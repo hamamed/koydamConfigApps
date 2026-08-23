@@ -32,6 +32,6 @@ rsync -az --delete --info=stats1 \
 
 echo "==> Restarting"
 # On a first run the service doesn't exist yet; that's expected, not a failure.
-ssh "$TARGET" "cd ${APP_DIR} && npm ci --omit=dev --no-audit --no-fund && node src/db/migrate.js && (systemctl restart skincraft 2>/dev/null || echo '    service not installed yet — run deploy/hostinger-setup.sh')"
+ssh "$TARGET" "cd ${APP_DIR} && npm ci --omit=dev --no-audit --no-fund && node src/db/migrate.js && (systemctl restart skincraft 2>/dev/null || echo '    service not installed yet — run deploy/setup.sh')"
 
 echo "==> Done"

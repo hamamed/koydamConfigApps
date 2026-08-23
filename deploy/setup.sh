@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# One-shot provisioning for a fresh Hostinger VPS (Ubuntu 22.04 / 24.04).
+# One-shot provisioning for an Ubuntu 22.04 / 24.04 server (Hetzner, Hostinger, anywhere with
+# root SSH). Nothing in here is provider-specific.
 #
 # Run as root, ON THE SERVER, after uploading the app:
 #
-#   sudo DOMAIN=vps.yourdomain.com EMAIL=you@example.com bash deploy/hostinger-setup.sh
+#   sudo DOMAIN=vps.yourdomain.com EMAIL=you@example.com bash deploy/setup.sh
 #
 # Idempotent — safe to re-run. It will not overwrite an existing .env or database.
 

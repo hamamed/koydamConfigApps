@@ -209,28 +209,34 @@ just opens Safari instead of the app.
 
 ## Deploying
 
-**On a Hostinger VPS?** See [deploy/DEPLOY-HOSTINGER.md](deploy/DEPLOY-HOSTINGER.md) — two commands,
-plus the hPanel specifics (which OS template to pick, DNS, firewall). Note that Hostinger's *shared*
-and *Cloud* hosting cannot run this: no Node runtime, no long-lived process, no writable database.
+See **[deploy/DEPLOY.md](deploy/DEPLOY.md)** for the full guide: adding this alongside a project
+already running on the same server, fresh-server setup on Hetzner or Hostinger, DNS, updates and
+troubleshooting.
 
-Generic Ubuntu:
+The short version — any Ubuntu 22.04/24.04 box with root SSH:
 
 ```bash
-sudo adduser --system --group --home /srv/skincraft skincraft
-sudo -u skincraft git clone <repo> /srv/skincraft
+git clone https://github.com/hamamed/skincraft.git /srv/skincraft
 cd /srv/skincraft
-sudo -u skincraft npm ci --omit=dev
-sudo -u skincraft cp .env.example .env && sudo -u skincraft nano .env
-sudo -u skincraft npm run migrate
-
-sudo cp deploy/skincraft.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now skincraft
-
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/skincraft
-sudo ln -s /etc/nginx/sites-available/skincraft /etc/nginx/sites-enabled/
-sudo certbot --nginx -d vps.yourdomain.com
-sudo nginx -t && sudo systemctl reload nginx
+sudo DOMAIN=skins.example.com EMAIL=you@example.com bash deploy/setup.sh
 ```
+
+That installs Node, creates the service user, migrates, registers systemd, configures nginx,
+requests a certificate and schedules backups. It's idempotent and never overwrites an existing
+`.env` or database.
+
+Already running another app on the box? Give it its own port and subdomain — nginx routes the
+rest:
+
+```bash
+sudo PORT=3001 DOMAIN=skins.example.com EMAIL=you@example.com bash deploy/setup.sh
+```
+
+The script refuses to start if the port is taken, leaves an already-active firewall alone, and
+only clears nginx's default site when this is the only site.
+
+**Shared hosting can't run this** — Hostinger Web/Cloud, cPanel and similar have no Node runtime,
+no long-lived process and no writable database location.
 
 nginx serves `/storage/` straight from disk, so Node never touches a byte of image traffic — which is the overwhelming majority of this app's bandwidth.
 
