@@ -46,7 +46,39 @@ will fail against a stale record:
 dig +short vps.yourdomain.com     # should print your VPS IP
 ```
 
-## 3. Upload and provision
+## 3. Get the code onto the server
+
+Two ways. **From GitHub** is the better one if the repo already exists — the server pulls
+directly, and updates are one command with no laptop involved.
+
+### From GitHub
+
+```bash
+ssh root@YOUR_SERVER_IP
+apt-get update && apt-get install -y git
+git clone https://github.com/YOUR_USER/skincraft-vps.git /srv/skincraft
+```
+
+A private repo will ask for credentials. Either use a
+[fine-grained personal access token](https://github.com/settings/tokens) as the password, or add
+a deploy key:
+
+```bash
+ssh-keygen -t ed25519 -f /root/.ssh/skincraft_deploy -N ""
+cat /root/.ssh/skincraft_deploy.pub
+# paste into GitHub → repo → Settings → Deploy keys → Add (read-only is enough)
+git clone git@github.com:YOUR_USER/skincraft-vps.git /srv/skincraft
+```
+
+### From your Mac
+
+```bash
+bash deploy/push.sh root@YOUR_SERVER_IP
+```
+
+Uploads over rsync. Nothing needs to exist on GitHub.
+
+## 4. Provision
 
 From your Mac, in the project directory:
 
@@ -54,10 +86,7 @@ From your Mac, in the project directory:
 bash deploy/push.sh root@YOUR_SERVER_IP
 ```
 
-Then on the server:
-
 ```bash
-ssh root@YOUR_SERVER_IP
 cd /srv/skincraft
 sudo DOMAIN=vps.yourdomain.com EMAIL=you@example.com bash deploy/hostinger-setup.sh
 ```
@@ -73,7 +102,7 @@ It prints a generated admin password at the end. Change it once you're in:
 cd /srv/skincraft && sudo -u skincraft npm run create-admin -- admin 'your-new-password'
 ```
 
-## 4. Point the app at it
+## 5. Point the app at it
 
 In the iOS project:
 
@@ -95,15 +124,25 @@ curl https://vps.yourdomain.com/.well-known/apple-app-site-association
 
 ## Subsequent deploys
 
+**Deployed from GitHub** — push to `main`, then on the server:
+
+```bash
+sudo bash /srv/skincraft/deploy/update.sh
+```
+
+Pulls, reinstalls, migrates and restarts. It runs git as the `skincraft` user: git refuses to
+operate on a repository owned by someone else, and running as root would leave root-owned files
+behind for the service to trip over.
+
+**Deployed by rsync** — from your Mac:
+
 ```bash
 bash deploy/push.sh root@YOUR_SERVER_IP
 ```
 
-Uploads changed files, reinstalls dependencies, migrates and restarts. `node_modules` is excluded
-deliberately — `better-sqlite3` and `sharp` ship native binaries, and the ones built on macOS will
-not run on Linux.
-
-Uploaded media and the database are excluded too, so a deploy can never clobber your catalogue.
+Either way `node_modules` is excluded deliberately: `better-sqlite3` and `sharp` ship native
+binaries, and the ones built on macOS will not run on Linux. The database and uploaded media are
+excluded too, so a deploy can never clobber your catalogue.
 
 ## Checking on it
 
