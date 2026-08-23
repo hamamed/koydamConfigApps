@@ -1,0 +1,485 @@
+/*
+ * SkinCraft admin theme.
+ *
+ * Layered on top of Bootstrap 5's dark mode rather than replacing it: Bootstrap keeps the grid,
+ * forms and utilities predictable, and this file re-skins the surfaces so the panel reads as the
+ * same product as the iOS app — near-black canvas, frosted cards, one violet→cyan accent.
+ */
+
+:root,
+[data-bs-theme='dark'] {
+  --sc-canvas: #08080c;
+  --sc-surface: #101018;
+  --sc-elevated: #16161f;
+  --sc-hairline: rgba(255, 255, 255, 0.08);
+  --sc-hairline-strong: rgba(255, 255, 255, 0.16);
+
+  --sc-text: #f5f5fa;
+  --sc-text-muted: #9a9aae;
+  --sc-text-dim: #62627a;
+
+  --sc-accent: #7c5cff;
+  --sc-accent-soft: #9b84ff;
+  --sc-cyan: #2de2e6;
+  --sc-magenta: #ff4fd8;
+  --sc-lime: #b6f36b;
+  --sc-amber: #ffb43d;
+  --sc-danger: #ff5a6e;
+
+  --sc-gradient: linear-gradient(135deg, var(--sc-accent) 0%, var(--sc-cyan) 100%);
+  --sc-radius: 16px;
+  --sc-sidebar-width: 248px;
+
+  --bs-body-bg: var(--sc-canvas);
+  --bs-body-color: var(--sc-text);
+  --bs-border-color: var(--sc-hairline);
+  --bs-primary: var(--sc-accent);
+  --bs-link-color: var(--sc-accent-soft);
+  --bs-link-hover-color: #b9a8ff;
+  --bs-body-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+}
+
+body {
+  background: var(--sc-canvas);
+  color: var(--sc-text);
+  /* Two soft blooms, fixed to the viewport so they don't travel with scrolling content. */
+  background-image:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(124, 92, 255, 0.16), transparent 60%),
+    radial-gradient(50rem 34rem at 92% 8%, rgba(45, 226, 230, 0.10), transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  font-feature-settings: 'ss01', 'cv01';
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+.sc-shell { display: flex; min-height: 100vh; }
+
+.sc-sidebar {
+  width: var(--sc-sidebar-width);
+  flex-shrink: 0;
+  border-right: 1px solid var(--sc-hairline);
+  background: rgba(16, 16, 24, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 0.875rem;
+}
+
+.sc-main { flex: 1; min-width: 0; padding: 1.75rem 2rem 4rem; }
+
+.sc-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.25rem 0.5rem 1.25rem;
+  text-decoration: none;
+}
+
+.sc-brand-mark {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  background: var(--sc-gradient);
+  display: grid; place-items: center;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(124, 92, 255, 0.4);
+}
+
+.sc-brand-name {
+  font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em;
+  background: var(--sc-gradient);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sc-nav { display: flex; flex-direction: column; gap: 2px; }
+
+.sc-nav-label {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--sc-text-dim);
+  padding: 1rem 0.75rem 0.4rem;
+}
+
+.sc-nav-link {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  color: var(--sc-text-muted);
+  text-decoration: none;
+  font-size: 0.9rem; font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sc-nav-link:hover { background: rgba(255, 255, 255, 0.05); color: var(--sc-text); }
+
+.sc-nav-link.active {
+  background: rgba(124, 92, 255, 0.16);
+  color: var(--sc-text);
+  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.32);
+}
+
+.sc-nav-link.active svg { color: var(--sc-accent-soft); }
+
+/* Unresolved reports need to be visible from every screen, not just the reports page. */
+.sc-nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--sc-danger);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sc-report-row { border-left: 3px solid transparent; }
+.sc-report-row.urgent { border-left-color: var(--sc-danger); background: rgba(255, 90, 110, 0.05); }
+
+.sc-reason {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; font-weight: 600;
+  padding: 0.2rem 0.5rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07); color: var(--sc-text-muted);
+}
+.sc-reason.urgent { background: rgba(255, 90, 110, 0.16); color: var(--sc-danger); }
+
+.sc-range { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: rgba(22, 22, 31, 0.7); border: 1px solid var(--sc-hairline); }
+.sc-range a {
+  padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+  color: var(--sc-text-muted); text-decoration: none;
+}
+.sc-range a.active { background: var(--sc-gradient); color: #fff; }
+
+.sc-sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--sc-hairline); }
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+
+.sc-card {
+  background: rgba(22, 22, 31, 0.72);
+  border: 1px solid var(--sc-hairline);
+  border-radius: var(--sc-radius);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.sc-card-pad { padding: 1.25rem; }
+
+.sc-page-title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.sc-page-sub { color: var(--sc-text-muted); font-size: 0.9rem; margin: 0.2rem 0 0; }
+
+/* ── Stat tiles ─────────────────────────────────────────────────────────── */
+
+.sc-stat { position: relative; overflow: hidden; }
+.sc-stat-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: rgba(124, 92, 255, 0.14); color: var(--sc-accent-soft);
+}
+.sc-stat-value { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.sc-stat-label { font-size: 0.78rem; color: var(--sc-text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.sc-delta { font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+.sc-delta.up { color: var(--sc-lime); }
+.sc-delta.down { color: var(--sc-danger); }
+.sc-delta.flat { color: var(--sc-text-dim); }
+
+/* ── Chart ──────────────────────────────────────────────────────────────── */
+
+.sc-chart { width: 100%; height: 160px; display: block; }
+.sc-chart-line { fill: none; stroke: url(#scStroke); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.sc-chart-area { fill: url(#scFill); stroke: none; }
+.sc-chart-grid { stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+.sc-spark { width: 84px; height: 26px; }
+.sc-spark-line { fill: none; stroke: var(--sc-cyan); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+
+/* ── Skin cards ─────────────────────────────────────────────────────────── */
+
+.sc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1rem;
+}
+
+.sc-skin-card {
+  position: relative;
+  border-radius: var(--sc-radius);
+  overflow: hidden;
+  border: 1px solid var(--sc-hairline);
+  background: var(--sc-elevated);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.18s ease;
+}
+
+.sc-skin-card:hover { transform: translateY(-3px); border-color: var(--sc-hairline-strong); }
+
+.sc-skin-thumb { aspect-ratio: 4 / 5; width: 100%; object-fit: cover; display: block; background: #0d0d14; }
+
+.sc-skin-body {
+  position: absolute; inset: auto 0 0 0;
+  padding: 0.8rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 20%, rgba(0,0,0,0.35) 65%, transparent);
+}
+
+.sc-skin-title { font-size: 0.9rem; font-weight: 600; margin: 0; line-height: 1.25; }
+.sc-skin-meta { font-size: 0.74rem; color: var(--sc-text-muted); display: flex; align-items: center; gap: 0.4rem; margin-top: 0.2rem; }
+
+.sc-skin-flags { position: absolute; top: 0.6rem; left: 0.6rem; display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.sc-skin-actions { position: absolute; top: 0.6rem; right: 0.6rem; display: flex; gap: 0.3rem; }
+
+/* ── Badges & chips ─────────────────────────────────────────────────────── */
+
+.sc-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 0.22rem 0.5rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10); color: var(--sc-text);
+  border: 1px solid var(--sc-hairline);
+  backdrop-filter: blur(8px);
+}
+
+.sc-badge.featured { background: var(--sc-gradient); border-color: transparent; color: #fff; }
+.sc-badge.draft { background: rgba(255, 180, 61, 0.18); color: var(--sc-amber); border-color: rgba(255, 180, 61, 0.3); }
+.sc-badge.category { background: rgba(255, 255, 255, 0.07); color: var(--sc-text-muted); font-weight: 600; }
+
+.sc-tag {
+  display: inline-flex; align-items: center;
+  font-size: 0.76rem; color: var(--sc-text-muted);
+  padding: 0.24rem 0.6rem; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sc-hairline);
+  text-decoration: none;
+}
+.sc-tag:hover { color: var(--sc-text); border-color: var(--sc-hairline-strong); }
+
+/* ── Icon buttons ───────────────────────────────────────────────────────── */
+
+.sc-icon-btn {
+  width: 30px; height: 30px;
+  display: inline-grid; place-items: center;
+  border-radius: 8px;
+  border: 1px solid var(--sc-hairline);
+  background: rgba(10, 10, 16, 0.7);
+  color: var(--sc-text-muted);
+  backdrop-filter: blur(8px);
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  padding: 0;
+}
+.sc-icon-btn:hover { color: var(--sc-text); border-color: var(--sc-hairline-strong); }
+.sc-icon-btn.is-on { color: var(--sc-magenta); border-color: rgba(255, 79, 216, 0.4); background: rgba(255, 79, 216, 0.14); }
+.sc-icon-btn.danger:hover { color: var(--sc-danger); border-color: rgba(255, 90, 110, 0.4); }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn-sc-primary {
+  background: var(--sc-gradient);
+  border: none; color: #fff; font-weight: 600;
+  box-shadow: 0 6px 20px rgba(124, 92, 255, 0.35);
+}
+.btn-sc-primary:hover { color: #fff; filter: brightness(1.08); box-shadow: 0 8px 26px rgba(124, 92, 255, 0.45); }
+
+.btn-sc-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--sc-hairline);
+  color: var(--sc-text-muted); font-weight: 500;
+}
+.btn-sc-ghost:hover { background: rgba(255, 255, 255, 0.09); color: var(--sc-text); border-color: var(--sc-hairline-strong); }
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+
+.form-control, .form-select {
+  background: rgba(8, 8, 12, 0.6);
+  border: 1px solid var(--sc-hairline);
+  color: var(--sc-text);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+}
+.form-control:focus, .form-select:focus {
+  background: rgba(8, 8, 12, 0.8);
+  border-color: var(--sc-accent);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.20);
+  color: var(--sc-text);
+}
+.form-control::placeholder { color: var(--sc-text-dim); }
+.form-label { font-size: 0.82rem; font-weight: 600; color: var(--sc-text-muted); margin-bottom: 0.35rem; }
+.form-text { color: var(--sc-text-dim); font-size: 0.78rem; }
+.form-check-input { background-color: rgba(8, 8, 12, 0.8); border-color: var(--sc-hairline-strong); }
+.form-check-input:checked { background-color: var(--sc-accent); border-color: var(--sc-accent); }
+
+/* Search fields with a leading icon need room for it; Bootstrap's ps-4 is narrower than the
+   icon itself, which lands the placeholder on top of the glyph. */
+.sc-input-icon { padding-left: 2.4rem !important; }
+
+/* ── Designer ───────────────────────────────────────────────────────────── */
+
+.sc-canvas-wrap {
+  border-radius: var(--sc-radius);
+  overflow: hidden;
+  border: 1px solid var(--sc-hairline);
+  /* Transparency checkerboard, so unpainted regions of the sheet read as transparent rather
+     than as black — which is what they'll be in the exported PNG. */
+  background-image:
+    linear-gradient(45deg, #14141c 25%, transparent 25%),
+    linear-gradient(-45deg, #14141c 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #14141c 75%),
+    linear-gradient(-45deg, transparent 75%, #14141c 75%);
+  background-size: 18px 18px;
+  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+  background-color: #0b0b11;
+}
+
+.sc-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Template pixels stay crisp; smoothing here would misrepresent the export. */
+  image-rendering: pixelated;
+  cursor: grab;
+  touch-action: none;
+}
+.sc-canvas-wrap canvas:active { cursor: grabbing; }
+
+.sc-sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 6px;
+}
+
+.sc-sticker {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--sc-hairline);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sc-text);
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: transform 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+}
+.sc-sticker:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--sc-hairline-strong);
+}
+
+.sc-swatch {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  padding: 0;
+}
+.sc-swatch:hover { border-color: #fff; }
+
+.form-range { accent-color: var(--sc-accent); }
+.form-control-color { height: 38px; padding: 4px; border-radius: 10px; }
+
+/* ── Dropzone ───────────────────────────────────────────────────────────── */
+
+.sc-dropzone {
+  border: 1.5px dashed var(--sc-hairline-strong);
+  border-radius: var(--sc-radius);
+  background: rgba(8, 8, 12, 0.45);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+  position: relative;
+}
+.sc-dropzone:hover { border-color: var(--sc-accent); background: rgba(124, 92, 255, 0.06); }
+.sc-dropzone.is-dragging { border-color: var(--sc-cyan); background: rgba(45, 226, 230, 0.08); }
+.sc-dropzone input[type='file'] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+.sc-dropzone-preview {
+  max-height: 190px; max-width: 100%;
+  border-radius: 10px;
+  /* Templates are pixel art — smoothing them in the preview misrepresents the asset. */
+  image-rendering: pixelated;
+  background-image:
+    linear-gradient(45deg, #16161f 25%, transparent 25%),
+    linear-gradient(-45deg, #16161f 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #16161f 75%),
+    linear-gradient(-45deg, transparent 75%, #16161f 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+
+.table { --bs-table-bg: transparent; --bs-table-color: var(--sc-text); margin: 0; }
+.table > :not(caption) > * > * { border-bottom-color: var(--sc-hairline); padding: 0.75rem 1rem; }
+.table thead th {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--sc-text-dim); font-weight: 600; border-bottom-color: var(--sc-hairline-strong);
+}
+.table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+
+/* ── Misc ───────────────────────────────────────────────────────────────── */
+
+.sc-empty { text-align: center; padding: 3.5rem 1rem; color: var(--sc-text-muted); }
+.sc-empty-icon {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(124, 92, 255, 0.12); color: var(--sc-accent-soft);
+  display: grid; place-items: center; margin: 0 auto 1rem;
+}
+
+.sc-code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  font-size: 0.8rem;
+  background: rgba(8, 8, 12, 0.7);
+  border: 1px solid var(--sc-hairline);
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  color: var(--sc-cyan);
+  word-break: break-all;
+  display: block;
+}
+
+.sc-divider { height: 1px; background: var(--sc-hairline); border: 0; margin: 1.25rem 0; }
+
+.alert { border-radius: 12px; border-width: 1px; }
+.alert-success { background: rgba(182, 243, 107, 0.12); border-color: rgba(182, 243, 107, 0.3); color: var(--sc-lime); }
+.alert-warning { background: rgba(255, 180, 61, 0.12); border-color: rgba(255, 180, 61, 0.3); color: var(--sc-amber); }
+.alert-danger  { background: rgba(255, 90, 110, 0.12); border-color: rgba(255, 90, 110, 0.3); color: var(--sc-danger); }
+
+.pagination .page-link {
+  background: rgba(22, 22, 31, 0.7); border-color: var(--sc-hairline);
+  color: var(--sc-text-muted); border-radius: 8px; margin: 0 2px;
+}
+.pagination .page-link:hover { background: rgba(255, 255, 255, 0.07); color: var(--sc-text); }
+.pagination .page-item.active .page-link { background: var(--sc-gradient); border-color: transparent; color: #fff; }
+.pagination .page-item.disabled .page-link { background: rgba(22, 22, 31, 0.4); color: var(--sc-text-dim); }
+
+/* ── Login ──────────────────────────────────────────────────────────────── */
+
+.sc-login { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
+.sc-login-card { width: 100%; max-width: 400px; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 991.98px) {
+  .sc-sidebar {
+    position: fixed; inset: 0 auto 0 0; z-index: 1045;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .sc-sidebar.is-open { transform: translateX(0); }
+  .sc-main { padding: 1rem 1rem 3rem; }
+  .sc-scrim {
+    position: fixed; inset: 0; z-index: 1040;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+  }
+}
+
+@media (min-width: 992px) {
+  .sc-menu-toggle, .sc-scrim { display: none !important; }
+}

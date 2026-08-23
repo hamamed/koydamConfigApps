@@ -1,0 +1,66 @@
+<%
+  // `currentPath` is the path within the admin router, so the dashboard is '/' not '/admin'.
+  const nav = [
+    { section: 'Catalogue', items: [
+      { href: '/admin',       icon: 'layout-dashboard', label: 'Dashboard',
+        active: currentPath === '/' },
+      { href: '/admin/skins', icon: 'shirt',            label: 'Skins',
+        active: currentPath.startsWith('/skins') && currentPath !== '/skins/new' },
+      { href: '/admin/tags',  icon: 'tags',             label: 'Tags',
+        active: currentPath.startsWith('/tags') },
+    ]},
+    { section: 'Insight', items: [
+      { href: '/admin/analytics', icon: 'activity', label: 'Analytics',
+        active: currentPath.startsWith('/analytics') },
+      { href: '/admin/reports',   icon: 'flag',       label: 'Reports',
+        active: currentPath.startsWith('/reports'), badge: openReports },
+    ]},
+  ];
+%>
+<aside class="sc-sidebar" id="scSidebar">
+  <a class="sc-brand" href="/admin">
+    <span class="sc-brand-mark"><i data-lucide="shirt" width="18" height="18"></i></span>
+    <span class="sc-brand-name">SkinCraft</span>
+  </a>
+
+  <nav class="sc-nav">
+    <% nav.forEach((group) => { %>
+      <div class="sc-nav-label"><%= group.section %></div>
+      <% group.items.forEach((item) => { %>
+        <a class="sc-nav-link <%= item.active ? 'active' : '' %>" href="<%= item.href %>">
+          <i data-lucide="<%= item.icon %>" width="17" height="17"></i>
+          <span><%= item.label %></span>
+          <% if (item.badge) { %><span class="sc-nav-badge"><%= item.badge %></span><% } %>
+        </a>
+      <% }) %>
+    <% }) %>
+
+    <div class="sc-nav-label">Create</div>
+    <a class="sc-nav-link <%= currentPath === '/skins/new' ? 'active' : '' %>" href="/admin/skins/new">
+      <i data-lucide="upload" width="17" height="17"></i>
+      <span>Upload skin</span>
+    </a>
+    <a class="sc-nav-link <%= currentPath === '/skins/design' ? 'active' : '' %>" href="/admin/skins/design">
+      <i data-lucide="wand-sparkles" width="17" height="17"></i>
+      <span>Design a skin</span>
+    </a>
+  </nav>
+
+  <div class="sc-sidebar-footer">
+    <div class="d-flex align-items-center gap-2 px-2 py-2">
+      <div class="sc-stat-icon" style="width:30px;height:30px;">
+        <i data-lucide="user" width="15" height="15"></i>
+      </div>
+      <div class="flex-grow-1" style="min-width:0;">
+        <div class="small fw-semibold text-truncate"><%= user.username %></div>
+        <div style="font-size:0.7rem;color:var(--sc-text-dim);"><%= user.role %></div>
+      </div>
+      <form method="post" action="/admin/logout" class="m-0">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="sc-icon-btn" type="submit" title="Sign out" aria-label="Sign out">
+          <i data-lucide="log-out" width="15" height="15"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</aside>

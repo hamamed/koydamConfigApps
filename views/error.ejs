@@ -1,0 +1,18 @@
+<%- include('partials/head', { title }) %>
+<div class="sc-login">
+  <div class="sc-login-card text-center">
+    <div class="sc-empty-icon mb-3">
+      <i data-lucide="<%= status === 404 ? 'file-question' : 'triangle-alert' %>" width="28" height="28"></i>
+    </div>
+    <h1 class="sc-page-title mb-2"><%= status %></h1>
+    <p class="sc-page-sub mb-4"><%= message %></p>
+    <a class="btn btn-sc-ghost" href="/admin">
+      <i data-lucide="arrow-left" width="15" height="15" class="me-1"></i>
+      Back to dashboard
+    </a>
+    <% if (detail) { %>
+      <pre class="sc-code text-start mt-4" style="white-space:pre-wrap;"><%= detail %></pre>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/foot') %>

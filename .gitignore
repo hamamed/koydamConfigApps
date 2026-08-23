@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+node_modules/
+data/
+storage/templates/*
+storage/previews/*
+!storage/templates/.gitkeep
+!storage/previews/.gitkeep
+.env
+*.log

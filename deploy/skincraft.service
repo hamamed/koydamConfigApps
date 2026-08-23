@@ -1,0 +1,46 @@
+# systemd unit for the SkinCraft API + admin panel.
+#
+#   sudo cp deploy/skincraft.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now skincraft
+
+[Unit]
+Description=SkinCraft catalogue API and admin panel
+Documentation=https://github.com/your-org/skincraft-vps
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=skincraft
+Group=skincraft
+WorkingDirectory=/srv/skincraft
+EnvironmentFile=/srv/skincraft/.env
+ExecStart=/usr/bin/node src/server.js
+
+Restart=always
+RestartSec=5
+# Give in-flight uploads a chance to finish; the app closes its listener on SIGTERM.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Hardening. The process only ever needs to write to its own data and storage directories.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+ReadWritePaths=/srv/skincraft/data /srv/skincraft/storage
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=skincraft
+
+[Install]
+WantedBy=multi-user.target

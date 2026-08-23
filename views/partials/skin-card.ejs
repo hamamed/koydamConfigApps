@@ -1,0 +1,38 @@
+<div class="sc-skin-card-wrap position-relative">
+  <a class="sc-skin-card" href="/admin/skins/<%= skin.id %>">
+    <img class="sc-skin-thumb" src="<%= skin.previewUrl %>" alt="" loading="lazy" width="320" height="400">
+    <div class="sc-skin-body">
+      <p class="sc-skin-title"><%= skin.title %></p>
+      <div class="sc-skin-meta">
+        <i data-lucide="download" width="12" height="12"></i>
+        <span><%= formatNumber(skin.downloads) %></span>
+        <span>·</span>
+        <span><%= categoryLabels[skin.category] %></span>
+      </div>
+    </div>
+  </a>
+
+  <div class="sc-skin-flags">
+    <% if (skin.isFeatured) { %>
+      <span class="sc-badge featured"><i data-lucide="sparkles" width="10" height="10"></i> Featured</span>
+    <% } %>
+    <% if (!skin.isPublished) { %>
+      <span class="sc-badge draft">Draft</span>
+    <% } %>
+  </div>
+
+  <div class="sc-skin-actions">
+    <form method="post" action="/admin/skins/<%= skin.id %>/feature" class="m-0" data-quick-action>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="sc-icon-btn <%= skin.isFeatured ? 'is-on' : '' %>" type="submit"
+              title="<%= skin.isFeatured ? 'Remove from Featured' : 'Add to Featured' %>"
+              aria-label="Toggle featured">
+        <i data-lucide="star" width="14" height="14"
+           <%= skin.isFeatured ? 'fill="currentColor"' : '' %>></i>
+      </button>
+    </form>
+    <a class="sc-icon-btn" href="/admin/skins/<%= skin.id %>/edit" title="Edit" aria-label="Edit">
+      <i data-lucide="pencil" width="14" height="14"></i>
+    </a>
+  </div>
+</div>
