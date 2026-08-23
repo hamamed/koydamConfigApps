@@ -144,6 +144,73 @@ Either way `node_modules` is excluded deliberately: `better-sqlite3` and `sharp`
 binaries, and the ones built on macOS will not run on Linux. The database and uploaded media are
 excluded too, so a deploy can never clobber your catalogue.
 
+## Running alongside another project
+
+One VPS can serve any number of apps. nginx routes by `server_name`, so each project gets its own
+subdomain, its own Node process on its own loopback port, and its own systemd service. Nothing is
+shared except nginx and the machine.
+
+```
+                      ┌── api.hamaprojects.com   → 127.0.0.1:3000  (existing app)
+Internet → nginx :443 ┤
+                      └── skins.hamaprojects.com → 127.0.0.1:3001  (this app)
+```
+
+**1. Point the subdomain at the same IP.** In hPanel → Domains → DNS zone, add an `A` record for
+`skins` → the same VPS IP the existing project uses. Confirm before asking for a certificate:
+
+```bash
+dig +short skins.hamaprojects.com
+```
+
+**2. Check what's already listening**, so you pick a free port:
+
+```bash
+ss -ltnp | grep -E 'node|:300|:400'
+```
+
+**3. Install on a different port.** The setup script takes `PORT`, refuses to start if it's already
+in use, and won't touch a firewall that's already active or remove other enabled nginx sites:
+
+```bash
+git clone https://github.com/hamamed/skincraft.git /srv/skincraft
+cd /srv/skincraft
+sudo PORT=3001 DOMAIN=skins.hamaprojects.com EMAIL=you@example.com \
+     bash deploy/hostinger-setup.sh
+```
+
+It creates `/etc/nginx/sites-available/skincraft` and its own `skincraft` systemd unit and service
+user, all named so they can't collide with an existing project.
+
+**4. Certificates.** certbot issues a separate certificate for the new subdomain and edits only the
+matching server block. The existing site's certificate and config are untouched. A wildcard
+certificate would also work, but there's no need — separate certificates renew independently, so a
+problem with one can't take the other offline.
+
+### If the existing project isn't behind nginx
+
+Check first:
+
+```bash
+systemctl status nginx apache2 caddy 2>/dev/null | grep -E 'nginx|apache|caddy|active'
+```
+
+If it's **Apache** or **Caddy**, don't install nginx alongside it — two servers can't both hold
+port 443. Either move this app behind the existing server as a reverse proxy (a virtual host for
+`skins.hamaprojects.com` proxying to `127.0.0.1:3001`), or migrate the other project to nginx. The
+app itself doesn't care: it listens on loopback and something in front terminates TLS.
+
+### Managing both
+
+```bash
+systemctl status skincraft            # this app
+journalctl -u skincraft -f            # its logs only
+ls /etc/nginx/sites-enabled/          # every site on the box
+nginx -t && systemctl reload nginx    # after any nginx change — test before reloading
+```
+
+Backups are per-app: `deploy/backup.sh` only touches `/srv/skincraft`.
+
 ## Checking on it
 
 ```bash

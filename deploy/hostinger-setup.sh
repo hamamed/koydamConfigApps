@@ -15,6 +15,10 @@ EMAIL="${EMAIL:-}"
 APP_DIR="${APP_DIR:-/srv/skincraft}"
 APP_USER="${APP_USER:-skincraft}"
 NODE_MAJOR="${NODE_MAJOR:-22}"
+# Each app on the box needs its own loopback port. Override when 3000 is already taken.
+PORT="${PORT:-3000}"
+# Set to 1 to leave an existing firewall completely alone.
+SKIP_FIREWALL="${SKIP_FIREWALL:-0}"
 
 if [[ -z "$DOMAIN" ]]; then
   echo "DOMAIN is required.  e.g. sudo DOMAIN=vps.yourdomain.com bash $0" >&2
@@ -26,6 +30,14 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 say() { printf '\n\033[1;35m==>\033[0m %s\n' "$1"; }
+
+# A port collision shows up as a service that starts, crashes on EADDRINUSE and flaps forever,
+# while nginx returns 502. Catching it here costs one command.
+if ss -ltn 2>/dev/null | grep -q ":${PORT} "; then
+  echo "Port ${PORT} is already in use on this server." >&2
+  echo "Something else is listening there — pick another, e.g.  sudo PORT=3001 ... bash $0" >&2
+  exit 1
+fi
 
 say "Updating packages"
 export DEBIAN_FRONTEND=noninteractive
@@ -73,7 +85,7 @@ if [[ ! -f "$APP_DIR/.env" ]]; then
   ADMIN_PW="$(node -e 'console.log(require("crypto").randomBytes(9).toString("base64url"))')"
 
   cat > "$APP_DIR/.env" <<ENV
-PORT=3000
+PORT=${PORT}
 HOST=127.0.0.1
 NODE_ENV=production
 PUBLIC_URL=https://${DOMAIN}
@@ -139,9 +151,16 @@ systemctl is-active --quiet skincraft && echo "    service is running" || {
 say "Configuring nginx for $DOMAIN"
 sed -e "s|vps\.yourdomain\.com|${DOMAIN}|g" \
     -e "s|/srv/skincraft|${APP_DIR}|g" \
+    -e "s|127\.0\.0\.1:3000|127.0.0.1:${PORT}|g" \
     "$APP_DIR/deploy/nginx.conf" > /etc/nginx/sites-available/skincraft
 ln -sf /etc/nginx/sites-available/skincraft /etc/nginx/sites-enabled/skincraft
-rm -f /etc/nginx/sites-enabled/default
+
+# Only clear the stock placeholder when this is the only site. On a server already serving
+# another project, removing enabled sites is somebody else's outage.
+enabled_count=$(ls -1 /etc/nginx/sites-enabled 2>/dev/null | grep -cv '^skincraft$' || true)
+if [[ "$enabled_count" -le 1 && -e /etc/nginx/sites-enabled/default ]]; then
+  rm -f /etc/nginx/sites-enabled/default
+fi
 
 # certbot hasn't run yet, so the TLS block would reference certificates that don't
 # exist and nginx would refuse to start. Serve plain HTTP until the cert is issued.
@@ -162,7 +181,7 @@ server {
     }
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:${PORT};
         include /etc/nginx/proxy_params;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
@@ -177,10 +196,19 @@ systemctl reload nginx
 
 # ── Firewall ─────────────────────────────────────────────────────────────────
 say "Firewall"
-ufw allow OpenSSH >/dev/null
-ufw allow 'Nginx Full' >/dev/null
-ufw --force enable >/dev/null
-echo "    22, 80, 443 open; everything else closed (3000 is loopback-only)"
+if [[ "$SKIP_FIREWALL" == "1" ]]; then
+  echo "    skipped (SKIP_FIREWALL=1)"
+elif ufw status 2>/dev/null | grep -q "Status: active"; then
+  # Already configured — enabling rules on someone else's firewall is how a working service
+  # goes dark, or how you lock yourself out when SSH isn't on 22.
+  echo "    ufw is already active — leaving it alone"
+  echo "    make sure 80 and 443 are allowed:  ufw allow 'Nginx Full'"
+else
+  ufw allow OpenSSH >/dev/null
+  ufw allow 'Nginx Full' >/dev/null
+  ufw --force enable >/dev/null
+  echo "    22, 80, 443 open; everything else closed (${PORT} is loopback-only)"
+fi
 
 # ── TLS ──────────────────────────────────────────────────────────────────────
 if [[ -n "$EMAIL" ]]; then
@@ -213,6 +241,7 @@ cat <<SUMMARY
 
     Admin panel   https://${DOMAIN}/admin
     API           https://${DOMAIN}/api/v1/skins
+    Listening on  127.0.0.1:${PORT} (nginx proxies to it)
 
 SUMMARY
 
