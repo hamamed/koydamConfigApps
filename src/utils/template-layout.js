@@ -12,53 +12,62 @@
 
 export const TEMPLATE_SIZE = { width: 585, height: 559 };
 
-const STUD = 64;
+// Every rectangle below was measured from Roblox's own template files, downloaded from
+// https://create.roblox.com/docs/avatar/classic-clothing, by scanning them for the flat colour
+// blocks. They are not derived or approximated, and they were verified by dressing a 3D rig in
+// the labelled template and reading the letters off the render.
+//
+// Two things a reconstruction would not guess:
+//   1. The torso sits at the TOP of the sheet and the limbs BELOW it.
+//   2. Each group has its own horizontal face order — torso runs R·F·L·B, the right limb runs
+//      L·B·R·F, the left limb runs F·L·B·R. No single unwrap function produces all three.
+//
+// The caps are consistent: `top` sits directly above the `front` face, `bottom` directly below.
+// The shirt and pants templates share this layout exactly; only the printed labels differ.
 
-/**
- * The six faces of one box, laid out flat.
- *
- * ```
- *          ┌──────┐
- *          │ top  │
- *   ┌──────┼──────┼──────┬──────┐
- *   │ left │front │right │ back │
- *   └──────┼──────┼──────┴──────┘
- *          │bottom│
- *          └──────┘
- * ```
- */
-function unwrap(originX, originY, faceWidth, depth, height) {
-  const rowY = originY + depth;
-  const frontX = originX + depth;
-
-  return {
-    left: { left: originX, top: rowY, width: depth, height },
-    front: { left: frontX, top: rowY, width: faceWidth, height },
-    right: { left: frontX + faceWidth, top: rowY, width: depth, height },
-    back: { left: frontX + faceWidth + depth, top: rowY, width: faceWidth, height },
-    top: { left: frontX, top: originY, width: faceWidth, height: depth },
-    bottom: { left: frontX, top: rowY + height, width: faceWidth, height: depth },
-  };
-}
-
-/** The three groups a template contains. Limbs at the top, torso centred below. */
 const GROUPS = {
-  leadingLimb: unwrap(2, 2, STUD, STUD, STUD * 2),
-  trailingLimb: unwrap(327, 2, STUD, STUD, STUD * 2),
-  torso: unwrap(100, 290, STUD * 2, STUD, STUD * 2),
+  torso: {
+    top:    { left: 231, top: 8,   width: 128, height: 64 },
+    right:  { left: 165, top: 74,  width: 64,  height: 128 },
+    front:  { left: 231, top: 74,  width: 128, height: 128 },
+    left:   { left: 361, top: 74,  width: 64,  height: 128 },
+    back:   { left: 427, top: 74,  width: 128, height: 128 },
+    bottom: { left: 231, top: 204, width: 128, height: 64 },
+  },
+  // The avatar's right arm or leg — bottom-left of the sheet.
+  rightLimb: {
+    top:    { left: 217, top: 289, width: 64, height: 64 },
+    left:   { left: 19,  top: 355, width: 64, height: 128 },
+    back:   { left: 85,  top: 355, width: 64, height: 128 },
+    right:  { left: 151, top: 355, width: 64, height: 128 },
+    front:  { left: 217, top: 355, width: 64, height: 128 },
+    bottom: { left: 217, top: 485, width: 64, height: 64 },
+  },
+  // The avatar's left arm or leg — bottom-right of the sheet.
+  leftLimb: {
+    top:    { left: 308, top: 289, width: 64, height: 64 },
+    front:  { left: 308, top: 355, width: 64, height: 128 },
+    left:   { left: 374, top: 355, width: 64, height: 128 },
+    back:   { left: 440, top: 355, width: 64, height: 128 },
+    right:  { left: 506, top: 355, width: 64, height: 128 },
+    bottom: { left: 308, top: 485, width: 64, height: 64 },
+  },
 };
 
 /** Which groups each garment paints. */
 export const LAYOUTS = {
-  shirt: { torso: GROUPS.torso, rightArm: GROUPS.leadingLimb, leftArm: GROUPS.trailingLimb },
-  tshirt: { torso: GROUPS.torso, rightArm: GROUPS.leadingLimb, leftArm: GROUPS.trailingLimb },
-  pants: { rightLeg: GROUPS.leadingLimb, leftLeg: GROUPS.trailingLimb },
+  shirt: { torso: GROUPS.torso, rightArm: GROUPS.rightLimb, leftArm: GROUPS.leftLimb },
+  tshirt: { torso: GROUPS.torso, rightArm: GROUPS.rightLimb, leftArm: GROUPS.leftLimb },
+  // Pants paint the waistband as well as the legs — that's what the torso group is for here.
+  pants: { torso: GROUPS.torso, rightLeg: GROUPS.rightLimb, leftLeg: GROUPS.leftLimb },
+  // A sheet only carries two limb groups, so a full-body texture necessarily paints the arm and
+  // the leg on each side from the same artwork.
   avatar: {
     torso: GROUPS.torso,
-    rightArm: GROUPS.leadingLimb,
-    leftArm: GROUPS.trailingLimb,
-    rightLeg: GROUPS.leadingLimb,
-    leftLeg: GROUPS.trailingLimb,
+    rightArm: GROUPS.rightLimb,
+    leftArm: GROUPS.leftLimb,
+    rightLeg: GROUPS.rightLimb,
+    leftLeg: GROUPS.leftLimb,
   },
 };
 
@@ -92,7 +101,7 @@ export function facesFor(category) {
 export function heroRegion(category) {
   switch (category) {
     case 'pants':
-      return GROUPS.leadingLimb.front;
+      return GROUPS.rightLimb.front;
     default:
       return GROUPS.torso.front;
   }

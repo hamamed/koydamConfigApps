@@ -173,10 +173,15 @@ deploy/                systemd unit, nginx config, backup script
 
 **Denormalised download counter.** `skins.downloads` is a running total; `download_events` keeps the log. The API reads one integer, the dashboard aggregates the log. Aggregating the whole log on every catalogue request is the first thing that would fall over.
 
-**One definition of the template geometry.** `src/utils/template-layout.js` owns the R6 unwrap.
-The seeder, the preview deriver and the browser designer all read it — the designer gets it as JSON
-injected into the page. It used to be duplicated between the seeder and the image service, which is
-how a preview crop quietly stops matching what the 3D renderer paints.
+**One definition of the template geometry, measured not guessed.**
+`src/utils/template-layout.js` owns the R6 unwrap, and every rectangle in it was measured from
+Roblox's own template files rather than derived from stud arithmetic. The seeder, the preview
+deriver and the browser designer all read it — the designer gets it as JSON injected into the page.
+It used to be duplicated between the seeder and the image service, which is how a preview crop
+quietly stops matching what the 3D renderer paints.
+
+If you change those coordinates, run `npm run regenerate-previews`: a derived preview is a crop of
+a specific region, so moving the region invalidates every preview already on disk.
 
 **Tags in their own table.** Search hits an index rather than scanning a JSON blob, and one query loads tags for a whole page — a lookup per skin turns a 20-item page into 21 round trips.
 
