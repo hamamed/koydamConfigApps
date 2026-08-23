@@ -56,7 +56,7 @@ directly, and updates are one command with no laptop involved.
 ```bash
 ssh root@YOUR_SERVER_IP
 apt-get update && apt-get install -y git
-git clone https://github.com/YOUR_USER/skincraft-vps.git /srv/skincraft
+git clone https://github.com/hamamed/skincraft.git /srv/skincraft
 ```
 
 A private repo will ask for credentials. Either use a
@@ -67,7 +67,7 @@ a deploy key:
 ssh-keygen -t ed25519 -f /root/.ssh/skincraft_deploy -N ""
 cat /root/.ssh/skincraft_deploy.pub
 # paste into GitHub → repo → Settings → Deploy keys → Add (read-only is enough)
-git clone git@github.com:YOUR_USER/skincraft-vps.git /srv/skincraft
+git clone git@github.com:hamamed/skincraft.git /srv/skincraft
 ```
 
 ### From your Mac

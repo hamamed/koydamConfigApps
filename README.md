@@ -6,9 +6,13 @@ Node + Express · SQLite · sharp · EJS · Bootstrap 5 · Lucide icons.
 
 ---
 
+Repository: <https://github.com/hamamed/skincraft>
+
 ## Quick start
 
 ```bash
+git clone https://github.com/hamamed/skincraft.git skincraft-vps
+cd skincraft-vps
 npm install
 cp .env.example .env         # then edit it — see below
 npm run migrate              # creates the schema + first admin
