@@ -21,6 +21,9 @@ REPOS_DIR=/opt/src
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER=brawl
 
+# Where every panel sends someone who is not signed in.
+PLATFORM_LOGIN_URL=https://config.hamaprojects.com
+
 # Never synced, unless a service overrides it with its own `preserve` key. A
 # deploy that wiped uploads or a database would be a restore from a backup that
 # does not exist.
@@ -71,7 +74,7 @@ done
 [[ -n "$CONF" ]] || die "services.conf not found. Is the repo cloned to $REPOS_DIR?"
 
 declare -a NAMES=()
-declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED PRESERVE
+declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED PRESERVE SSO
 declare -A FETCHED
 
 parse_conf() {
@@ -103,6 +106,7 @@ parse_conf() {
       repo)    REPO[$current]="$value" ;;
       subdir)  SUBDIR[$current]="$value" ;;
       preserve) PRESERVE[$current]="$value" ;;
+      sso)     SSO[$current]="$value" ;;
       target)  TARGET[$current]="$value" ;;
       type)    TYPE[$current]="$value" ;;
       unit)    UNIT[$current]="$value" ;;
@@ -218,6 +222,92 @@ fetch_source() {
 # The overlay is only as current as this checkout. Deploying one service alone
 # must not hand it files from whenever platform was last pulled.
 refresh_overlay_source() { fetch_source platform; }
+
+# ── Single sign-on wiring ───────────────────────────────────────────────────
+#
+# A service reads PLATFORM_URL and SERVICE_TOKEN from its own .env, and .env is
+# never synced - it is the one file that must not come from the repository. So
+# nothing in a git deploy sets these, and without them each service silently
+# falls back to what it did before: SkinCraft to its own login page, Brawl to a
+# 503 on /admin. Both look like the deploy worked.
+#
+# The token is platform-api's. It is read from there rather than generated per
+# service, because introspection only answers callers presenting the same one.
+
+PLATFORM_ENV=/opt/platform-api/.env
+
+env_get() {
+  local file="$1" key="$2"
+  [[ -f "$file" ]] || return 0
+  # Last wins, matching how dotenv reads a file with a repeated key.
+  grep -E "^${key}=" "$file" 2>/dev/null | tail -1 | cut -d= -f2- || true
+}
+
+# Idempotent: replaces the line if the key is present, appends it if not.
+env_set() {
+  local file="$1" key="$2" value="$3"
+
+  if [[ ! -f "$file" ]]; then
+    warn "no .env at $file - skipping $key"
+    return 1
+  fi
+
+  if [[ "$(env_get "$file" "$key")" == "$value" ]]; then
+    return 0
+  fi
+
+  # A backup before touching a secrets file, because this one was lost once.
+  cp -a "$file" "$file.bak"
+
+  if grep -qE "^${key}=" "$file"; then
+    # A token can contain characters sed would read as delimiters, so the value
+    # is passed through the environment rather than interpolated into the
+    # expression.
+    KEY="$key" VALUE="$value" awk '
+      BEGIN { k = ENVIRON["KEY"]; v = ENVIRON["VALUE"] }
+      $0 ~ "^" k "=" { print k "=" v; done = 1; next }
+      { print }
+      END { if (!done) print k "=" v }
+    ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  fi
+
+  chown "$APP_USER:$APP_USER" "$file" 2>/dev/null || true
+  chmod 600 "$file"
+  return 0
+}
+
+link_sso() {
+  local name="$1" slug="${SSO[$name]:-}"
+  [[ -n "$slug" ]] || return 0
+
+  local env_file="${TARGET[$name]}/.env"
+  [[ -f "$env_file" ]] || { warn "$name has no .env - cannot wire single sign-on"; return 0; }
+
+  local token
+  token="$(env_get "$PLATFORM_ENV" SERVICE_TOKEN)"
+  if [[ -z "$token" ]]; then
+    warn "no SERVICE_TOKEN in $PLATFORM_ENV - single sign-on will stay off"
+    return 0
+  fi
+
+  [[ $DRY_RUN -eq 1 ]] && { info "would wire single sign-on for $name"; return 0; }
+
+  local changed=0
+  env_set "$env_file" PLATFORM_URL "$PLATFORM_LOGIN_URL" && changed=1
+  env_set "$env_file" SERVICE_TOKEN "$token" && changed=1
+  env_set "$env_file" PLATFORM_APP_SLUG "$slug" && changed=1
+
+  # The old per-service key is what the panel used before there was one login.
+  # Leaving it set means a URL with ?key=... still works, which is the thing
+  # single sign-on was meant to remove.
+  if [[ -n "$(env_get "$env_file" ADMIN_KEY)" ]]; then
+    warn "$name still has ADMIN_KEY in .env - remove it once sign-in is confirmed working"
+  fi
+
+  ok "single sign-on wired to $PLATFORM_LOGIN_URL"
+}
 
 # ── Overlays ────────────────────────────────────────────────────────────────
 #
@@ -427,6 +517,8 @@ deploy_one() {
   install_deps "$name"
   run_build "$name"
   run_migrations "$name"
+
+  link_sso "$name"
 
   if [[ -n "${OVERLAY[$name]:-}" ]]; then
     # After the sync: rsync --delete would otherwise remove overlay files that

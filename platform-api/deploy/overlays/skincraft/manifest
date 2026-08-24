@@ -7,6 +7,7 @@
 # replaced here rather than forked upstream.
 
 shared/platform-auth.js                      src/middleware/platform-auth.js
+shared/css/bootstrap.min.css                 public/css/bootstrap.min.css
 shared/css/koydam.css                        public/css/koydam.css
 overlays/skincraft/css/admin.css            public/css/admin.css
 overlays/skincraft/src/middleware/auth.js    src/middleware/auth.js
