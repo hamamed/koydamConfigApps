@@ -57,13 +57,18 @@ run() {
 
 # ── The registry ────────────────────────────────────────────────────────────
 
+# Found rather than hardcoded, because this script is normally installed to
+# /opt/deploy.sh - away from the checkout it came from. A source checkout is
+# preferred over the installed copy, so editing services.conf and pulling
+# takes effect on the very next run rather than only after a deploy.
 CONF=""
 for candidate in "$SELF_DIR/services.conf" \
-                 "$REPOS_DIR/platform/deploy/services.conf" \
+                 "$REPOS_DIR"/*/deploy/services.conf \
+                 "$REPOS_DIR"/*/*/deploy/services.conf \
                  /opt/platform-api/deploy/services.conf; do
   [[ -f "$candidate" ]] && { CONF="$candidate"; break; }
 done
-[[ -n "$CONF" ]] || die "services.conf not found."
+[[ -n "$CONF" ]] || die "services.conf not found. Is the repo cloned to $REPOS_DIR?"
 
 declare -a NAMES=()
 declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED PRESERVE
