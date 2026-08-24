@@ -32,6 +32,91 @@ die()  { printf '  %sx%s %s\n' "$RED" "$RESET" "$1" >&2; exit 1; }
 
 human() { numfmt --to=iec --suffix=B "$1" 2>/dev/null || echo "$1 bytes"; }
 
+# ── Offsite ─────────────────────────────────────────────────────────────────
+#
+# A backup on the same disk as the data is not a backup of the disk. This copies
+# the archive somewhere else, configured in /etc/hamaprojects/backup.conf:
+#
+#   OFFSITE_KIND=rsync
+#   OFFSITE_TARGET=backups@other-host:/srv/hamaprojects/
+#   OFFSITE_SSH_KEY=/root/.ssh/backup_ed25519      # optional
+#
+#   OFFSITE_KIND=rclone
+#   OFFSITE_TARGET=b2:my-bucket/hamaprojects       # any rclone remote
+#
+# Absent or OFFSITE_KIND=none means local only, and the script says so rather
+# than staying quiet - "no offsite copy" should be a line you read, not a fact
+# you assume was handled.
+
+OFFSITE_CONF=/etc/hamaprojects/backup.conf
+
+send_offsite() {
+  local archive="$1"
+
+  if [[ ! -f "$OFFSITE_CONF" ]]; then
+    warn "no offsite copy - $OFFSITE_CONF does not exist"
+    return 0
+  fi
+
+  # shellcheck disable=SC1090
+  . "$OFFSITE_CONF"
+
+  local kind="${OFFSITE_KIND:-none}"
+  [[ "$kind" == "none" ]] && { info "offsite disabled in $OFFSITE_CONF"; return 0; }
+
+  if [[ -z "${OFFSITE_TARGET:-}" ]]; then
+    warn "OFFSITE_KIND=$kind but no OFFSITE_TARGET - skipping"
+    return 1
+  fi
+
+  step "Copying offsite"
+
+  case "$kind" in
+    rsync)
+      command -v rsync >/dev/null || { warn "rsync not installed"; return 1; }
+
+      local ssh_opts=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new)
+      [[ -n "${OFFSITE_SSH_KEY:-}" ]] && ssh_opts+=(-i "$OFFSITE_SSH_KEY")
+
+      if rsync -a --timeout=120 -e "ssh ${ssh_opts[*]}" "$archive" "$OFFSITE_TARGET"; then
+        ok "sent to $OFFSITE_TARGET"
+        return 0
+      fi
+      warn "rsync to $OFFSITE_TARGET failed"
+      return 1
+      ;;
+
+    rclone)
+      command -v rclone >/dev/null || { warn "rclone not installed"; return 1; }
+
+      if rclone copy --retries 2 "$archive" "$OFFSITE_TARGET"; then
+        ok "sent to $OFFSITE_TARGET"
+        return 0
+      fi
+      warn "rclone to $OFFSITE_TARGET failed"
+      return 1
+      ;;
+
+    *)
+      warn "unknown OFFSITE_KIND '$kind' - expected rsync, rclone or none"
+      return 1
+      ;;
+  esac
+}
+
+# ── Telling someone ─────────────────────────────────────────────────────────
+#
+# Through the panel's own alert destinations rather than a URL configured here,
+# so there is one place to change where alerts go.
+
+alert() {
+  local message="$1"
+  [[ -x /usr/bin/node || -x /usr/local/bin/node ]] || return 0
+  [[ -d /opt/platform-api ]] || return 0
+
+  (cd /opt/platform-api && node src/scripts/notify.js "$message") >/dev/null 2>&1 || true
+}
+
 cmd_list() {
   step "Backups in $BACKUP_DIR"
   if ! compgen -G "$BACKUP_DIR/*.tar.gz" >/dev/null 2>&1; then
@@ -112,6 +197,7 @@ if command -v pg_dump >/dev/null 2>&1; then
     if sudo -u postgres pg_dump --no-owner --no-acl "$db" > "$WORK/$db-postgres.sql" 2>/dev/null; then
       ok "postgres/$db  $(human "$(stat -c %s "$WORK/$db-postgres.sql")")"
     else
+      alert "Backup FAILED on hamaprojects: pg_dump of '$db' returned an error. No archive was written."
       die "pg_dump of '$db' failed - stopping rather than writing a backup without it"
     fi
   done
@@ -159,7 +245,10 @@ ok "$ARCHIVE"
 ok "$(human "$(stat -c %s "$ARCHIVE")")"
 
 # Read it back before trusting it.
-gzip -t "$ARCHIVE" || die "archive verified as CORRUPT - do not rely on it"
+if ! gzip -t "$ARCHIVE"; then
+  alert "Backup FAILED on hamaprojects: the archive it just wrote is corrupt."
+  die "archive verified as CORRUPT - do not rely on it"
+fi
 ok "verified readable"
 
 if ! tar tzf "$ARCHIVE" | grep -q 'brawl-postgres.sql'; then
@@ -167,6 +256,12 @@ if ! tar tzf "$ARCHIVE" | grep -q 'brawl-postgres.sql'; then
 fi
 
 # ── Rotation ────────────────────────────────────────────────────────────────
+
+if ! send_offsite "$ARCHIVE"; then
+  # The local archive is fine; what failed is the copy that survives this disk.
+  # Worth an alert precisely because everything looks healthy from here.
+  alert "Backup WARNING on hamaprojects: the local archive was written but the offsite copy failed."
+fi
 
 mapfile -t old < <(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null | tail -n +$((KEEP + 1)))
 if [[ ${#old[@]} -gt 0 ]]; then

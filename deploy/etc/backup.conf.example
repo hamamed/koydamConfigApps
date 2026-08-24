@@ -1,0 +1,30 @@
+# Where the nightly archive is copied, beyond this disk.
+#
+# Install to /etc/hamaprojects/backup.conf and chmod 600 - it can name a host
+# and a key path, and on some setups a bucket credential.
+#
+# A backup that only exists on the volume it protects is not a backup of that
+# volume. This is the line between an inconvenience and starting over.
+
+# ── Option 1: another machine over SSH ──────────────────────────────────────
+#
+# Set up once:
+#   ssh-keygen -t ed25519 -f /root/.ssh/backup_ed25519 -N ""
+#   ssh-copy-id -i /root/.ssh/backup_ed25519.pub backups@other-host
+#
+# Prefer a key that can only write to the backup directory on that host.
+
+OFFSITE_KIND=none
+# OFFSITE_KIND=rsync
+# OFFSITE_TARGET=backups@other-host:/srv/hamaprojects/
+# OFFSITE_SSH_KEY=/root/.ssh/backup_ed25519
+
+# ── Option 2: object storage via rclone ─────────────────────────────────────
+#
+# Works with Backblaze B2, Cloudflare R2, S3, Storj and the rest.
+#   apt install rclone && rclone config
+#
+# Cheapest for this: B2 or R2, where a few GB costs pennies a month.
+
+# OFFSITE_KIND=rclone
+# OFFSITE_TARGET=b2:my-bucket/hamaprojects
