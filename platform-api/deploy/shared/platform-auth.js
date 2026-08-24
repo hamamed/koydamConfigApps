@@ -77,9 +77,11 @@ function sweep() {
  */
 async function introspect(sid) {
   const hit = cache.get(sid);
-  if (hit && hit.expires > Date.now()) return hit.user;
+  if (hit && hit.expires > Date.now()) {
+    return hit.user ? { state: 'active', user: hit.user } : { state: 'inactive' };
+  }
 
-  if (!PLATFORM_URL || !SERVICE_TOKEN) return null;
+  if (!PLATFORM_URL || !SERVICE_TOKEN) return { state: 'misconfigured' };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -95,7 +97,14 @@ async function introspect(sid) {
       body: JSON.stringify({ sid }),
     });
 
-    if (!res.ok) return null;
+    if (res.status === 401) {
+      // The token this service holds is not the one platform-api expects.
+      // Reported as its own state: treating it as "not signed in" sends the
+      // browser to a login that immediately sends it back, forever.
+      return { state: 'misconfigured' };
+    }
+
+    if (!res.ok) return { state: 'unreachable' };
 
     const body = await res.json();
     const user = body.active ? body.user : null;
@@ -103,9 +112,10 @@ async function introspect(sid) {
     if (cache.size > 500) sweep();
     cache.set(sid, { user, expires: Date.now() + CACHE_MS });
 
-    return user;
+    return user ? { state: 'active', user } : { state: 'inactive' };
   } catch {
-    return null;
+    // Timeout, DNS failure, connection refused. Not a signed-out user.
+    return { state: 'unreachable' };
   } finally {
     clearTimeout(timer);
   }
@@ -136,14 +146,45 @@ export function requirePlatformAuth() {
     }
 
     const sid = readCookie(req, COOKIE);
-    const user = sid ? await introspect(sid) : null;
+    const result = sid ? await introspect(sid) : { state: 'inactive' };
 
-    if (!user) {
-      const back = encodeURIComponent(
+    if (result.state === 'misconfigured') {
+      return res.status(500).send(
+        'This service could not verify your session: platform-api rejected ' +
+          'its SERVICE_TOKEN. Both must hold the same value. Run ' +
+          '`sudo /opt/deploy.sh` to copy it across.',
+      );
+    }
+
+    if (result.state === 'unreachable') {
+      return res.status(503).send(
+        'Could not reach the sign-in service to verify your session. ' +
+          'Try again in a moment.',
+      );
+    }
+
+    if (result.state !== 'active') {
+      // Loop guard. Arriving back from the login still unauthenticated means
+      // the two sides disagree about the session, and bouncing again repeats
+      // until the browser gives up with a redirect error that says nothing
+      // about the cause.
+      if (req.query.sso === '1') {
+        return res.status(401).send(
+          'Signed in at the platform, but this service cannot see the ' +
+            'session. Check that COOKIE_DOMAIN on platform-api covers this ' +
+            'domain, then sign in again.',
+        );
+      }
+
+      const here = new URL(
         `${req.protocol}://${req.get('host')}${req.originalUrl}`,
       );
+      here.searchParams.set('sso', '1');
+      const back = encodeURIComponent(here.toString());
       return res.redirect(`${PLATFORM_URL}/login?next=${back}`);
     }
+
+    const user = result.user;
 
     if (!permitted(user)) {
       return res
@@ -162,5 +203,12 @@ export function requirePlatformAuth() {
 /** Resolves the current user without enforcing anything. */
 export async function platformUser(req) {
   const sid = readCookie(req, COOKIE);
-  return sid ? introspect(sid) : null;
+  if (!sid) return null;
+
+  // Callers of this one only ask "who is this, if anyone" — they have no
+  // branch for why nobody. introspect's states collapse back to a user or
+  // null here, so a token mismatch reads as signed out rather than throwing
+  // an object at code expecting a user.
+  const result = await introspect(sid);
+  return result.state === 'active' ? result.user : null;
 }
