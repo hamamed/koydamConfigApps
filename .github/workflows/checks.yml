@@ -1,0 +1,183 @@
+name: checks
+
+# Every push and every pull request. Deploying pulls this repository directly,
+# so a syntax error here reaches production the moment someone runs deploy.sh -
+# there is no build step in between to fail first.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Syntax ────────────────────────────────────────────────────────────
+      #
+      # `node --check` parses without executing, so this needs no dependencies
+      # and covers every service in one pass. It is the cheapest check here and
+      # catches the failure that would otherwise be discovered as a blank panel.
+
+      - name: JavaScript parses
+        run: |
+          fail=0
+          count=0
+          while IFS= read -r f; do
+            count=$((count + 1))
+            node --check "$f" || { echo "::error file=$f::syntax error"; fail=1; }
+          done < <(find . -name '*.js' \
+                     -not -path '*/node_modules/*' \
+                     -not -path '*/.git/*')
+          echo "checked $count files"
+          exit $fail
+
+      - name: Shell scripts parse
+        run: |
+          fail=0
+          count=0
+          while IFS= read -r f; do
+            count=$((count + 1))
+            bash -n "$f" || { echo "::error file=$f::syntax error"; fail=1; }
+          done < <(find . -name '*.sh' -not -path '*/node_modules/*')
+          echo "checked $count scripts"
+          exit $fail
+
+      # A CRLF shebang fails as "bad interpreter", which reads as a missing
+      # file and has cost real debugging time. .gitattributes pins it; this is
+      # what proves the pin is working.
+      - name: Shell scripts are LF
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if grep -qU $'\r' "$f"; then
+              echo "::error file=$f::contains CRLF; must be LF"
+              fail=1
+            fi
+          done < <(find . -name '*.sh' -not -path '*/node_modules/*')
+          exit $fail
+
+      # ── Migrations ────────────────────────────────────────────────────────
+      #
+      # Run against a real Postgres rather than parsed, because the mistakes
+      # that matter are semantic: a non-IMMUTABLE index expression, a foreign
+      # key to a table created later. Both parse fine and fail on the box.
+
+      - name: Migrations apply to a real Postgres
+        run: |
+          docker run -d --name pg \
+            -e POSTGRES_PASSWORD=test -e POSTGRES_DB=platform \
+            -p 5432:5432 postgres:16-alpine
+
+          for i in $(seq 1 30); do
+            docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+          for f in platform-api/src/db/migrations/*.sql; do
+            echo "-- $f"
+            docker exec -i pg psql -v ON_ERROR_STOP=1 -U postgres -d platform < "$f"
+          done
+
+          # Twice: every migration here is written to be re-runnable, and a
+          # deploy runs all of them on every boot.
+          echo "-- re-running, must be idempotent"
+          for f in platform-api/src/db/migrations/*.sql; do
+            docker exec -i pg psql -v ON_ERROR_STOP=1 -U postgres -d platform < "$f"
+          done
+
+      # ── Overlays ──────────────────────────────────────────────────────────
+      #
+      # The manifests name files copied into the other services on deploy. A
+      # missing source is a warning at deploy time and a panel that renders
+      # unstyled afterwards, so it is an error here instead.
+
+      - name: Overlay manifests resolve
+        working-directory: platform-api/deploy
+        run: |
+          fail=0
+          for m in overlays/*/manifest; do
+            while read -r src dest; do
+              [ -z "$src" ] && continue
+              case "$src" in \#*) continue;; esac
+              if [ ! -f "$src" ]; then
+                echo "::error file=$m::missing source $src"
+                fail=1
+              fi
+              [ -z "$dest" ] && { echo "::error file=$m::$src has no destination"; fail=1; }
+            done < "$m"
+          done
+          exit $fail
+
+      - name: services.conf is valid
+        run: |
+          # deploy.sh validates the registry and exits non-zero on a bad block;
+          # `list` is the subcommand that does it without touching anything.
+          platform-api/deploy/deploy.sh list
+
+      # ── Panel ─────────────────────────────────────────────────────────────
+
+      # A style attribute cannot be allowed by a hash or a nonce, so one that
+      # slips into the markup is silently dropped by the CSP and the element
+      # renders unstyled.
+      - name: No inline styles in panel markup
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if grep -q 'style="' "$f"; then
+              echo "::error file=$f::inline style attribute; the CSP blocks these"
+              fail=1
+            fi
+          done < <(find . -path '*/panel/*.html' -not -path '*/node_modules/*')
+          exit $fail
+
+      # Every class the panels use must exist in the stylesheet they load. A
+      # missing one is invisible until someone looks at that screen.
+      - name: Panel classes are defined
+        run: |
+          fail=0
+          css="platform-api/deploy/shared/css"
+          for f in platform-api/src/panel/*.html brawl-vps/src/panel/*.html; do
+            [ -f "$f" ] || continue
+            for c in $(grep -oE '\b(ad|kd)-[a-z0-9-]+' "$f" | sort -u); do
+              grep -qh "\.$c\b" "$css/admin.css" "$css/koydam.css" || {
+                echo "::error file=$f::.$c is used but not defined"
+                fail=1
+              }
+            done
+          done
+          exit $fail
+
+      # ── Secrets ───────────────────────────────────────────────────────────
+
+      - name: No secrets committed
+        run: |
+          fail=0
+          if git ls-files | grep -E '(^|/)\.env$'; then
+            echo "::error::a .env file is committed"
+            fail=1
+          fi
+          if git ls-files | grep -q node_modules; then
+            echo "::error::node_modules is committed"
+            fail=1
+          fi
+          # A real AdMob publisher id in the source. Excluded: Google's own test
+          # publisher, which is meant to be here, and the placeholders used in
+          # error messages and documentation. A lookahead is not available -
+          # git grep -E is POSIX, so the filtering happens after the match.
+          live=$(
+            git grep -ohE 'ca-app-pub-[0-9]{16}' -- '*.js' '*.dart' 2>/dev/null |
+            sort -u |
+            grep -vE '3940256099942544|0{16}|1234567890123456' || true
+          )
+          if [ -n "$live" ]; then
+            echo "::warning::a live AdMob publisher id appears in source: $live"
+            echo "these belong in the panel, not in a compiled-in constant"
+          fi
+          exit $fail
