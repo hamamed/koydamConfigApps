@@ -325,6 +325,29 @@ sync_files() {
   fi
   for p in "${keep[@]}"; do args+=(--exclude "$p"); done
 
+  if [[ $DRY_RUN -eq 1 ]]; then
+    # rsync's own dry run, not a printed command. On a first deploy over an
+    # install that was built from uploads, what matters is which files are
+    # about to be deleted because they are not in the repository - and only
+    # rsync can answer that.
+    local out
+    out=$(rsync "${args[@]}" --dry-run --itemize-changes "$src"/ "$target"/ 2>&1 || true)
+
+    local added deleted changed
+    added=$(grep -c "^>f+++++++" <<< "$out" || true)
+    deleted=$(grep -c "^\*deleting" <<< "$out" || true)
+    changed=$(grep -cE "^>f[^+]" <<< "$out" || true)
+
+    info "would add $added, update $changed, delete $deleted"
+
+    if [[ "$deleted" -gt 0 ]]; then
+      warn "these exist on the server but not in the repository:"
+      grep "^\*deleting" <<< "$out" | sed 's/^\*deleting  */      /' | head -40
+      [[ "$deleted" -gt 40 ]] && info "      ... and $((deleted - 40)) more"
+    fi
+    return 0
+  fi
+
   run rsync "${args[@]}" "$src"/ "$target"/
   run chown -R "$APP_USER:$APP_USER" "$target"
   ok "files synced"
