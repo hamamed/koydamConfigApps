@@ -12,7 +12,8 @@
     "dev": "node --watch src/server.js",
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
-    "reset-password": "node src/scripts/reset-password.js"
+    "reset-password": "node src/scripts/reset-password.js",
+    "notify": "node src/scripts/notify.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
