@@ -21,9 +21,14 @@ REPOS_DIR=/opt/src
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_USER=brawl
 
-# Never synced. A deploy that wiped uploads or a database would be a restore
-# from a backup that does not exist.
-PRESERVE=(node_modules .git .env data storage wallpapers uploads)
+# Never synced, unless a service overrides it with its own `preserve` key. A
+# deploy that wiped uploads or a database would be a restore from a backup that
+# does not exist.
+#
+# A whole directory is the blunt default and it is not always right: a service
+# can keep hand-maintained source beside generated state in the same folder, in
+# which case it must name the generated file instead of the directory.
+PRESERVE_DEFAULT=(node_modules .git .env data storage wallpapers uploads)
 
 DRY_RUN=0
 
@@ -61,7 +66,7 @@ done
 [[ -n "$CONF" ]] || die "services.conf not found."
 
 declare -a NAMES=()
-declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED
+declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED PRESERVE
 declare -A FETCHED
 
 parse_conf() {
@@ -92,6 +97,7 @@ parse_conf() {
     case "$key" in
       repo)    REPO[$current]="$value" ;;
       subdir)  SUBDIR[$current]="$value" ;;
+      preserve) PRESERVE[$current]="$value" ;;
       target)  TARGET[$current]="$value" ;;
       type)    TYPE[$current]="$value" ;;
       unit)    UNIT[$current]="$value" ;;
@@ -304,8 +310,15 @@ sync_files() {
   target="${TARGET[$name]}"
 
   [[ -d "$src" ]] || die "$name: ${SUBDIR[$name]:-.} does not exist in the repository"
-  local args=(-a --delete)
-  for p in "${PRESERVE[@]}"; do args+=(--exclude "$p"); done
+  local args=(-a --delete) keep
+  # A service's own list replaces the default rather than adding to it, so what
+  # is preserved is stated in one place and readable at a glance.
+  if [[ -n "${PRESERVE[$name]:-}" ]]; then
+    read -r -a keep <<< "${PRESERVE[$name]}"
+  else
+    keep=("${PRESERVE_DEFAULT[@]}")
+  fi
+  for p in "${keep[@]}"; do args+=(--exclude "$p"); done
 
   run rsync "${args[@]}" "$src"/ "$target"/
   run chown -R "$APP_USER:$APP_USER" "$target"
