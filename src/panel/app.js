@@ -149,6 +149,41 @@ function statusDot(ok) {
 
 // ── Views ───────────────────────────────────────────────────────────────────
 
+/**
+ * The age of the newest backup, fetched after the page has drawn.
+ *
+ * Its own request rather than part of the overview, because it reads the
+ * filesystem and the dashboard should not wait on that. Only admins can ask;
+ * for anyone else the line simply stays empty.
+ */
+async function loadBackupStatus(target) {
+  try {
+    const s = await api('/api/backups');
+
+    const badge = el('span', 'ad-backup' + (s.stale ? ' stale' : ''));
+    badge.append(icon(s.stale ? 'circle-alert' : 'circle-check', 14));
+
+    if (!s.configured) {
+      badge.append(el('span', null, 'No backups have ever run'));
+    } else if (!s.latest) {
+      badge.append(el('span', null, 'Backup directory is empty'));
+    } else {
+      const age = s.ageHours < 1
+        ? 'less than an hour ago'
+        : s.ageHours < 48
+          ? Math.round(s.ageHours) + 'h ago'
+          : Math.round(s.ageHours / 24) + ' days ago';
+      badge.append(el('span', null, `Last backup ${age} · ${s.count} kept`));
+    }
+
+    target.replaceChildren(badge);
+  } catch {
+    // Not an admin, or the endpoint is unavailable. Neither is worth an error
+    // on a dashboard whose other panels loaded fine.
+    target.replaceChildren();
+  }
+}
+
 function viewHome() {
   const root = el('div');
 
@@ -163,6 +198,11 @@ function viewHome() {
     ['Services down', fmt(down), down ? 'circle-alert' : 'circle-check'],
   ];
 
+  // Filled in after the tiles render: the dashboard should not wait on a
+  // filesystem read, and a missing answer is not worth blocking on.
+  const backupLine = el('div', 'mb-3');
+  loadBackupStatus(backupLine);
+
   for (const [label, value, ic] of tiles) {
     const col = el('div', 'col-6 col-xl-3');
     const c = el('div', 'ad-card ad-kpi');
@@ -173,7 +213,7 @@ function viewHome() {
     col.append(c);
     kpis.append(col);
   }
-  root.append(kpis, el('div', 'mb-3'));
+  root.append(kpis, backupLine);
 
   // Apps
   const appsCard = card('Apps', 'layout-grid');
@@ -309,11 +349,26 @@ function platformCard(detail, platform) {
     return box;
   };
   const ads = mkToggle('Ads enabled', existing.adsEnabled ?? true);
+  const testAds = mkToggle('Test ads', existing.testAds ?? false);
   const maint = mkToggle('Maintenance mode', existing.maintenance ?? false);
   c.body.append(toggles);
 
+  c.body.append(
+    el(
+      'p',
+      'kd-faint small mb-0',
+      'Test ads serve Google’s own units instead of yours: the layout is ' +
+        'exercised and nothing is earned. The setting to use while a build is ' +
+        'in review, where a live advert risks a policy strike.',
+    ),
+  );
+
   const maintMsg = labelledInput('Maintenance message', existing.maintenanceMessage, 'Back shortly…', ro);
   c.body.append(maintMsg.wrap);
+
+  const preview = el('a', 'btn btn-sm btn-outline-secondary mt-3', 'Preview what the app receives');
+  preview.href = `#/preview/${detail.slug}/${platform}`;
+  c.body.append(preview);
 
   // ── Ad units ──
   c.body.append(el('div', 'ad-section-label mt-3', 'Ad units'));
@@ -419,6 +474,7 @@ function platformCard(detail, platform) {
             latestVersion: latest.value.trim() || null,
             minSupportedVersion: minVer.value.trim() || null,
             adsEnabled: ads.checked,
+            testAds: testAds.checked,
             maintenance: maint.checked,
             maintenanceMessage: maintMsg.input.value.trim() || null,
           }),
@@ -754,9 +810,419 @@ async function grantDialog(user) {
   }
 }
 
+// ── Config preview ──────────────────────────────────────────────────────────
+
+/**
+ * What the app will actually receive.
+ *
+ * The editor above changes rows in four tables; this is the one document they
+ * add up to. Reading it back is the difference between "I set the field" and
+ * "the app will see it".
+ */
+async function viewPreview(slug, platform) {
+  const wrap = el('div');
+  const { card: c, body } = card(`Preview — ${platform}`, 'scroll-text');
+
+  body.append(el('div', 'ad-loading kd-faint small', 'Loading…'));
+  wrap.append(c);
+
+  try {
+    const data = await api(`/api/apps/${slug}/preview/${platform}`);
+    body.replaceChildren();
+
+    for (const w of data.warnings ?? []) {
+      const note = el('div', 'ad-warn d-flex align-items-start gap-2 mb-2');
+      note.append(icon('circle-alert', 15));
+      note.append(el('span', null, w));
+      body.append(note);
+    }
+
+    const url = el('div', 'kd-faint small mb-2');
+    url.append(el('span', null, 'GET '), el('code', null, data.url));
+    body.append(url);
+
+    const pre = el('pre', 'ad-json');
+    pre.textContent = JSON.stringify(data.config, null, 2);
+    body.append(pre);
+
+    const copy = el('button', 'btn btn-sm btn-outline-secondary mt-2', 'Copy JSON');
+    copy.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(data.config, null, 2));
+        toast('Copied');
+      } catch {
+        // Clipboard access is refused in some contexts; selecting the text is
+        // still possible, so this is a note rather than a failure.
+        toast('Select the text and copy manually', 'err');
+      }
+    });
+    body.append(copy);
+  } catch (err) {
+    body.replaceChildren(el('div', 'ad-empty', err.message));
+  }
+
+  return wrap;
+}
+
+// ── Schedule ────────────────────────────────────────────────────────────────
+
+async function viewSchedule() {
+  const wrap = el('div');
+  const { schedule } = await api('/api/schedule');
+
+  const pending = schedule.filter((s) => !s.applied_at);
+  const done = schedule.filter((s) => s.applied_at);
+
+  // ── New ──
+  const { card: form, body: fb } = card('Schedule a change', 'history');
+
+  const grid = el('div', 'row g-2');
+
+  const appSel = el('select', 'form-select form-select-sm');
+  for (const a of overview.apps) {
+    const o = el('option', null, a.name);
+    o.value = a.slug;
+    appSel.append(o);
+  }
+
+  const platSel = el('select', 'form-select form-select-sm');
+  for (const p of ['ios', 'android']) {
+    const o = el('option', null, p);
+    o.value = p;
+    platSel.append(o);
+  }
+
+  const whatSel = el('select', 'form-select form-select-sm');
+  for (const [value, label] of [
+    ['ads-off', 'Turn ads OFF'],
+    ['ads-on', 'Turn ads ON'],
+    ['test-on', 'Test ads ON'],
+    ['test-off', 'Test ads OFF'],
+    ['maint-on', 'Maintenance ON'],
+    ['maint-off', 'Maintenance OFF'],
+  ]) {
+    const o = el('option', null, label);
+    o.value = value;
+    whatSel.append(o);
+  }
+
+  const when = el('input', 'form-control form-control-sm');
+  when.type = 'datetime-local';
+
+  const note = el('input', 'form-control form-control-sm');
+  note.placeholder = 'Why (optional)';
+
+  for (const [label, control] of [
+    ['App', appSel],
+    ['Platform', platSel],
+    ['Change', whatSel],
+    ['When', when],
+    ['Note', note],
+  ]) {
+    const col = el('div', 'col-12 col-md');
+    col.append(el('label', 'form-label small kd-faint', label), control);
+    grid.append(col);
+  }
+
+  fb.append(grid);
+
+  const add = el('button', 'btn btn-sm btn-primary mt-2', 'Schedule');
+  add.addEventListener('click', async () => {
+    const map = {
+      'ads-off': { adsEnabled: false },
+      'ads-on': { adsEnabled: true },
+      'test-on': { testAds: true },
+      'test-off': { testAds: false },
+      'maint-on': { maintenance: true },
+      'maint-off': { maintenance: false },
+    };
+
+    if (!when.value) return toast('Pick a time', 'err');
+
+    add.disabled = true;
+    try {
+      await api('/api/schedule', {
+        method: 'POST',
+        body: JSON.stringify({
+          appSlug: appSel.value,
+          platform: platSel.value,
+          kind: 'platform',
+          // datetime-local has no zone; the browser's own offset is what the
+          // person filling it in meant.
+          runAt: new Date(when.value).toISOString(),
+          payload: map[whatSel.value],
+          note: note.value || null,
+        }),
+      });
+      toast('Scheduled');
+      route();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      add.disabled = false;
+    }
+  });
+  fb.append(add);
+  wrap.append(form);
+
+  // ── Pending ──
+  const { card: p, body: pb } = card('Pending', 'refresh-cw');
+  pb.append(
+    table(
+      ['When', 'App', 'Change', 'By', ''],
+      pending.map((s) => {
+        const cancel = el('button', 'btn btn-sm btn-outline-danger', 'Cancel');
+        cancel.addEventListener('click', async () => {
+          try {
+            await api('/api/schedule/' + s.id, { method: 'DELETE' });
+            toast('Cancelled');
+            route();
+          } catch (err) {
+            toast(err.message, 'err');
+          }
+        });
+
+        return [
+          new Date(s.run_at).toLocaleString(),
+          s.app_slug + (s.platform ? ' · ' + s.platform : ''),
+          describeChange(s),
+          { text: s.created_by ?? '—', className: 'kd-faint small' },
+          cancel,
+        ];
+      }),
+    ),
+  );
+  wrap.append(p);
+
+  // ── History ──
+  if (done.length) {
+    const { card: h, body: hb } = card('Already applied', 'circle-check');
+    hb.append(
+      table(
+        ['When', 'App', 'Change', 'Result'],
+        done.slice(0, 20).map((s) => [
+          new Date(s.applied_at).toLocaleString(),
+          s.app_slug + (s.platform ? ' · ' + s.platform : ''),
+          describeChange(s),
+          s.error
+            ? { text: s.error, className: 'text-danger small' }
+            : { text: 'applied', className: 'kd-faint small' },
+        ]),
+      ),
+    );
+    wrap.append(h);
+  }
+
+  return wrap;
+}
+
+/** A schedule row in words rather than JSON. */
+function describeChange(s) {
+  const p = s.payload ?? {};
+  if (s.kind === 'flag') return `flag ${p.key} = ${JSON.stringify(p.value)}`;
+
+  const parts = [];
+  if ('adsEnabled' in p) parts.push(p.adsEnabled ? 'ads on' : 'ads off');
+  if ('testAds' in p) parts.push(p.testAds ? 'test ads on' : 'test ads off');
+  if ('maintenance' in p) parts.push(p.maintenance ? 'maintenance on' : 'maintenance off');
+  return parts.join(', ') || JSON.stringify(p);
+}
+
+// ── Alerts ──────────────────────────────────────────────────────────────────
+
+async function viewAlerts() {
+  const wrap = el('div');
+  const { alerts } = await api('/api/alerts');
+
+  const { card: c, body } = card('Where outage alerts go', 'circle-alert');
+
+  body.append(
+    el(
+      'p',
+      'kd-faint small',
+      'A message is sent when a service changes state — down, and again when ' +
+        'it recovers. A service that stays down is one message, not one a minute.',
+    ),
+  );
+
+  body.append(
+    table(
+      ['Type', 'Chat', 'Last sent', 'Last error', ''],
+      alerts.map((a) => {
+        const del = el('button', 'btn btn-sm btn-outline-danger', 'Remove');
+        del.addEventListener('click', async () => {
+          try {
+            await api('/api/alerts/' + a.id, { method: 'DELETE' });
+            toast('Removed');
+            route();
+          } catch (err) {
+            toast(err.message, 'err');
+          }
+        });
+
+        return [
+          a.kind,
+          { text: a.chat_id ?? '—', className: 'kd-faint small' },
+          { text: ago(a.last_sent_at), className: 'kd-faint small' },
+          a.last_error
+            ? { text: a.last_error, className: 'text-danger small' }
+            : { text: '—', className: 'kd-faint small' },
+          del,
+        ];
+      }),
+    ),
+  );
+
+  // ── Add ──
+  const row = el('div', 'row g-2 mt-2');
+
+  const kind = el('select', 'form-select form-select-sm');
+  for (const [v, l] of [['webhook', 'Webhook (Slack / Discord)'], ['telegram', 'Telegram']]) {
+    const o = el('option', null, l);
+    o.value = v;
+    kind.append(o);
+  }
+
+  const target = el('input', 'form-control form-control-sm');
+  target.placeholder = 'https://hooks.slack.com/… or a Telegram bot token';
+
+  const chat = el('input', 'form-control form-control-sm');
+  chat.placeholder = 'Telegram chat id';
+
+  for (const [label, control] of [['Type', kind], ['Target', target], ['Chat id', chat]]) {
+    const col = el('div', 'col-12 col-md');
+    col.append(el('label', 'form-label small kd-faint', label), control);
+    row.append(col);
+  }
+  body.append(row);
+
+  const buttons = el('div', 'd-flex gap-2 mt-2');
+
+  const add = el('button', 'btn btn-sm btn-primary', 'Add');
+  add.addEventListener('click', async () => {
+    add.disabled = true;
+    try {
+      await api('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: kind.value,
+          target: target.value.trim(),
+          chatId: chat.value.trim() || null,
+        }),
+      });
+      toast('Added');
+      route();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      add.disabled = false;
+    }
+  });
+
+  const test = el('button', 'btn btn-sm btn-outline-secondary', 'Send a test');
+  test.addEventListener('click', async () => {
+    test.disabled = true;
+    try {
+      const r = await api('/api/alerts/test', { method: 'POST' });
+      toast(
+        r.delivered
+          ? `Delivered to ${r.delivered} destination(s)`
+          : 'Nothing was delivered — check the errors above',
+        r.delivered ? 'ok' : 'err',
+      );
+      route();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      test.disabled = false;
+    }
+  });
+
+  buttons.append(add, test);
+  body.append(buttons);
+  wrap.append(c);
+
+  return wrap;
+}
+
+// ── Account ─────────────────────────────────────────────────────────────────
+
+async function viewAccount() {
+  const wrap = el('div');
+  const { card: c, body } = card('Change your password', 'shield');
+
+  const current = el('input', 'form-control form-control-sm');
+  current.type = 'password';
+  current.autocomplete = 'current-password';
+
+  const next = el('input', 'form-control form-control-sm');
+  next.type = 'password';
+  next.autocomplete = 'new-password';
+
+  const again = el('input', 'form-control form-control-sm');
+  again.type = 'password';
+  again.autocomplete = 'new-password';
+
+  const row = el('div', 'row g-2');
+  for (const [label, control] of [
+    ['Current password', current],
+    ['New password', next],
+    ['Repeat it', again],
+  ]) {
+    const col = el('div', 'col-12 col-md-4');
+    col.append(el('label', 'form-label small kd-faint', label), control);
+    row.append(col);
+  }
+  body.append(row);
+
+  body.append(
+    el(
+      'p',
+      'kd-faint small mt-2 mb-0',
+      'At least 10 characters. Changing it signs out your other sessions.',
+    ),
+  );
+
+  const save = el('button', 'btn btn-sm btn-primary mt-2', 'Change password');
+  save.addEventListener('click', async () => {
+    if (next.value !== again.value) return toast('The two new passwords differ', 'err');
+    if (next.value.length < 10) return toast('At least 10 characters', 'err');
+
+    save.disabled = true;
+    try {
+      const r = await api('/api/me/password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: current.value, newPassword: next.value }),
+      });
+      toast(
+        r.signedOutOtherSessions
+          ? `Changed. Signed out ${r.signedOutOtherSessions} other session(s).`
+          : 'Changed.',
+      );
+      current.value = next.value = again.value = '';
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      save.disabled = false;
+    }
+  });
+  body.append(save);
+
+  wrap.append(c);
+  return wrap;
+}
+
 // ── Routing ─────────────────────────────────────────────────────────────────
 
-const TITLES = { home: 'Dashboard', services: 'Services', audit: 'Audit log', users: 'Team' };
+const TITLES = {
+  home: 'Dashboard',
+  services: 'Services',
+  audit: 'Audit log',
+  users: 'Team',
+  schedule: 'Scheduled changes',
+  alerts: 'Alerts',
+  account: 'Your account',
+};
 
 async function route() {
   const hash = location.hash.replace(/^#/, '') || '/';
@@ -772,6 +1238,19 @@ async function route() {
       const slug = decodeURIComponent(hash.slice(5));
       $('pageTitle').textContent = slug;
       view.replaceChildren(await viewApp(slug));
+    } else if (hash.startsWith('/preview/')) {
+      const [, , slug, platform] = hash.split('/');
+      $('pageTitle').textContent = slug + ' preview';
+      view.replaceChildren(await viewPreview(slug, platform));
+    } else if (hash === '/schedule') {
+      $('pageTitle').textContent = TITLES.schedule;
+      view.replaceChildren(await viewSchedule());
+    } else if (hash === '/alerts') {
+      $('pageTitle').textContent = TITLES.alerts;
+      view.replaceChildren(await viewAlerts());
+    } else if (hash === '/account') {
+      $('pageTitle').textContent = TITLES.account;
+      view.replaceChildren(await viewAccount());
     } else if (hash === '/services') {
       $('pageTitle').textContent = TITLES.services;
       view.replaceChildren(await viewServices());

@@ -1,3 +1,4 @@
+import { applyTestUnits, testAppId } from '../ads.js';
 import { query } from './pool.js';
 
 /**
@@ -21,7 +22,7 @@ export async function appConfig(slug, platform) {
     `SELECT a.slug, a.name,
             p.bundle_id, p.store_url, p.admob_app_id, p.ads_enabled,
             p.latest_version, p.min_supported_version,
-            p.maintenance, p.maintenance_message
+            p.maintenance, p.maintenance_message, p.test_ads
        FROM apps a
        JOIN app_platforms p ON p.app_slug = a.slug
       WHERE a.slug = $1 AND p.platform = $2`,
@@ -46,8 +47,13 @@ export async function appConfig(slug, platform) {
       // handles "this one placement is a problem"; this one handles "stop all
       // of it, now", which is the response to an AdMob policy warning.
       enabled: row.ads_enabled && Boolean(row.admob_app_id),
-      admobAppId: row.admob_app_id,
-      units,
+      // In test mode the client is handed Google's units instead of the real
+      // ones. Substituted here rather than in the app, so a review build can be
+      // switched over without a release - and so it shows up in the payload the
+      // panel previews rather than hiding in client logic.
+      testMode: row.test_ads,
+      admobAppId: row.test_ads ? testAppId(platform) : row.admob_app_id,
+      units: row.test_ads ? applyTestUnits(units, platform) : units,
       pacing,
     },
     update: {
@@ -118,7 +124,8 @@ export async function listApps() {
                 'latestVersion', p.latest_version,
                 'minSupportedVersion', p.min_supported_version,
                 'maintenance', p.maintenance,
-                'maintenanceMessage', p.maintenance_message
+                'maintenanceMessage', p.maintenance_message,
+                'testAds', p.test_ads
               ) ORDER BY p.platform
             ) FILTER (WHERE p.platform IS NOT NULL), '[]') AS platforms
        FROM apps a
@@ -174,8 +181,9 @@ export async function upsertPlatform(slug, platform, fields) {
   const res = await query(
     `INSERT INTO app_platforms (
        app_slug, platform, bundle_id, store_url, admob_app_id, ads_enabled,
-       latest_version, min_supported_version, maintenance, maintenance_message
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       latest_version, min_supported_version, maintenance, maintenance_message,
+       test_ads
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
      ON CONFLICT (app_slug, platform) DO UPDATE SET
        bundle_id             = EXCLUDED.bundle_id,
        store_url             = EXCLUDED.store_url,
@@ -185,6 +193,7 @@ export async function upsertPlatform(slug, platform, fields) {
        min_supported_version = EXCLUDED.min_supported_version,
        maintenance           = EXCLUDED.maintenance,
        maintenance_message   = EXCLUDED.maintenance_message,
+       test_ads              = EXCLUDED.test_ads,
        updated_at            = now()`,
     [
       slug,
@@ -197,6 +206,7 @@ export async function upsertPlatform(slug, platform, fields) {
       fields.minSupportedVersion ?? null,
       fields.maintenance ?? false,
       fields.maintenanceMessage ?? null,
+      fields.testAds ?? false,
     ],
   );
   return res?.rowCount ?? 0;

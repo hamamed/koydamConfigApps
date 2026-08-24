@@ -39,9 +39,17 @@
       <div class="ad-nav-label">Apps</div>
       <div id="appNav"></div>
 
+      <div class="ad-nav-label">Operations</div>
+      <a class="ad-nav-link" href="#/schedule" data-view="schedule">
+        <svg class="lucide"><use href="/panel/icons.svg#i-calendar-clock"></use></svg> Scheduled changes
+      </a>
+
       <div class="ad-nav-label" data-admin-only>Infrastructure</div>
       <a class="ad-nav-link" href="#/services" data-view="services" data-admin-only>
         <svg class="lucide"><use href="/panel/icons.svg#i-server"></use></svg> Services
+      </a>
+      <a class="ad-nav-link" href="#/alerts" data-view="alerts" data-admin-only>
+        <svg class="lucide"><use href="/panel/icons.svg#i-bell"></use></svg> Alerts
       </a>
       <a class="ad-nav-link" href="#/audit" data-view="audit" data-admin-only>
         <svg class="lucide"><use href="/panel/icons.svg#i-scroll-text"></use></svg> Audit log
@@ -53,10 +61,13 @@
 
     <div class="ad-sidebar-foot">
       <div class="d-flex align-items-center gap-2">
-        <div class="flex-grow-1 min-w-0">
+        <!-- The whole block is the link to your own account: a password change
+             belongs where your name already is, not in a nav section. -->
+        <a class="flex-grow-1 min-w-0 text-decoration-none" href="#/account"
+           title="Your account">
           <div class="small fw-semibold text-truncate" id="userEmail">…</div>
           <div class="kd-faint ad-meta" id="userRole"></div>
-        </div>
+        </a>
         <button class="btn btn-sm btn-link kd-muted p-1" id="logout" type="button" title="Sign out">
           <svg class="lucide" width="16" height="16"><use href="/panel/icons.svg#i-log-out"></use></svg>
         </button>
