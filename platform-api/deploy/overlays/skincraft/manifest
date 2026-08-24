@@ -10,5 +10,7 @@ shared/platform-auth.js                      src/middleware/platform-auth.js
 shared/css/bootstrap.min.css                 public/css/bootstrap.min.css
 shared/css/koydam.css                        public/css/koydam.css
 overlays/skincraft/css/admin.css            public/css/admin.css
+shared/logo/logo.png                         public/logo/logo.png
+shared/logo/logoText.png                     public/logo/logoText.png
 overlays/skincraft/src/middleware/auth.js    src/middleware/auth.js
 overlays/skincraft/views/partials/head.ejs   views/partials/head.ejs
