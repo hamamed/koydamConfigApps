@@ -61,7 +61,8 @@ done
 [[ -n "$CONF" ]] || die "services.conf not found."
 
 declare -a NAMES=()
-declare -A REPO TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED
+declare -A REPO SUBDIR TARGET TYPE UNIT HEALTH OVERLAY BUILD ENABLED
+declare -A FETCHED
 
 parse_conf() {
   local current="" key value line
@@ -90,6 +91,7 @@ parse_conf() {
 
     case "$key" in
       repo)    REPO[$current]="$value" ;;
+      subdir)  SUBDIR[$current]="$value" ;;
       target)  TARGET[$current]="$value" ;;
       type)    TYPE[$current]="$value" ;;
       unit)    UNIT[$current]="$value" ;;
@@ -144,12 +146,43 @@ ensure_home() {
 }
 
 # ── Source checkouts ────────────────────────────────────────────────────────
+#
+# Keyed by repository, not by service: several services live in one repo, and
+# cloning it once per service would mean three copies that can disagree.
+
+repo_slug() {
+  local u="${1%/}"
+  u="${u##*/}"
+  echo "${u%.git}"
+}
+
+src_dir() { echo "$REPOS_DIR/$(repo_slug "${REPO[$1]}")"; }
+
+# The directory inside the checkout this service is built from.
+src_path() {
+  local sub="${SUBDIR[$1]:-}"
+  if [[ -z "$sub" || "$sub" == "." ]]; then
+    src_dir "$1"
+  else
+    echo "$(src_dir "$1")/$sub"
+  fi
+}
 
 # Kept apart from the install directory. Cloning over the install would put
 # .git beside a live .env, where one careless `git clean` takes the secrets.
 fetch_source() {
   local name="$1" ref="${2:-}"
-  local src="$REPOS_DIR/$name"
+  local src slug
+  src="$(src_dir "$name")"
+  slug="$(repo_slug "${REPO[$name]}")"
+
+  # Once per repository per run. Without this a three-service monorepo would
+  # be fetched and hard-reset three times, and a rollback undone by the next
+  # service that shares the checkout.
+  if [[ -z "$ref" && -n "${FETCHED[$slug]:-}" ]]; then
+    return 0
+  fi
+  FETCHED[$slug]=1
 
   if [[ -d "$src/.git" ]]; then
     run git -C "$src" fetch --quiet --tags origin \
@@ -183,7 +216,7 @@ refresh_overlay_source() { fetch_source platform; }
 # three different design systems. Each service declares what it receives in
 # deploy/overlays/<name>/manifest.
 
-overlay_dir() { echo "$REPOS_DIR/platform/deploy"; }
+overlay_dir() { echo "$(src_path platform)/deploy"; }
 
 apply_overlay() {
   local name="$1" ov="${OVERLAY[$1]:-}"
@@ -266,7 +299,11 @@ cmd_list() {
 
 sync_files() {
   local name="$1" p
-  local src="$REPOS_DIR/$name" target="${TARGET[$name]}"
+  local src target
+  src="$(src_path "$name")"
+  target="${TARGET[$name]}"
+
+  [[ -d "$src" ]] || die "$name: ${SUBDIR[$name]:-.} does not exist in the repository"
   local args=(-a --delete)
   for p in "${PRESERVE[@]}"; do args+=(--exclude "$p"); done
 
@@ -343,7 +380,7 @@ deploy_one() {
 
   fetch_source "$name" "$ref"
   [[ $DRY_RUN -eq 0 ]] \
-    && ok "source at $(git -C "$REPOS_DIR/$name" rev-parse --short HEAD)"
+    && ok "source at $(git -C "$(src_dir "$name")" rev-parse --short HEAD)"
 
   sync_files "$name"
   install_deps "$name"
