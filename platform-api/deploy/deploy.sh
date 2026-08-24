@@ -279,6 +279,106 @@ env_set() {
   return 0
 }
 
+# Single sign-on needs four things set on platform-api, and a .env rebuilt by
+# hand after an outage is missing all of them. Each is filled in only when
+# absent: a value already there was chosen deliberately and is left alone.
+#
+#   SERVICE_TOKEN          what the other services present to introspect a
+#                          session. Generated here, then copied outward by
+#                          link_sso, so both ends always hold the same secret.
+#   COOKIE_DOMAIN          without a leading-dot domain the session cookie is
+#                          visible only to config., and api. and skincraft.
+#                          would each need their own login - the thing this
+#                          replaces.
+#   ALLOWED_REDIRECT_HOSTS the post-login bounce is checked against this. Empty
+#                          means every redirect is refused, so signing in lands
+#                          on the dashboard instead of the page asked for.
+#   SECURE_COOKIES         these domains are HTTPS.
+
+# The hosts every panel is reachable at, taken from the health URLs already in
+# services.conf rather than written down twice.
+platform_hosts() {
+  local name url host out=""
+  for name in "${NAMES[@]}"; do
+    url="${HEALTH[$name]:-}"
+    [[ -n "$url" ]] || continue
+    host="${url#*://}"
+    host="${host%%/*}"
+    [[ -n "$host" ]] || continue
+    case ",$out," in
+      *",$host,"*) continue ;;
+    esac
+    out="${out:+$out,}$host"
+  done
+  echo "$out"
+}
+
+# The parent of the hosts above: config.hamaprojects.com -> .hamaprojects.com
+cookie_domain_for() {
+  local first="${1%%,*}"
+  local parent="${first#*.}"
+  [[ "$parent" == "$first" || -z "$parent" ]] && return 0
+  echo ".$parent"
+}
+
+ensure_platform_config() {
+  local env_file="$PLATFORM_ENV"
+
+  if [[ ! -f "$env_file" ]]; then
+    warn "no $env_file - cannot configure single sign-on"
+    return 0
+  fi
+
+  local hosts domain changed=0
+  hosts="$(platform_hosts)"
+  domain="$(cookie_domain_for "$hosts")"
+
+  if [[ -z "$(env_get "$env_file" SERVICE_TOKEN)" ]]; then
+    if ! command -v openssl >/dev/null 2>&1; then
+      warn "openssl not found - cannot generate SERVICE_TOKEN"
+      return 0
+    fi
+    [[ $DRY_RUN -eq 1 ]] && { info "would generate SERVICE_TOKEN"; return 0; }
+
+    # Hex, so it survives systemd's EnvironmentFile parser as well as dotenv.
+    env_set "$env_file" SERVICE_TOKEN "$(openssl rand -hex 32)"
+    ok "generated SERVICE_TOKEN"
+    changed=1
+  fi
+
+  [[ $DRY_RUN -eq 1 ]] && return 0
+
+  if [[ -z "$(env_get "$env_file" COOKIE_DOMAIN)" && -n "$domain" ]]; then
+    env_set "$env_file" COOKIE_DOMAIN "$domain"
+    ok "COOKIE_DOMAIN=$domain"
+    changed=1
+  fi
+
+  if [[ -z "$(env_get "$env_file" ALLOWED_REDIRECT_HOSTS)" && -n "$hosts" ]]; then
+    env_set "$env_file" ALLOWED_REDIRECT_HOSTS "$hosts"
+    ok "ALLOWED_REDIRECT_HOSTS=$hosts"
+    changed=1
+  fi
+
+  if [[ -z "$(env_get "$env_file" SECURE_COOKIES)" ]]; then
+    env_set "$env_file" SECURE_COOKIES true
+    changed=1
+  fi
+
+  # It has to be holding the token before anything asks it to check one, and
+  # platform-api may not be in this run at all.
+  if [[ $changed -eq 1 ]] && systemctl is-active --quiet platform-api 2>/dev/null; then
+    systemctl restart platform-api
+    sleep 2
+    if systemctl is-active --quiet platform-api; then
+      ok "platform-api restarted with the new configuration"
+    else
+      journalctl -u platform-api -n 20 --no-pager || true
+      die "platform-api failed to restart after its configuration changed"
+    fi
+  fi
+}
+
 link_sso() {
   local name="$1" slug="${SSO[$name]:-}"
   [[ -n "$slug" ]] || return 0
@@ -604,6 +704,8 @@ self_update() {
 # Needs the checkout current before it can compare.
 refresh_overlay_source
 self_update "$@"
+
+ensure_platform_config
 
 [[ $DRY_RUN -eq 1 ]] && step "Dry run - nothing will change"
 
