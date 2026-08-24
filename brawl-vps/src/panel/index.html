@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Key-gated, but there is no reason for it to appear in a search result and
+     invite people to try. -->
+<meta name="robots" content="noindex, nofollow">
+<title>Brawl Stats — operations</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!--
+  The same design system as the platform dashboard and the Koydam site. Copied
+  in rather than linked across origins: a panel that renders unstyled because
+  another service is down is a panel you cannot use at exactly the moment you
+  need it.
+
+  Bootstrap is vendored too — the panel runs under `script-src 'self'` and a
+  CDN would be blocked outright.
+-->
+<link rel="stylesheet" href="/panel-vendor.css">
+<link rel="stylesheet" href="/panel/css/koydam.css">
+<link rel="stylesheet" href="/panel/css/admin.css">
+</head>
+
+<body class="ad-body">
+
+<!-- Lucide, as one inline sprite. Injected by panel.js so <use href="#i-…">
+     resolves against this document. -->
+<div id="sprite" hidden></div>
+
+<div class="ad-shell">
+
+  <aside class="ad-sidebar" id="sidebar">
+    <div class="ad-brand d-flex align-items-center gap-2">
+      <span class="ad-brand-mark" aria-hidden="true">
+        <svg class="lucide" width="18" height="18"><use href="#i-database"></use></svg>
+      </span>
+      <div>
+        <div class="fw-semibold" style="letter-spacing:-.01em">Brawl Stats</div>
+        <small class="kd-faint d-block"
+               style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase">
+          Operations
+        </small>
+      </div>
+    </div>
+
+    <nav class="ad-nav flex-grow-1">
+      <div class="ad-nav-label">Live</div>
+      <a class="ad-nav-link active" href="#overview">
+        <svg class="lucide"><use href="#i-gauge"></use></svg> Overview
+      </a>
+      <a class="ad-nav-link" href="#crawls">
+        <svg class="lucide"><use href="#i-activity"></use></svg> Crawls
+      </a>
+      <a class="ad-nav-link" href="#meta">
+        <svg class="lucide"><use href="#i-trophy"></use></svg> Meta
+      </a>
+
+      <div class="ad-nav-label">Data</div>
+      <a class="ad-nav-link" href="#storage">
+        <svg class="lucide"><use href="#i-hard-drive"></use></svg> Storage
+      </a>
+      <a class="ad-nav-link" href="#database">
+        <svg class="lucide"><use href="#i-table"></use></svg> Database
+      </a>
+    </nav>
+
+    <div class="ad-sidebar-foot">
+      <div class="d-flex flex-column gap-1">
+        <span class="ad-status" id="db-pill">db</span>
+        <span class="ad-status" id="crawl-pill">crawler</span>
+        <span class="ad-status" id="source-pill">source</span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="ad-main">
+    <header class="ad-topbar">
+      <button class="btn btn-sm btn-link kd-muted d-lg-none p-1" id="menuToggle" type="button">
+        <svg class="lucide" width="20" height="20"><use href="#i-menu"></use></svg>
+      </button>
+      <div>
+        <h1 class="ad-page-title mb-0">Operations</h1>
+        <div class="kd-faint" style="font-size:.72rem" id="subtitle">Connecting…</div>
+      </div>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                id="refresh" type="button">
+          <svg class="lucide" width="15" height="15" id="refresh-icon">
+            <use href="#i-refresh-cw"></use>
+          </svg>
+          <span class="d-none d-sm-inline">Refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="ad-content">
+
+      <section id="overview">
+        <div class="row g-3 mb-4" id="totals"></div>
+      </section>
+
+      <div class="row g-3">
+
+        <div class="col-12 col-xl-7" id="crawls">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <svg class="lucide" width="16" height="16"><use href="#i-activity"></use></svg>
+              <span class="fw-semibold">Recent crawls</span>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr>
+                    <th>Started</th><th>Status</th>
+                    <th class="text-end">Players</th>
+                    <th class="text-end">Battles</th>
+                    <th class="text-end">Took</th>
+                  </tr>
+                </thead>
+                <tbody id="runs"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-5">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <svg class="lucide" width="16" height="16"><use href="#i-users"></use></svg>
+              <span class="fw-semibold">Player universe</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-2" id="universe"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-5" id="storage">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <svg class="lucide" width="16" height="16"><use href="#i-hard-drive"></use></svg>
+              <span class="fw-semibold">Storage</span>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr><th>Table</th><th class="text-end">Size</th><th class="text-end">Rows</th></tr>
+                </thead>
+                <tbody id="sizes"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xl-7" id="meta">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <svg class="lucide" width="16" height="16"><use href="#i-trophy"></use></svg>
+              <span class="fw-semibold">Latest standings</span>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Brawler</th>
+                    <th style="width:38%">Win rate</th>
+                    <th class="text-end">Battles</th>
+                  </tr>
+                </thead>
+                <tbody id="standings"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <svg class="lucide" width="16" height="16"><use href="#i-chart-column"></use></svg>
+              <span class="fw-semibold">Movers · 7 days</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-2" id="movers"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12" id="database">
+          <div class="ad-card">
+            <div class="ad-card-head">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <svg class="lucide" width="16" height="16"><use href="#i-table"></use></svg>
+                <span class="fw-semibold">Database</span>
+              </div>
+              <div class="d-flex flex-wrap gap-1" id="table-picker"></div>
+              <div class="kd-faint small mt-2" id="table-note"></div>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr id="browse-head"></tr></thead>
+                <tbody id="browse-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="kd-faint small mt-4 mb-2" id="footer"></p>
+    </main>
+  </div>
+
+</div>
+
+<script src="/panel.js"></script>
+</body>
+</html>
