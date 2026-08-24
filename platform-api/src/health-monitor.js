@@ -18,19 +18,22 @@ const RETAIN_DAYS = 14;
 
 export async function checkAllServices() {
   const res = await query(
-    'SELECT slug, health_url FROM services WHERE health_url IS NOT NULL',
+    'SELECT slug, name, health_url FROM services WHERE health_url IS NOT NULL',
   );
 
   const services = res?.rows ?? [];
-  if (!services.length) return 0;
+  if (!services.length) return [];
 
   // In parallel: a dozen services checked in series would take as long as the
   // slowest chain, and the point of the interval is a current picture.
-  await Promise.all(services.map((s) => checkOne(s.slug, s.health_url)));
-  return services.length;
+  // Returned rather than counted: the caller compares these against what each
+  // service was last seen as, and a count cannot say which one changed.
+  return Promise.all(
+    services.map((s) => checkOne(s.slug, s.health_url, s.name)),
+  );
 }
 
-async function checkOne(slug, url) {
+async function checkOne(slug, url, name) {
   const started = Date.now();
   let ok = false;
   let status = null;
@@ -65,6 +68,8 @@ async function checkOne(slug, url) {
   );
 
   if (!ok) log.warn('Service check failed', { slug, error });
+
+  return { slug, name: name ?? slug, ok, status: error };
 }
 
 /** Drops history past the retention window. */

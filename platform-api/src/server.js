@@ -11,6 +11,8 @@ import { closePool, dbHealth } from './db/pool.js';
 import { runMigrations } from './db/migrate.js';
 import { bootstrapOwner, seedServices } from './db/bootstrap.js';
 import { checkAllServices, pruneChecks } from './health-monitor.js';
+import { reportStatusChanges } from './alerts.js';
+import { applyDueChanges, expireStaleChanges } from './scheduler.js';
 import { authRouter } from './routes/auth.js';
 import { configRouter } from './routes/config.js';
 import { dashboardRouter } from './routes/dashboard.js';
@@ -127,13 +129,31 @@ async function boot() {
   // enough that it is not itself traffic worth worrying about.
   const check = async () => {
     try {
-      await checkAllServices();
+      const results = await checkAllServices();
+      // Alerting is separate from checking, and its failures must not stop the
+      // next sweep - a dead webhook should not also cost the health history.
+      await reportStatusChanges(results).catch((err) =>
+        log.warn('Alerting failed', { error: err.message }),
+      );
     } catch (err) {
       log.warn('Health sweep failed', { error: err.message });
     }
   };
   await check();
   timers.push(setInterval(check, 60_000));
+
+  // Scheduled changes, on the same minute cadence. A change set for 18:00
+  // should land within a minute of it, not within an hour.
+  const sweepSchedule = async () => {
+    try {
+      await applyDueChanges();
+      await expireStaleChanges();
+    } catch (err) {
+      log.warn('Schedule sweep failed', { error: err.message });
+    }
+  };
+  await sweepSchedule();
+  timers.push(setInterval(sweepSchedule, 60_000));
 
   // Housekeeping. Hourly: expired sessions and old check history are both
   // cheap to carry for an extra hour and pointless to sweep more often.
