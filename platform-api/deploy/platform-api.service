@@ -1,0 +1,30 @@
+[Unit]
+Description=platform-api — shared app config and AdMob settings
+Documentation=https://github.com/hamamed
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/platform-api
+EnvironmentFile=/opt/platform-api/.env
+ExecStart=/usr/bin/node src/server.js
+
+Restart=always
+RestartSec=3
+
+# The service reads its own directory and writes nothing outside it.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/platform-api
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=platform-api
+
+[Install]
+WantedBy=multi-user.target

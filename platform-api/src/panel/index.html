@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/panel/vendor.css">
+<link rel="stylesheet" href="/panel/css/koydam.css">
+<link rel="stylesheet" href="/panel/css/admin.css">
+</head>
+
+<body class="ad-body">
+
+<div class="ad-shell">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="ad-sidebar" id="sidebar">
+    <div class="ad-brand d-flex align-items-center gap-2">
+      <span class="ad-brand-mark" aria-hidden="true">
+        <svg class="lucide" width="18" height="18"><use href="/panel/icons.svg#i-layout-grid"></use></svg>
+      </span>
+      <div>
+        <div class="fw-semibold" style="letter-spacing:-.01em">Platform</div>
+        <small class="kd-faint d-block" style="font-size:.62rem;letter-spacing:.1em;text-transform:uppercase">
+          Control panel
+        </small>
+      </div>
+    </div>
+
+    <nav class="ad-nav flex-grow-1" id="nav">
+      <div class="ad-nav-label">Overview</div>
+      <a class="ad-nav-link" href="#/" data-view="home">
+        <svg class="lucide"><use href="/panel/icons.svg#i-gauge"></use></svg> Dashboard
+      </a>
+
+      <div class="ad-nav-label">Apps</div>
+      <div id="appNav"></div>
+
+      <div class="ad-nav-label" data-admin-only>Infrastructure</div>
+      <a class="ad-nav-link" href="#/services" data-view="services" data-admin-only>
+        <svg class="lucide"><use href="/panel/icons.svg#i-server"></use></svg> Services
+      </a>
+      <a class="ad-nav-link" href="#/audit" data-view="audit" data-admin-only>
+        <svg class="lucide"><use href="/panel/icons.svg#i-scroll-text"></use></svg> Audit log
+      </a>
+      <a class="ad-nav-link" href="#/users" data-view="users" data-owner-only>
+        <svg class="lucide"><use href="/panel/icons.svg#i-users"></use></svg> Team
+      </a>
+    </nav>
+
+    <div class="ad-sidebar-foot">
+      <div class="d-flex align-items-center gap-2">
+        <div class="flex-grow-1 min-w-0">
+          <div class="small fw-semibold text-truncate" id="userEmail">…</div>
+          <div class="kd-faint" style="font-size:.7rem" id="userRole"></div>
+        </div>
+        <button class="btn btn-sm btn-link kd-muted p-1" id="logout" type="button" title="Sign out">
+          <svg class="lucide" width="16" height="16"><use href="/panel/icons.svg#i-log-out"></use></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ────────────────────────────────────────────────────────── -->
+  <div class="ad-main">
+    <header class="ad-topbar">
+      <button class="btn btn-sm btn-link kd-muted d-lg-none p-1" id="menuToggle" type="button">
+        <svg class="lucide" width="20" height="20"><use href="/panel/icons.svg#i-menu"></use></svg>
+      </button>
+      <h1 class="ad-page-title mb-0" id="pageTitle">Dashboard</h1>
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="kd-faint small" id="lastUpdated"></span>
+        <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                id="refresh" type="button">
+          <svg class="lucide" width="15" height="15" id="refreshIcon">
+            <use href="/panel/icons.svg#i-refresh-cw"></use>
+          </svg>
+          <span class="d-none d-sm-inline">Refresh</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="ad-content" id="view"></main>
+  </div>
+
+</div>
+
+<div class="ad-toasts" id="toasts"></div>
+
+<script src="/panel/app.js"></script>
+</body>
+</html>

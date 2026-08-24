@@ -1,0 +1,12 @@
+# What platform-api owns inside the Brawl install.
+#
+# Left: a path under deploy/. Right: where it lands in /opt/brawl-vps.
+# Applied on every deploy, so these files cannot drift from the source here.
+#
+# platform-auth.js is also committed in brawl-vps itself — it is a hard import
+# and the service would not boot from a bare clone without it. This copy is the
+# authoritative one; `deploy.sh verify` reports when they disagree.
+
+shared/platform-auth.js   src/platform-auth.js
+shared/css/koydam.css     src/panel/css/koydam.css
+shared/css/admin.css      src/panel/css/admin.css

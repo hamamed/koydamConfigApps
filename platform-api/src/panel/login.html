@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in — Platform</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Bootstrap is vendored and served from this origin. The panel runs under a
+     strict CSP, and a CDN script or stylesheet would be blocked outright. -->
+<link rel="stylesheet" href="/panel/vendor.css">
+<link rel="stylesheet" href="/panel/css/koydam.css">
+<link rel="stylesheet" href="/panel/css/admin.css">
+</head>
+
+<body>
+<main class="ad-login">
+  <div class="ad-login-card">
+
+    <div class="mb-4 d-flex align-items-center gap-2">
+      <span class="ad-brand-mark" aria-hidden="true">
+        <svg class="lucide" width="20" height="20"><use href="/panel/icons.svg#i-layout-grid"></use></svg>
+      </span>
+      <div>
+        <div class="fw-semibold" style="letter-spacing:-.01em">Platform</div>
+        <small class="kd-faint d-block"
+               style="letter-spacing:.1em;text-transform:uppercase;font-size:.62rem">
+          App configuration
+        </small>
+      </div>
+    </div>
+
+    <h1 class="kd-h3 mb-1">Sign in</h1>
+    <p class="kd-muted small mb-4">Manage apps, ad units, flags and services.</p>
+
+    <form id="loginForm" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="email">Email</label>
+        <input class="form-control" id="email" name="email" type="email"
+               autocomplete="username" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password"
+               autocomplete="current-password" required>
+      </div>
+
+      <div id="loginError" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
+
+      <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2"
+              id="submit" type="submit">
+        <svg class="lucide" width="16" height="16"><use href="/panel/icons.svg#i-log-in"></use></svg>
+        <span>Sign in</span>
+      </button>
+    </form>
+
+  </div>
+</main>
+
+<script src="/panel/login.js"></script>
+</body>
+</html>
