@@ -68,37 +68,12 @@ body.ad-body { background: var(--kd-surface); }
 /* The glyph tile beside the wordmark. The markup carries this class in both
    panels but nothing defined it, so the span was laying out as bare inline
    text and the icon sat unaligned against the label. */
-/* Small typographic tweaks that used to be style="" attributes.
-
-   They live here because the panels run under a CSP with no 'unsafe-inline',
-   and a style attribute cannot be allowed by a hash or a nonce - only by
-   'unsafe-hashes' or 'unsafe-inline', both of which weaken the policy for
-   every element on the page. Three rules is the cheaper trade. */
-.ad-brand-name { letter-spacing: -0.01em; }
-
-.ad-brand-sub {
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 /* Secondary line under a heading: the signed-in role, a status subtitle. */
+/* Secondary line under a heading: a signed-in role, a status subtitle. */
 .ad-meta { font-size: 0.7rem; }
 
 /* Win-rate column, wide enough for the inline bar the cell draws. */
 .ad-col-winrate { width: 38%; }
-
-.ad-brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex: none;
-  border-radius: 8px;
-  background: var(--kd-accent);
-  color: #fff;
-}
 
 .ad-brand {
   display: flex; align-items: center; gap: .6rem;
@@ -347,4 +322,13 @@ body.ad-body { background: var(--kd-surface); }
   border-radius: var(--kd-radius-lg);
   box-shadow: var(--kd-shadow-lift);
   padding: 2rem;
+}
+
+/* Sub-line under the sign-in lockup. Centred with it, and quiet enough that
+   the logo stays the largest thing on the page. */
+.ad-login-lede {
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.75rem;
 }

@@ -81,6 +81,15 @@ adminRouter.use(
   express.static(path.join(PANEL_DIR, 'css'), { maxAge: '1h', fallthrough: false }),
 );
 
+/**
+ * The Koydam logo. Delivered by the platform overlay, same files every other
+ * panel serves, so the three cannot drift into three slightly different marks.
+ */
+adminRouter.use(
+  '/panel/logo',
+  express.static(path.join(PANEL_DIR, 'logo'), { maxAge: '7d', fallthrough: false }),
+);
+
 adminRouter.get('/panel-vendor.css', (_req, res) => {
   res.type('text/css');
   res.sendFile(
