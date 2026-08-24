@@ -3,6 +3,7 @@
  *
  *   node src/scripts/reset-password.js you@example.com
  *   node src/scripts/reset-password.js you@example.com 'a chosen password'
+ *   node src/scripts/reset-password.js you@example.com 'short' --force
  *
  * With no password a strong one is generated and printed. Run it on the box:
  * it needs POSTGRES_URL, and it prints a credential, so it belongs in a root
@@ -17,9 +18,11 @@ import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
 
 import { hashPassword } from '../auth.js';
-import { closePool, query } from '../db/pool.js';
+import { closePool, isDbEnabled, query } from '../db/pool.js';
 
-const [, , emailArg, passwordArg] = process.argv;
+const args = process.argv.slice(2).filter((a) => a !== '--force');
+const force = process.argv.includes('--force');
+const [emailArg, passwordArg] = args;
 
 if (!emailArg) {
   console.error('usage: node src/scripts/reset-password.js <email> [password]');
@@ -36,12 +39,41 @@ if (!email.includes('@')) {
 // Long enough that it is not worth attacking, short enough to retype once.
 const password = passwordArg || randomBytes(12).toString('base64url');
 
-if (passwordArg && passwordArg.length < 10) {
-  console.error('That password is under 10 characters. Choose a longer one.');
+// Ten is the floor. Not a policy anyone has to agree with - but a weak
+// password here opens the AdMob settings, the config every app fetches, and a
+// panel that browses the database, so it should take a deliberate act rather
+// than a typo to set one.
+if (passwordArg && passwordArg.length < 10 && !force) {
+  console.error(
+    `That password is ${passwordArg.length} characters; the minimum is 10.
+` +
+      'Choose a longer one, or pass --force if you mean it.',
+  );
   process.exit(1);
 }
 
+if (passwordArg && passwordArg.length < 10 && force) {
+  console.warn(
+    `
+  Warning: setting a ${passwordArg.length}-character password. ` +
+      'Anyone who signs in here can change what every app fetches.',
+  );
+}
+
 async function main() {
+  // query() returns null on failure rather than throwing, because serving
+  // config must degrade instead of falling over. That is right for the server
+  // and wrong here: without this check the script prints a password for a
+  // write that never happened, and the account it names cannot sign in.
+  if (!isDbEnabled()) {
+    throw new Error('POSTGRES_URL is not set - nothing was changed');
+  }
+
+  const probe = await query('SELECT 1 AS ok');
+  if (!probe?.rows?.length) {
+    throw new Error('Could not reach the database - nothing was changed');
+  }
+
   const hash = await hashPassword(password);
 
   const existing = await query(
@@ -53,15 +85,20 @@ async function main() {
   if (user) {
     // Clearing the lockout too: someone resetting a password has usually just
     // finished failing to sign in eight times.
-    await query(
+    const updated = await query(
       `UPDATE users
           SET password_hash = $2,
               failed_attempts = 0,
               locked_until = NULL,
               disabled = false
-        WHERE id = $1`,
+        WHERE id = $1
+      RETURNING id`,
       [user.id, hash],
     );
+
+    if (!updated?.rows?.length) {
+      throw new Error('The password was not changed - nothing was written');
+    }
 
     // Every existing session for this account is now stale. Leaving them alive
     // would mean a reset does not actually lock anyone out.
@@ -74,11 +111,16 @@ async function main() {
     const count = await query('SELECT COUNT(*)::int AS n FROM users');
     const first = (count?.rows?.[0]?.n ?? 0) === 0;
 
-    await query(
+    const created = await query(
       `INSERT INTO users (email, name, password_hash, role)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
       [email, 'Owner', hash, first ? 'owner' : 'admin'],
     );
+
+    if (!created?.rows?.length) {
+      throw new Error('The account was not created - nothing was changed');
+    }
 
     console.log(`\n  Created ${email} as ${first ? 'owner' : 'admin'}.`);
     if (!first) {
