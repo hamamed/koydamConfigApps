@@ -18,7 +18,8 @@
 set -euo pipefail
 
 REPOS_DIR=/opt/src
-SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+SELF_DIR="$(dirname "$SELF")"
 APP_USER=brawl
 
 # Where every panel sends someone who is not signed in.
@@ -580,6 +581,30 @@ esac
 
 need_root
 ensure_home
+
+# The installed copy at /opt/deploy.sh is exactly that - a copy. Pulling the
+# repository updates the checkout and leaves it untouched, so a fix to this
+# script silently does not run and the deploy it produces looks fine. Rather
+# than rely on remembering to reinstall it, it replaces itself and restarts.
+self_update() {
+  [[ $DRY_RUN -eq 1 ]] && return 0
+  [[ -n "${DEPLOY_SELF_UPDATED:-}" ]] && return 0   # only once, never a loop
+
+  local latest
+  latest="$(src_path platform)/deploy/deploy.sh"
+  [[ -f "$latest" && -f "$SELF" ]] || return 0
+  cmp -s "$SELF" "$latest" && return 0
+
+  warn "this script is out of date - updating $SELF and restarting"
+  cp "$latest" "$SELF"
+  chmod 755 "$SELF"
+  DEPLOY_SELF_UPDATED=1 exec "$SELF" "$@"
+}
+
+# Needs the checkout current before it can compare.
+refresh_overlay_source
+self_update "$@"
+
 [[ $DRY_RUN -eq 1 ]] && step "Dry run - nothing will change"
 
 if [[ ${#ARGS[@]} -eq 0 ]]; then
