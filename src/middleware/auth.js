@@ -1,9 +1,30 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { db } from '../db/index.js';
+import { platformUser, requirePlatformAuth } from './platform-auth.js';
 
-/** Loads the signed-in user onto `req.user` and `res.locals.user` for every request. */
-export function loadUser(req, res, next) {
+/**
+ * Loads the signed-in user onto `req.user` and `res.locals.user`.
+ *
+ * Prefers the platform session from config.hamaprojects.com, so this panel has
+ * no login of its own. Falls back to the local session when PLATFORM_URL is
+ * unset — which keeps a standalone install, or a local dev copy, working.
+ */
+export async function loadUser(req, res, next) {
+  if (process.env.PLATFORM_URL) {
+    const platform = await platformUser(req);
+    if (platform) {
+      req.user = {
+        id: platform.id,
+        username: platform.email,
+        role: platform.role,
+        platform: true,
+      };
+      res.locals.user = req.user;
+      return next();
+    }
+  }
+
   const userId = req.session?.userId;
   if (userId) {
     req.user = db
@@ -16,9 +37,20 @@ export function loadUser(req, res, next) {
   next();
 }
 
-/** Gate for admin pages. Remembers where the user was headed so login can return them there. */
+/**
+ * Gate for admin pages.
+ *
+ * With SSO on, an unauthenticated request bounces to the platform login and
+ * returns here afterwards — this panel has no password of its own. Without
+ * PLATFORM_URL the original local login still applies.
+ */
+const platformGate = requirePlatformAuth();
+
 export function requireAuth(req, res, next) {
   if (req.user) return next();
+
+  if (process.env.PLATFORM_URL) return platformGate(req, res, next);
+
   const returnTo = req.originalUrl.startsWith('/admin') ? req.originalUrl : '/admin';
   return res.redirect(`/admin/login?next=${encodeURIComponent(returnTo)}`);
 }
