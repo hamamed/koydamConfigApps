@@ -132,6 +132,19 @@ deploy_one() {
 #
 # Each service declares what it receives in deploy/overlays/<name>/manifest.
 
+# The overlay is only as current as this repo's checkout. Deploying just one
+# service must not hand it files from whenever platform was last pulled.
+refresh_overlay_source() {
+  local src="$REPOS_DIR/platform"
+  if [[ -d "$src/.git" ]]; then
+    git -C "$src" fetch --quiet origin || warn "could not refresh overlay source"
+    git -C "$src" reset --hard --quiet origin/HEAD 2>/dev/null       || git -C "$src" reset --hard --quiet origin/main || true
+  else
+    mkdir -p "$REPOS_DIR"
+    git clone --quiet "${REPO[platform]}" "$src"       || die "overlay source unavailable — clone of platform-api failed"
+  fi
+}
+
 apply_overlay() {
   local name="$1"
   local target="${TARGET[$name]}"
@@ -189,6 +202,7 @@ verify_overlays() {
 
 if [[ "${1:-}" == "verify" ]]; then
   step "Verifying overlays"
+  refresh_overlay_source
   verify_overlays
   exit 0
 fi
@@ -203,6 +217,7 @@ for name in "${TARGETS[@]}"; do
 
   # After the sync, because rsync --delete would otherwise remove overlay
   # files that are not in the service's own repository.
+  refresh_overlay_source
   if [[ -f "$REPOS_DIR/platform/deploy/overlays/$name/manifest" ]]; then
     apply_overlay "$name"
     systemctl restart "${UNIT[$name]}"
