@@ -1,0 +1,312 @@
+/* ==========================================================================
+   admin.css — dashboard chrome.
+   Extends the public design system (koydam.css) with a sidebar shell, tables
+   and editor-specific bits. Load order: bootstrap → koydam.css → admin.css
+   ========================================================================== */
+
+:root {
+  --ad-sidebar-w: 254px;
+  --ad-topbar-h: 60px;
+}
+
+body.ad-body { background: var(--kd-surface); }
+
+/* --------------------------------------------------------------- shell -- */
+.ad-shell { display: flex; min-height: 100vh; }
+
+.ad-sidebar {
+  width: var(--ad-sidebar-w);
+  flex: none;
+  background: #fff;
+  border-right: 1px solid var(--kd-line);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 1045;
+  transform: translateX(0);
+  transition: transform var(--kd-slow) var(--kd-ease);
+}
+
+.ad-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: var(--ad-sidebar-w);
+}
+
+.ad-topbar {
+  height: var(--ad-topbar-h);
+  background: rgba(255, 255, 255, .86);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--kd-line);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-inline: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.ad-content { padding: clamp(1.25rem, 2.6vw, 2rem) clamp(1rem, 2.5vw, 1.75rem) 4rem; }
+
+@media (max-width: 991.98px) {
+  .ad-sidebar { transform: translateX(-100%); box-shadow: var(--kd-shadow-lift); }
+  .ad-sidebar.is-open { transform: translateX(0); }
+  .ad-main { margin-left: 0; }
+  .ad-backdrop {
+    position: fixed; inset: 0; z-index: 1040;
+    background: rgba(11, 18, 32, .38);
+    backdrop-filter: blur(1px);
+  }
+}
+
+/* ------------------------------------------------------------- sidebar -- */
+.ad-brand {
+  display: flex; align-items: center; gap: .6rem;
+  padding: 1.05rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  color: var(--kd-ink);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+/* The admin brand keeps its wordmark, so the glyph stays at text scale. */
+.ad-brand .kd-brand-mark { height: 26px; }
+.ad-brand small {
+  display: block;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+}
+
+.ad-nav { padding: .85rem .7rem; overflow-y: auto; flex: 1 1 auto; }
+
+.ad-nav-label {
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  padding: .9rem .55rem .4rem;
+}
+
+.ad-nav-link {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .52rem .6rem;
+  border-radius: 9px;
+  color: var(--kd-muted);
+  font-size: .9rem;
+  font-weight: 500;
+  transition: background var(--kd-fast) var(--kd-ease), color var(--kd-fast) var(--kd-ease);
+}
+.ad-nav-link:hover { background: var(--kd-surface-2); color: var(--kd-ink); }
+.ad-nav-link.is-active { background: var(--kd-ink); color: #fff; }
+.ad-nav-link.is-active .lucide { color: #fff; }
+.ad-nav-link .lucide { width: 16px; height: 16px; color: var(--kd-faint); }
+.ad-nav-link .ad-badge {
+  margin-left: auto;
+  background: var(--kd-accent-soft);
+  color: var(--kd-accent-ink);
+  border-radius: 99px;
+  font-size: .7rem;
+  font-weight: 650;
+  padding: .05rem .45rem;
+}
+.ad-nav-link.is-active .ad-badge { background: rgba(255,255,255,.18); color: #fff; }
+
+.ad-sidebar-foot { padding: .8rem; border-top: 1px solid var(--kd-line); }
+
+/* --------------------------------------------------------------- views -- */
+.ad-view { display: none; }
+.ad-view.is-active { display: block; animation: ad-fade .22s var(--kd-ease); }
+@keyframes ad-fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.ad-page-title { font-size: 1.4rem; letter-spacing: -0.028em; margin: 0; }
+
+.ad-card {
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+}
+.ad-card-head {
+  padding: .9rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ad-card-head h2 { font-size: .95rem; margin: 0; letter-spacing: -0.015em; }
+.ad-card-body { padding: 1.15rem; }
+
+/* KPI tiles */
+.ad-kpi { padding: 1.15rem; }
+.ad-kpi .lucide { width: 17px; height: 17px; color: var(--kd-faint); }
+.ad-kpi-value { font-size: 1.75rem; font-weight: 640; letter-spacing: -0.035em; color: var(--kd-ink); line-height: 1.1; }
+.ad-kpi-label { font-size: .8rem; color: var(--kd-faint); }
+
+/* -------------------------------------------------------------- tables -- */
+.ad-table { width: 100%; margin: 0; font-size: .885rem; }
+.ad-table th {
+  font-size: .7rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  padding: .7rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface);
+  white-space: nowrap;
+}
+.ad-table td {
+  padding: .8rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  vertical-align: middle;
+  color: var(--kd-ink-2);
+}
+.ad-table tbody tr:last-child td { border-bottom: 0; }
+.ad-table tbody tr { transition: background var(--kd-fast) var(--kd-ease); }
+.ad-table tbody tr:hover { background: var(--kd-surface); }
+.ad-table tbody tr.is-unread td:first-child { box-shadow: inset 2px 0 0 var(--kd-accent); }
+
+.ad-table-wrap { overflow-x: auto; }
+
+/* ------------------------------------------------------------- editors -- */
+.ad-section-label {
+  font-size: .72rem;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  margin-bottom: .85rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--kd-line);
+}
+
+/* Markdown/HTML editor toolbar */
+.ad-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  padding: .4rem;
+  border: 1px solid var(--kd-line-strong);
+  border-bottom: 0;
+  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  background: var(--kd-surface);
+}
+.ad-toolbar button {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 7px;
+  padding: .28rem .5rem;
+  color: var(--kd-muted);
+  font-size: .8rem;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-toolbar button:hover { background: #fff; border-color: var(--kd-line); color: var(--kd-ink); }
+.ad-editor {
+  border-radius: 0 0 var(--kd-radius-sm) var(--kd-radius-sm);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .82rem;
+  line-height: 1.7;
+  min-height: 260px;
+  resize: vertical;
+}
+.ad-preview {
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  max-height: 420px;
+  overflow: auto;
+}
+
+/* Image pickers */
+.ad-thumb {
+  position: relative;
+  width: 92px; height: 92px;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  overflow: hidden;
+  background: var(--kd-surface-2);
+  flex: none;
+}
+.ad-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-thumb button {
+  position: absolute; top: 4px; right: 4px;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 6px;
+  background: rgba(11, 18, 32, .72);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--kd-fast) var(--kd-ease);
+}
+.ad-thumb:hover button { opacity: 1; }
+
+.ad-drop {
+  border: 1px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-drop:hover, .ad-drop.is-over { border-color: var(--kd-accent); background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Repeatable list rows (features, bullets) */
+.ad-repeat-row { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.ad-repeat-row .btn { flex: none; }
+
+/* Toasts */
+.ad-toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 1080; display: grid; gap: .5rem; }
+.ad-toast {
+  display: flex; align-items: center; gap: .55rem;
+  background: var(--kd-ink);
+  color: #fff;
+  border-radius: 10px;
+  padding: .65rem .9rem;
+  font-size: .875rem;
+  box-shadow: var(--kd-shadow-lift);
+  animation: ad-toast-in .24s var(--kd-ease);
+}
+.ad-toast.is-error { background: var(--kd-danger); }
+.ad-toast .lucide { width: 16px; height: 16px; }
+@keyframes ad-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Status pills */
+.ad-status { font-size: .72rem; font-weight: 600; padding: .18rem .5rem; border-radius: 99px; text-transform: capitalize; }
+.ad-status-published { background: #ecfdf5; color: var(--kd-ok); }
+.ad-status-draft     { background: var(--kd-surface-2); color: var(--kd-muted); }
+.ad-status-archived  { background: #fef2f2; color: var(--kd-danger); }
+.ad-status-sent      { background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Empty states */
+.ad-empty { padding: 3rem 1rem; text-align: center; color: var(--kd-faint); }
+.ad-empty .lucide { width: 26px; height: 26px; }
+
+/* Login screen */
+.ad-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 1px 1px, var(--kd-line-strong) 1px, transparent 0) 0 0 / 28px 28px,
+    var(--kd-surface);
+}
+.ad-login-card {
+  width: min(410px, 100%);
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: var(--kd-shadow-lift);
+  padding: 2rem;
+}
