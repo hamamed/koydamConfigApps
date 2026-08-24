@@ -15,6 +15,7 @@ import {
   visibleApps,
 } from '../auth.js';
 import { isValidAppId, isValidUnitId, testPlacements } from '../ads.js';
+import { compareVersions } from '../version.js';
 import { log } from '../log.js';
 import { backupStatus } from '../backups.js';
 import { notify } from '../alerts.js';
@@ -676,4 +677,251 @@ dashboardRouter.post('/api/me/password', async (req, res) => {
 
 dashboardRouter.get('/api/backups', requireAdminRole, async (_req, res) => {
   res.json(await backupStatus());
+});
+
+// ── Announcements ───────────────────────────────────────────────────────────
+
+dashboardRouter.get('/api/apps/:slug/announcements', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (!canViewApp(req.user, slug)) return res.status(403).json({ error: 'forbidden' });
+
+  const result = await query(
+    `SELECT id, platform, kind, title, body, link_url, link_label,
+            min_version, max_version, starts_at, ends_at, dismissible,
+            active, created_by, created_at,
+            -- What the client would decide, computed here so the panel can
+            -- show "live now" rather than making someone read four columns
+            -- and work it out.
+            (active
+             AND (starts_at IS NULL OR starts_at <= now())
+             AND (ends_at   IS NULL OR ends_at   >  now())) AS live
+       FROM announcements
+      WHERE app_slug = $1
+      ORDER BY created_at DESC`,
+    [slug],
+  );
+
+  res.json({ announcements: result?.rows ?? [] });
+});
+
+dashboardRouter.post('/api/apps/:slug/announcements', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+
+  const title = String(req.body?.title ?? '').trim();
+  if (!title) return res.status(400).json({ error: 'title_required' });
+
+  const platform = req.body?.platform ? String(req.body.platform).toLowerCase() : null;
+  if (platform && !PLATFORMS.has(platform)) {
+    return res.status(400).json({ error: 'bad_platform' });
+  }
+
+  const linkUrl = req.body?.linkUrl ? String(req.body.linkUrl).trim() : null;
+  if (linkUrl) {
+    let url;
+    try {
+      url = new URL(linkUrl);
+    } catch {
+      return res.status(400).json({ error: 'bad_link', message: 'That is not a URL.' });
+    }
+    // A banner is tapped by people who trust the app. An http:// link, or a
+    // javascript: one, is not something to hand them.
+    if (url.protocol !== 'https:') {
+      return res.status(400).json({
+        error: 'https_required',
+        message: 'Links in a banner must be https.',
+      });
+    }
+  }
+
+  // Caught here because a reversed range matches nobody and looks like a
+  // banner that silently never appeared.
+  const minV = req.body?.minVersion ? String(req.body.minVersion).trim() : null;
+  const maxV = req.body?.maxVersion ? String(req.body.maxVersion).trim() : null;
+  if (minV && maxV && compareVersions(minV, maxV) > 0) {
+    return res.status(400).json({
+      error: 'bad_version_range',
+      message: `${minV} is above ${maxV}, so this would reach nobody.`,
+    });
+  }
+
+  const startsAt = req.body?.startsAt ? new Date(req.body.startsAt) : null;
+  const endsAt = req.body?.endsAt ? new Date(req.body.endsAt) : null;
+  for (const [label, d] of [['startsAt', startsAt], ['endsAt', endsAt]]) {
+    if (d && Number.isNaN(d.getTime())) {
+      return res.status(400).json({ error: 'bad_date', message: `${label} is not a date.` });
+    }
+  }
+  if (startsAt && endsAt && startsAt >= endsAt) {
+    return res.status(400).json({
+      error: 'bad_window',
+      message: 'It would end before it started.',
+    });
+  }
+
+  const inserted = await query(
+    `INSERT INTO announcements
+       (app_slug, platform, kind, title, body, link_url, link_label,
+        min_version, max_version, starts_at, ends_at, dismissible, active, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+     RETURNING id`,
+    [
+      slug,
+      platform,
+      String(req.body?.kind ?? 'info'),
+      title,
+      req.body?.body ? String(req.body.body) : null,
+      linkUrl,
+      req.body?.linkLabel ? String(req.body.linkLabel).trim() : null,
+      minV,
+      maxV,
+      startsAt?.toISOString() ?? null,
+      endsAt?.toISOString() ?? null,
+      req.body?.dismissible ?? true,
+      req.body?.active ?? true,
+      req.user.email,
+    ],
+  );
+
+  const id = inserted?.rows?.[0]?.id;
+  if (!id) return res.status(500).json({ error: 'not_created' });
+
+  await audit(req, 'announcement.create', { type: 'app', id: slug }, { id, title });
+  res.json({ ok: true, id });
+});
+
+dashboardRouter.post('/api/apps/:slug/announcements/:id/toggle', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'bad_id' });
+
+  const updated = await query(
+    `UPDATE announcements SET active = NOT active, updated_at = now()
+      WHERE id = $1 AND app_slug = $2 RETURNING active`,
+    [id, slug],
+  );
+
+  const row = updated?.rows?.[0];
+  if (!row) return res.status(404).json({ error: 'not_found' });
+
+  await audit(req, 'announcement.toggle', { type: 'app', id: slug }, { id, active: row.active });
+  res.json({ ok: true, active: row.active });
+});
+
+dashboardRouter.delete('/api/apps/:slug/announcements/:id', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'bad_id' });
+
+  await query('DELETE FROM announcements WHERE id = $1 AND app_slug = $2', [id, slug]);
+  await audit(req, 'announcement.delete', { type: 'app', id: slug }, { id });
+  res.json({ ok: true });
+});
+
+// ── Rating prompt ───────────────────────────────────────────────────────────
+
+dashboardRouter.post('/api/apps/:slug/rating/:platform', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  const platform = String(req.params.platform).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+  if (!PLATFORMS.has(platform)) return res.status(400).json({ error: 'bad_platform' });
+
+  // Bounded rather than trusted. A prompt after zero sessions is the surest
+  // way to be rated by someone who has not used the app yet, and iOS allows a
+  // limited number of these a year.
+  const num = (value, fallback, min, max) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(n)));
+  };
+
+  const settings = {
+    enabled: Boolean(req.body?.enabled),
+    minSessions: num(req.body?.minSessions, 5, 1, 500),
+    minDaysInstalled: num(req.body?.minDaysInstalled, 3, 0, 365),
+    cooldownDays: num(req.body?.cooldownDays, 90, 1, 365),
+  };
+
+  await recorded(req, slug, 'rating.update', { platform }, () =>
+    query(
+      `UPDATE app_platforms SET rating_prompt = $3, updated_at = now()
+        WHERE app_slug = $1 AND platform = $2`,
+      [slug, platform, JSON.stringify(settings)],
+    ),
+  );
+
+  res.json({ ok: true, settings });
+});
+
+// ── Release notes ───────────────────────────────────────────────────────────
+
+dashboardRouter.get('/api/apps/:slug/release-notes', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (!canViewApp(req.user, slug)) return res.status(403).json({ error: 'forbidden' });
+
+  const result = await query(
+    `SELECT platform, version, title, body, published, updated_at
+       FROM release_notes WHERE app_slug = $1
+      ORDER BY updated_at DESC`,
+    [slug],
+  );
+
+  res.json({ notes: result?.rows ?? [] });
+});
+
+dashboardRouter.post('/api/apps/:slug/release-notes', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+
+  // Normalised the same way the read path does, so notes written as "1.4.0+27"
+  // are still found by a client reporting "1.4.0".
+  const version = String(req.body?.version ?? '')
+    .trim()
+    .replace(/^v/i, '')
+    .split(/[+-]/)[0];
+
+  if (!version) return res.status(400).json({ error: 'version_required' });
+
+  const body = String(req.body?.body ?? '').trim();
+  if (!body) return res.status(400).json({ error: 'body_required' });
+
+  const platform = req.body?.platform ? String(req.body.platform).toLowerCase() : null;
+  if (platform && !PLATFORMS.has(platform)) {
+    return res.status(400).json({ error: 'bad_platform' });
+  }
+
+  await query(
+    `INSERT INTO release_notes (app_slug, platform, version, title, body, published)
+     VALUES ($1,$2,$3,$4,$5,$6)
+     ON CONFLICT (app_slug, version, COALESCE(platform, '*')) DO UPDATE
+       SET title = EXCLUDED.title,
+           body = EXCLUDED.body,
+           published = EXCLUDED.published,
+           updated_at = now()`,
+    [
+      slug,
+      platform,
+      version,
+      req.body?.title ? String(req.body.title).trim() : null,
+      body,
+      Boolean(req.body?.published),
+    ],
+  );
+
+  await audit(req, 'releasenotes.update', { type: 'app', id: slug }, { version });
+  res.json({ ok: true, version });
+});
+
+dashboardRouter.delete('/api/apps/:slug/release-notes/:version', async (req, res) => {
+  const slug = String(req.params.slug).toLowerCase();
+  if (denyEdit(req, res, slug)) return;
+
+  const version = String(req.params.version);
+  await query('DELETE FROM release_notes WHERE app_slug = $1 AND version = $2', [slug, version]);
+  await audit(req, 'releasenotes.delete', { type: 'app', id: slug }, { version });
+  res.json({ ok: true });
 });

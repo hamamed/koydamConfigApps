@@ -28,7 +28,13 @@ configRouter.get('/v1/apps/:slug/config', async (req, res) => {
     });
   }
 
-  const result = await appConfig(slug, platform);
+  // Read before assembling, not only for the fetch counter: announcements and
+  // release notes are targeted by it.
+  const version = typeof req.query.version === 'string'
+    ? req.query.version.slice(0, 32)
+    : null;
+
+  const result = await appConfig(slug, platform, version);
 
   if (!result) {
     // 404 rather than an empty config: a client that gets `{}` would read it
@@ -42,9 +48,6 @@ configRouter.get('/v1/apps/:slug/config', async (req, res) => {
   // Fire and forget. A counter must never delay or fail the response the app
   // is waiting on before it can draw its first screen.
   if (config.trackFetches) {
-    const version = typeof req.query.version === 'string'
-      ? req.query.version.slice(0, 32)
-      : null;
     Promise.resolve()
       .then(() => recordFetch(slug, platform, version))
       .catch((err) => log.debug('Fetch counter failed', { error: err.message }));

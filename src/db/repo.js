@@ -1,4 +1,5 @@
 import { applyTestUnits, testAppId } from '../ads.js';
+import { versionInRange } from '../version.js';
 import { query } from './pool.js';
 
 /**
@@ -17,12 +18,13 @@ import { query } from './pool.js';
  * Returns null when the app or platform is unknown, which the route turns into
  * a 404 — better than an empty config the client would read as "ads off".
  */
-export async function appConfig(slug, platform) {
+export async function appConfig(slug, platform, version = null) {
   const res = await query(
     `SELECT a.slug, a.name,
             p.bundle_id, p.store_url, p.admob_app_id, p.ads_enabled,
             p.latest_version, p.min_supported_version,
-            p.maintenance, p.maintenance_message, p.test_ads
+            p.maintenance, p.maintenance_message, p.test_ads,
+            p.rating_prompt
        FROM apps a
        JOIN app_platforms p ON p.app_slug = a.slug
       WHERE a.slug = $1 AND p.platform = $2`,
@@ -32,10 +34,12 @@ export async function appConfig(slug, platform) {
   const row = res?.rows?.[0];
   if (!row) return null;
 
-  const [units, pacing, flags] = await Promise.all([
+  const [units, pacing, flags, banner, notes] = await Promise.all([
     adUnits(slug, platform),
     adPacing(slug, platform),
     featureFlags(slug, platform),
+    announcement(slug, platform, version),
+    releaseNotes(slug, platform, version),
   ]);
 
   return {
@@ -65,9 +69,94 @@ export async function appConfig(slug, platform) {
       active: row.maintenance,
       message: row.maintenance_message,
     },
+    // A banner the panel can push without a release, or null.
+    announcement: banner,
+    // When to ask for a review. iOS allows a limited number of prompts a year,
+    // so the timing belongs somewhere it can be corrected in an afternoon.
+    rating: row.rating_prompt ?? { enabled: false },
+    // Notes for the version this client is running, shown once after an update.
+    whatsNew: notes,
     flags,
   };
 }
+
+/**
+ * The announcement this client should see, or null.
+ *
+ * Filtered in two places on purpose. The window and the on/off switch are SQL,
+ * because the database can answer those and there is no reason to carry rows
+ * across that will be discarded. Version targeting is JavaScript, because
+ * "1.10.0" sorts before "1.9.0" as text and doing it in SQL would silently
+ * target the wrong people.
+ *
+ * At most one is returned. A banner is one banner; handing the client a list
+ * and letting it choose moves that decision somewhere it cannot be changed
+ * without a release.
+ */
+async function announcement(slug, platform, version) {
+  const res = await query(
+    `SELECT id, kind, title, body, link_url, link_label,
+            min_version, max_version, dismissible
+       FROM announcements
+      WHERE app_slug = $1
+        AND active
+        AND (platform IS NULL OR platform = $2)
+        AND (starts_at IS NULL OR starts_at <= now())
+        AND (ends_at   IS NULL OR ends_at   >  now())
+      -- Platform-specific first, then newest. The one written for this
+      -- platform is more deliberate than the one written for both.
+      ORDER BY platform NULLS LAST, created_at DESC`,
+    [slug, platform],
+  );
+
+  for (const row of res?.rows ?? []) {
+    if (!versionInRange(version, row.min_version, row.max_version)) continue;
+
+    return {
+      id: String(row.id),
+      kind: row.kind,
+      title: row.title,
+      body: row.body,
+      link: row.link_url ? { url: row.link_url, label: row.link_label } : null,
+      dismissible: row.dismissible,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Release notes for the version the client is actually running.
+ *
+ * Not the newest: someone who skipped two releases should read about what they
+ * have, not about a version they do not. A client that does not report its
+ * version gets nothing, which is correct - there is no way to know what to
+ * show it.
+ */
+async function releaseNotes(slug, platform, version) {
+  if (!version) return null;
+
+  // The build suffix is not part of what a release is called: "1.4.0+27" and
+  // "1.4.0" are the same release to everyone except the store.
+  const clean = String(version).trim().replace(/^v/i, '').split(/[+-]/)[0];
+
+  const res = await query(
+    `SELECT title, body FROM release_notes
+      WHERE app_slug = $1
+        AND published
+        AND version = $2
+        AND (platform IS NULL OR platform = $3)
+      ORDER BY platform NULLS LAST
+      LIMIT 1`,
+    [slug, clean, platform],
+  );
+
+  const row = res?.rows?.[0];
+  if (!row) return null;
+
+  return { version: clean, title: row.title, body: row.body };
+}
+
 
 /** Enabled placements only — a disabled unit is absent, not present-and-false. */
 async function adUnits(slug, platform) {
@@ -125,7 +214,8 @@ export async function listApps() {
                 'minSupportedVersion', p.min_supported_version,
                 'maintenance', p.maintenance,
                 'maintenanceMessage', p.maintenance_message,
-                'testAds', p.test_ads
+                'testAds', p.test_ads,
+                'ratingPrompt', p.rating_prompt
               ) ORDER BY p.platform
             ) FILTER (WHERE p.platform IS NOT NULL), '[]') AS platforms
        FROM apps a
