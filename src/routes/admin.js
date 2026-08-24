@@ -18,6 +18,9 @@ import {
 import { generateSkinId, slugify, parseTags } from '../utils/ids.js';
 import { LAYOUTS, FACE_SHADE, heroRegion, TEMPLATE_SIZE } from '../utils/template-layout.js';
 import { REPORT_REASONS } from '../utils/validate.js';
+import { designSkin, isAvailable as isAiAvailable, availableQualities } from '../services/ai/design.js';
+import { PUBLISH_CHECKLIST } from '../services/ai/guidelines.js';
+import { layoutProof } from '../services/ai/compose.js';
 
 export const adminRouter = express.Router();
 
@@ -444,3 +447,117 @@ function validateSkinForm(form) {
 function wantsJson(req) {
   return req.xhr || req.get('accept')?.includes('application/json');
 }
+
+// ── Design a skin with AI ───────────────────────────────────────────────────
+
+/**
+ * The form. Rendered whether or not generation is configured, so someone can
+ * see what it would do and what it needs before finding a key.
+ */
+adminRouter.get('/skins/ai', (req, res) => {
+  res.render('skins/ai', {
+    title: 'Design a skin',
+    available: isAiAvailable(),
+    qualities: availableQualities(),
+    checklist: PUBLISH_CHECKLIST,
+  });
+});
+
+/**
+ * Generates, composes, and saves as an unpublished draft.
+ *
+ * Never published directly. Roblox moderates every upload and its decision is
+ * the one that counts, so a person looks at this before it is offered to
+ * anyone - and the draft is the shape that makes that the default rather than
+ * a step someone has to remember.
+ */
+adminRouter.post('/skins/ai', async (req, res, next) => {
+  const description = String(req.body?.description ?? '').trim();
+  const category = String(req.body?.category ?? 'shirt');
+  const quality = String(req.body?.quality ?? 'standard');
+  const title = String(req.body?.title ?? '').trim() || description.slice(0, 60);
+
+  if (!CATEGORIES.includes(category)) {
+    req.flash('error', 'Pick a category.');
+    return res.redirect('/admin/skins/ai');
+  }
+
+  try {
+    const result = await designSkin({ description, category, quality });
+
+    const id = generateSkinId();
+    const base = `${slugify(title, id)}-${id.slice(5)}`;
+
+    // Through the same storage path an upload takes: it re-encodes with sharp,
+    // which is what guarantees the bytes really are a PNG and strips whatever
+    // metadata the provider attached.
+    const stored = await storeTemplate(result.template, `${base}.png`);
+    const preview = await storePreview(result.preview, `${base}.webp`);
+
+    createSkin({
+      id,
+      title,
+      category,
+      // The description doubles as the record of what was asked for. Someone
+      // looking at this in a month should not have to guess where it came from.
+      description: `AI generated — “${result.meta.description}”`,
+      tags: ['ai'],
+      isFeatured: false,
+      // The point of the whole flow: it arrives as a draft.
+      isPublished: false,
+      color: await dominantColor(result.template, category),
+      templateFile: stored.filename,
+      previewFile: preview.filename,
+      templateW: stored.width,
+      templateH: stored.height,
+      fileBytes: stored.bytes + preview.bytes,
+      createdBy: req.user.id,
+    });
+
+    logAudit(req.user.id, 'skin.design', id, result.meta.description);
+
+    req.flash(
+      'success',
+      'Generated as a draft. Check it against the guidelines, then publish.',
+    );
+    return res.redirect(`/admin/skins/${id}`);
+  } catch (error) {
+    // A refused prompt is an answer, not a fault: it should read as guidance
+    // rather than as a stack trace in the log.
+    if (error.code === 'prompt_rejected') {
+      req.flash('error', error.message);
+      return res.redirect('/admin/skins/ai');
+    }
+
+    // A provider being down, out of credit or rate limiting is worth showing
+    // as itself rather than as a generic 500.
+    if (/provider|configured|rate limit|too long/i.test(error.message)) {
+      req.flash('error', error.message);
+      return res.redirect('/admin/skins/ai');
+    }
+
+    return next(error);
+  }
+});
+
+/**
+ * The layout proof.
+ *
+ * Renders each face in its own colour so the geometry can be confirmed by
+ * looking, rather than by uploading to Roblox and dressing an avatar. If a
+ * face ever lands in the wrong rectangle this shows it immediately; a finished
+ * skin hides it until somebody wears the thing.
+ */
+adminRouter.get('/skins/ai/layout-proof.png', async (req, res, next) => {
+  try {
+    const category = CATEGORIES.includes(String(req.query.category))
+      ? String(req.query.category)
+      : 'shirt';
+
+    res.type('image/png');
+    res.set('Cache-Control', 'no-store');
+    return res.send(await layoutProof(category));
+  } catch (error) {
+    return next(error);
+  }
+});

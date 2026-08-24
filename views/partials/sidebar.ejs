@@ -5,7 +5,10 @@
       { href: '/admin',       icon: 'layout-dashboard', label: 'Dashboard',
         active: currentPath === '/' },
       { href: '/admin/skins', icon: 'shirt',            label: 'Skins',
-        active: currentPath.startsWith('/skins') && currentPath !== '/skins/new' },
+        active: currentPath.startsWith('/skins')
+                && currentPath !== '/skins/new' && currentPath !== '/skins/ai' },
+      { href: '/admin/skins/ai', icon: 'sparkles',     label: 'Design with AI',
+        active: currentPath === '/skins/ai' },
       { href: '/admin/tags',  icon: 'tags',             label: 'Tags',
         active: currentPath.startsWith('/tags') },
     ]},
