@@ -1,0 +1,55 @@
+[Unit]
+Description=Brawl Stats API pipeline
+Documentation=https://developer.brawlstars.com
+After=network-online.target redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# Create this user first (no login shell, no home):
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin brawl
+User=brawl
+Group=brawl
+
+WorkingDirectory=/opt/brawl-vps
+EnvironmentFile=/opt/brawl-vps/.env
+
+# Use the absolute node path — systemd has no PATH from your shell profile, so
+# `node` alone fails when installed via nvm or fnm. Find it with `which node`.
+ExecStart=/usr/bin/node src/server.js
+
+Restart=always
+RestartSec=5
+
+# Cap restart looping: 5 failures in 60s and systemd stops trying, so a bad
+# config surfaces in `systemctl status` instead of thrashing forever.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# SIGTERM triggers the graceful shutdown in server.js; give it time to drain.
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=brawl-api
+
+# ── Hardening ───────────────────────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+
+# ProtectSystem=strict makes everything read-only; the app writes
+# data/brawler-meta.json, so that one path needs an exception.
+ReadWritePaths=/opt/brawl-vps/data
+
+[Install]
+WantedBy=multi-user.target

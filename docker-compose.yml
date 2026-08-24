@@ -1,0 +1,79 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Override .env: inside Compose, Redis is reachable by service name, and
+      # the app must bind 0.0.0.0 to be reachable from the host.
+      HOST: 0.0.0.0
+      REDIS_URL: redis://redis:6379
+      # Same idea for Postgres: reachable by service name inside Compose.
+      POSTGRES_URL: postgres://brawl:${POSTGRES_PASSWORD:-brawl}@postgres:5432/brawl
+    ports:
+      # Published on loopback only — nginx on the host proxies to it. Change to
+      # "8080:8080" only if you intend to expose the API directly with no TLS.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Persists data/brawler-meta.json so a restart doesn't re-sync.
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Cache-only workload: cap memory and evict the least-recently-used keys
+    # rather than letting Redis grow until the OOM killer intervenes. No
+    # persistence — everything here is reconstructible from the API.
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: brawl
+      POSTGRES_DB: brawl
+      # Set POSTGRES_PASSWORD in .env. The fallback exists so a fresh clone
+      # comes up without editing anything; it is not a password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brawl}
+    volumes:
+      # The durable half of the system. Unlike Redis, nothing here is
+      # reconstructible — a crawl that is lost is lost, because the upstream API
+      # only ever reports the present moment.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brawl -d brawl"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    # Not published. Only the api service needs it, and exposing Postgres to the
+    # host is how databases end up on the public internet.
+    expose:
+      - "5432"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pgdata:
