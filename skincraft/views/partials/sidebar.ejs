@@ -7,8 +7,6 @@
       { href: '/admin/skins', icon: 'shirt',            label: 'Skins',
         active: currentPath.startsWith('/skins')
                 && currentPath !== '/skins/new' && currentPath !== '/skins/ai' },
-      { href: '/admin/skins/ai', icon: 'sparkles',     label: 'Design with AI',
-        active: currentPath === '/skins/ai' },
       { href: '/admin/tags',  icon: 'tags',             label: 'Tags',
         active: currentPath.startsWith('/tags') },
     ]},
@@ -49,6 +47,10 @@
     <a class="sc-nav-link <%= currentPath === '/skins/design' ? 'active' : '' %>" href="/admin/skins/design">
       <i data-lucide="wand-sparkles" width="17" height="17"></i>
       <span>Design a skin</span>
+    </a>
+    <a class="sc-nav-link <%= currentPath === '/skins/ai' ? 'active' : '' %>" href="/admin/skins/ai">
+      <i data-lucide="sparkles" width="17" height="17"></i>
+      <span>Design with AI</span>
     </a>
   </nav>
 
