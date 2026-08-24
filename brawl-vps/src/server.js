@@ -50,7 +50,10 @@ app.use(
         // The admin panel shares its typeface with the rest of the Koydam
         // design system. Two hostnames, narrowly scoped — the alternative is
         // vendoring four font files to avoid one origin.
-        'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        // No 'unsafe-inline'. The panel's markup carries no style attributes,
+        // so the exemption bought nothing and applied to every element on the
+        // page. Matches the dashboard's policy.
+        'style-src': ["'self'", 'https://fonts.googleapis.com'],
         'font-src': ["'self'", 'https://fonts.gstatic.com'],
         // Dropped: helmet sets this by default, and on a plain-HTTP deployment
         // it makes the browser rewrite every request to https:// — which then
