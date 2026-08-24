@@ -1,9 +1,12 @@
-/* ==========================================================================
-   admin.css — dashboard chrome.
-   Extends the public design system (koydam.css) with a sidebar shell, tables
-   and editor-specific bits. Load order: bootstrap → koydam.css → admin.css
-   ========================================================================== */
+/* Dashboard chrome — shared by platform-api and Brawl.
 
+   Both panels are hand-written HTML using the `ad-*` vocabulary, so one file
+   serves them. SkinCraft does NOT load this: its EJS templates use ~55 `sc-*`
+   class names, and rather than edit every view in a third-party repo with no
+   tests, those classes are redefined against the same Koydam tokens in
+   deploy/overlays/skincraft/css/admin.css. Two files, one design.
+
+   Load order: bootstrap -> koydam.css -> this. */
 :root {
   --ad-sidebar-w: 254px;
   --ad-topbar-h: 60px;
@@ -62,6 +65,21 @@ body.ad-body { background: var(--kd-surface); }
 }
 
 /* ------------------------------------------------------------- sidebar -- */
+/* The glyph tile beside the wordmark. The markup carries this class in both
+   panels but nothing defined it, so the span was laying out as bare inline
+   text and the icon sat unaligned against the label. */
+.ad-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 8px;
+  background: var(--kd-accent);
+  color: #fff;
+}
+
 .ad-brand {
   display: flex; align-items: center; gap: .6rem;
   padding: 1.05rem 1.15rem;

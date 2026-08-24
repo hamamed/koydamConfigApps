@@ -38,9 +38,19 @@ panelRouter.get('/', async (req, res) => {
 
 // ── Assets ──────────────────────────────────────────────────────────────────
 
+/**
+ * The shared design system.
+ *
+ * Served from deploy/shared/css rather than a copy under src/panel, because
+ * that directory is the single source every panel on this box is deployed
+ * from. A second copy here would be the one that drifted.
+ */
 panelRouter.use(
   '/panel/css',
-  express.static(path.join(PANEL, 'css'), { maxAge: '1h', fallthrough: false }),
+  express.static(path.join(ROOT, 'deploy', 'shared', 'css'), {
+    maxAge: '1h',
+    fallthrough: false,
+  }),
 );
 
 panelRouter.get('/panel/app.js', (_req, res) => {

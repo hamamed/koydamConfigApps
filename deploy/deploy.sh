@@ -9,6 +9,10 @@
 #
 # Or name one:  sudo /opt/deploy.sh brawl | platform | skincraft
 #
+# And to check nothing has been hand-edited on the box:
+#
+#   sudo /opt/deploy.sh verify
+#
 # The first install of each still uses its own setup script — this only knows
 # how to move an existing install forward, which is the thing you do weekly.
 #
@@ -119,19 +123,75 @@ deploy_one() {
   fi
 }
 
-# SkinCraft's theme and SSO client live in this repo, not its own, and a fresh
-# checkout would otherwise restore the upstream dark theme and local login.
-reapply_skincraft_overlay() {
-  local overlay="$REPOS_DIR/platform/deploy"
-  [[ -d "$overlay/skincraft-theme" ]] || return 0
-  [[ -d /opt/skincraft ]] || return 0
+# ── Overlays ────────────────────────────────────────────────────────────────
+#
+# Some files that live inside Brawl and SkinCraft are owned by this repo: the
+# SSO client both of them import, and the shared stylesheet all three panels
+# render. Keeping one copy here and pushing it outward is what stops three
+# design systems slowly becoming three different design systems.
+#
+# Each service declares what it receives in deploy/overlays/<name>/manifest.
 
-  cp "$overlay/skincraft-theme/css/"*.css /opt/skincraft/public/css/
-  cp "$overlay/skincraft-theme/views/partials/head.ejs" /opt/skincraft/views/partials/
-  [[ -d "$overlay/skincraft-auth" ]] && cp "$overlay/skincraft-auth/"*.js /opt/skincraft/src/middleware/
-  chown -R brawl:brawl /opt/skincraft
-  ok "skincraft overlay reapplied"
+apply_overlay() {
+  local name="$1"
+  local target="${TARGET[$name]}"
+  local deploy_dir="$REPOS_DIR/platform/deploy"
+  local manifest="$deploy_dir/overlays/$name/manifest"
+
+  [[ -f "$manifest" ]] || return 0
+  [[ -d "$target"   ]] || return 0
+
+  local applied=0 src dest
+  while read -r src dest; do
+    # Blank lines and comments.
+    [[ -z "$src" || "$src" == \#* ]] && continue
+
+    if [[ ! -f "$deploy_dir/$src" ]]; then
+      warn "overlay source missing: $src"
+      continue
+    fi
+
+    mkdir -p "$(dirname "$target/$dest")"
+    cp "$deploy_dir/$src" "$target/$dest"
+    applied=$((applied + 1))
+  done < "$manifest"
+
+  chown -R brawl:brawl "$target"
+  ok "overlay applied ($applied files)"
 }
+
+# Reports drift instead of fixing it. The copies committed inside brawl-vps and
+# skincraft exist so those repos boot from a bare clone; this is how you find
+# out one of them has been edited in place and no longer matches the source.
+verify_overlays() {
+  local deploy_dir="$REPOS_DIR/platform/deploy"
+  local drift=0
+
+  for name in brawl skincraft; do
+    local manifest="$deploy_dir/overlays/$name/manifest"
+    local target="${TARGET[$name]}"
+    [[ -f "$manifest" && -d "$target" ]] || continue
+
+    while read -r src dest; do
+      [[ -z "$src" || "$src" == \#* ]] && continue
+      [[ -f "$deploy_dir/$src" && -f "$target/$dest" ]] || continue
+
+      if ! cmp -s "$deploy_dir/$src" "$target/$dest"; then
+        warn "$name: $dest differs from $src"
+        drift=$((drift + 1))
+      fi
+    done < "$manifest"
+  done
+
+  [[ $drift -eq 0 ]] && ok "all overlay files match source"
+  return 0
+}
+
+if [[ "${1:-}" == "verify" ]]; then
+  step "Verifying overlays"
+  verify_overlays
+  exit 0
+fi
 
 TARGETS=("${@:-platform brawl skincraft}")
 # shellcheck disable=SC2206
@@ -140,7 +200,13 @@ TARGETS=(${TARGETS[@]})
 for name in "${TARGETS[@]}"; do
   [[ -n "${REPO[$name]:-}" ]] || die "Unknown target '$name'. Use: platform, brawl, skincraft."
   deploy_one "$name"
-  [[ "$name" == "skincraft" ]] && { reapply_skincraft_overlay; systemctl restart skincraft; }
+
+  # After the sync, because rsync --delete would otherwise remove overlay
+  # files that are not in the service's own repository.
+  if [[ -f "$REPOS_DIR/platform/deploy/overlays/$name/manifest" ]]; then
+    apply_overlay "$name"
+    systemctl restart "${UNIT[$name]}"
+  fi
 done
 
 step "Health"
