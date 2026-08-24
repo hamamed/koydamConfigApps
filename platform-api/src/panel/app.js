@@ -300,9 +300,425 @@ async function viewApp(slug) {
   }
 
   root.append(flagsCard(detail));
+
+  // Everything the panel can say to this app's users, below what it can
+  // configure about it.
+  root.append(announcementsCard(detail.slug));
+  root.append(ratingCard(detail));
+  root.append(releaseNotesCard(detail.slug));
+
   root.append(versionsCard(detail));
   return root;
 }
+
+// ── Announcements ───────────────────────────────────────────────────────────
+
+/**
+ * A banner the app shows, pushed without a release.
+ *
+ * Loaded after the page draws rather than folded into the app detail request:
+ * this is a second table and the platform editors above are what someone came
+ * for.
+ */
+function announcementsCard(slug) {
+  const c = card('Announcement banner', 'circle-alert');
+
+  c.body.append(
+    el(
+      'p',
+      'kd-faint small',
+      'One banner at a time. The most recent live one that matches the ' +
+        'client’s platform and version wins.',
+    ),
+  );
+
+  const list = el('div');
+  c.body.append(list);
+
+  const refresh = async () => {
+    try {
+      const { announcements } = await api(`/api/apps/${slug}/announcements`);
+
+      list.replaceChildren(
+        table(
+          ['Title', 'Scope', 'Window', 'State', ''],
+          announcements.map((a) => {
+            const scope = [
+              a.platform ?? 'both',
+              a.min_version || a.max_version
+                ? `${a.min_version ?? '…'}–${a.max_version ?? '…'}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ');
+
+            const window =
+              a.starts_at || a.ends_at
+                ? `${a.starts_at ? new Date(a.starts_at).toLocaleDateString() : '…'} – ` +
+                  `${a.ends_at ? new Date(a.ends_at).toLocaleDateString() : '…'}`
+                : 'always';
+
+            const state = a.live
+              ? { text: 'live', className: 'text-success small fw-semibold' }
+              : a.active
+                ? { text: 'scheduled', className: 'kd-faint small' }
+                : { text: 'off', className: 'kd-faint small' };
+
+            const actions = el('div', 'd-flex gap-1');
+
+            const toggle = el(
+              'button',
+              'btn btn-sm btn-outline-secondary',
+              a.active ? 'Turn off' : 'Turn on',
+            );
+            toggle.addEventListener('click', async () => {
+              try {
+                await api(`/api/apps/${slug}/announcements/${a.id}/toggle`, { method: 'POST' });
+                refresh();
+              } catch (err) {
+                toast(err.message, 'err');
+              }
+            });
+
+            const del = el('button', 'btn btn-sm btn-outline-danger', 'Delete');
+            del.addEventListener('click', async () => {
+              try {
+                await api(`/api/apps/${slug}/announcements/${a.id}`, { method: 'DELETE' });
+                toast('Deleted');
+                refresh();
+              } catch (err) {
+                toast(err.message, 'err');
+              }
+            });
+
+            actions.append(toggle, del);
+
+            const title = el('div');
+            title.append(el('div', 'fw-semibold', a.title));
+            if (a.body) title.append(el('div', 'kd-faint small', a.body.slice(0, 90)));
+
+            return [title, { text: scope, className: 'kd-faint small' },
+                    { text: window, className: 'kd-faint small' }, state, actions];
+          }),
+        ),
+      );
+    } catch (err) {
+      list.replaceChildren(el('div', 'ad-empty', err.message));
+    }
+  };
+
+  refresh();
+
+  // ── New ──
+  const form = el('div', 'row g-2 mt-3');
+
+  const title = el('input', 'form-control form-control-sm');
+  title.placeholder = 'Season 32 meta is live';
+
+  const body = el('input', 'form-control form-control-sm');
+  body.placeholder = 'Tier lists updated for the new balance changes.';
+
+  const kind = el('select', 'form-select form-select-sm');
+  for (const [v, l] of [['info', 'Info'], ['warning', 'Warning'], ['success', 'Good news']]) {
+    const o = el('option', null, l);
+    o.value = v;
+    kind.append(o);
+  }
+
+  const platform = el('select', 'form-select form-select-sm');
+  for (const [v, l] of [['', 'Both platforms'], ['ios', 'iOS only'], ['android', 'Android only']]) {
+    const o = el('option', null, l);
+    o.value = v;
+    platform.append(o);
+  }
+
+  const linkUrl = el('input', 'form-control form-control-sm');
+  linkUrl.placeholder = 'https://… (optional)';
+
+  const minVersion = el('input', 'form-control form-control-sm');
+  minVersion.placeholder = 'Min version';
+
+  const maxVersion = el('input', 'form-control form-control-sm');
+  maxVersion.placeholder = 'Max version';
+
+  const startsAt = el('input', 'form-control form-control-sm');
+  startsAt.type = 'datetime-local';
+
+  const endsAt = el('input', 'form-control form-control-sm');
+  endsAt.type = 'datetime-local';
+
+  for (const [label, control, width] of [
+    ['Title', title, 'col-12 col-md-6'],
+    ['Body', body, 'col-12 col-md-6'],
+    ['Style', kind, 'col-6 col-md-3'],
+    ['Who sees it', platform, 'col-6 col-md-3'],
+    ['Link', linkUrl, 'col-12 col-md-6'],
+    ['From version', minVersion, 'col-6 col-md-3'],
+    ['To version', maxVersion, 'col-6 col-md-3'],
+    ['Show from', startsAt, 'col-6 col-md-3'],
+    ['Show until', endsAt, 'col-6 col-md-3'],
+  ]) {
+    const col = el('div', width);
+    col.append(el('label', 'form-label small kd-faint', label), control);
+    form.append(col);
+  }
+
+  c.body.append(form);
+
+  const dismissWrap = el('div', 'form-check mt-2');
+  const dismissible = el('input', 'form-check-input');
+  dismissible.type = 'checkbox';
+  dismissible.id = 'annDismiss';
+  dismissible.checked = true;
+  const dismissLabel = el('label', 'form-check-label small', 'People can dismiss it');
+  dismissLabel.htmlFor = 'annDismiss';
+  dismissWrap.append(dismissible, dismissLabel);
+  c.body.append(dismissWrap);
+
+  const add = el('button', 'btn btn-sm btn-primary mt-2', 'Publish banner');
+  add.addEventListener('click', async () => {
+    if (!title.value.trim()) return toast('Give it a title', 'err');
+
+    add.disabled = true;
+    try {
+      await api(`/api/apps/${slug}/announcements`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: title.value.trim(),
+          body: body.value.trim() || null,
+          kind: kind.value,
+          platform: platform.value || null,
+          linkUrl: linkUrl.value.trim() || null,
+          minVersion: minVersion.value.trim() || null,
+          maxVersion: maxVersion.value.trim() || null,
+          startsAt: startsAt.value ? new Date(startsAt.value).toISOString() : null,
+          endsAt: endsAt.value ? new Date(endsAt.value).toISOString() : null,
+          dismissible: dismissible.checked,
+        }),
+      });
+      toast('Published');
+      title.value = body.value = linkUrl.value = '';
+      minVersion.value = maxVersion.value = startsAt.value = endsAt.value = '';
+      refresh();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      add.disabled = false;
+    }
+  });
+  c.body.append(add);
+
+  return c.card;
+}
+
+// ── Rating prompt ───────────────────────────────────────────────────────────
+
+function ratingCard(detail) {
+  const c = card('Review prompt', 'circle-check');
+
+  c.body.append(
+    el(
+      'p',
+      'kd-faint small',
+      'iOS allows a limited number of review prompts a year. Asking too early ' +
+        'spends one on somebody who has barely used the app.',
+    ),
+  );
+
+  for (const platform of ['ios', 'android']) {
+    const existing =
+      (detail.platforms ?? []).find((p) => p.platform === platform)?.ratingPrompt ?? {};
+
+    const row = el('div', 'row g-2 align-items-end mb-2');
+
+    const heading = el('div', 'col-12');
+    heading.append(el('div', 'ad-section-label', platform.toUpperCase()));
+    row.append(heading);
+
+    const enabled = el('input', 'form-check-input');
+    enabled.type = 'checkbox';
+    enabled.checked = existing.enabled ?? false;
+
+    const enabledCol = el('div', 'col-6 col-md-2');
+    const check = el('div', 'form-check');
+    check.append(enabled, el('label', 'form-check-label small', 'Ask'));
+    enabledCol.append(check);
+    row.append(enabledCol);
+
+    const mk = (label, value, fallback) => {
+      const input = el('input', 'form-control form-control-sm');
+      input.type = 'number';
+      input.min = '0';
+      input.value = value ?? fallback;
+      const col = el('div', 'col-6 col-md-3');
+      col.append(el('label', 'form-label small kd-faint', label), input);
+      row.append(col);
+      return input;
+    };
+
+    const minSessions = mk('After N opens', existing.minSessions, 5);
+    const minDays = mk('Not before day', existing.minDaysInstalled, 3);
+    const cooldown = mk('Ask again after (days)', existing.cooldownDays, 90);
+
+    const save = el('button', 'btn btn-sm btn-outline-secondary', 'Save');
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      try {
+        await api(`/api/apps/${detail.slug}/rating/${platform}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            enabled: enabled.checked,
+            minSessions: Number(minSessions.value),
+            minDaysInstalled: Number(minDays.value),
+            cooldownDays: Number(cooldown.value),
+          }),
+        });
+        toast(platform.toUpperCase() + ' saved');
+      } catch (err) {
+        toast(err.message, 'err');
+      } finally {
+        save.disabled = false;
+      }
+    });
+
+    const saveCol = el('div', 'col-6 col-md-2');
+    saveCol.append(save);
+    row.append(saveCol);
+
+    c.body.append(row);
+  }
+
+  return c.card;
+}
+
+// ── Release notes ───────────────────────────────────────────────────────────
+
+function releaseNotesCard(slug) {
+  const c = card("What's new", 'scroll-text');
+
+  c.body.append(
+    el(
+      'p',
+      'kd-faint small',
+      'Shown once after an update, to whoever is running that version. Write ' +
+        'them before the build ships and publish when it does.',
+    ),
+  );
+
+  const list = el('div');
+  c.body.append(list);
+
+  const refresh = async () => {
+    try {
+      const { notes } = await api(`/api/apps/${slug}/release-notes`);
+
+      list.replaceChildren(
+        table(
+          ['Version', 'Scope', 'Title', 'State', ''],
+          notes.map((n) => {
+            const del = el('button', 'btn btn-sm btn-outline-danger', 'Delete');
+            del.addEventListener('click', async () => {
+              try {
+                await api(
+                  `/api/apps/${slug}/release-notes/${encodeURIComponent(n.version)}`,
+                  { method: 'DELETE' },
+                );
+                toast('Deleted');
+                refresh();
+              } catch (err) {
+                toast(err.message, 'err');
+              }
+            });
+
+            return [
+              { text: n.version, className: 'fw-semibold' },
+              { text: n.platform ?? 'both', className: 'kd-faint small' },
+              { text: n.title ?? '—', className: 'small' },
+              n.published
+                ? { text: 'published', className: 'text-success small' }
+                : { text: 'draft', className: 'kd-faint small' },
+              del,
+            ];
+          }),
+        ),
+      );
+    } catch (err) {
+      list.replaceChildren(el('div', 'ad-empty', err.message));
+    }
+  };
+
+  refresh();
+
+  const form = el('div', 'row g-2 mt-3');
+
+  const version = el('input', 'form-control form-control-sm');
+  version.placeholder = '1.4.0';
+
+  const platform = el('select', 'form-select form-select-sm');
+  for (const [v, l] of [['', 'Both'], ['ios', 'iOS'], ['android', 'Android']]) {
+    const o = el('option', null, l);
+    o.value = v;
+    platform.append(o);
+  }
+
+  const title = el('input', 'form-control form-control-sm');
+  title.placeholder = "What's new in 1.4";
+
+  const body = el('textarea', 'form-control form-control-sm');
+  body.rows = 3;
+  body.placeholder = 'Career stats now include your best three brawlers.';
+
+  for (const [label, control, width] of [
+    ['Version', version, 'col-6 col-md-2'],
+    ['Platform', platform, 'col-6 col-md-2'],
+    ['Title', title, 'col-12 col-md-8'],
+    ['Notes', body, 'col-12'],
+  ]) {
+    const col = el('div', width);
+    col.append(el('label', 'form-label small kd-faint', label), control);
+    form.append(col);
+  }
+  c.body.append(form);
+
+  const pubWrap = el('div', 'form-check mt-2');
+  const published = el('input', 'form-check-input');
+  published.type = 'checkbox';
+  published.id = 'notesPublished';
+  pubWrap.append(published, el('label', 'form-check-label small', 'Publish now'));
+  c.body.append(pubWrap);
+
+  const save = el('button', 'btn btn-sm btn-primary mt-2', 'Save notes');
+  save.addEventListener('click', async () => {
+    if (!version.value.trim()) return toast('Which version?', 'err');
+    if (!body.value.trim()) return toast('Write the notes', 'err');
+
+    save.disabled = true;
+    try {
+      await api(`/api/apps/${slug}/release-notes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          version: version.value.trim(),
+          platform: platform.value || null,
+          title: title.value.trim() || null,
+          body: body.value.trim(),
+          published: published.checked,
+        }),
+      });
+      toast('Saved');
+      version.value = title.value = body.value = '';
+      published.checked = false;
+      refresh();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      save.disabled = false;
+    }
+  });
+  c.body.append(save);
+
+  return c.card;
+}
+
 
 function labelledInput(label, value, placeholder, disabled) {
   const wrap = el('div', 'mb-2');
