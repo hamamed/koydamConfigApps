@@ -22,7 +22,22 @@ export const panelRouter = Router();
 
 // ── Pages ───────────────────────────────────────────────────────────────────
 
-panelRouter.get('/login', async (req, res) => {
+/**
+ * Never cache a response whose content depends on who is asking.
+ *
+ * Both pages below answer differently with and without a session: `/` is either
+ * the dashboard or a redirect to the login. Without this a browser caches the
+ * redirect and replays it after signing in - the cookie is set, the navigation
+ * happens, and the login page comes straight back with no error shown, because
+ * the server was never asked.
+ */
+function noStore(_req, res, next) {
+  res.set('Cache-Control', 'no-store, must-revalidate');
+  res.set('Vary', 'Cookie');
+  next();
+}
+
+panelRouter.get('/login', noStore, async (req, res) => {
   // Already signed in: skip the form and honour ?next=, which is how a panel
   // on another subdomain bounces someone here and gets them back.
   if (await currentUser(req)) {
@@ -31,7 +46,7 @@ panelRouter.get('/login', async (req, res) => {
   res.sendFile(path.join(PANEL, 'login.html'));
 });
 
-panelRouter.get('/', async (req, res) => {
+panelRouter.get('/', noStore, async (req, res) => {
   if (!(await currentUser(req))) return res.redirect('/login');
   res.sendFile(path.join(PANEL, 'index.html'));
 });

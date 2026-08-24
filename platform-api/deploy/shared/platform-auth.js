@@ -145,6 +145,13 @@ export function requirePlatformAuth() {
       );
     }
 
+    // Everything past this point answers differently depending on who is
+    // asking, including the redirect to the login. Cached, that redirect
+    // replays after signing in and sends the browser back to the form with
+    // nothing to show for it, because the server was never asked again.
+    res.set('Cache-Control', 'no-store, must-revalidate');
+    res.set('Vary', 'Cookie');
+
     const sid = readCookie(req, COOKIE);
     const result = sid ? await introspect(sid) : { state: 'inactive' };
 
