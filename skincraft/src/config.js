@@ -29,6 +29,20 @@ export const config = {
   dataDir: resolve(process.env.DATA_DIR, './data'),
   storageDir: resolve(process.env.STORAGE_DIR, './storage'),
 
+  /**
+   * Artwork generation. Off unless a key is present.
+   *
+   * Speaks the OpenAI images API, which several providers implement - so the
+   * base URL is configurable and switching provider needs no code change.
+   * Off by default because it costs money per image and because a feature
+   * that silently does nothing is worse than one that says it is not set up.
+   */
+  ai: {
+    apiKey: process.env.AI_IMAGE_API_KEY || '',
+    baseUrl: (process.env.AI_IMAGE_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, ''),
+    model: process.env.AI_IMAGE_MODEL || 'gpt-image-1',
+  },
+
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 12) * 1024 * 1024,
 
   corsOrigins: (process.env.CORS_ORIGINS || '')

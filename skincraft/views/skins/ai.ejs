@@ -1,0 +1,115 @@
+<%- include('../partials/head', { title }) %>
+<div class="sc-shell">
+  <%- include('../partials/sidebar') %>
+  <div class="sc-scrim d-none" id="scScrim"></div>
+
+  <main class="sc-main">
+    <%- include('../partials/topbar', {
+      heading: 'Design with AI',
+      subheading: 'Describe a design; it is composed into a Roblox template as a draft'
+    }) %>
+
+    <%- include('../partials/flash') %>
+
+    <% if (!available) { %>
+      <div class="alert alert-warning">
+        <strong>Not switched on.</strong>
+        Set <code>AI_IMAGE_API_KEY</code> in <code>/opt/skincraft/.env</code>
+        and restart. Nothing else is needed — the rest is already here.
+      </div>
+    <% } %>
+
+    <div class="row g-3">
+      <!-- Prompt -->
+      <div class="col-12 col-xl-7">
+        <div class="sc-card sc-card-pad">
+          <h2 class="h6 mb-3">Describe the design</h2>
+
+          <form method="post" action="/admin/skins/ai">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="mb-3">
+              <label class="form-label" for="description">What should it look like?</label>
+              <textarea class="form-control" id="description" name="description"
+                        rows="3" maxlength="500" required
+                        placeholder="A deep blue galaxy with purple nebula clouds and small white stars"
+                        <%= available ? '' : 'disabled' %>></textarea>
+              <div class="form-text">
+                Describe the <em>artwork</em>, not the garment. “Blue galaxy
+                pattern”, not “a shirt with a galaxy on it” — asking for a shirt
+                gets you a picture of a shirt, printed on a shirt.
+              </div>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6 col-md-4">
+                <label class="form-label" for="category">Garment</label>
+                <select class="form-select" id="category" name="category"
+                        <%= available ? '' : 'disabled' %>>
+                  <option value="shirt">Shirt</option>
+                  <option value="pants">Pants</option>
+                  <option value="tshirt">T-shirt</option>
+                  <option value="avatar">Full body</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-4">
+                <label class="form-label" for="quality">Detail</label>
+                <select class="form-select" id="quality" name="quality"
+                        <%= available ? '' : 'disabled' %>>
+                  <option value="simple">Simple — 1 image</option>
+                  <option value="standard" selected>Standard — 2 images</option>
+                  <option value="detailed">Detailed — 3 images</option>
+                </select>
+                <div class="form-text">Each image costs a generation.</div>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <label class="form-label" for="title">Title</label>
+                <input class="form-control" id="title" name="title"
+                       maxlength="80" placeholder="Optional"
+                       <%= available ? '' : 'disabled' %>>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" type="submit" <%= available ? '' : 'disabled' %>>
+              Generate as draft
+            </button>
+            <span class="small ms-2" style="color:var(--sc-text-dim);">
+              Up to a minute. It arrives unpublished.
+            </span>
+          </form>
+        </div>
+      </div>
+
+      <!-- Guidance -->
+      <div class="col-12 col-xl-5">
+        <div class="sc-card sc-card-pad mb-3">
+          <h2 class="h6 mb-3">Before you publish</h2>
+          <ul class="mb-0 ps-3 small">
+            <% checklist.forEach(function (item) { %>
+              <li class="mb-1"><%= item %></li>
+            <% }); %>
+          </ul>
+        </div>
+
+        <div class="sc-card sc-card-pad">
+          <h2 class="h6 mb-2">How the sheet is built</h2>
+          <p class="small" style="color:var(--sc-text-dim);">
+            The model draws flat artwork; this places it into the 585 × 559
+            layout Roblox expects. Each colour is one face of the avatar — the
+            artwork is scaled and shaded into those exact rectangles.
+          </p>
+          <img src="/admin/skins/ai/layout-proof.png?category=shirt"
+               alt="Every face of the template rendered in its own colour"
+               class="img-fluid border rounded">
+          <p class="small mb-0 mt-2" style="color:var(--sc-text-dim);">
+            Red is the front, blue the back, green and yellow the sides. If a
+            face ever landed in the wrong rectangle, it would show here.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>
