@@ -120,7 +120,34 @@ migrates, creates the first owner account, installs the systemd unit,
 configures nginx and requests a certificate. It prints the sign-in details at
 the end. Re-running preserves the database, the credentials and `.env`.
 
-Redeploy later with `sudo ./deploy/update.sh`.
+## Deploying
+
+One script covers every service on the box. It pulls from GitHub, so a release
+is a push, not an upload.
+
+```bash
+sudo /opt/deploy.sh              # everything
+sudo /opt/deploy.sh brawl        # one service
+sudo /opt/deploy.sh list         # what is configured, and whether it is up
+sudo /opt/deploy.sh verify       # report files edited by hand on the server
+sudo /opt/deploy.sh --dry-run    # say what would change, change nothing
+sudo /opt/deploy.sh rollback brawl 3a90b01
+```
+
+Adding a service is a block in [`deploy/services.conf`](deploy/services.conf) —
+name, repo, target, type, unit, health URL. The script itself never changes.
+
+Installing it, once:
+
+```bash
+mkdir -p /opt/src
+git clone https://github.com/hamamed/platform-api.git /opt/src/platform
+install -m 755 /opt/src/platform/deploy/deploy.sh /opt/deploy.sh
+```
+
+`.env`, databases, uploads and wallpapers are excluded from every sync, so a
+deploy cannot take data with it. `deploy/update.sh` remains as the fallback for
+when GitHub is not reachable.
 
 ### SkinCraft on the same box
 

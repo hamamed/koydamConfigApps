@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
-# Redeploys platform-api over an existing install.
+# Redeploys platform-api over an existing install, from an uploaded copy.
+#
+# The normal path is now `deploy.sh`, which pulls from GitHub and handles every
+# service. This remains for the case that one cannot: no network to github, a
+# repo you cannot reach, or a change you need on the box before it is pushed.
 #
 # Preserves .env and the database. For a first install use setup.sh, which also
 # creates the database, the service and the nginx block.
