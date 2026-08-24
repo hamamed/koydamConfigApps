@@ -1,0 +1,197 @@
+<%- include('../partials/head', { title }) %>
+<div class="sc-shell">
+  <%- include('../partials/sidebar') %>
+  <div class="sc-scrim d-none" id="scScrim"></div>
+
+  <main class="sc-main">
+    <%- include('../partials/topbar', {
+      heading: 'Design a skin',
+      subheading: 'Compose a template, then publish it straight to the catalogue'
+    }) %>
+
+    <%- include('../partials/flash') %>
+
+    <!-- The layout the canvas draws through: injected rather than duplicated in JS, so it stays
+         the same geometry the seeder and the preview deriver use. A JSON script tag isn't
+         executed, so it doesn't run into the page's script-src policy. -->
+    <script type="application/json" id="scLayout"><%- JSON.stringify(layout) %></script>
+
+    <div class="row g-3" id="scDesigner">
+      <!-- Canvas -->
+      <div class="col-12 col-xl-7">
+        <div class="sc-card sc-card-pad">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h2 class="h6 mb-1">Template</h2>
+              <p class="mb-0 small" style="color:var(--sc-text-dim);">
+                585 × 559 · drag stickers to move them
+              </p>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="scGuides" checked>
+              <label class="form-check-label small" for="scGuides">Show guides</label>
+            </div>
+          </div>
+
+          <div class="sc-canvas-wrap">
+            <canvas id="scCanvas" width="585" height="559"></canvas>
+          </div>
+
+          <div class="d-flex gap-2 mt-3 flex-wrap">
+            <button class="btn btn-sc-ghost btn-sm" type="button" id="scDownload">
+              <i data-lucide="download" width="14" height="14" class="me-1"></i>Download PNG
+            </button>
+            <span class="small align-self-center" style="color:var(--sc-text-dim);">
+              Guides are never included in the export.
+            </span>
+          </div>
+        </div>
+
+        <!-- Selected sticker -->
+        <div class="sc-card sc-card-pad mt-3" id="scSelection" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 mb-0">Selected sticker</h2>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sc-ghost btn-sm" type="button" id="scDecalFront">Bring to front</button>
+              <button class="sc-icon-btn danger" type="button" id="scDecalDelete" aria-label="Delete sticker">
+                <i data-lucide="trash-2" width="14" height="14"></i>
+              </button>
+            </div>
+          </div>
+          <label class="form-label" for="scDecalSize">Size</label>
+          <input class="form-range mb-2" type="range" id="scDecalSize" min="12" max="220" step="1">
+          <label class="form-label" for="scDecalRotation">Rotation</label>
+          <input class="form-range" type="range" id="scDecalRotation" min="-3.14" max="3.14" step="0.01">
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="col-12 col-xl-5">
+        <div class="sc-card sc-card-pad mb-3">
+          <h2 class="h6 mb-3">Style</h2>
+
+          <div class="row g-2 mb-3">
+            <div class="col-12">
+              <label class="form-label" for="scCategory">Garment</label>
+              <select class="form-select" id="scCategory">
+                <% ['shirt', 'tshirt', 'pants'].forEach((value) => { %>
+                  <option value="<%= value %>"><%= categoryLabels[value] %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="scBase">Base colour</label>
+              <input class="form-control form-control-color w-100" type="color" id="scBase" value="#5A4BE8">
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="scAccent">Accent</label>
+              <input class="form-control form-control-color w-100" type="color" id="scAccent" value="#B6F36B">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="scPattern">Pattern</label>
+              <select class="form-select" id="scPattern">
+                <% [['none','Solid'],['stripes','Stripes'],['checks','Checks'],['dots','Dots'],
+                    ['diagonal','Diagonal'],['camo','Camo'],['gradient','Fade']].forEach(([value, label]) => { %>
+                  <option value="<%= value %>" <%= value === 'stripes' ? 'selected' : '' %>><%= label %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="scPatternScale">Pattern scale</label>
+              <input class="form-range" type="range" id="scPatternScale" min="0.4" max="2.5" step="0.05" value="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo -->
+        <div class="sc-card sc-card-pad mb-3">
+          <h2 class="h6 mb-1">Start from a photo</h2>
+          <p class="small mb-3" style="color:var(--sc-text-dim);">
+            Pulls the dominant colours out of an image. Skips near-greys, so a picture shot against
+            a white wall doesn't come back as grey and white.
+          </p>
+
+          <input class="form-control mb-2" type="file" id="scPhoto" accept="image/*">
+
+          <div id="scPalette" class="d-flex flex-wrap gap-2 mb-2"></div>
+
+          <div id="scPhotoActions" style="display:none;">
+            <button class="btn btn-sc-ghost btn-sm" type="button" id="scPhotoAsGraphic">
+              <i data-lucide="image-plus" width="14" height="14" class="me-1"></i>
+              Add photo as a graphic
+            </button>
+          </div>
+        </div>
+
+        <!-- Stickers -->
+        <div class="sc-card sc-card-pad mb-3">
+          <h2 class="h6 mb-2">Stickers</h2>
+
+          <div class="sc-sticker-grid mb-3">
+            <% ['😎','🔥','💀','👾','🌈','⚡️','💎','🎮','👑','🦖','🍕','🚀','⭐️','❤️','🎧','🐉',
+                '🌸','🍄','🎯','🧊','☠️','🤖','🌙','🍀'].forEach((glyph) => { %>
+              <button class="sc-sticker" type="button" data-emoji="<%= glyph %>"
+                      aria-label="Add <%= glyph %>"><%= glyph %></button>
+            <% }) %>
+          </div>
+
+          <label class="form-label">Shapes</label>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <% ['star','heart','circle','ring','triangle','bolt','diamond'].forEach((shape) => { %>
+              <button class="sc-sticker" type="button" data-shape="<%= shape %>"
+                      aria-label="Add <%= shape %>">
+                <i data-lucide="<%= { star:'star', heart:'heart', circle:'circle', ring:'circle-dot',
+                                      triangle:'triangle', bolt:'zap', diamond:'diamond' }[shape] %>"
+                   width="17" height="17"></i>
+              </button>
+            <% }) %>
+            <input class="form-control form-control-color ms-auto" type="color" id="scShapeColor"
+                   value="#FFFFFF" style="width:46px;" aria-label="Shape colour">
+          </div>
+        </div>
+
+        <!-- Publish -->
+        <div class="sc-card sc-card-pad">
+          <h2 class="h6 mb-1">Publish</h2>
+          <p class="small mb-3" style="color:var(--sc-text-dim);">
+            Goes through the same upload path as a manual one — card artwork and dominant colour
+            are derived automatically.
+          </p>
+
+          <form id="scPublish">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="mb-2">
+              <label class="form-label" for="scTitle">Title</label>
+              <input class="form-control" id="scTitle" name="title" type="text" maxlength="80"
+                     placeholder="Neon Stripe Hoodie" required>
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label" for="scTags">Tags</label>
+              <input class="form-control" id="scTags" name="tags" type="text"
+                     placeholder="neon, stripes, designed">
+            </div>
+
+            <div class="form-check form-switch mb-1">
+              <input class="form-check-input" type="checkbox" id="scPublished" name="isPublished" checked>
+              <label class="form-check-label small" for="scPublished">Published</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="scFeatured" name="isFeatured">
+              <label class="form-check-label small" for="scFeatured">Featured</label>
+            </div>
+
+            <button class="btn btn-sc-primary w-100" type="submit" id="scPublishButton">
+              <i data-lucide="upload" width="16" height="16" class="me-1"></i>
+              Publish to the catalogue
+            </button>
+            <p class="small mt-2 mb-0" id="scPublishStatus" style="color:var(--sc-text-dim);"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/designer.js?v=<%= assetVersion %>"></script>
+<%- include('../partials/foot') %>

@@ -1,0 +1,291 @@
+<%- include('partials/head', { title }) %>
+<div class="sc-shell">
+  <%- include('partials/sidebar') %>
+  <div class="sc-scrim d-none" id="scScrim"></div>
+
+  <main class="sc-main">
+    <%
+      const ranges = [7, 14, 30, 90];
+      const rangePicker = `<div class="sc-range">${ranges.map((value) =>
+        `<a href="/admin/analytics?days=${value}" class="${value === days ? 'active' : ''}">${value}d</a>`
+      ).join('')}</div>`;
+    %>
+    <%- include('partials/topbar', {
+      heading: 'Analytics',
+      subheading: `Last ${days} days, compared with the ${days} before`,
+      actions: rangePicker
+    }) %>
+
+    <%- include('partials/flash') %>
+
+    <!-- Headline -->
+    <div class="row g-3 mb-4">
+      <%
+        const tiles = [
+          { icon: 'download', label: 'Downloads', value: formatNumber(summary.downloads),
+            delta: summary.downloadsChange },
+          { icon: 'users',    label: 'Unique downloaders', value: formatNumber(summary.uniques),
+            note: 'distinct clients' },
+          { icon: 'plus',     label: 'New skins', value: formatNumber(summary.published),
+            note: 'published in period' },
+          { icon: 'flag',     label: 'Reports', value: formatNumber(summary.reports),
+            delta: summary.reportsChange, invert: true },
+        ];
+      %>
+      <% tiles.forEach((tile) => { %>
+        <div class="col-6 col-xl-3">
+          <div class="sc-card sc-card-pad sc-stat h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <span class="sc-stat-icon"><i data-lucide="<%= tile.icon %>" width="17" height="17"></i></span>
+              <% if (typeof tile.delta === 'number') { %>
+                <%
+                  // For reports a rise is bad, so the colour is inverted rather than the number.
+                  const good = tile.invert ? tile.delta <= 0 : tile.delta >= 0;
+                  const cls = tile.delta === 0 ? 'flat' : (good ? 'up' : 'down');
+                %>
+                <span class="sc-delta <%= cls %>">
+                  <i data-lucide="<%= tile.delta > 0 ? 'arrow-up-right' : tile.delta < 0 ? 'arrow-down-right' : 'minus' %>"
+                     width="13" height="13"></i><%= Math.abs(tile.delta) %>%
+                </span>
+              <% } %>
+            </div>
+            <div class="sc-stat-value"><%= tile.value %></div>
+            <div class="sc-stat-label mt-1"><%= tile.label %></div>
+            <% if (tile.note) { %>
+              <div class="small mt-2" style="color:var(--sc-text-dim);"><%= tile.note %></div>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <!-- Downloads vs unique people -->
+    <div class="sc-card sc-card-pad mb-3">
+      <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div>
+          <h2 class="h6 mb-1">Downloads and reach</h2>
+          <p class="mb-0 small" style="color:var(--sc-text-dim);">
+            The gap between the two lines is how much repeat downloading you're seeing.
+          </p>
+        </div>
+        <div class="d-flex gap-3 small">
+          <span><span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:#7c5cff;"></span>
+            Downloads</span>
+          <span style="color:var(--sc-text-muted);">
+            <span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:#2de2e6;"></span>
+            Unique people</span>
+        </div>
+      </div>
+
+      <%
+        // Both series share one scale so the comparison is honest.
+        const peak = Math.max(...downloads.map((p) => p.count), ...uniques.map((p) => p.count), 1);
+        const scaled = (series) => series.map((p) => ({ count: (p.count / peak) * 100 }));
+        const line1 = sparklinePath(scaled(downloads), { width: 640, height: 150 });
+        const line2 = sparklinePath(scaled(uniques), { width: 640, height: 150 });
+      %>
+      <svg class="sc-chart" viewBox="0 0 640 150" preserveAspectRatio="none" role="img"
+           aria-label="Downloads and unique downloaders over time">
+        <defs>
+          <linearGradient id="scStroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#7c5cff"/><stop offset="100%" stop-color="#9b84ff"/>
+          </linearGradient>
+          <linearGradient id="scFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#7c5cff" stop-opacity="0.26"/>
+            <stop offset="100%" stop-color="#7c5cff" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <% [0, 0.25, 0.5, 0.75, 1].forEach((f) => { %>
+          <line class="sc-chart-grid" x1="0" x2="640" y1="<%= (f * 150).toFixed(1) %>" y2="<%= (f * 150).toFixed(1) %>"/>
+        <% }) %>
+        <polygon class="sc-chart-area" points="<%= line1.area %>"/>
+        <polyline class="sc-chart-line" points="<%= line1.line %>"/>
+        <polyline points="<%= line2.line %>" fill="none" stroke="#2de2e6" stroke-width="2"
+                  stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div class="d-flex justify-content-between mt-2 small" style="color:var(--sc-text-dim);">
+        <span><%= formatDate(downloads[0].day) %></span>
+        <span>peak <%= formatNumber(peak) %>/day</span>
+        <span><%= formatDate(downloads[downloads.length - 1].day) %></span>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <!-- Movers -->
+      <div class="col-12 col-xl-7">
+        <div class="sc-card h-100">
+          <div class="p-3 pb-2">
+            <h2 class="h6 mb-1">Biggest movers</h2>
+            <p class="mb-0 small" style="color:var(--sc-text-dim);">
+              Versus the previous <%= days %> days. Skins with almost no history are excluded.
+            </p>
+          </div>
+          <% if (movers.length === 0) { %>
+            <p class="small px-3 pb-3 mb-0" style="color:var(--sc-text-dim);">Not enough history yet.</p>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead><tr><th>Skin</th><th class="text-end">Before</th><th class="text-end">Now</th><th class="text-end">Change</th></tr></thead>
+                <tbody>
+                  <% movers.forEach((item) => { %>
+                    <tr>
+                      <td>
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-body" href="/admin/skins/<%= item.id %>">
+                          <img src="/storage/previews/<%= item.preview_file %>" alt="" width="32" height="40"
+                               style="border-radius:6px;object-fit:cover;" loading="lazy">
+                          <span class="small fw-semibold text-truncate" style="max-width:190px;"><%= item.title %></span>
+                        </a>
+                      </td>
+                      <td class="text-end small" style="color:var(--sc-text-dim);"><%= formatNumber(item.prior) %></td>
+                      <td class="text-end small fw-semibold"><%= formatNumber(item.recent) %></td>
+                      <td class="text-end">
+                        <span class="sc-delta <%= item.change > 0 ? 'up' : item.change < 0 ? 'down' : 'flat' %>">
+                          <%= item.change > 0 ? '+' : '' %><%= item.change %>%
+                        </span>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Category split -->
+      <div class="col-12 col-xl-5">
+        <div class="sc-card sc-card-pad h-100">
+          <h2 class="h6 mb-3">Downloads by category</h2>
+          <% if (categories.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">No downloads in this period.</p>
+          <% } else { %>
+            <% const maxTotal = Math.max(...categories.map((c) => c.total), 1); %>
+            <% categories.forEach((entry) => { %>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-baseline mb-1">
+                  <span class="small fw-semibold"><%= categoryLabels[entry.category] || entry.category %></span>
+                  <span class="small" style="color:var(--sc-text-dim);"><%= formatNumber(entry.total) %></span>
+                </div>
+                <div style="height:6px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                  <div style="height:100%;border-radius:99px;background:var(--sc-gradient);
+                              width:<%= Math.max(3, Math.round((entry.total / maxTotal) * 100)) %>%;"></div>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="col-12 col-xl-6">
+        <div class="sc-card sc-card-pad h-100">
+          <h2 class="h6 mb-1">Tag performance</h2>
+          <p class="mb-3 small" style="color:var(--sc-text-dim);">
+            Which tags pull downloads — not simply which are used most.
+          </p>
+          <% if (tags.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">No tagged downloads yet.</p>
+          <% } else { %>
+            <% tags.forEach((tag) => { %>
+              <div class="d-flex justify-content-between align-items-center py-1">
+                <a class="sc-tag" href="/admin/skins?q=<%= encodeURIComponent(tag.name) %>">#<%= tag.name %></a>
+                <span class="small" style="color:var(--sc-text-dim);">
+                  <%= formatNumber(tag.downloads) %> · <%= tag.skins %> skin<%= tag.skins === 1 ? '' : 's' %>
+                </span>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Search demand -->
+      <div class="col-12 col-xl-6">
+        <div class="sc-card sc-card-pad h-100">
+          <h2 class="h6 mb-1">Search demand</h2>
+          <p class="mb-3 small" style="color:var(--sc-text-dim);">
+            <%= formatNumber(searches.total) %> searches. The misses are your to-do list.
+          </p>
+          <% if (searches.missed.length === 0 && searches.top.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">No searches recorded yet.</p>
+          <% } else { %>
+            <% if (searches.missed.length) { %>
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i data-lucide="search-x" width="14" height="14" style="color:var(--sc-amber);"></i>
+                <span class="small fw-semibold">Nothing found</span>
+              </div>
+              <% searches.missed.forEach((entry) => { %>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <a class="sc-tag" href="/admin/skins?q=<%= encodeURIComponent(entry.term) %>"><%= entry.term %></a>
+                  <span class="small" style="color:var(--sc-amber);"><%= entry.searches %>×</span>
+                </div>
+              <% }) %>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Quality signal -->
+      <div class="col-12">
+        <div class="sc-card sc-card-pad">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i data-lucide="flag" width="16" height="16" style="color:var(--sc-danger);"></i>
+            <h2 class="h6 mb-0">Quality signal</h2>
+          </div>
+          <p class="mb-3 small" style="color:var(--sc-text-dim);">
+            Ranked by reports per thousand downloads — a raw count would just re-rank by popularity.
+          </p>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-7">
+              <% if (flagged.length === 0) { %>
+                <p class="small mb-0" style="color:var(--sc-text-dim);">No open reports.</p>
+              <% } else { %>
+                <div class="table-responsive">
+                  <table class="table align-middle mb-0">
+                    <thead><tr><th>Skin</th><th class="text-end">Reports</th><th class="text-end">Per 1K</th></tr></thead>
+                    <tbody>
+                      <% flagged.forEach((item) => { %>
+                        <tr>
+                          <td>
+                            <a class="d-flex align-items-center gap-2 text-decoration-none text-body" href="/admin/skins/<%= item.id %>">
+                              <img src="/storage/previews/<%= item.preview_file %>" alt="" width="30" height="38"
+                                   style="border-radius:6px;object-fit:cover;" loading="lazy">
+                              <span class="small fw-semibold text-truncate" style="max-width:200px;"><%= item.title %></span>
+                            </a>
+                          </td>
+                          <td class="text-end small fw-semibold" style="color:var(--sc-danger);"><%= item.reports %></td>
+                          <td class="text-end small" style="color:var(--sc-text-dim);"><%= item.ratePerThousand %></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } %>
+            </div>
+
+            <div class="col-12 col-md-5">
+              <% if (reasons.length === 0) { %>
+                <p class="small mb-0" style="color:var(--sc-text-dim);">Nothing reported in this period.</p>
+              <% } else { %>
+                <% const maxReason = Math.max(...reasons.map((r) => r.count), 1); %>
+                <% reasons.forEach((entry) => { %>
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-baseline mb-1">
+                      <span class="small"><%= entry.label %></span>
+                      <span class="small" style="color:var(--sc-text-dim);"><%= entry.count %></span>
+                    </div>
+                    <div style="height:5px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                      <div style="height:100%;border-radius:99px;background:var(--sc-danger);opacity:0.75;
+                                  width:<%= Math.max(3, Math.round((entry.count / maxReason) * 100)) %>%;"></div>
+                    </div>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

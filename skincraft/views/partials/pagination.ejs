@@ -1,0 +1,44 @@
+<% if (pagination.pageCount > 1) { %>
+  <%
+    const buildUrl = (page) => {
+      const params = new URLSearchParams(Object.entries(filters).filter(([, v]) => v));
+      params.set('page', page);
+      return `${basePath}?${params.toString()}`;
+    };
+    // Show a window around the current page rather than every page — 40 pages of numbers is
+    // navigation you have to read instead of navigation you can use.
+    const window = 2;
+    const start = Math.max(1, pagination.page - window);
+    const end = Math.min(pagination.pageCount, pagination.page + window);
+  %>
+  <nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+    <div class="small" style="color:var(--sc-text-dim);">
+      Page <%= pagination.page %> of <%= pagination.pageCount %> · <%= pagination.total %> total
+    </div>
+    <ul class="pagination pagination-sm m-0">
+      <li class="page-item <%= pagination.page <= 1 ? 'disabled' : '' %>">
+        <a class="page-link" href="<%= buildUrl(pagination.page - 1) %>" aria-label="Previous">
+          <i data-lucide="chevron-left" width="14" height="14"></i>
+        </a>
+      </li>
+      <% if (start > 1) { %>
+        <li class="page-item"><a class="page-link" href="<%= buildUrl(1) %>">1</a></li>
+        <% if (start > 2) { %><li class="page-item disabled"><span class="page-link">…</span></li><% } %>
+      <% } %>
+      <% for (let p = start; p <= end; p += 1) { %>
+        <li class="page-item <%= p === pagination.page ? 'active' : '' %>">
+          <a class="page-link" href="<%= buildUrl(p) %>"><%= p %></a>
+        </li>
+      <% } %>
+      <% if (end < pagination.pageCount) { %>
+        <% if (end < pagination.pageCount - 1) { %><li class="page-item disabled"><span class="page-link">…</span></li><% } %>
+        <li class="page-item"><a class="page-link" href="<%= buildUrl(pagination.pageCount) %>"><%= pagination.pageCount %></a></li>
+      <% } %>
+      <li class="page-item <%= pagination.page >= pagination.pageCount ? 'disabled' : '' %>">
+        <a class="page-link" href="<%= buildUrl(pagination.page + 1) %>" aria-label="Next">
+          <i data-lucide="chevron-right" width="14" height="14"></i>
+        </a>
+      </li>
+    </ul>
+  </nav>
+<% } %>

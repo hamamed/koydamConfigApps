@@ -1,0 +1,16 @@
+<div class="d-flex align-items-start justify-content-between gap-3 mb-4 flex-wrap">
+  <div class="d-flex align-items-center gap-2">
+    <button class="sc-icon-btn sc-menu-toggle" id="scMenuToggle" type="button" aria-label="Open menu">
+      <i data-lucide="menu" width="16" height="16"></i>
+    </button>
+    <div>
+      <h1 class="sc-page-title"><%= heading %></h1>
+      <% if (typeof subheading !== 'undefined' && subheading) { %>
+        <p class="sc-page-sub"><%= subheading %></p>
+      <% } %>
+    </div>
+  </div>
+  <% if (typeof actions !== 'undefined' && actions) { %>
+    <div class="d-flex align-items-center gap-2"><%- actions %></div>
+  <% } %>
+</div>

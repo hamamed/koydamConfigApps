@@ -1,0 +1,300 @@
+<%- include('partials/head', { title }) %>
+<div class="sc-shell">
+  <%- include('partials/sidebar') %>
+  <div class="sc-scrim d-none" id="scScrim"></div>
+
+  <main class="sc-main">
+    <%- include('partials/topbar', {
+      heading: 'Dashboard',
+      subheading: 'How the catalogue is performing right now',
+      actions: `<a class="btn btn-sc-primary" href="/admin/skins/new">
+                  <i data-lucide="upload" width="16" height="16" class="me-1"></i>Upload skin</a>`
+    }) %>
+
+    <%- include('partials/flash') %>
+
+    <!-- Headline metrics -->
+    <div class="row g-3 mb-4">
+      <%
+        const tiles = [
+          { icon: 'shirt',       label: 'Skins',            value: formatNumber(overview.totalSkins),
+            note: `${overview.draftCount} draft${overview.draftCount === 1 ? '' : 's'}` },
+          { icon: 'download',    label: 'Total downloads',  value: formatNumber(overview.totalDownloads),
+            note: `${formatNumber(overview.downloadsToday)} today` },
+          { icon: 'trending-up', label: 'Last 7 days',      value: formatNumber(overview.downloadsLast7),
+            delta: overview.trend },
+          { icon: 'sparkles',    label: 'Featured',         value: formatNumber(overview.featuredCount),
+            note: 'shown in the app carousel' },
+        ];
+      %>
+      <% tiles.forEach((tile) => { %>
+        <div class="col-6 col-xl-3">
+          <div class="sc-card sc-card-pad sc-stat h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <span class="sc-stat-icon"><i data-lucide="<%= tile.icon %>" width="17" height="17"></i></span>
+              <% if (typeof tile.delta === 'number') { %>
+                <span class="sc-delta <%= tile.delta > 0 ? 'up' : tile.delta < 0 ? 'down' : 'flat' %>">
+                  <i data-lucide="<%= tile.delta > 0 ? 'arrow-up-right' : tile.delta < 0 ? 'arrow-down-right' : 'minus' %>"
+                     width="13" height="13"></i>
+                  <%= Math.abs(tile.delta) %>%
+                </span>
+              <% } %>
+            </div>
+            <div class="sc-stat-value"><%= tile.value %></div>
+            <div class="sc-stat-label mt-1"><%= tile.label %></div>
+            <% if (tile.note) { %>
+              <div class="small mt-2" style="color:var(--sc-text-dim);"><%= tile.note %></div>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+
+    <div class="row g-3">
+      <!-- Downloads chart -->
+      <div class="col-12 col-xl-8">
+        <div class="sc-card sc-card-pad h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h2 class="h6 mb-1">Downloads</h2>
+              <p class="mb-0 small" style="color:var(--sc-text-dim);">Last 14 days</p>
+            </div>
+            <span class="sc-badge category">
+              peak <%= formatNumber(Math.max(...series.map((p) => p.count), 0)) %>/day
+            </span>
+          </div>
+
+          <%
+            // Rendered server-side: fourteen data points don't justify shipping a chart library.
+            const spark = sparklinePath(series, { width: 640, height: 150 });
+          %>
+          <svg class="sc-chart" viewBox="0 0 640 150" preserveAspectRatio="none" role="img"
+               aria-label="Downloads over the last 14 days">
+            <defs>
+              <linearGradient id="scStroke" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stop-color="#7c5cff"/>
+                <stop offset="100%" stop-color="#2de2e6"/>
+              </linearGradient>
+              <linearGradient id="scFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#7c5cff" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#7c5cff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <% [0, 0.25, 0.5, 0.75, 1].forEach((fraction) => { %>
+              <line class="sc-chart-grid" x1="0" x2="640"
+                    y1="<%= (fraction * 150).toFixed(1) %>" y2="<%= (fraction * 150).toFixed(1) %>"/>
+            <% }) %>
+            <polygon class="sc-chart-area" points="<%= spark.area %>"/>
+            <polyline class="sc-chart-line" points="<%= spark.line %>"/>
+          </svg>
+
+          <div class="d-flex justify-content-between mt-2 small" style="color:var(--sc-text-dim);">
+            <span><%= formatDate(series[0].day) %></span>
+            <span><%= formatDate(series[series.length - 1].day) %></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category split -->
+      <div class="col-12 col-xl-4">
+        <div class="sc-card sc-card-pad h-100">
+          <h2 class="h6 mb-3">By category</h2>
+          <% if (breakdown.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">Nothing published yet.</p>
+          <% } else { %>
+            <% const maxDownloads = Math.max(...breakdown.map((b) => b.downloads), 1); %>
+            <% breakdown.forEach((entry) => { %>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-baseline mb-1">
+                  <span class="small fw-semibold"><%= categoryLabels[entry.category] %></span>
+                  <span class="small" style="color:var(--sc-text-dim);">
+                    <%= entry.skins %> · <%= formatNumber(entry.downloads) %>
+                  </span>
+                </div>
+                <div style="height:6px;border-radius:99px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                  <div style="height:100%;border-radius:99px;background:var(--sc-gradient);
+                              width:<%= Math.max(3, Math.round((entry.downloads / maxDownloads) * 100)) %>%;"></div>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+
+          <hr class="sc-divider">
+          <div class="d-flex justify-content-between small">
+            <span style="color:var(--sc-text-dim);">Storage used</span>
+            <span class="fw-semibold"><%= formatBytes(storage.totalBytes) %></span>
+          </div>
+          <div class="d-flex justify-content-between small mt-1">
+            <span style="color:var(--sc-text-dim);">Files</span>
+            <span class="fw-semibold"><%= storage.templates.count + storage.previews.count %></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending now -->
+      <div class="col-12 col-xl-8">
+        <div class="sc-card">
+          <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+            <h2 class="h6 mb-0">Trending this week</h2>
+            <a class="small text-decoration-none" href="/admin/skins?sort=mostDownloaded">View all</a>
+          </div>
+          <% if (top.length === 0) { %>
+            <p class="small px-3 pb-3 mb-0" style="color:var(--sc-text-dim);">No downloads recorded yet.</p>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Skin</th>
+                    <th class="d-none d-md-table-cell">Category</th>
+                    <th class="text-end">7 days</th>
+                    <th class="text-end">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% top.forEach((item) => { %>
+                    <tr>
+                      <td>
+                        <a class="d-flex align-items-center gap-2 text-decoration-none text-body"
+                           href="/admin/skins/<%= item.id %>">
+                          <img src="/storage/previews/<%= item.preview_file %>" alt="" width="34" height="42"
+                               style="border-radius:7px;object-fit:cover;flex-shrink:0;" loading="lazy">
+                          <span class="fw-semibold small text-truncate" style="max-width:220px;">
+                            <%= item.title %>
+                          </span>
+                          <% if (item.is_featured) { %>
+                            <i data-lucide="sparkles" width="13" height="13" style="color:var(--sc-accent-soft);"></i>
+                          <% } %>
+                        </a>
+                      </td>
+                      <td class="d-none d-md-table-cell">
+                        <span class="sc-badge category"><%= categoryLabels[item.category] %></span>
+                      </td>
+                      <td class="text-end small fw-semibold" style="color:var(--sc-cyan);">
+                        +<%= formatNumber(item.recent) %>
+                      </td>
+                      <td class="text-end small"><%= formatNumber(item.downloads) %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="col-12 col-xl-4">
+        <div class="sc-card sc-card-pad h-100">
+          <h2 class="h6 mb-3">Recent activity</h2>
+          <% if (activity.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">Nothing yet.</p>
+          <% } else { %>
+            <% activity.forEach((entry) => {
+                 const icons = {
+                   'skin.create': 'plus', 'skin.update': 'pencil', 'skin.delete': 'trash-2',
+                   'skin.feature': 'sparkles', 'skin.unfeature': 'sparkle',
+                   'skin.publish': 'eye', 'skin.unpublish': 'eye-off',
+                   'auth.login': 'log-in', 'auth.logout': 'log-out',
+                 };
+            %>
+              <div class="d-flex align-items-start gap-2 mb-3">
+                <span class="sc-stat-icon" style="width:26px;height:26px;flex-shrink:0;">
+                  <i data-lucide="<%= icons[entry.action] || 'activity' %>" width="13" height="13"></i>
+                </span>
+                <div style="min-width:0;">
+                  <div class="small">
+                    <span class="fw-semibold"><%= entry.username || 'system' %></span>
+                    <span style="color:var(--sc-text-muted);">
+                      <%= entry.action.replace('skin.', '').replace('auth.', '') %>
+                    </span>
+                    <% if (entry.detail) { %>
+                      <span class="text-truncate d-inline-block align-bottom" style="max-width:150px;">
+                        <%= entry.detail %>
+                      </span>
+                    <% } %>
+                  </div>
+                  <div style="font-size:0.72rem;color:var(--sc-text-dim);"><%= timeAgo(entry.created_at) %></div>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- What people searched for -->
+    <div class="sc-card mt-3">
+      <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+        <div>
+          <h2 class="h6 mb-1">Search demand</h2>
+          <p class="mb-0 small" style="color:var(--sc-text-dim);">
+            <%= formatNumber(searches.total) %> searches in the last <%= searches.days %> days
+          </p>
+        </div>
+      </div>
+
+      <div class="row g-0">
+        <div class="col-12 col-md-6 p-3 pt-0">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i data-lucide="search-x" width="15" height="15" style="color:var(--sc-amber);"></i>
+            <span class="small fw-semibold">Nothing found</span>
+          </div>
+          <% if (searches.missed.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">
+              Every search returned results.
+            </p>
+          <% } else { %>
+            <p class="small mb-2" style="color:var(--sc-text-dim);">
+              Demand the catalogue can't answer yet — make these next.
+            </p>
+            <% searches.missed.forEach((entry) => { %>
+              <div class="d-flex justify-content-between align-items-center py-1">
+                <a class="sc-tag" href="/admin/skins?q=<%= encodeURIComponent(entry.term) %>">
+                  <%= entry.term %>
+                </a>
+                <span class="small" style="color:var(--sc-amber);">
+                  <%= entry.searches %>×
+                </span>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+
+        <div class="col-12 col-md-6 p-3 pt-0">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i data-lucide="search" width="15" height="15" style="color:var(--sc-cyan);"></i>
+            <span class="small fw-semibold">Most searched</span>
+          </div>
+          <% if (searches.top.length === 0) { %>
+            <p class="small mb-0" style="color:var(--sc-text-dim);">No searches recorded yet.</p>
+          <% } else { %>
+            <% searches.top.forEach((entry) => { %>
+              <div class="d-flex justify-content-between align-items-center py-1">
+                <a class="sc-tag" href="/admin/skins?q=<%= encodeURIComponent(entry.term) %>">
+                  <%= entry.term %>
+                </a>
+                <span class="small" style="color:var(--sc-text-dim);">
+                  <%= entry.searches %>× · <%= Math.round(entry.avg_results) %> hits
+                </span>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- API endpoint reference -->
+    <div class="sc-card sc-card-pad mt-3">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i data-lucide="plug" width="16" height="16" style="color:var(--sc-cyan);"></i>
+        <h2 class="h6 mb-0">Live API endpoint</h2>
+      </div>
+      <p class="small mb-2" style="color:var(--sc-text-dim);">
+        This is the URL the iOS app calls. It must match <code>AppConfig.baseURL</code> in the client.
+      </p>
+      <code class="sc-code"><%= publicUrl %>/api/v1/skins?category=shirts&amp;page=1&amp;limit=20</code>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
