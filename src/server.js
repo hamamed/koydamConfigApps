@@ -123,11 +123,11 @@ app.get('/health', async (req, res) => {
     uptimeSeconds: Math.round(process.uptime()),
     cache: cacheStats(),
     db: await dbHealth(),
-    // Whether a key is configured and how long it is — never the key itself.
-    // Enough to tell "the server never loaded one" from "my paste was short".
     adminPanel: {
-      enabled: Boolean(config.adminKey),
-      keyLength: config.adminKey.length,
+      auth: 'platform-sso',
+      ssoConfigured: Boolean(process.env.PLATFORM_URL && process.env.SERVICE_TOKEN),
+      // Flagged so a leftover gets removed. Nothing authenticates against it.
+      staleAdminKey: config.adminKey ? true : undefined,
     },
     brawlerMeta: metaStats(),
     version: process.env.npm_package_version ?? '1.0.0',
