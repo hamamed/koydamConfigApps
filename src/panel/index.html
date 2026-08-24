@@ -21,17 +21,14 @@
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
   <aside class="ad-sidebar" id="sidebar">
-    <div class="ad-brand d-flex align-items-center gap-2">
-      <span class="ad-brand-mark" aria-hidden="true">
-        <svg class="lucide" width="18" height="18"><use href="/panel/icons.svg#i-layout-grid"></use></svg>
-      </span>
-      <div>
-        <div class="fw-semibold ad-brand-name">Platform</div>
-        <small class="kd-faint d-block ad-brand-sub">
-          Control panel
-        </small>
-      </div>
-    </div>
+    <!-- The real mark, and the same lockup shape the agency site uses: name
+         first, role underneath. A generic glyph in an accent square said
+         nothing about whose product this is. -->
+    <a class="ad-brand" href="/">
+      <img class="kd-brand-mark" src="/panel/logo/logo.png" alt=""
+           width="23" height="26">
+      <span>Koydam<small>Control panel</small></span>
+    </a>
 
     <nav class="ad-nav flex-grow-1" id="nav">
       <div class="ad-nav-label">Overview</div>

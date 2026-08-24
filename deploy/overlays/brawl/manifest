@@ -10,3 +10,5 @@
 shared/platform-auth.js   src/platform-auth.js
 shared/css/koydam.css     src/panel/css/koydam.css
 shared/css/admin.css      src/panel/css/admin.css
+shared/logo/logo.png      src/panel/logo/logo.png
+shared/logo/logoText.png  src/panel/logo/logoText.png

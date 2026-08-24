@@ -75,6 +75,19 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 
 .sc-brand-name { font-weight: 650; letter-spacing: -.01em; color: var(--kd-ink); }
 
+/* The mark is now the Koydam logo rather than a glyph in a tile, so it sits at
+   text scale beside the wordmark - matching .ad-brand on the other panels. */
+.sc-brand .kd-brand-mark { height: 26px; }
+
+.sc-brand-name small {
+  display: block;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+}
+
 /* ── Nav ────────────────────────────────────────────────────────────────── */
 
 .sc-nav { display: flex; flex-direction: column; gap: .12rem; }

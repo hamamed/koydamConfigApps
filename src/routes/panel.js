@@ -68,6 +68,21 @@ panelRouter.use(
   }),
 );
 
+/**
+ * The Koydam logo, from the same folder the stylesheet comes from.
+ *
+ * One copy for every panel on this box: the mark in each sidebar and the
+ * lockup on the sign-in page are the same files the agency site serves, so
+ * they cannot drift into three slightly different logos.
+ */
+panelRouter.use(
+  '/panel/logo',
+  express.static(path.join(ROOT, 'deploy', 'shared', 'logo'), {
+    maxAge: '7d',
+    fallthrough: false,
+  }),
+);
+
 panelRouter.get('/panel/app.js', (_req, res) => {
   res.type('application/javascript').sendFile(path.join(PANEL, 'app.js'));
 });
