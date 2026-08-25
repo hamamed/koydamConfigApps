@@ -1,27 +1,27 @@
 <%- include('../partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('../partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%- include('../partials/topbar', {
       heading: 'Skins',
       subheading: `${pagination.total} in the catalogue`,
-      actions: `<a class="btn btn-sc-primary" href="/admin/skins/new">
+      actions: `<a class="btn btn-kd" href="/admin/skins/new">
                   <i data-lucide="upload" width="16" height="16" class="me-1"></i>Upload skin</a>`
     }) %>
 
     <%- include('../partials/flash') %>
 
     <!-- Filters. A GET form so every result set is a shareable, bookmarkable URL. -->
-    <form class="sc-card sc-card-pad mb-4" method="get" action="/admin/skins" id="scFilters">
+    <form class="ad-card ad-card-pad mb-4" method="get" action="/admin/skins" id="scFilters">
       <div class="row g-2 align-items-end">
         <div class="col-12 col-lg-4">
           <label class="form-label" for="q">Search</label>
           <div class="position-relative">
             <i data-lucide="search" width="15" height="15"
-               style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--sc-text-dim);"></i>
-            <input class="form-control sc-input-icon" id="q" name="q" type="search"
+               style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--kd-faint);"></i>
+            <input class="form-control ad-input-icon" id="q" name="q" type="search"
                    value="<%= filters.q %>" placeholder="Title, description or tag">
           </div>
         </div>
@@ -57,11 +57,11 @@
         </div>
 
         <div class="col-6 col-lg-2 d-flex gap-2">
-          <button class="btn btn-sc-ghost flex-grow-1" type="submit">
+          <button class="btn btn-kd-ghost flex-grow-1" type="submit">
             <i data-lucide="filter" width="15" height="15" class="me-1"></i>Apply
           </button>
           <% if (filters.q || filters.category || filters.status !== 'all' || filters.sort !== 'newest') { %>
-            <a class="btn btn-sc-ghost" href="/admin/skins" title="Clear filters" aria-label="Clear filters">
+            <a class="btn btn-kd-ghost" href="/admin/skins" title="Clear filters" aria-label="Clear filters">
               <i data-lucide="x" width="15" height="15"></i>
             </a>
           <% } %>
@@ -70,18 +70,18 @@
     </form>
 
     <% if (skins.length === 0) { %>
-      <div class="sc-card sc-empty">
-        <div class="sc-empty-icon"><i data-lucide="package-open" width="28" height="28"></i></div>
+      <div class="ad-card ad-empty">
+        <div class="ad-empty-icon"><i data-lucide="package-open" width="28" height="28"></i></div>
         <h2 class="h6 mb-1">No skins match those filters</h2>
-        <p class="small mb-3" style="color:var(--sc-text-dim);">
+        <p class="small mb-3" style="color:var(--kd-faint);">
           <%= filters.q ? `Nothing found for “${filters.q}”.` : 'Upload your first skin to get started.' %>
         </p>
-        <a class="btn btn-sc-primary btn-sm" href="/admin/skins/new">
+        <a class="btn btn-kd btn-sm" href="/admin/skins/new">
           <i data-lucide="upload" width="15" height="15" class="me-1"></i>Upload skin
         </a>
       </div>
     <% } else { %>
-      <div class="sc-grid">
+      <div class="ad-grid">
         <% skins.forEach((skin) => { %>
           <%- include('../partials/skin-card', { skin }) %>
         <% }) %>

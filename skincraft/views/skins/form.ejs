@@ -1,9 +1,9 @@
 <%- include('../partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('../partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%
       const isCreate = mode === 'create';
       const action = isCreate ? '/admin/skins' : `/admin/skins/${skin.id}`;
@@ -13,7 +13,7 @@
       subheading: isCreate
         ? 'Add a new template to the catalogue'
         : skin.title,
-      actions: isCreate ? '' : `<a class="btn btn-sc-ghost" href="/admin/skins/${skin.id}">
+      actions: isCreate ? '' : `<a class="btn btn-kd-ghost" href="/admin/skins/${skin.id}">
                   <i data-lucide="eye" width="15" height="15" class="me-1"></i>View</a>`
     }) %>
 
@@ -35,28 +35,28 @@
       <div class="row g-3">
         <!-- Files -->
         <div class="col-12 col-lg-5">
-          <div class="sc-card sc-card-pad mb-3">
+          <div class="ad-card ad-card-pad mb-3">
             <h2 class="h6 mb-1">Template</h2>
-            <p class="small mb-3" style="color:var(--sc-text-dim);">
+            <p class="small mb-3" style="color:var(--kd-faint);">
               The PNG people download and upload to Roblox. Classic clothing is 585 × 559.
             </p>
 
-            <label class="sc-dropzone d-block" data-dropzone data-preview="templatePreview">
+            <label class="ad-dropzone d-block" data-dropzone data-preview="templatePreview">
               <input type="file" name="template" accept="image/png,image/jpeg,image/webp"
                      <%= isCreate ? 'required' : '' %>>
-              <img class="sc-dropzone-preview mb-2 d-none" id="templatePreview" alt="">
+              <img class="ad-dropzone-preview mb-2 d-none" id="templatePreview" alt="">
               <div data-dropzone-empty>
-                <i data-lucide="image-up" width="26" height="26" style="color:var(--sc-accent-soft);"></i>
+                <i data-lucide="image-up" width="26" height="26" style="color:var(--kd-accent-ink);"></i>
                 <p class="small mb-0 mt-2 fw-semibold">
                   <%= isCreate ? 'Drop a template or click to choose' : 'Replace template' %>
                 </p>
-                <p class="mb-0" style="font-size:0.74rem;color:var(--sc-text-dim);">PNG, JPEG or WebP</p>
+                <p class="mb-0" style="font-size:0.74rem;color:var(--kd-faint);">PNG, JPEG or WebP</p>
               </div>
             </label>
 
             <% if (!isCreate) { %>
               <div class="d-flex align-items-center justify-content-between mt-3 small">
-                <span style="color:var(--sc-text-dim);">Current</span>
+                <span style="color:var(--kd-faint);">Current</span>
                 <span class="fw-semibold">
                   <%= skin.template_w %> × <%= skin.template_h %> · <%= formatBytes(skin.file_bytes) %>
                 </span>
@@ -64,18 +64,18 @@
             <% } %>
           </div>
 
-          <div class="sc-card sc-card-pad">
+          <div class="ad-card ad-card-pad">
             <h2 class="h6 mb-1">Card artwork</h2>
-            <p class="small mb-3" style="color:var(--sc-text-dim);">
+            <p class="small mb-3" style="color:var(--kd-faint);">
               Optional. Leave empty and we'll generate one from the template's front face.
             </p>
 
-            <label class="sc-dropzone d-block" data-dropzone data-preview="previewPreview">
+            <label class="ad-dropzone d-block" data-dropzone data-preview="previewPreview">
               <input type="file" name="preview" accept="image/png,image/jpeg,image/webp">
-              <img class="sc-dropzone-preview mb-2 d-none" id="previewPreview" alt=""
+              <img class="ad-dropzone-preview mb-2 d-none" id="previewPreview" alt=""
                    style="image-rendering:auto;">
               <div data-dropzone-empty>
-                <i data-lucide="image" width="24" height="24" style="color:var(--sc-text-dim);"></i>
+                <i data-lucide="image" width="24" height="24" style="color:var(--kd-faint);"></i>
                 <p class="small mb-0 mt-2">Drop card artwork (optional)</p>
               </div>
             </label>
@@ -94,7 +94,7 @@
 
         <!-- Details -->
         <div class="col-12 col-lg-7">
-          <div class="sc-card sc-card-pad mb-3">
+          <div class="ad-card ad-card-pad mb-3">
             <h2 class="h6 mb-3">Details</h2>
 
             <div class="mb-3">
@@ -134,7 +134,7 @@
             <% if (knownTags.length) { %>
               <div class="d-flex flex-wrap gap-1 mt-2">
                 <% knownTags.slice(0, 14).forEach((tag) => { %>
-                  <button class="sc-tag border-0" type="button" data-tag-suggestion="<%= tag.name %>">
+                  <button class="ad-tag border-0" type="button" data-tag-suggestion="<%= tag.name %>">
                     + <%= tag.name %>
                   </button>
                 <% }) %>
@@ -142,7 +142,7 @@
             <% } %>
           </div>
 
-          <div class="sc-card sc-card-pad mb-3">
+          <div class="ad-card ad-card-pad mb-3">
             <h2 class="h6 mb-3">Visibility</h2>
 
             <div class="form-check form-switch mb-2">
@@ -165,11 +165,11 @@
           </div>
 
           <div class="d-flex gap-2">
-            <button class="btn btn-sc-primary px-4" type="submit">
+            <button class="btn btn-kd px-4" type="submit">
               <i data-lucide="check" width="16" height="16" class="me-1"></i>
               <%= isCreate ? 'Publish skin' : 'Save changes' %>
             </button>
-            <a class="btn btn-sc-ghost" href="<%= isCreate ? '/admin/skins' : `/admin/skins/${skin.id}` %>">
+            <a class="btn btn-kd-ghost" href="<%= isCreate ? '/admin/skins' : `/admin/skins/${skin.id}` %>">
               Cancel
             </a>
           </div>

@@ -1,9 +1,9 @@
 <%- include('../partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('../partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%- include('../partials/topbar', {
       heading: 'Design a skin',
       subheading: 'Compose a template, then publish it straight to the catalogue'
@@ -19,11 +19,11 @@
     <div class="row g-3" id="scDesigner">
       <!-- Canvas -->
       <div class="col-12 col-xl-7">
-        <div class="sc-card sc-card-pad">
+        <div class="ad-card ad-card-pad">
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
               <h2 class="h6 mb-1">Template</h2>
-              <p class="mb-0 small" style="color:var(--sc-text-dim);">
+              <p class="mb-0 small" style="color:var(--kd-faint);">
                 585 × 559 · drag stickers to move them
               </p>
             </div>
@@ -33,27 +33,27 @@
             </div>
           </div>
 
-          <div class="sc-canvas-wrap">
+          <div class="ad-canvas-wrap">
             <canvas id="scCanvas" width="585" height="559"></canvas>
           </div>
 
           <div class="d-flex gap-2 mt-3 flex-wrap">
-            <button class="btn btn-sc-ghost btn-sm" type="button" id="scDownload">
+            <button class="btn btn-kd-ghost btn-sm" type="button" id="scDownload">
               <i data-lucide="download" width="14" height="14" class="me-1"></i>Download PNG
             </button>
-            <span class="small align-self-center" style="color:var(--sc-text-dim);">
+            <span class="small align-self-center" style="color:var(--kd-faint);">
               Guides are never included in the export.
             </span>
           </div>
         </div>
 
         <!-- Selected sticker -->
-        <div class="sc-card sc-card-pad mt-3" id="scSelection" style="display:none;">
+        <div class="ad-card ad-card-pad mt-3" id="scSelection" style="display:none;">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h2 class="h6 mb-0">Selected sticker</h2>
             <div class="d-flex gap-2">
-              <button class="btn btn-sc-ghost btn-sm" type="button" id="scDecalFront">Bring to front</button>
-              <button class="sc-icon-btn danger" type="button" id="scDecalDelete" aria-label="Delete sticker">
+              <button class="btn btn-kd-ghost btn-sm" type="button" id="scDecalFront">Bring to front</button>
+              <button class="ad-icon-btn danger" type="button" id="scDecalDelete" aria-label="Delete sticker">
                 <i data-lucide="trash-2" width="14" height="14"></i>
               </button>
             </div>
@@ -67,7 +67,7 @@
 
       <!-- Controls -->
       <div class="col-12 col-xl-5">
-        <div class="sc-card sc-card-pad mb-3">
+        <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-3">Style</h2>
 
           <div class="row g-2 mb-3">
@@ -104,9 +104,9 @@
         </div>
 
         <!-- Photo -->
-        <div class="sc-card sc-card-pad mb-3">
+        <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-1">Start from a photo</h2>
-          <p class="small mb-3" style="color:var(--sc-text-dim);">
+          <p class="small mb-3" style="color:var(--kd-faint);">
             Pulls the dominant colours out of an image. Skips near-greys, so a picture shot against
             a white wall doesn't come back as grey and white.
           </p>
@@ -116,7 +116,7 @@
           <div id="scPalette" class="d-flex flex-wrap gap-2 mb-2"></div>
 
           <div id="scPhotoActions" style="display:none;">
-            <button class="btn btn-sc-ghost btn-sm" type="button" id="scPhotoAsGraphic">
+            <button class="btn btn-kd-ghost btn-sm" type="button" id="scPhotoAsGraphic">
               <i data-lucide="image-plus" width="14" height="14" class="me-1"></i>
               Add photo as a graphic
             </button>
@@ -124,13 +124,13 @@
         </div>
 
         <!-- Stickers -->
-        <div class="sc-card sc-card-pad mb-3">
+        <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-2">Stickers</h2>
 
-          <div class="sc-sticker-grid mb-3">
+          <div class="ad-sticker-grid mb-3">
             <% ['😎','🔥','💀','👾','🌈','⚡️','💎','🎮','👑','🦖','🍕','🚀','⭐️','❤️','🎧','🐉',
                 '🌸','🍄','🎯','🧊','☠️','🤖','🌙','🍀'].forEach((glyph) => { %>
-              <button class="sc-sticker" type="button" data-emoji="<%= glyph %>"
+              <button class="ad-sticker" type="button" data-emoji="<%= glyph %>"
                       aria-label="Add <%= glyph %>"><%= glyph %></button>
             <% }) %>
           </div>
@@ -138,7 +138,7 @@
           <label class="form-label">Shapes</label>
           <div class="d-flex align-items-center gap-2 flex-wrap">
             <% ['star','heart','circle','ring','triangle','bolt','diamond'].forEach((shape) => { %>
-              <button class="sc-sticker" type="button" data-shape="<%= shape %>"
+              <button class="ad-sticker" type="button" data-shape="<%= shape %>"
                       aria-label="Add <%= shape %>">
                 <i data-lucide="<%= { star:'star', heart:'heart', circle:'circle', ring:'circle-dot',
                                       triangle:'triangle', bolt:'zap', diamond:'diamond' }[shape] %>"
@@ -151,9 +151,9 @@
         </div>
 
         <!-- Publish -->
-        <div class="sc-card sc-card-pad">
+        <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-1">Publish</h2>
-          <p class="small mb-3" style="color:var(--sc-text-dim);">
+          <p class="small mb-3" style="color:var(--kd-faint);">
             Goes through the same upload path as a manual one — card artwork and dominant colour
             are derived automatically.
           </p>
@@ -182,11 +182,11 @@
               <label class="form-check-label small" for="scFeatured">Featured</label>
             </div>
 
-            <button class="btn btn-sc-primary w-100" type="submit" id="scPublishButton">
+            <button class="btn btn-kd w-100" type="submit" id="scPublishButton">
               <i data-lucide="upload" width="16" height="16" class="me-1"></i>
               Publish to the catalogue
             </button>
-            <p class="small mt-2 mb-0" id="scPublishStatus" style="color:var(--sc-text-dim);"></p>
+            <p class="small mt-2 mb-0" id="scPublishStatus" style="color:var(--kd-faint);"></p>
           </form>
         </div>
       </div>

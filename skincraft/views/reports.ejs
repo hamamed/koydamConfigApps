@@ -1,12 +1,12 @@
 <%- include('partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%
       const statuses = [['open','Open'],['resolved','Resolved'],['dismissed','Dismissed'],['all','All']];
-      const picker = `<div class="sc-range">${statuses.map(([value, label]) =>
+      const picker = `<div class="ad-range">${statuses.map(([value, label]) =>
         `<a href="/admin/reports?status=${value}" class="${value === filters.status ? 'active' : ''}">${label}</a>`
       ).join('')}</div>`;
     %>
@@ -19,19 +19,19 @@
     <%- include('partials/flash') %>
 
     <% if (reports.length === 0) { %>
-      <div class="sc-card sc-empty">
-        <div class="sc-empty-icon"><i data-lucide="shield-check" width="28" height="28"></i></div>
+      <div class="ad-card ad-empty">
+        <div class="ad-empty-icon"><i data-lucide="shield-check" width="28" height="28"></i></div>
         <h2 class="h6 mb-1">Nothing to review</h2>
-        <p class="small mb-0" style="color:var(--sc-text-dim);">
+        <p class="small mb-0" style="color:var(--kd-faint);">
           <%= filters.status === 'open' ? 'No open reports — the catalogue is clean.' : 'No reports with that status.' %>
         </p>
       </div>
     <% } else { %>
-      <div class="sc-card overflow-hidden">
+      <div class="ad-card overflow-hidden">
         <% reports.forEach((report, index) => { %>
-          <div class="sc-report-row <%= report.isUrgent ? 'urgent' : '' %> p-3
+          <div class="ad-report-row <%= report.isUrgent ? 'urgent' : '' %> p-3
                       <%= index < reports.length - 1 ? 'border-bottom' : '' %>"
-               style="border-color: var(--sc-hairline) !important;">
+               style="border-color: var(--kd-line) !important;">
             <div class="d-flex gap-3 align-items-start flex-wrap">
               <a href="/admin/skins/<%= report.skin_id %>" class="flex-shrink-0">
                 <img src="/storage/previews/<%= report.preview_file %>" alt="" width="46" height="58"
@@ -40,14 +40,14 @@
 
               <div class="flex-grow-1" style="min-width:220px;">
                 <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                  <span class="sc-reason <%= report.isUrgent ? 'urgent' : '' %>">
+                  <span class="ad-reason <%= report.isUrgent ? 'urgent' : '' %>">
                     <% if (report.isUrgent) { %><i data-lucide="triangle-alert" width="11" height="11"></i><% } %>
                     <%= report.reasonLabel %>
                   </span>
-                  <span class="sc-badge category"><%= categoryLabels[report.category] %></span>
-                  <% if (!report.is_published) { %><span class="sc-badge draft">Draft</span><% } %>
+                  <span class="ad-badge category"><%= categoryLabels[report.category] %></span>
+                  <% if (!report.is_published) { %><span class="ad-badge draft">Draft</span><% } %>
                   <% if (report.status !== 'open') { %>
-                    <span class="sc-badge"><%= report.status %></span>
+                    <span class="ad-badge"><%= report.status %></span>
                   <% } %>
                 </div>
 
@@ -56,31 +56,31 @@
                 </a>
 
                 <% if (report.note) { %>
-                  <p class="small mb-1 mt-1" style="color:var(--sc-text-muted);">“<%= report.note %>”</p>
+                  <p class="small mb-1 mt-1" style="color:var(--kd-muted);">“<%= report.note %>”</p>
                 <% } %>
 
-                <div style="font-size:0.72rem;color:var(--sc-text-dim);">
+                <div style="font-size:0.72rem;color:var(--kd-faint);">
                   <%= timeAgo(report.created_at) %>
                   <% if (report.resolver) { %> · handled by <%= report.resolver %><% } %>
                 </div>
               </div>
 
               <div class="d-flex gap-2 align-items-center ms-auto">
-                <a class="btn btn-sc-ghost btn-sm" href="/admin/skins/<%= report.skin_id %>/edit">
+                <a class="btn btn-kd-ghost btn-sm" href="/admin/skins/<%= report.skin_id %>/edit">
                   <i data-lucide="pencil" width="14" height="14" class="me-1"></i>Fix
                 </a>
                 <% if (report.status === 'open') { %>
                   <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="status" value="resolved">
-                    <button class="btn btn-sc-primary btn-sm" type="submit">
+                    <button class="btn btn-kd btn-sm" type="submit">
                       <i data-lucide="check" width="14" height="14" class="me-1"></i>Resolve
                     </button>
                   </form>
                   <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="status" value="dismissed">
-                    <button class="sc-icon-btn" type="submit" title="Dismiss" aria-label="Dismiss">
+                    <button class="ad-icon-btn" type="submit" title="Dismiss" aria-label="Dismiss">
                       <i data-lucide="x" width="14" height="14"></i>
                     </button>
                   </form>
@@ -88,7 +88,7 @@
                   <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" name="status" value="open">
-                    <button class="btn btn-sc-ghost btn-sm" type="submit">Reopen</button>
+                    <button class="btn btn-kd-ghost btn-sm" type="submit">Reopen</button>
                   </form>
                 <% } %>
               </div>
