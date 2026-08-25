@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+import {
+  bool as liveBool,
+  num as liveNum,
+  str as liveStr,
+} from './remote-settings.js';
+
 /**
  * Fails fast on missing required config rather than 500ing on the first
  * request. A container that won't start is a much clearer signal than one that
@@ -294,3 +300,104 @@ export const config = {
 
   logLevel: process.env.LOG_LEVEL ?? 'info',
 };
+
+// ── Settings from the panel ─────────────────────────────────────────────────
+//
+// The object above is built once at import, so every value in it is whatever
+// .env said at boot. That is right for the things that cannot change without a
+// restart - the port, the database - and wrong for a cache lifetime or a crawl
+// interval, which is exactly what someone opens the panel to adjust.
+//
+// So the movable ones are redefined below as getters. A read consults the
+// panel's cached value first and falls back to what .env produced, which means
+// existing call sites - `config.cache.player`, `config.crawler.concurrency` -
+// keep working unchanged and simply start reflecting the panel.
+//
+// The .env value stays the floor. If the panel is unreachable, or a setting
+// was never overridden, the service behaves exactly as it did before.
+
+const LIVE = [
+  // [object on config, property, env key, kind, transform]
+  [() => config.ttl, 'player', 'TTL_PLAYER', 'num'],
+  [() => config.ttl, 'battleLog', 'TTL_BATTLELOG', 'num'],
+  [() => config.ttl, 'club', 'TTL_CLUB', 'num'],
+  [() => config.ttl, 'brawlers', 'TTL_BRAWLERS', 'num'],
+  [() => config.ttl, 'events', 'TTL_EVENTS', 'num'],
+  [() => config.ttl, 'meta', 'TTL_META', 'num'],
+  [() => config.ttl, 'notFound', 'TTL_NOT_FOUND', 'num'],
+  [() => config.wallpapers, 'ttl', 'TTL_WALLPAPERS', 'num'],
+
+  [() => config.crawler, 'enabled', 'CRAWLER_ENABLED', 'bool'],
+  [() => config.crawler, 'intervalMinutes', 'CRAWLER_INTERVAL_MIN', 'num'],
+  [() => config.crawler, 'playersPerRegion', 'CRAWLER_PLAYERS', 'num'],
+  [() => config.crawler, 'concurrency', 'CRAWLER_CONCURRENCY', 'num'],
+  [() => config.crawler, 'minSampleSize', 'CRAWLER_MIN_SAMPLE', 'num'],
+  [() => config.crawler, 'discoveryPerCycle', 'CRAWLER_DISCOVERY', 'num'],
+  [() => config.crawler, 'searchedPerCycle', 'CRAWLER_SEARCHED', 'num'],
+  [() => config.crawler, 'profilesPerCycle', 'CRAWLER_PROFILES', 'num'],
+];
+
+for (const [owner, prop, key, kind] of LIVE) {
+  const target = owner();
+  if (!target || !(prop in target)) continue;
+
+  const fallback = target[prop];
+
+  Object.defineProperty(target, prop, {
+    enumerable: true,
+    configurable: true,
+    get() {
+      return kind === 'bool' ? liveBool(key, fallback) : liveNum(key, fallback);
+    },
+  });
+}
+
+// Retention and the disk budget sit on config.postgres and are read by the
+// pruner rather than per request, but the same reasoning applies: raising a
+// retention window should not need a deploy.
+if (config.postgres) {
+  const retention = config.postgres.retentionDays;
+  const battles = config.postgres.battleRetentionDays;
+  const budget = config.postgres.diskBudgetBytes;
+
+  Object.defineProperties(config.postgres, {
+    retentionDays: {
+      enumerable: true, configurable: true,
+      get: () => liveNum('POSTGRES_RETENTION_DAYS', retention),
+    },
+    battleRetentionDays: {
+      enumerable: true, configurable: true,
+      get: () => liveNum('POSTGRES_BATTLE_RETENTION_DAYS', battles),
+    },
+    diskBudgetBytes: {
+      enumerable: true, configurable: true,
+      // Stored in the panel as gigabytes, because nobody wants to type
+      // 40000000000 into a form.
+      get: () => {
+        const gb = liveNum('POSTGRES_DISK_BUDGET_GB', null);
+        return gb == null ? budget : gb * 1_000_000_000;
+      },
+    },
+  });
+}
+
+/**
+ * The Supercell token, read live.
+ *
+ * A getter rather than a captured value so rotating it in the panel takes
+ * effect on the next request instead of on the next restart - which matters
+ * because the usual reason to rotate is that the current one stopped working.
+ */
+const envApiToken = config.supercell.token;
+Object.defineProperty(config.supercell, 'token', {
+  enumerable: true,
+  configurable: true,
+  get: () => liveStr('BRAWL_API_TOKEN', envApiToken),
+});
+
+const envPublicKey = config.apiKey;
+Object.defineProperty(config, 'apiKey', {
+  enumerable: true,
+  configurable: true,
+  get: () => liveStr('PUBLIC_API_KEY', envPublicKey),
+});
