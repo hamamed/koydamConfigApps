@@ -16,6 +16,14 @@ import {
 } from '../auth.js';
 import { isValidAppId, isValidUnitId, testPlacements } from '../ads.js';
 import { compareVersions } from '../version.js';
+import { isEncryptionConfigured } from '../secrets.js';
+import {
+  clear as clearSetting,
+  forPanel as settingsForPanel,
+  recentChanges as recentSettingChanges,
+  set as setSetting,
+} from '../settings.js';
+import { CATALOGUE, findSetting, serviceNames } from '../settings-catalogue.js';
 import { log } from '../log.js';
 import { backupStatus } from '../backups.js';
 import { notify } from '../alerts.js';
@@ -924,4 +932,99 @@ dashboardRouter.delete('/api/apps/:slug/release-notes/:version', async (req, res
   await query('DELETE FROM release_notes WHERE app_slug = $1 AND version = $2', [slug, version]);
   await audit(req, 'releasenotes.delete', { type: 'app', id: slug }, { version });
   res.json({ ok: true });
+});
+
+// ── Service settings ────────────────────────────────────────────────────────
+
+/**
+ * The settings that used to live in .env.
+ *
+ * Admins see and change tuning; only an owner may touch a secret. The split
+ * matters because a tuning mistake is reversible from this same page, while a
+ * leaked API key is not.
+ */
+dashboardRouter.get('/api/settings/:service', requireAdminRole, async (req, res) => {
+  const service = String(req.params.service).toLowerCase();
+  if (!serviceNames().includes(service)) {
+    return res.status(404).json({ error: 'unknown_service' });
+  }
+
+  const [settings, changes] = await Promise.all([
+    settingsForPanel(service),
+    recentSettingChanges(service, 20),
+  ]);
+
+  res.json({
+    service,
+    name: CATALOGUE[service].name,
+    // Grouped here rather than in the browser: the order is editorial, and the
+    // panel should not be re-deriving it from a flat list.
+    groups: CATALOGUE[service].groups.map((g) => ({
+      title: g.title,
+      settings: settings.filter((s) => s.group === g.title),
+    })),
+    changes,
+    // Without this, saving a secret would appear to work and then silently do
+    // nothing useful, so the panel says so up front.
+    encryptionReady: isEncryptionConfigured(),
+  });
+});
+
+dashboardRouter.post('/api/settings/:service/:key', requireAdminRole, async (req, res) => {
+  const service = String(req.params.service).toLowerCase();
+  const key = String(req.params.key);
+
+  if (!serviceNames().includes(service)) {
+    return res.status(404).json({ error: 'unknown_service' });
+  }
+
+  const spec = findSetting(service, key);
+  if (!spec) return res.status(400).json({ error: 'unknown_setting' });
+
+  // A secret is a credential for a paid or rate-limited service. Changing one
+  // is an owner's decision, not an admin's.
+  if (spec.type === 'secret' && !isOwner(req.user)) {
+    return res.status(403).json({
+      error: 'owner_only',
+      message: 'Only an owner can change a secret.',
+    });
+  }
+
+  const result = await setSetting(service, key, req.body?.value, req.user.email);
+  if (!result.ok) return res.status(400).json({ error: 'invalid', message: result.reason });
+
+  await audit(
+    req,
+    'setting.update',
+    { type: 'service', id: service },
+    // The value is recorded for tuning and withheld for secrets: an audit log
+    // that carries every key ever set is a second place they leak from.
+    { key, value: spec.type === 'secret' ? '(secret)' : result.value },
+  );
+
+  res.json({ ok: true, value: result.value, restart: spec.restart });
+});
+
+/**
+ * Removes an override so the service falls back to its .env value.
+ *
+ * Deleting rather than blanking, because "" is a legitimate value as far as a
+ * service is concerned and would not fall back to anything.
+ */
+dashboardRouter.delete('/api/settings/:service/:key', requireAdminRole, async (req, res) => {
+  const service = String(req.params.service).toLowerCase();
+  const key = String(req.params.key);
+
+  const spec = findSetting(service, key);
+  if (!spec) return res.status(400).json({ error: 'unknown_setting' });
+
+  if (spec.type === 'secret' && !isOwner(req.user)) {
+    return res.status(403).json({ error: 'owner_only', message: 'Only an owner can clear a secret.' });
+  }
+
+  const result = await clearSetting(service, key, req.user.email);
+  if (!result.ok) return res.status(400).json({ error: 'invalid', message: result.reason });
+
+  await audit(req, 'setting.clear', { type: 'service', id: service }, { key });
+  res.json({ ok: true, removed: result.removed });
 });

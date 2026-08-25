@@ -5,6 +5,8 @@ import { Router } from 'express';
 import { config } from '../config.js';
 import { query } from '../db/pool.js';
 import { log } from '../log.js';
+import { forService } from '../settings.js';
+import { serviceNames } from '../settings-catalogue.js';
 
 /**
  * Single sign-on for the other panels on this box.
@@ -95,6 +97,38 @@ ssoRouter.post('/api/session/introspect', async (req, res) => {
       ),
     },
   });
+});
+
+/**
+ * GET /api/services/:slug/settings
+ *
+ * What a service should apply, decrypted. Authenticated by the same service
+ * token as introspection - this returns real API keys, so it is the most
+ * sensitive endpoint on the box and shares the strictest gate it has.
+ */
+ssoRouter.get('/api/services/:slug/settings', async (req, res) => {
+  if (!config.serviceToken) {
+    return res.status(503).json({
+      error: 'not_configured',
+      message: 'SERVICE_TOKEN is not configured on platform-api.',
+    });
+  }
+
+  if (!serviceAuthorised(req)) {
+    log.warn('Rejected settings fetch', { ip: req.ip, service: req.params.slug });
+    return res.status(401).json({ error: 'bad_service_token' });
+  }
+
+  const slug = String(req.params.slug ?? '').toLowerCase();
+  if (!serviceNames().includes(slug)) {
+    return res.status(404).json({ error: 'unknown_service' });
+  }
+
+  const settings = await forService(slug);
+
+  // Never cached by anything in between. These are credentials.
+  res.set('Cache-Control', 'no-store');
+  res.json({ service: slug, settings, fetchedAt: new Date().toISOString() });
 });
 
 /**

@@ -59,6 +59,16 @@ export const config = {
   serviceToken: process.env.SERVICE_TOKEN ?? '',
 
   /**
+   * Encrypts the secrets stored in the settings table.
+   *
+   * Stays in .env and nowhere else - it is the one thing a database dump must
+   * not carry, since the dump is what gets copied offsite. Rotating it makes
+   * every stored secret undecryptable, which reads as "unset" and falls back
+   * to .env rather than breaking anything.
+   */
+  settingsKey: process.env.SETTINGS_KEY ?? '',
+
+  /**
    * Hosts a post-login redirect may return to.
    *
    * An open redirect on a login page is a phishing primitive: sign in at the

@@ -8,6 +8,7 @@
 # shared ad-* vocabulary it takes the same stylesheet as the other panels.
 
 shared/platform-auth.js                      src/middleware/platform-auth.js
+shared/remote-settings.js                    src/remote-settings.js
 shared/css/bootstrap.min.css                 public/css/bootstrap.min.css
 shared/css/koydam.css                        public/css/koydam.css
 shared/css/admin.css                         public/css/admin.css

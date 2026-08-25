@@ -1628,6 +1628,187 @@ async function viewAccount() {
   return wrap;
 }
 
+/** The services whose settings the panel can edit. */
+const SERVICES = ['brawl', 'skincraft', 'platform'];
+
+// ── Service settings ────────────────────────────────────────────────────────
+
+/**
+ * The settings that used to be edited by SSH-ing in and opening .env.
+ *
+ * Each field shows whether it is set here or falling through to .env, because
+ * that distinction is the whole question when something is not behaving as the
+ * form says it should.
+ */
+async function viewSettings(service) {
+  const wrap = el('div');
+  const data = await api('/api/settings/' + service);
+
+  $('pageTitle').textContent = data.name + ' settings';
+
+  if (!data.encryptionReady) {
+    const warn = el('div', 'ad-warn d-flex align-items-start gap-2 mb-3');
+    warn.append(icon('circle-alert', 15));
+    warn.append(
+      el(
+        'span',
+        null,
+        'SETTINGS_KEY is not set on platform-api, so secrets cannot be stored. ' +
+          'Add it to /opt/platform-api/.env and restart. Everything else works.',
+      ),
+    );
+    wrap.append(warn);
+  }
+
+  const tabs = el('div', 'd-flex gap-2 mb-3 flex-wrap');
+  for (const s of SERVICES) {
+    const b = el('a', 'btn btn-sm ' + (s === service ? 'btn-primary' : 'btn-outline-secondary'), s);
+    b.href = '#/settings/' + s;
+    tabs.append(b);
+  }
+  wrap.append(tabs);
+
+  for (const group of data.groups) {
+    if (!group.settings.length) continue;
+
+    const { card: c, body } = card(group.title, 'settings');
+
+    for (const spec of group.settings) {
+      body.append(settingRow(service, spec));
+    }
+
+    wrap.append(c);
+  }
+
+  // ── History ──
+  if (data.changes.length) {
+    const { card: h, body: hb } = card('Recent changes', 'history');
+    hb.append(
+      table(
+        ['When', 'Setting', 'Changed to', 'By'],
+        data.changes.map((ch) => [
+          { text: ago(ch.changed_at), className: 'kd-faint small' },
+          { text: ch.key, className: 'small' },
+          ch.is_secret
+            ? { text: '(secret)', className: 'kd-faint small' }
+            : {
+                text: ch.new_value === null ? 'cleared' : JSON.stringify(ch.new_value),
+                className: 'small',
+              },
+          { text: ch.changed_by ?? '—', className: 'kd-faint small' },
+        ]),
+      ),
+    );
+    wrap.append(h);
+  }
+
+  return wrap;
+}
+
+/** One field, with its state and its save and clear controls. */
+function settingRow(service, spec) {
+  const row = el('div', 'row g-2 align-items-end py-2 border-bottom');
+
+  // ── Label ──
+  const labelCol = el('div', 'col-12 col-md-4');
+  labelCol.append(el('div', 'fw-semibold small', spec.label));
+
+  const meta = el('div', 'kd-faint ad-meta');
+  meta.append(el('span', null, spec.key));
+  if (spec.restart) {
+    meta.append(el('span', 'badge text-bg-light ms-1', 'restart'));
+  }
+  labelCol.append(meta);
+
+  if (spec.help) labelCol.append(el('div', 'kd-faint ad-meta mt-1', spec.help));
+  row.append(labelCol);
+
+  // ── Control ──
+  const inputCol = el('div', 'col-12 col-md-5');
+  let input;
+
+  if (spec.type === 'boolean') {
+    input = el('select', 'form-select form-select-sm');
+    for (const [v, l] of [['true', 'On'], ['false', 'Off']]) {
+      const o = el('option', null, l);
+      o.value = v;
+      if (String(spec.value) === v) o.selected = true;
+      input.append(o);
+    }
+  } else if (spec.type === 'select') {
+    input = el('select', 'form-select form-select-sm');
+    for (const opt of spec.options ?? []) {
+      const o = el('option', null, opt);
+      o.value = opt;
+      if (spec.value === opt) o.selected = true;
+      input.append(o);
+    }
+  } else {
+    input = el('input', 'form-control form-control-sm');
+    if (spec.type === 'number') {
+      input.type = 'number';
+      if (spec.min != null) input.min = String(spec.min);
+      if (spec.max != null) input.max = String(spec.max);
+    } else if (spec.type === 'secret') {
+      input.type = 'password';
+      input.autocomplete = 'new-password';
+      // Never prefilled: the value has not been sent to this page, and a
+      // placeholder that looks like a value invites saving the mask back.
+      input.placeholder = spec.isSet ? spec.masked + ' — type a new value to replace' : 'Not set';
+    }
+    if (spec.type !== 'secret' && spec.value != null) input.value = String(spec.value);
+  }
+
+  inputCol.append(input);
+  row.append(inputCol);
+
+  // ── State and actions ──
+  const actionCol = el('div', 'col-12 col-md-3 d-flex align-items-center gap-2');
+
+  const state = el(
+    'span',
+    'ad-meta ' + (spec.isSet ? 'text-success' : 'kd-faint'),
+    spec.isSet ? 'set here' : 'from .env',
+  );
+  actionCol.append(state);
+
+  const save = el('button', 'btn btn-sm btn-outline-secondary ms-auto', 'Save');
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      const r = await api(`/api/settings/${service}/${spec.key}`, {
+        method: 'POST',
+        body: JSON.stringify({ value: input.value }),
+      });
+      toast(r.restart ? 'Saved — restart the service to apply' : 'Saved');
+      route();
+    } catch (err) {
+      toast(err.message, 'err');
+    } finally {
+      save.disabled = false;
+    }
+  });
+  actionCol.append(save);
+
+  if (spec.isSet) {
+    const reset = el('button', 'btn btn-sm btn-link kd-faint p-0', 'reset');
+    reset.title = 'Remove this override and fall back to .env';
+    reset.addEventListener('click', async () => {
+      try {
+        await api(`/api/settings/${service}/${spec.key}`, { method: 'DELETE' });
+        toast('Reset to the .env value');
+        route();
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+    });
+    actionCol.append(reset);
+  }
+
+  row.append(actionCol);
+  return row;
+}
+
 // ── Routing ─────────────────────────────────────────────────────────────────
 
 const TITLES = {
@@ -1636,6 +1817,7 @@ const TITLES = {
   audit: 'Audit log',
   users: 'Team',
   schedule: 'Scheduled changes',
+  settings: 'Settings',
   alerts: 'Alerts',
   account: 'Your account',
 };
@@ -1658,6 +1840,9 @@ async function route() {
       const [, , slug, platform] = hash.split('/');
       $('pageTitle').textContent = slug + ' preview';
       view.replaceChildren(await viewPreview(slug, platform));
+    } else if (hash.startsWith('/settings')) {
+      const service = hash.split('/')[2] || SERVICES[0];
+      view.replaceChildren(await viewSettings(service));
     } else if (hash === '/schedule') {
       $('pageTitle').textContent = TITLES.schedule;
       view.replaceChildren(await viewSchedule());

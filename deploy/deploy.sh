@@ -354,6 +354,15 @@ ensure_platform_config() {
     changed=1
   fi
 
+  # Encrypts the secrets stored in the settings table. Generated rather than
+  # asked for, and never written anywhere but this file - a database dump must
+  # not carry the key that decrypts it.
+  if [[ -z "$(env_get "$env_file" SETTINGS_KEY)" ]] && command -v openssl >/dev/null 2>&1; then
+    env_set "$env_file" SETTINGS_KEY "$(openssl rand -hex 32)"
+    ok "generated SETTINGS_KEY"
+    changed=1
+  fi
+
   if [[ -z "$(env_get "$env_file" ALLOWED_REDIRECT_HOSTS)" && -n "$hosts" ]]; then
     env_set "$env_file" ALLOWED_REDIRECT_HOSTS "$hosts"
     ok "ALLOWED_REDIRECT_HOSTS=$hosts"
