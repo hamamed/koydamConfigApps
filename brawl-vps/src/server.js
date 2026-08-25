@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 
 import { config } from './config.js';
+import { remoteStatus, startRemoteSettings } from './remote-settings.js';
 import { log } from './log.js';
 import { cacheStats, closeCache } from './cache/store.js';
 import { playerRouter } from './routes/player.js';
@@ -123,6 +124,7 @@ app.get('/health', async (req, res) => {
     uptimeSeconds: Math.round(process.uptime()),
     cache: cacheStats(),
     db: await dbHealth(),
+    settings: remoteStatus(),
     adminPanel: {
       auth: 'platform-sso',
       ssoConfigured: Boolean(process.env.PLATFORM_URL && process.env.SERVICE_TOKEN),
@@ -211,6 +213,11 @@ app.use(errorHandler);
 let crawlTimer = null;
 
 async function boot() {
+  // Before anything reads config: the panel may hold the Supercell token, and
+  // a crawl starting on a stale one would fail every request in its first
+  // cycle. Never fatal - if the panel is unreachable the .env values stand.
+  await startRemoteSettings('brawl', log);
+
   // Before anything that might write: a crawl firing against an unmigrated
   // database would fail every insert.
   await runMigrations();
