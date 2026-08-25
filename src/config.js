@@ -1,4 +1,6 @@
 import 'dotenv/config';
+
+import { str as liveStr } from './remote-settings.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -38,9 +40,22 @@ export const config = {
    * that silently does nothing is worse than one that says it is not set up.
    */
   ai: {
-    apiKey: process.env.AI_IMAGE_API_KEY || '',
-    baseUrl: (process.env.AI_IMAGE_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, ''),
-    model: process.env.AI_IMAGE_MODEL || 'gpt-image-1',
+    // Getters, not values: the key is set in the panel and should take effect
+    // on the next request rather than on the next restart - the usual reason
+    // to change one is that the current one stopped working.
+    get apiKey() {
+      return liveStr('AI_IMAGE_API_KEY', process.env.AI_IMAGE_API_KEY || '');
+    },
+    get baseUrl() {
+      const raw = liveStr(
+        'AI_IMAGE_BASE_URL',
+        process.env.AI_IMAGE_BASE_URL || 'https://api.openai.com/v1',
+      );
+      return String(raw).replace(/\/+$/, '');
+    },
+    get model() {
+      return liveStr('AI_IMAGE_MODEL', process.env.AI_IMAGE_MODEL || 'gpt-image-1');
+    },
   },
 
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 12) * 1024 * 1024,
