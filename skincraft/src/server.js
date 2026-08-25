@@ -6,6 +6,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import path from 'node:path';
 import { config } from './config.js';
+import { startRemoteSettings } from './remote-settings.js';
 import { migrate } from './db/index.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { loadUser, flash } from './middleware/auth.js';
@@ -123,6 +124,14 @@ app.get('/', (req, res) => res.redirect('/admin'));
 
 app.use(notFound);
 app.use(errorHandler);
+
+// Settings from the panel, layered over .env. Started here rather than awaited:
+// nothing in the first few requests needs the AI key, and a slow or unreachable
+// panel must not delay the port opening.
+startRemoteSettings('skincraft', {
+  info: (msg) => console.log('  ' + msg),
+  warn: (msg, d) => console.warn('  ' + msg, d ?? ''),
+}).catch(() => {});
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`  SkinCraft API   ${config.publicUrl}/api/v1/skins`);
