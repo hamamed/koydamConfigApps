@@ -4,12 +4,13 @@
 #
 # More than Brawl needs, because SkinCraft is a third-party checkout: its own
 # repo ships a dark theme and a local username/password login, and both are
-# replaced here rather than forked upstream.
+# replaced here rather than forked upstream. Since its markup moved onto the
+# shared ad-* vocabulary it takes the same stylesheet as the other panels.
 
 shared/platform-auth.js                      src/middleware/platform-auth.js
 shared/css/bootstrap.min.css                 public/css/bootstrap.min.css
 shared/css/koydam.css                        public/css/koydam.css
-overlays/skincraft/css/admin.css            public/css/admin.css
+shared/css/admin.css                         public/css/admin.css
 shared/logo/logo.png                         public/logo/logo.png
 shared/logo/logoText.png                     public/logo/logoText.png
 overlays/skincraft/src/middleware/auth.js    src/middleware/auth.js
