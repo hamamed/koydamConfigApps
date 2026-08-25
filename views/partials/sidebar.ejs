@@ -18,54 +18,54 @@
     ]},
   ];
 %>
-<aside class="sc-sidebar" id="scSidebar">
+<aside class="ad-sidebar" id="scSidebar">
   <!-- The Koydam mark, as on every other panel. Delivered by the platform
        overlay, so all three serve the same file. -->
-  <a class="sc-brand" href="/admin">
+  <a class="ad-brand" href="/admin">
     <img class="kd-brand-mark" src="/assets/logo/logo.png" alt=""
          width="23" height="26">
-    <span class="sc-brand-name">SkinCraft<small>Skin catalogue</small></span>
+    <span class="ad-brand-name">SkinCraft<small>Skin catalogue</small></span>
   </a>
 
-  <nav class="sc-nav">
+  <nav class="ad-nav">
     <% nav.forEach((group) => { %>
-      <div class="sc-nav-label"><%= group.section %></div>
+      <div class="ad-nav-label"><%= group.section %></div>
       <% group.items.forEach((item) => { %>
-        <a class="sc-nav-link <%= item.active ? 'active' : '' %>" href="<%= item.href %>">
+        <a class="ad-nav-link <%= item.active ? 'active' : '' %>" href="<%= item.href %>">
           <i data-lucide="<%= item.icon %>" width="17" height="17"></i>
           <span><%= item.label %></span>
-          <% if (item.badge) { %><span class="sc-nav-badge"><%= item.badge %></span><% } %>
+          <% if (item.badge) { %><span class="ad-nav-badge"><%= item.badge %></span><% } %>
         </a>
       <% }) %>
     <% }) %>
 
-    <div class="sc-nav-label">Create</div>
-    <a class="sc-nav-link <%= currentPath === '/skins/new' ? 'active' : '' %>" href="/admin/skins/new">
+    <div class="ad-nav-label">Create</div>
+    <a class="ad-nav-link <%= currentPath === '/skins/new' ? 'active' : '' %>" href="/admin/skins/new">
       <i data-lucide="upload" width="17" height="17"></i>
       <span>Upload skin</span>
     </a>
-    <a class="sc-nav-link <%= currentPath === '/skins/design' ? 'active' : '' %>" href="/admin/skins/design">
+    <a class="ad-nav-link <%= currentPath === '/skins/design' ? 'active' : '' %>" href="/admin/skins/design">
       <i data-lucide="wand-sparkles" width="17" height="17"></i>
       <span>Design a skin</span>
     </a>
-    <a class="sc-nav-link <%= currentPath === '/skins/ai' ? 'active' : '' %>" href="/admin/skins/ai">
+    <a class="ad-nav-link <%= currentPath === '/skins/ai' ? 'active' : '' %>" href="/admin/skins/ai">
       <i data-lucide="sparkles" width="17" height="17"></i>
       <span>Design with AI</span>
     </a>
   </nav>
 
-  <div class="sc-sidebar-footer">
+  <div class="ad-sidebar-footer">
     <div class="d-flex align-items-center gap-2 px-2 py-2">
-      <div class="sc-stat-icon" style="width:30px;height:30px;">
+      <div class="ad-stat-icon" style="width:30px;height:30px;">
         <i data-lucide="user" width="15" height="15"></i>
       </div>
       <div class="flex-grow-1" style="min-width:0;">
         <div class="small fw-semibold text-truncate"><%= user.username %></div>
-        <div style="font-size:0.7rem;color:var(--sc-text-dim);"><%= user.role %></div>
+        <div style="font-size:0.7rem;color:var(--kd-faint);"><%= user.role %></div>
       </div>
       <form method="post" action="/admin/logout" class="m-0">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <button class="sc-icon-btn" type="submit" title="Sign out" aria-label="Sign out">
+        <button class="ad-icon-btn" type="submit" title="Sign out" aria-label="Sign out">
           <i data-lucide="log-out" width="15" height="15"></i>
         </button>
       </form>

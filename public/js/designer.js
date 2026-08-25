@@ -549,7 +549,7 @@
     palette.forEach((hex) => {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'sc-swatch';
+      chip.className = 'ad-swatch';
       chip.style.background = hex;
       chip.title = `Use ${hex} as the base colour`;
       chip.addEventListener('click', () => {

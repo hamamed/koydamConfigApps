@@ -1,9 +1,9 @@
 <%- include('../partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('../partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%- include('../partials/topbar', {
       heading: 'Design with AI',
       subheading: 'Describe a design; it is composed into a Roblox template as a draft'
@@ -22,7 +22,7 @@
     <div class="row g-3">
       <!-- Prompt -->
       <div class="col-12 col-xl-7">
-        <div class="sc-card sc-card-pad">
+        <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-3">Describe the design</h2>
 
           <form method="post" action="/admin/skins/ai">
@@ -75,7 +75,7 @@
             <button class="btn btn-primary" type="submit" <%= available ? '' : 'disabled' %>>
               Generate as draft
             </button>
-            <span class="small ms-2" style="color:var(--sc-text-dim);">
+            <span class="small ms-2" style="color:var(--kd-faint);">
               Up to a minute. It arrives unpublished.
             </span>
           </form>
@@ -84,7 +84,7 @@
 
       <!-- Guidance -->
       <div class="col-12 col-xl-5">
-        <div class="sc-card sc-card-pad mb-3">
+        <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-3">Before you publish</h2>
           <ul class="mb-0 ps-3 small">
             <% checklist.forEach(function (item) { %>
@@ -93,9 +93,9 @@
           </ul>
         </div>
 
-        <div class="sc-card sc-card-pad">
+        <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-2">How the sheet is built</h2>
-          <p class="small" style="color:var(--sc-text-dim);">
+          <p class="small" style="color:var(--kd-faint);">
             The model draws flat artwork; this places it into the 585 × 559
             layout Roblox expects. Each colour is one face of the avatar — the
             artwork is scaled and shaded into those exact rectangles.
@@ -103,7 +103,7 @@
           <img src="/admin/skins/ai/layout-proof.png?category=shirt"
                alt="Every face of the template rendered in its own colour"
                class="img-fluid border rounded">
-          <p class="small mb-0 mt-2" style="color:var(--sc-text-dim);">
+          <p class="small mb-0 mt-2" style="color:var(--kd-faint);">
             Red is the front, blue the back, green and yellow the sides. If a
             face ever landed in the wrong rectangle, it would show here.
           </p>

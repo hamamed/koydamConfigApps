@@ -1,85 +1,91 @@
-/* ==========================================================================
-   SkinCraft admin — Koydam design system.
-   Layered on Bootstrap 5.3 light. Load order: bootstrap → koydam.css → this.
+/* Dashboard chrome — shared by platform-api and Brawl.
 
-   ## Why the class names did not change
+   Both panels are hand-written HTML using the `ad-*` vocabulary, so one file
+   serves them. SkinCraft does NOT load this: its EJS templates use ~55 `sc-*`
+   class names, and rather than edit every view in a third-party repo with no
+   tests, those classes are redefined against the same Koydam tokens in
+   deploy/overlays/skincraft/css/admin.css. Two files, one design.
 
-   The templates use ~55 `sc-*` classes across a dozen EJS files. Renaming them
-   all to the shared `ad-*` vocabulary would mean editing every view for a
-   purely cosmetic change, in a repository that has no test suite — so instead
-   every `sc-*` class is redefined here in terms of the Koydam tokens. Same
-   markup, same behaviour, one design.
-
-   The previous theme was near-black with a violet accent, deliberately matched
-   to the iOS app. That has been traded for consistency with the other panels
-   on this box; the app itself is untouched.
-   ========================================================================== */
-
+   Load order: bootstrap -> koydam.css -> this. */
 :root {
-  --sc-sidebar-width: 254px;
-  --sc-topbar-h: 60px;
-
-  /* Aliases onto the Koydam tokens, so anything this file missed still lands
-     on the right colour rather than an undefined variable. */
-  --sc-canvas:          var(--kd-surface);
-  --sc-surface:         #ffffff;
-  --sc-elevated:        #ffffff;
-  --sc-hairline:        var(--kd-line);
-  --sc-hairline-strong: var(--kd-line-strong);
-  --sc-text:            var(--kd-ink);
-  --sc-text-muted:      var(--kd-muted);
-  --sc-accent:          var(--kd-accent);
-  --sc-accent-soft:     var(--kd-accent-ink);
-  --sc-radius:          var(--kd-radius);
+  --ad-sidebar-w: 254px;
+  --ad-topbar-h: 60px;
 }
 
-body { background: var(--kd-surface); color: var(--kd-ink-2); }
+body.ad-body { background: var(--kd-surface); }
 
-/* ── Shell ──────────────────────────────────────────────────────────────── */
+/* --------------------------------------------------------------- shell -- */
+.ad-shell { display: flex; min-height: 100vh; }
 
-.sc-shell { display: flex; min-height: 100vh; }
-
-.sc-sidebar {
-  width: var(--sc-sidebar-width);
-  flex-shrink: 0;
+.ad-sidebar {
+  width: var(--ad-sidebar-w);
+  flex: none;
   background: #fff;
   border-right: 1px solid var(--kd-line);
-  position: sticky;
-  top: 0;
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 1.1rem .85rem;
+  position: fixed;
+  inset: 0 auto 0 0;
   z-index: 1045;
+  transform: translateX(0);
+  transition: transform var(--kd-slow) var(--kd-ease);
 }
 
-.sc-main { flex: 1; min-width: 0; padding: 1.75rem 2rem 4rem; }
+.ad-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: var(--ad-sidebar-w);
+}
 
-.sc-brand {
+.ad-topbar {
+  height: var(--ad-topbar-h);
+  background: rgba(255, 255, 255, .86);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--kd-line);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
   display: flex;
   align-items: center;
-  gap: .625rem;
-  padding: .25rem .5rem 1.25rem;
-  text-decoration: none;
+  gap: 1rem;
+  padding-inline: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.ad-content { padding: clamp(1.25rem, 2.6vw, 2rem) clamp(1rem, 2.5vw, 1.75rem) 4rem; }
+
+@media (max-width: 991.98px) {
+  .ad-sidebar { transform: translateX(-100%); box-shadow: var(--kd-shadow-lift); }
+  .ad-sidebar.is-open { transform: translateX(0); }
+  .ad-main { margin-left: 0; }
+  .ad-backdrop {
+    position: fixed; inset: 0; z-index: 1040;
+    background: rgba(11, 18, 32, .38);
+    backdrop-filter: blur(1px);
+  }
+}
+
+/* ------------------------------------------------------------- sidebar -- */
+/* The glyph tile beside the wordmark. The markup carries this class in both
+   panels but nothing defined it, so the span was laying out as bare inline
+   text and the icon sat unaligned against the label. */
+/* Secondary line under a heading: the signed-in role, a status subtitle. */
+/* Secondary line under a heading: a signed-in role, a status subtitle. */
+.ad-meta { font-size: 0.7rem; }
+
+/* Win-rate column, wide enough for the inline bar the cell draws. */
+.ad-col-winrate { width: 38%; }
+
+.ad-brand {
+  display: flex; align-items: center; gap: .6rem;
+  padding: 1.05rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
   color: var(--kd-ink);
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
-
-.sc-brand-mark {
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  display: grid; place-items: center;
-  background: var(--kd-accent-soft);
-  color: var(--kd-accent);
-  flex: none;
-}
-
-.sc-brand-name { font-weight: 650; letter-spacing: -.01em; color: var(--kd-ink); }
-
-/* The mark is now the Koydam logo rather than a glyph in a tile, so it sits at
-   text scale beside the wordmark - matching .ad-brand on the other panels. */
-.sc-brand .kd-brand-mark { height: 26px; }
-
-.sc-brand-name small {
+/* The admin brand keeps its wordmark, so the glyph stays at text scale. */
+.ad-brand .kd-brand-mark { height: 26px; }
+.ad-brand small {
   display: block;
   font-size: .68rem;
   font-weight: 500;
@@ -88,45 +94,336 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: var(--kd-faint);
 }
 
-/* ── Nav ────────────────────────────────────────────────────────────────── */
+.ad-nav { padding: .85rem .7rem; overflow-y: auto; flex: 1 1 auto; }
 
-.sc-nav { display: flex; flex-direction: column; gap: .12rem; }
-
-.sc-nav-label {
+.ad-nav-label {
   font-size: .66rem;
-  font-weight: 700;
-  letter-spacing: .1em;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--kd-faint);
-  padding: 1rem .6rem .35rem;
+  font-weight: 600;
+  padding: .9rem .55rem .4rem;
 }
 
-.sc-nav-link {
+.ad-nav-link {
   display: flex;
   align-items: center;
-  gap: .7rem;
+  gap: .65rem;
   padding: .52rem .6rem;
   border-radius: 9px;
   color: var(--kd-muted);
   font-size: .9rem;
   font-weight: 500;
-  text-decoration: none;
-  transition: background var(--kd-fast) var(--kd-ease),
-              color var(--kd-fast) var(--kd-ease);
+  transition: background var(--kd-fast) var(--kd-ease), color var(--kd-fast) var(--kd-ease);
 }
-
-.sc-nav-link svg, .sc-nav-link i { width: 16px; height: 16px; color: var(--kd-faint); }
-
-.sc-nav-link:hover { background: var(--kd-surface-2); color: var(--kd-ink); }
-
-.sc-nav-link.active {
+.ad-nav-link:hover { background: var(--kd-surface-2); color: var(--kd-ink); }
+.ad-nav-link.is-active { background: var(--kd-ink); color: #fff; }
+.ad-nav-link.is-active .lucide { color: #fff; }
+.ad-nav-link .lucide { width: 16px; height: 16px; color: var(--kd-faint); }
+.ad-nav-link .ad-badge {
+  margin-left: auto;
   background: var(--kd-accent-soft);
   color: var(--kd-accent-ink);
-  font-weight: 600;
+  border-radius: 99px;
+  font-size: .7rem;
+  font-weight: 650;
+  padding: .05rem .45rem;
 }
-.sc-nav-link.active svg, .sc-nav-link.active i { color: var(--kd-accent); }
+.ad-nav-link.is-active .ad-badge { background: rgba(255,255,255,.18); color: #fff; }
 
-.sc-nav-badge, .sc-badge {
+.ad-sidebar-foot { padding: .8rem; border-top: 1px solid var(--kd-line); }
+
+/* --------------------------------------------------------------- views -- */
+.ad-view { display: none; }
+.ad-view.is-active { display: block; animation: ad-fade .22s var(--kd-ease); }
+@keyframes ad-fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.ad-page-title { font-size: 1.4rem; letter-spacing: -0.028em; margin: 0; }
+
+.ad-card {
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+}
+.ad-card-head {
+  padding: .9rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ad-card-head h2 { font-size: .95rem; margin: 0; letter-spacing: -0.015em; }
+.ad-card-body { padding: 1.15rem; }
+
+/* KPI tiles */
+.ad-kpi { padding: 1.15rem; }
+.ad-kpi .lucide { width: 17px; height: 17px; color: var(--kd-faint); }
+.ad-kpi-value { font-size: 1.75rem; font-weight: 640; letter-spacing: -0.035em; color: var(--kd-ink); line-height: 1.1; }
+.ad-kpi-label { font-size: .8rem; color: var(--kd-faint); }
+
+/* -------------------------------------------------------------- tables -- */
+.ad-table { width: 100%; margin: 0; font-size: .885rem; }
+.ad-table th {
+  font-size: .7rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  padding: .7rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface);
+  white-space: nowrap;
+}
+.ad-table td {
+  padding: .8rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  vertical-align: middle;
+  color: var(--kd-ink-2);
+}
+.ad-table tbody tr:last-child td { border-bottom: 0; }
+.ad-table tbody tr { transition: background var(--kd-fast) var(--kd-ease); }
+.ad-table tbody tr:hover { background: var(--kd-surface); }
+.ad-table tbody tr.is-unread td:first-child { box-shadow: inset 2px 0 0 var(--kd-accent); }
+
+.ad-table-wrap { overflow-x: auto; }
+
+/* ------------------------------------------------------------- editors -- */
+.ad-section-label {
+  font-size: .72rem;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  margin-bottom: .85rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--kd-line);
+}
+
+/* Markdown/HTML editor toolbar */
+.ad-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  padding: .4rem;
+  border: 1px solid var(--kd-line-strong);
+  border-bottom: 0;
+  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  background: var(--kd-surface);
+}
+.ad-toolbar button {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 7px;
+  padding: .28rem .5rem;
+  color: var(--kd-muted);
+  font-size: .8rem;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-toolbar button:hover { background: #fff; border-color: var(--kd-line); color: var(--kd-ink); }
+.ad-editor {
+  border-radius: 0 0 var(--kd-radius-sm) var(--kd-radius-sm);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .82rem;
+  line-height: 1.7;
+  min-height: 260px;
+  resize: vertical;
+}
+.ad-preview {
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  max-height: 420px;
+  overflow: auto;
+}
+
+/* Image pickers */
+.ad-thumb {
+  position: relative;
+  width: 92px; height: 92px;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  overflow: hidden;
+  background: var(--kd-surface-2);
+  flex: none;
+}
+.ad-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-thumb button {
+  position: absolute; top: 4px; right: 4px;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 6px;
+  background: rgba(11, 18, 32, .72);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--kd-fast) var(--kd-ease);
+}
+.ad-thumb:hover button { opacity: 1; }
+
+.ad-drop {
+  border: 1px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-drop:hover, .ad-drop.is-over { border-color: var(--kd-accent); background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Repeatable list rows (features, bullets) */
+.ad-repeat-row { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.ad-repeat-row .btn { flex: none; }
+
+/* Toasts */
+.ad-toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 1080; display: grid; gap: .5rem; }
+.ad-toast {
+  display: flex; align-items: center; gap: .55rem;
+  background: var(--kd-ink);
+  color: #fff;
+  border-radius: 10px;
+  padding: .65rem .9rem;
+  font-size: .875rem;
+  box-shadow: var(--kd-shadow-lift);
+  animation: ad-toast-in .24s var(--kd-ease);
+}
+.ad-toast.is-error { background: var(--kd-danger); }
+.ad-toast .lucide { width: 16px; height: 16px; }
+@keyframes ad-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Status pills */
+.ad-status { font-size: .72rem; font-weight: 600; padding: .18rem .5rem; border-radius: 99px; text-transform: capitalize; }
+.ad-status-published { background: #ecfdf5; color: var(--kd-ok); }
+.ad-status-draft     { background: var(--kd-surface-2); color: var(--kd-muted); }
+.ad-status-archived  { background: #fef2f2; color: var(--kd-danger); }
+.ad-status-sent      { background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Empty states */
+.ad-empty { padding: 3rem 1rem; text-align: center; color: var(--kd-faint); }
+.ad-empty .lucide { width: 26px; height: 26px; }
+
+/* Login screen */
+.ad-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 1px 1px, var(--kd-line-strong) 1px, transparent 0) 0 0 / 28px 28px,
+    var(--kd-surface);
+}
+.ad-login-card {
+  width: min(410px, 100%);
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: var(--kd-shadow-lift);
+  padding: 2rem;
+}
+
+/* Sub-line under the sign-in lockup. Centred with it, and quiet enough that
+   the logo stays the largest thing on the page. */
+.ad-login-lede {
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ── Operations views ─────────────────────────────────────────────────────── */
+
+/* The config preview. Monospace and scrollable in its own box: a config is
+   read by comparing lines, and a document that widens the page instead of
+   scrolling itself makes every other panel jump. */
+.ad-json {
+  background: var(--kd-surface);
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  padding: .85rem 1rem;
+  margin: 0;
+  max-height: 26rem;
+  overflow: auto;
+  font-size: .78rem;
+  line-height: 1.55;
+  color: var(--kd-ink-2);
+}
+
+/* A note about something worth checking before a release - not an error, so
+   it reads as amber rather than red. */
+.ad-warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--kd-radius);
+  padding: .55rem .75rem;
+  font-size: .82rem;
+  color: #92400e;
+}
+.ad-warn .lucide { flex: none; margin-top: .1rem; }
+
+/* Backup age on the dashboard. Quiet when recent, loud when not - the whole
+   point is that a stale backup is visible without being looked for. */
+.ad-backup {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .78rem;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  border: 1px solid var(--kd-line);
+  color: var(--kd-muted);
+}
+.ad-backup.stale {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SkinCraft components
+
+   The shell above - sidebar, cards, tables, nav - is shared by all three
+   panels. What follows is SkinCraft's own furniture: skin cards, charts, the
+   template designer's canvas and stickers. It lives here rather than in a
+   second stylesheet so there is one file to change when the design does, and
+   costs the other two panels nothing but unused selectors.
+
+   These were `sc-*` in a separate sheet. The shell rules that duplicated the
+   ones above were dropped rather than ported - keeping them would have
+   redefined .ad-card and .ad-sidebar for every panel that loads this file.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Two values with no equivalent in the Koydam tokens. Everything else the
+     components need is already a --kd- token. */
+  --ad-cyan: #0891b2;
+  --ad-gradient: linear-gradient(90deg, var(--kd-accent), #818cf8);
+}
+body { background: var(--kd-surface); color: var(--kd-ink-2); }
+
+.ad-brand-mark {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  background: var(--kd-accent-soft);
+  color: var(--kd-accent);
+  flex: none;
+}
+
+.ad-brand-name { font-weight: 650; letter-spacing: -.01em; color: var(--kd-ink); }
+
+.ad-brand-name small {
+  display: block;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+}
+
+.ad-nav-badge, .ad-badge {
   margin-left: auto;
   font-size: .68rem;
   font-weight: 700;
@@ -136,7 +433,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: var(--kd-accent-ink);
 }
 
-.sc-sidebar-footer {
+.ad-sidebar-footer {
   margin-top: auto;
   padding-top: 1rem;
   border-top: 1px solid var(--kd-line);
@@ -144,35 +441,17 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: var(--kd-faint);
 }
 
-/* ── Cards ──────────────────────────────────────────────────────────────── */
+.ad-card-pad { padding: 1.15rem; }
 
-.sc-card {
-  background: #fff;
-  border: 1px solid var(--kd-line);
-  border-radius: var(--kd-radius);
-}
+.ad-divider { height: 1px; background: var(--kd-line); border: 0; margin: 1rem 0; }
 
-.sc-card-pad { padding: 1.15rem; }
-
-.sc-divider { height: 1px; background: var(--kd-line); border: 0; margin: 1rem 0; }
-
-/* ── Page headings ──────────────────────────────────────────────────────── */
-
-.sc-page-title {
-  font-size: 1.32rem;
-  font-weight: 660;
-  letter-spacing: -.025em;
-  color: var(--kd-ink);
-  margin: 0;
-}
-
-.sc-page-sub { color: var(--kd-muted); font-size: .9rem; margin: .15rem 0 0; }
+.ad-page-sub { color: var(--kd-muted); font-size: .9rem; margin: .15rem 0 0; }
 
 /* ── Stats ──────────────────────────────────────────────────────────────── */
 
-.sc-stat { position: relative; overflow: hidden; }
+.ad-stat { position: relative; overflow: hidden; }
 
-.sc-stat-icon {
+.ad-stat-icon {
   width: 34px; height: 34px;
   border-radius: 10px;
   display: grid; place-items: center;
@@ -180,7 +459,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: var(--kd-accent);
 }
 
-.sc-stat-value {
+.ad-stat-value {
   font-size: 1.75rem;
   font-weight: 640;
   letter-spacing: -.035em;
@@ -189,29 +468,29 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   font-variant-numeric: tabular-nums;
 }
 
-.sc-stat-label { font-size: .8rem; color: var(--kd-faint); }
+.ad-stat-label { font-size: .8rem; color: var(--kd-faint); }
 
-.sc-delta { font-size: .78rem; font-weight: 600; }
-.sc-delta.up { color: var(--kd-ok); }
-.sc-delta.down { color: var(--kd-danger); }
+.ad-delta { font-size: .78rem; font-weight: 600; }
+.ad-delta.up { color: var(--kd-ok); }
+.ad-delta.down { color: var(--kd-danger); }
 
 /* ── Buttons and chips ──────────────────────────────────────────────────── */
 
-.sc-primary {
+.ad-primary {
   background: var(--kd-accent);
   border: 1px solid var(--kd-accent);
   color: #fff;
 }
-.sc-primary:hover { background: var(--kd-accent-ink); border-color: var(--kd-accent-ink); color: #fff; }
+.ad-primary:hover { background: var(--kd-accent-ink); border-color: var(--kd-accent-ink); color: #fff; }
 
-.sc-ghost {
+.ad-ghost {
   background: #fff;
   border: 1px solid var(--kd-line);
   color: var(--kd-ink-2);
 }
-.sc-ghost:hover { border-color: var(--kd-line-strong); background: var(--kd-surface); color: var(--kd-ink); }
+.ad-ghost:hover { border-color: var(--kd-line-strong); background: var(--kd-surface); color: var(--kd-ink); }
 
-.sc-icon-btn {
+.ad-icon-btn {
   width: 32px; height: 32px;
   display: grid; place-items: center;
   border-radius: 9px;
@@ -219,9 +498,9 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   background: #fff;
   color: var(--kd-muted);
 }
-.sc-icon-btn:hover { color: var(--kd-ink); border-color: var(--kd-line-strong); }
+.ad-icon-btn:hover { color: var(--kd-ink); border-color: var(--kd-line-strong); }
 
-.sc-tag {
+.ad-tag {
   display: inline-flex; align-items: center; gap: .3rem;
   font-size: .74rem; font-weight: 600;
   padding: .16rem .5rem;
@@ -231,7 +510,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   border: 1px solid var(--kd-line);
 }
 
-.sc-code {
+.ad-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .78rem;
   color: var(--kd-muted);
@@ -240,7 +519,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   padding: .08rem .32rem;
 }
 
-.sc-swatch {
+.ad-swatch {
   width: 18px; height: 18px;
   border-radius: 5px;
   border: 1px solid var(--kd-line-strong);
@@ -259,7 +538,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   box-shadow: 0 0 0 .18rem rgba(79, 70, 229, .14);
 }
 
-.sc-input-icon {
+.ad-input-icon {
   position: absolute;
   left: .7rem; top: 50%;
   transform: translateY(-50%);
@@ -267,17 +546,17 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   pointer-events: none;
 }
 
-.sc-range { accent-color: var(--kd-accent); }
+.ad-range { accent-color: var(--kd-accent); }
 
 /* ── Skins grid ─────────────────────────────────────────────────────────── */
 
-.sc-grid {
+.ad-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 1rem;
 }
 
-.sc-skin-card {
+.ad-skin-card {
   position: relative;
   overflow: hidden;
   border-radius: var(--kd-radius);
@@ -286,9 +565,9 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   transition: box-shadow var(--kd-fast) var(--kd-ease),
               border-color var(--kd-fast) var(--kd-ease);
 }
-.sc-skin-card:hover { border-color: var(--kd-line-strong); box-shadow: var(--kd-shadow); }
+.ad-skin-card:hover { border-color: var(--kd-line-strong); box-shadow: var(--kd-shadow); }
 
-.sc-skin-thumb {
+.ad-skin-thumb {
   aspect-ratio: 4 / 5;
   width: 100%;
   object-fit: cover;
@@ -297,7 +576,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   background: var(--kd-surface-2);
 }
 
-.sc-skin-body {
+.ad-skin-body {
   position: absolute; inset: auto 0 0 0;
   padding: .8rem;
   /* Kept dark: it sits over artwork, not over the page. */
@@ -305,17 +584,17 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: #fff;
 }
 
-.sc-skin-title { font-weight: 600; font-size: .9rem; color: #fff; }
-.sc-skin-meta  { font-size: .74rem; color: rgba(255,255,255,.8); }
-.sc-skin-flags { display: flex; gap: .25rem; }
-.sc-skin-actions { position: absolute; top: .55rem; right: .55rem; display: flex; gap: .3rem; }
+.ad-skin-title { font-weight: 600; font-size: .9rem; color: #fff; }
+.ad-skin-meta  { font-size: .74rem; color: rgba(255,255,255,.8); }
+.ad-skin-flags { display: flex; gap: .25rem; }
+.ad-skin-actions { position: absolute; top: .55rem; right: .55rem; display: flex; gap: .3rem; }
 
-.sc-sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: .5rem; }
-.sc-sticker { border: 1px solid var(--kd-line); border-radius: 9px; padding: .35rem; background: #fff; }
+.ad-sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: .5rem; }
+.ad-sticker { border: 1px solid var(--kd-line); border-radius: 9px; padding: .35rem; background: #fff; }
 
 /* ── Upload ─────────────────────────────────────────────────────────────── */
 
-.sc-dropzone {
+.ad-dropzone {
   border: 2px dashed var(--kd-line-strong);
   border-radius: var(--kd-radius);
   background: var(--kd-surface);
@@ -325,56 +604,31 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   transition: border-color var(--kd-fast) var(--kd-ease),
               background var(--kd-fast) var(--kd-ease);
 }
-.sc-dropzone.is-over { border-color: var(--kd-accent); background: var(--kd-accent-soft); }
-.sc-dropzone-preview { max-height: 240px; border-radius: var(--kd-radius-sm); }
-.sc-canvas-wrap { background: var(--kd-surface-2); border-radius: var(--kd-radius); padding: 1rem; }
+.ad-dropzone.is-over { border-color: var(--kd-accent); background: var(--kd-accent-soft); }
+.ad-dropzone-preview { max-height: 240px; border-radius: var(--kd-radius-sm); }
+.ad-canvas-wrap { background: var(--kd-surface-2); border-radius: var(--kd-radius); padding: 1rem; }
 
 /* ── Charts ─────────────────────────────────────────────────────────────── */
 
-.sc-chart { width: 100%; height: 220px; }
-.sc-chart-grid { stroke: var(--kd-line); stroke-width: 1; }
-.sc-chart-line { stroke: var(--kd-accent); stroke-width: 2; fill: none; }
-.sc-chart-area { fill: rgba(79, 70, 229, .10); }
-.sc-spark { width: 100%; height: 38px; }
-.sc-spark-line { stroke: var(--kd-accent); stroke-width: 1.8; fill: none; }
+.ad-chart { width: 100%; height: 220px; }
+.ad-chart-grid { stroke: var(--kd-line); stroke-width: 1; }
+.ad-chart-line { stroke: var(--kd-accent); stroke-width: 2; fill: none; }
+.ad-chart-area { fill: rgba(79, 70, 229, .10); }
+.ad-spark { width: 100%; height: 38px; }
+.ad-spark-line { stroke: var(--kd-accent); stroke-width: 1.8; fill: none; }
 
 /* ── Reports ────────────────────────────────────────────────────────────── */
 
-.sc-report-row { border-bottom: 1px solid var(--kd-line); }
-.sc-report-row:last-child { border-bottom: 0; }
-.sc-reason { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--kd-warn); }
-
-/* ── Empty states ───────────────────────────────────────────────────────── */
-
-.sc-empty { text-align: center; padding: 3rem 1rem; color: var(--kd-muted); }
-.sc-empty-icon {
+.ad-report-row { border-bottom: 1px solid var(--kd-line); }
+.ad-report-row:last-child { border-bottom: 0; }
+.ad-reason { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--kd-warn); }
+.ad-empty-icon {
   width: 46px; height: 46px;
   border-radius: 13px;
   display: grid; place-items: center;
   margin: 0 auto .75rem;
   background: var(--kd-surface-2);
   color: var(--kd-faint);
-}
-
-/* ── Login ──────────────────────────────────────────────────────────────── */
-
-.sc-login {
-  min-height: 100vh;
-  display: grid; place-items: center;
-  padding: 1.5rem;
-  /* Same dotted field as the other panels' sign-in. */
-  background:
-    radial-gradient(circle at 1px 1px, var(--kd-line-strong) 1px, transparent 0) 0 0 / 28px 28px,
-    var(--kd-surface);
-}
-
-.sc-login-card {
-  width: 100%; max-width: 400px;
-  background: #fff;
-  border: 1px solid var(--kd-line);
-  border-radius: var(--kd-radius-lg);
-  box-shadow: var(--kd-shadow-lift);
-  padding: 2rem;
 }
 
 /* ── Tables ─────────────────────────────────────────────────────────────── */
@@ -393,21 +647,21 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
-.sc-menu-toggle { display: none; }
-.sc-scrim { display: none; }
+.ad-menu-toggle { display: none; }
+.ad-scrim { display: none; }
 
 @media (max-width: 991.98px) {
-  .sc-sidebar {
+  .ad-sidebar {
     position: fixed; inset: 0 auto 0 0;
     transform: translateX(-100%);
     transition: transform var(--kd-slow) var(--kd-ease);
     box-shadow: var(--kd-shadow-lift);
   }
-  .sc-sidebar.is-open { transform: translateX(0); }
-  .sc-main { padding: 1rem 1rem 3rem; }
-  .sc-menu-toggle { display: grid; }
+  .ad-sidebar.is-open { transform: translateX(0); }
+  .ad-main { padding: 1rem 1rem 3rem; }
+  .ad-menu-toggle { display: grid; }
 
-  .sc-scrim {
+  .ad-scrim {
     display: block;
     position: fixed; inset: 0;
     background: rgba(11, 18, 32, .35);
@@ -415,27 +669,23 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
     transition: opacity var(--kd-fast) var(--kd-ease);
     z-index: 1040;
   }
-  .sc-scrim.is-open { opacity: 1; pointer-events: auto; }
-}
-
-/* ── Variables the templates reference inline ────────────────────────────────
-   Several views set `style="color:var(--sc-text-dim)"` directly rather than
-   using a class. Those variables have to exist or the declaration is dropped
-   and the element falls back to inherited colour — which reads as a styling
-   bug with no obvious cause. */
-
-:root {
-  --sc-text-dim:  var(--kd-faint);
-  --sc-danger:    var(--kd-danger);
-  --sc-warn:      var(--kd-warn);
-  --sc-ok:        var(--kd-ok);
-  --sc-amber:     var(--kd-warn);
-  --sc-cyan:      #0891b2;
-
-  /* Was violet→cyan. Now the accent into a lighter tint of itself, so progress
-     bars and meters read as one family with the rest of the panel. */
-  --sc-gradient:  linear-gradient(90deg, var(--kd-accent), #818cf8);
+  .ad-scrim.is-open { opacity: 1; pointer-events: auto; }
 }
 
 /* The wrapper the skins grid puts around each card. */
-.sc-skin-card-wrap { position: relative; }
+.ad-skin-card-wrap { position: relative; }
+
+/* Two state classes the scripts toggle and no stylesheet ever defined, so the
+   drop zone gave no feedback while a file was over it and a toggled button
+   looked identical to an untoggled one. */
+.ad-dropzone.is-dragging {
+  border-color: var(--kd-accent);
+  background: var(--kd-accent-soft);
+}
+
+.btn.is-on,
+.ad-icon-btn.is-on {
+  background: var(--kd-accent);
+  border-color: var(--kd-accent);
+  color: #fff;
+}

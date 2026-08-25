@@ -1,9 +1,9 @@
 <%- include('partials/head', { title }) %>
-<div class="sc-shell">
+<div class="ad-shell">
   <%- include('partials/sidebar') %>
-  <div class="sc-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim d-none" id="scScrim"></div>
 
-  <main class="sc-main">
+  <main class="ad-main">
     <%- include('partials/topbar', {
       heading: 'Tags',
       subheading: 'What creators are searching for in the app'
@@ -12,13 +12,13 @@
     <%- include('partials/flash') %>
 
     <% if (tags.length === 0) { %>
-      <div class="sc-card sc-empty">
-        <div class="sc-empty-icon"><i data-lucide="tags" width="28" height="28"></i></div>
+      <div class="ad-card ad-empty">
+        <div class="ad-empty-icon"><i data-lucide="tags" width="28" height="28"></i></div>
         <h2 class="h6 mb-1">No tags yet</h2>
-        <p class="small mb-0" style="color:var(--sc-text-dim);">Tags are created when you add them to a skin.</p>
+        <p class="small mb-0" style="color:var(--kd-faint);">Tags are created when you add them to a skin.</p>
       </div>
     <% } else { %>
-      <div class="sc-card sc-card-pad">
+      <div class="ad-card ad-card-pad">
         <div class="d-flex flex-wrap gap-2">
           <% const maxUses = Math.max(...tags.map((t) => t.uses), 1); %>
           <% tags.forEach((tag) => { %>
@@ -28,10 +28,10 @@
               const weight = tag.uses / maxUses;
               const size = (0.76 + weight * 0.34).toFixed(2);
             %>
-            <a class="sc-tag" href="/admin/skins?q=<%= encodeURIComponent(tag.name) %>"
-               style="font-size:<%= size %>rem;<%= weight > 0.6 ? 'color:var(--sc-text);border-color:var(--sc-hairline-strong);' : '' %>">
+            <a class="ad-tag" href="/admin/skins?q=<%= encodeURIComponent(tag.name) %>"
+               style="font-size:<%= size %>rem;<%= weight > 0.6 ? 'color:var(--kd-ink);border-color:var(--kd-line-strong);' : '' %>">
               #<%= tag.name %>
-              <span class="ms-2" style="color:var(--sc-text-dim);font-size:0.72em;"><%= tag.uses %></span>
+              <span class="ms-2" style="color:var(--kd-faint);font-size:0.72em;"><%= tag.uses %></span>
             </a>
           <% }) %>
         </div>

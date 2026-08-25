@@ -136,12 +136,12 @@
           icon.setAttribute('fill', isOn ? 'currentColor' : 'none');
         }
         // Reflect the change in the card's badge row without a reload.
-        const card = form.closest('.sc-skin-card-wrap');
-        const flags = card?.querySelector('.sc-skin-flags');
-        const existing = flags?.querySelector('.sc-badge.featured');
+        const card = form.closest('.ad-skin-card-wrap');
+        const flags = card?.querySelector('.ad-skin-flags');
+        const existing = flags?.querySelector('.ad-badge.featured');
         if (isOn && flags && !existing) {
           const badge = document.createElement('span');
-          badge.className = 'sc-badge featured';
+          badge.className = 'ad-badge featured';
           badge.textContent = 'Featured';
           flags.prepend(badge);
         } else if (!isOn && existing) {
