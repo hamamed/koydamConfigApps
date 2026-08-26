@@ -73,7 +73,12 @@ wallpapersRouter.get(
  * Deeper nesting is ignored rather than flattened — a folder someone made to
  * organise their own originals should not turn into a category in the app.
  */
-async function scanGallery() {
+/**
+ * Exported so the admin panel can list the gallery without the public route's
+ * cache in the way: after an upload, the panel must show what is on disk now,
+ * not what the index looked like a minute ago.
+ */
+export async function scanGallery() {
   let entries;
   try {
     entries = await readdir(WALLPAPER_ROOT, { withFileTypes: true });

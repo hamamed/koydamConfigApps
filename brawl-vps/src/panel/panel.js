@@ -443,9 +443,161 @@ async function refresh() {
   }
 }
 
+
+// ── Wallpapers ──────────────────────────────────────────────────────────────
+
+/**
+ * The gallery, and adding to it.
+ *
+ * Loaded on its own rather than folded into the dashboard poll: it reads the
+ * disk, and the rest of the panel refreshes every few seconds.
+ */
+async function loadWallpapers() {
+  const grid = document.getElementById('wp-grid');
+  const summary = document.getElementById('wp-summary');
+  if (!grid) return;
+
+  grid.replaceChildren(el('div', 'kd-faint small', 'Loading…'));
+
+  let data;
+  try {
+    data = await getJson('/admin/wallpapers');
+  } catch (err) {
+    grid.replaceChildren(el('div', 'kd-faint small', err.message));
+    return;
+  }
+
+  summary.textContent =
+    `${data.items.length} image${data.items.length === 1 ? '' : 's'} · ${bytes(data.totalBytes)}`;
+
+  // Feeds the category box, so adding to an existing one is a pick rather than
+  // a retype — and a typo does not silently create a near-duplicate folder.
+  const list = document.getElementById('wp-categories');
+  list.replaceChildren(
+    ...data.categories.map((c) => {
+      const o = document.createElement('option');
+      o.value = c;
+      return o;
+    }),
+  );
+
+  if (!data.items.length) {
+    grid.replaceChildren(
+      el('div', 'kd-faint small', 'Nothing here yet. Upload a few images above.'),
+    );
+    return;
+  }
+
+  grid.replaceChildren(...data.items.map(wallpaperCard));
+}
+
+function wallpaperCard(item) {
+  const card = el('div', 'ad-wp');
+
+  const img = document.createElement('img');
+  // The public path: the same bytes the app fetches, so a broken thumbnail
+  // here means a broken image there rather than a panel-only quirk.
+  img.src = '/wallpapers/' + item.id.split('/').map(encodeURIComponent).join('/');
+  img.alt = item.name;
+  img.loading = 'lazy';
+  card.append(img);
+
+  const body = el('div', 'ad-wp-body');
+  body.append(el('div', 'ad-wp-name text-truncate', item.name));
+
+  const meta = [item.category, item.width ? `${item.width}×${item.height}` : null, bytes(item.bytes)]
+    .filter(Boolean)
+    .join(' · ');
+  body.append(el('div', 'kd-faint ad-meta text-truncate', meta));
+
+  const remove = el('button', 'btn btn-sm btn-link text-danger p-0 ad-meta', 'Delete');
+  remove.addEventListener('click', async () => {
+    // A wallpaper is a file, and the app is serving it right now. One
+    // confirmation is cheap next to restoring from a backup.
+    if (!window.confirm(`Delete “${item.name}”? This removes the file.`)) return;
+
+    remove.disabled = true;
+    try {
+      const res = await fetch(
+        '/admin/wallpapers/' + item.id.split('/').map(encodeURIComponent).join('/'),
+        { method: 'DELETE', credentials: 'same-origin' },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message ?? 'Could not delete it.');
+      loadWallpapers();
+    } catch (err) {
+      window.alert(err.message);
+      remove.disabled = false;
+    }
+  });
+
+  body.append(remove);
+  card.append(body);
+  return card;
+}
+
+async function uploadWallpapers() {
+  const input = document.getElementById('wp-files');
+  const category = document.getElementById('wp-category');
+  const button = document.getElementById('wp-upload');
+  const result = document.getElementById('wp-result');
+
+  const files = [...(input.files ?? [])];
+  if (!files.length) {
+    result.replaceChildren(el('div', 'kd-faint small mb-2', 'Choose some images first.'));
+    return;
+  }
+
+  const form = new FormData();
+  for (const f of files) form.append('files', f);
+  if (category.value.trim()) form.append('category', category.value.trim());
+
+  button.disabled = true;
+  result.replaceChildren(el('div', 'kd-faint small mb-2', `Uploading ${files.length}…`));
+
+  try {
+    const res = await fetch('/admin/wallpapers', {
+      method: 'POST',
+      credentials: 'same-origin',
+      // No Content-Type: the browser sets it with the multipart boundary, and
+      // setting it by hand produces a body the server cannot parse.
+      body: form,
+    });
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message ?? `Upload failed (${res.status}).`);
+
+    const parts = [];
+    if (body.stored?.length) {
+      parts.push(el('div', 'small mb-1', `Added ${body.stored.length}.`));
+    }
+    // Named individually: "3 of 5 failed" without saying which three means
+    // uploading all five again to find out.
+    for (const f of body.failed ?? []) {
+      parts.push(el('div', 'text-danger small mb-1', `${f.name}: ${f.reason}`));
+    }
+    result.replaceChildren(...parts);
+
+    input.value = '';
+    loadWallpapers();
+  } catch (err) {
+    result.replaceChildren(el('div', 'text-danger small mb-2', err.message));
+  } finally {
+    button.disabled = false;
+  }
+}
+
 $('refresh').addEventListener('click', refresh);
 
-loadSprite().then(refresh);
+document.getElementById('wp-upload')?.addEventListener('click', uploadWallpapers);
+document.getElementById('wp-refresh')?.addEventListener('click', loadWallpapers);
+
+// The gallery reads the disk, so it loads once rather than joining the
+// ten-second poll below.
+loadSprite().then(() => {
+  refresh();
+  loadWallpapers();
+});
 
 // Ten seconds: fast enough to watch a crawl land, slow enough that the counters
 // are not doing arithmetic nobody is reading.

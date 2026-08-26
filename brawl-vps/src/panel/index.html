@@ -61,6 +61,9 @@
       <a class="ad-nav-link" href="#database">
         <svg class="lucide"><use href="#i-table"></use></svg> Database
       </a>
+      <a class="ad-nav-link" href="#wallpapers">
+        <svg class="lucide"><use href="#i-image"></use></svg> Wallpapers
+      </a>
     </nav>
 
     <div class="ad-sidebar-foot">
@@ -199,6 +202,46 @@
                 <thead><tr id="browse-head"></tr></thead>
                 <tbody id="browse-body"></tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Wallpapers ────────────────────────────────────────────── -->
+        <div class="col-12" id="wallpapers">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2 flex-wrap">
+              <svg class="lucide" width="16" height="16"><use href="#i-image"></use></svg>
+              <span class="fw-semibold">Wallpapers</span>
+              <span class="kd-faint small" id="wp-summary"></span>
+              <button class="btn btn-sm btn-outline-secondary ms-auto" type="button" id="wp-refresh">
+                Refresh
+              </button>
+            </div>
+
+            <div class="ad-card-body">
+              <!-- A plain file input rather than a drop zone: this is used a few
+                   times a year, and a file picker never fails to work. -->
+              <div class="row g-2 align-items-end mb-3">
+                <div class="col-12 col-md-5">
+                  <label class="form-label small kd-faint" for="wp-files">Images</label>
+                  <input class="form-control form-control-sm" type="file" id="wp-files"
+                         accept="image/png,image/jpeg,image/webp" multiple>
+                </div>
+                <div class="col-8 col-md-4">
+                  <label class="form-label small kd-faint" for="wp-category">Category</label>
+                  <input class="form-control form-control-sm" id="wp-category"
+                         list="wp-categories" placeholder="brawlers (optional)">
+                  <datalist id="wp-categories"></datalist>
+                </div>
+                <div class="col-4 col-md-3">
+                  <button class="btn btn-sm btn-primary w-100" type="button" id="wp-upload">
+                    Upload
+                  </button>
+                </div>
+              </div>
+
+              <div id="wp-result"></div>
+              <div class="ad-wp-grid" id="wp-grid"></div>
             </div>
           </div>
         </div>
