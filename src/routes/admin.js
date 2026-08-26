@@ -3,9 +3,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import express, { Router } from 'express';
+import multer from 'multer';
 
 import { config } from '../config.js';
 import { requirePlatformAuth } from '../platform-auth.js';
+import { scanGallery, WALLPAPER_ROOT } from './wallpapers.js';
+import { deleteWallpaper, MAX_BYTES, storeWallpaper } from '../wallpapers/store.js';
+import { cacheDel } from '../cache/store.js';
 import { dbHealth } from '../db/pool.js';
 import {
   latestStandings,
@@ -122,7 +126,7 @@ const ICONS = [
   'database', 'activity', 'users', 'swords', 'hard-drive', 'clock',
   'trending-up', 'trending-down', 'circle-check', 'circle-alert', 'table',
   'refresh-cw', 'map', 'gauge', 'layers', 'search', 'server', 'list',
-  'chart-column', 'trophy',
+  'chart-column', 'trophy', 'image',
 ];
 
 async function buildSprite() {
@@ -229,4 +233,91 @@ adminRouter.get('/admin/table/:name', async (req, res) => {
   }
 
   res.json(result);
+});
+
+// ── Wallpapers ──────────────────────────────────────────────────────────────
+//
+// The gallery is files on disk, and until now the only way to add one was scp.
+// These sit behind the same platform login as the rest of the panel.
+
+/**
+ * In memory, not to a temp directory.
+ *
+ * The files are capped at 12 MB and are written to their final location
+ * immediately, so a disk round trip would buy nothing - and a temp file left
+ * behind by a failed request is a slow leak nobody notices.
+ */
+const wallpaperUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_BYTES, files: 12 },
+});
+
+/** The gallery as the panel shows it: every file, newest first. */
+adminRouter.get('/admin/wallpapers', requireAdmin, async (_req, res) => {
+  const gallery = await scanGallery();
+
+  res.json({
+    root: WALLPAPER_ROOT,
+    categories: gallery.categories,
+    items: gallery.items,
+    totalBytes: gallery.items.reduce((n, i) => n + (i.bytes ?? 0), 0),
+    maxBytes: MAX_BYTES,
+  });
+});
+
+/**
+ * Adds one or more images.
+ *
+ * Several at once because adding wallpapers is naturally a batch: someone has a
+ * folder of twelve, and twelve separate uploads is twelve chances to give up
+ * half way.
+ */
+adminRouter.post(
+  '/admin/wallpapers',
+  requireAdmin,
+  wallpaperUpload.array('files', 12),
+  async (req, res) => {
+    const files = req.files ?? [];
+    if (!files.length) return res.status(400).json({ error: 'no_files' });
+
+    const category = req.body?.category ?? '';
+    const stored = [];
+    const failed = [];
+
+    for (const file of files) {
+      // Sequential: these are disk writes, and running twelve in parallel on a
+      // single VPS trades a little latency for a lot of contention.
+      const result = await storeWallpaper({
+        buffer: file.buffer,
+        filename: file.originalname,
+        category,
+      });
+
+      if (result.ok) stored.push(result.id);
+      else failed.push({ name: file.originalname, reason: result.reason });
+    }
+
+    // The index is cached, so without this a wallpaper someone just added does
+    // not appear until the TTL expires - which reads as the upload failing.
+    if (stored.length) await cacheDel('wallpapers:index');
+
+    log.info('Wallpapers uploaded', {
+      by: req.platformUser?.email,
+      stored: stored.length,
+      failed: failed.length,
+    });
+
+    res.json({ ok: true, stored, failed });
+  },
+);
+
+adminRouter.delete('/admin/wallpapers/:id(*)', requireAdmin, async (req, res) => {
+  const result = await deleteWallpaper(req.params.id);
+
+  if (!result.ok) return res.status(400).json({ error: 'not_deleted', message: result.reason });
+
+  await cacheDel('wallpapers:index');
+  log.info('Wallpaper deleted', { by: req.platformUser?.email, id: result.id });
+
+  res.json({ ok: true, id: result.id });
 });
