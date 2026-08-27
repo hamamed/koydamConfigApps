@@ -366,13 +366,13 @@ let activeTable = null;
 function renderPicker(tables, counts) {
   $('table-picker').replaceChildren(
     ...tables.map((t) => {
-      const btn = el('button', 'btn btn-sm btn-outline-secondary');
+      const btn = el('button', 'btn btn-sm btn-kd-outline');
       btn.type = 'button';
       // Bootstrap's own active state, so the selected table reads the same as
       // every other toggle in the design system.
       if (t.name === activeTable) {
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-kd-outline');
+        btn.classList.add('btn-kd');
       }
 
       btn.append(el('span', null, t.label));
@@ -540,7 +540,7 @@ function wallpaperCard(item) {
     .join(' · ');
   body.append(el('div', 'kd-faint ad-meta text-truncate', meta));
 
-  const remove = el('button', 'btn btn-sm btn-link text-danger p-0 ad-meta', 'Delete');
+  const remove = el('button', 'btn btn-sm btn-kd-ghost text-danger p-0 ad-meta', 'Delete');
 
   // Two taps rather than a browser dialog. A wallpaper is a file the app is
   // serving right now, so it deserves a confirmation - but window.confirm
