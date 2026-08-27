@@ -26,7 +26,7 @@
         <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-3">Describe the design</h2>
 
-          <form method="post" action="/admin/skins/ai">
+          <form method="post" action="/admin/skins/ai" data-ai-form>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
             <div class="mb-3">
@@ -73,12 +73,35 @@
               </div>
             </div>
 
-            <button class="btn btn-kd" type="submit" <%= available ? '' : 'disabled' %>>
+            <button class="btn btn-kd" type="submit" data-ai-submit <%= available ? '' : 'disabled' %>>
               Generate as draft
             </button>
             <span class="small ms-2" style="color:var(--kd-faint);">
-              Up to a minute. It arrives unpublished.
+              A minute or two, longer on Detailed. It arrives unpublished.
             </span>
+
+            <!--
+              Progress lives here rather than in the tab spinner. Generation is
+              one to several minutes of nothing visible: without this the page
+              looks frozen, and the honest question "is it working?" has no
+              answer on screen. Hidden until the script takes over, so with
+              JavaScript off the plain form post still works and this never
+              appears claiming something that is not happening.
+            -->
+            <div class="ad-ai-status" data-ai-status hidden>
+              <span class="ad-spin" aria-hidden="true">
+                <i data-lucide="loader-circle"></i>
+              </span>
+              <div class="ad-ai-status-text">
+                <strong data-ai-status-title>Generating…</strong>
+                <span class="d-block small" data-ai-status-detail></span>
+              </div>
+            </div>
+
+            <div class="alert alert-danger ad-ai-error" data-ai-error hidden>
+              <i data-lucide="circle-alert" class="me-1"></i>
+              <span data-ai-error-text></span>
+            </div>
           </form>
         </div>
       </div>

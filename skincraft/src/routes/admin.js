@@ -478,6 +478,9 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
   const title = String(req.body?.title ?? '').trim() || description.slice(0, 60);
 
   if (!CATEGORIES.includes(category)) {
+    if (wantsJson(req)) {
+      return res.status(400).json({ status: 'error', message: 'Pick a category.' });
+    }
     req.flash('error', 'Pick a category.');
     return res.redirect('/admin/skins/ai');
   }
@@ -516,6 +519,13 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
 
     logAudit(req.user.id, 'skin.design', id, result.meta.description);
 
+    // The browser form posts and follows a redirect; the in-page flow asks for
+    // JSON and navigates itself, so it can keep a progress indicator on screen
+    // for the whole generation instead of leaving the tab spinner to say it.
+    if (wantsJson(req)) {
+      return res.json({ status: 'success', data: { id, location: `/admin/skins/${id}` } });
+    }
+
     req.flash(
       'success',
       'Generated as a draft. Check it against the guidelines, then publish.',
@@ -524,16 +534,30 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
   } catch (error) {
     // A refused prompt is an answer, not a fault: it should read as guidance
     // rather than as a stack trace in the log.
-    if (error.code === 'prompt_rejected') {
+    //
+    // A provider being down, out of credit or rate limiting is worth showing as
+    // itself rather than as a generic 500 — the provider's own status code is
+    // the thing that tells you whether to retry, top up, or rewrite the prompt.
+    const isExpected =
+      error.code === 'prompt_rejected' ||
+      /provider|configured|rate limit|too long/i.test(error.message);
+
+    if (isExpected) {
+      // 502, not 500: the fault is upstream of this service, and saying so is
+      // what stops an image provider's bad afternoon reading as a SkinCraft bug.
+      if (wantsJson(req)) {
+        return res.status(502).json({ status: 'error', message: error.message });
+      }
       req.flash('error', error.message);
       return res.redirect('/admin/skins/ai');
     }
 
-    // A provider being down, out of credit or rate limiting is worth showing
-    // as itself rather than as a generic 500.
-    if (/provider|configured|rate limit|too long/i.test(error.message)) {
-      req.flash('error', error.message);
-      return res.redirect('/admin/skins/ai');
+    if (wantsJson(req)) {
+      console.error(error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Generation failed. The server log has the detail.',
+      });
     }
 
     return next(error);

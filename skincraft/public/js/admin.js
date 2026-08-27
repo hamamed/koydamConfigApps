@@ -158,4 +158,115 @@
       }
     });
   });
+
+  // ── AI generation progress ──────────────────────────────────────────────
+  //
+  // Generation is a single request that can run for minutes. Left as a plain
+  // form post, the only sign anything is happening is the browser's tab
+  // spinner — so the page looks frozen, people submit again, and every retry
+  // is another image billed to the key.
+  //
+  // Posting it in the background instead lets the wait say what it is doing,
+  // and lets a failure land on this page with the provider's own words rather
+  // than as a gateway error page with none.
+  const aiForm = document.querySelector('form[data-ai-form]');
+
+  if (aiForm) {
+    const status = aiForm.querySelector('[data-ai-status]');
+    const statusTitle = aiForm.querySelector('[data-ai-status-title]');
+    const statusDetail = aiForm.querySelector('[data-ai-status-detail]');
+    const errorBox = aiForm.querySelector('[data-ai-error]');
+    const errorText = aiForm.querySelector('[data-ai-error-text]');
+    const submit = aiForm.querySelector('[data-ai-submit]');
+
+    // What the wait is actually spending time on. Each image is a separate
+    // round trip to the provider, so "Detailed" is genuinely three times the
+    // wait — saying so is what stops it reading as a hang.
+    const images = { simple: 1, standard: 2, detailed: 3 };
+
+    let ticker = null;
+    // Set once the result is in and the browser is on its way to the draft.
+    // Without it the `finally` below tears the busy state down mid-navigation:
+    // the spinner vanishes and the button comes back live for the moment
+    // before the page unloads, which is exactly long enough to submit again
+    // and pay for a second generation.
+    let navigating = false;
+
+    const stopTicker = () => {
+      if (ticker) window.clearInterval(ticker);
+      ticker = null;
+    };
+
+    aiForm.addEventListener('submit', async (event) => {
+      if (!aiForm.reportValidity()) return;
+      event.preventDefault();
+
+      const count = images[aiForm.querySelector('[name="quality"]')?.value] ?? 2;
+      const started = Date.now();
+
+      errorBox.hidden = true;
+      status.hidden = false;
+      status.classList.add('is-busy');
+      statusTitle.textContent = count === 1 ? 'Generating 1 image…' : `Generating ${count} images…`;
+      submit.setAttribute('disabled', 'disabled');
+      iconsReady();
+
+      const tick = () => {
+        const seconds = Math.round((Date.now() - started) / 1000);
+        statusDetail.textContent =
+          `${seconds}s elapsed — drawing the artwork, then composing the template. ` +
+          'Leaving this page cancels nothing, but you will not see the result.';
+      };
+      tick();
+      ticker = window.setInterval(tick, 1000);
+
+      try {
+        const response = await fetch(aiForm.action, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'X-CSRF-Token': aiForm.querySelector('[name="_csrf"]').value,
+          },
+          body: new URLSearchParams(new FormData(aiForm)),
+        });
+
+        // Read the body before checking `ok`: the useful sentence — which
+        // provider failed and why — is in the error payload, not the status.
+        const payload = await response.json().catch(() => null);
+
+        if (response.ok && payload?.data?.location) {
+          navigating = true;
+          statusTitle.textContent = 'Done — opening the draft';
+          statusDetail.textContent = '';
+          stopTicker();
+          window.location.assign(payload.data.location);
+          return;
+        }
+
+        throw new Error(
+          payload?.message ||
+            `The server returned ${response.status} and no explanation. ` +
+            'Check the SkinCraft log for what happened.',
+        );
+      } catch (error) {
+        // A dropped connection is the likeliest failure on a request this
+        // long, and it means the generation may well have finished anyway.
+        const message =
+          error instanceof TypeError
+            ? 'Lost the connection while generating. It may still have completed — check Drafts before trying again, so you are not billed twice.'
+            : error.message;
+
+        errorText.textContent = message;
+        errorBox.hidden = false;
+        iconsReady();
+      } finally {
+        stopTicker();
+        if (!navigating) {
+          status.hidden = true;
+          status.classList.remove('is-busy');
+          submit.removeAttribute('disabled');
+        }
+      }
+    });
+  }
 })();

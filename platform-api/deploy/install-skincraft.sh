@@ -307,6 +307,31 @@ server {
         proxy_read_timeout 60s;
     }
 
+    # AI generation, and nothing else, gets a long window.
+    #
+    # It is one synchronous request that calls the image provider once per
+    # image — up to three on "Detailed", each with its own 120s ceiling in
+    # provider.js. Under the 60s above, nginx hung up first: the browser got a
+    # gateway error while the generation carried on server-side and saved a
+    # draft nobody was told about, so the same prompt got run again and billed
+    # again.
+    #
+    # The rule is that the front door must outlast the app's own budget, so the
+    # app is what gives up and the user gets its sentence instead of a gateway
+    # page with none. 420s clears 3 x 120s plus composing and storing.
+    location /admin/skins/ai {
+        proxy_pass http://skincraft_app;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 420s;
+        proxy_send_timeout 420s;
+        # A progress indicator that arrives all at once at the end is not one.
+        proxy_buffering off;
+    }
+
     # Generated previews and templates. A separate location so image traffic
     # never competes with the API for the same limits — the same lesson the
     # Brawl wallpapers taught.

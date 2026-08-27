@@ -741,3 +741,47 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   border-color: #fecaca;
   color: #991b1b;
 }
+
+/* AI generation progress
+   ----------------------
+   A long request needs to say so on the page. The browser's tab spinner is the
+   only other signal, and it is both easy to miss and indistinguishable from a
+   page that has hung — which is how a two-minute generation gets submitted
+   three times, each one billed to the image key. */
+.ad-ai-status {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  margin-top: .9rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+  color: var(--kd-ink);
+}
+
+/* The accent border is what separates "working" from a static notice sitting
+   in the same slot. */
+.ad-ai-status.is-busy { border-color: var(--kd-accent-soft); }
+
+.ad-ai-status-text { line-height: 1.35; }
+.ad-ai-status-text span { color: var(--kd-muted); }
+
+.ad-spin {
+  display: inline-flex;
+  flex: none;
+  color: var(--kd-accent);
+  animation: ad-spin 1s linear infinite;
+}
+
+.ad-spin .lucide { width: 18px; height: 18px; }
+
+@keyframes ad-spin { to { transform: rotate(360deg); } }
+
+/* Spinning is decoration; the elapsed counter beside it is the real signal, so
+   removing the motion loses nothing for someone who asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  .ad-spin { animation: none; }
+}
+
+.ad-ai-error { margin-top: .9rem; margin-bottom: 0; }
