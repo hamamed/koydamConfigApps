@@ -17,6 +17,7 @@ import {
 import { isValidAppId, isValidUnitId, testPlacements } from '../ads.js';
 import { compareVersions } from '../version.js';
 import { isEncryptionConfigured } from '../secrets.js';
+import { pressure, resourceSnapshot } from '../resources.js';
 import {
   clear as clearSetting,
   forPanel as settingsForPanel,
@@ -1027,4 +1028,23 @@ dashboardRouter.delete('/api/settings/:service/:key', requireAdminRole, async (r
 
   await audit(req, 'setting.clear', { type: 'service', id: service }, { key });
   res.json({ ok: true, removed: result.removed });
+});
+
+// ── Host resources ──────────────────────────────────────────────────────────
+
+/**
+ * What this box is using, and how close it is to running out.
+ *
+ * Admins only: it names systemd units, process ids and database sizes, which
+ * is a map of the estate rather than anything about an app.
+ */
+dashboardRouter.get('/api/resources', requireAdminRole, async (_req, res) => {
+  const snapshot = await resourceSnapshot();
+
+  res.json({
+    ...snapshot,
+    // Computed here rather than in the browser: the thresholds are a decision
+    // about what matters, and that belongs with the numbers.
+    warnings: pressure(snapshot),
+  });
 });

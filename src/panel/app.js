@@ -1836,6 +1836,157 @@ function settingRow(service, spec) {
   return row;
 }
 
+
+// ── Host resources ──────────────────────────────────────────────────────────
+
+/** Bytes, at the scale a person reads. */
+function gb(n) {
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  return (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + units[i];
+}
+
+/**
+ * A labelled bar. The number and the picture together, because a percentage
+ * alone does not say whether 80% is 8GB or 800MB.
+ */
+function meter(label, percent, detail, tone) {
+  const wrap = el('div', 'mb-3');
+
+  const top = el('div', 'd-flex align-items-baseline gap-2 mb-1');
+  top.append(el('span', 'small fw-semibold', label));
+  top.append(el('span', 'kd-faint ad-meta ms-auto', detail));
+  wrap.append(top);
+
+  const track = el('div', 'ad-meter');
+  const fill = el('div', 'ad-meter-fill' + (tone ? ' ' + tone : ''));
+  // Clamped: a load average can exceed 100% of a core, and a bar wider than
+  // its track pushes the layout apart.
+  fill.style.width = Math.min(100, Math.max(0, percent)) + '%';
+  track.append(fill);
+  wrap.append(track);
+
+  return wrap;
+}
+
+/** warn above the first threshold, bad above the second. */
+function tone(percent, warnAt, badAt) {
+  if (percent >= badAt) return 'is-bad';
+  if (percent >= warnAt) return 'is-warn';
+  return '';
+}
+
+async function viewResources() {
+  const root = el('div');
+  const data = await api('/api/resources');
+
+  // ── What needs attention, first ──
+  for (const w of data.warnings ?? []) {
+    const note = el('div', 'ad-warn d-flex align-items-start gap-2 mb-2' +
+      (w.level === 'critical' ? ' is-critical' : ''));
+    note.append(icon('circle-alert', 15));
+    note.append(el('span', null, w.text));
+    root.append(note);
+  }
+
+  if (!data.warnings?.length) {
+    const ok = el('div', 'kd-faint small mb-3 d-flex align-items-center gap-2');
+    ok.append(icon('circle-check', 15));
+    ok.append(el('span', null, 'Everything is within its thresholds.'));
+    root.append(ok);
+  }
+
+  // ── The three that matter ──
+  const { card: headline, body } = card('This server', 'server');
+
+  const cpuDetail = data.cpu.available
+    ? `load ${data.cpu.load1.toFixed(2)} across ${data.cpu.cores} cores`
+    : 'load average is not reported on this platform';
+  body.append(
+    meter('CPU', data.cpu.available ? data.cpu.percent : 0, cpuDetail,
+      tone(data.cpu.percent, 70, 100)),
+  );
+
+  body.append(
+    meter('Memory',
+      data.memory.percent,
+      `${gb(data.memory.used)} of ${gb(data.memory.total)} used` +
+        (data.memory.approximate ? ' (approximate)' : ''),
+      tone(data.memory.percent, 85, 92)),
+  );
+
+  for (const d of data.disks ?? []) {
+    body.append(
+      meter(`Disk · ${d.label}`, d.percent,
+        `${gb(d.used)} of ${gb(d.total)} used · ${gb(d.free)} free`,
+        tone(d.percent, 80, 90)),
+    );
+  }
+
+  if (data.memory.swapTotal) {
+    const usedSwap = data.memory.swapTotal - data.memory.swapFree;
+    const pct = Math.round((usedSwap / data.memory.swapTotal) * 100);
+    body.append(meter('Swap', pct, `${gb(usedSwap)} of ${gb(data.memory.swapTotal)}`,
+      tone(pct, 50, 80)));
+  }
+
+  body.append(
+    el('div', 'kd-faint ad-meta',
+      `Up ${Math.round(data.uptimeSeconds / 86400)} days · measured ${ago(data.at)}`),
+  );
+
+  root.append(headline);
+
+  // ── Per service ──
+  if (data.services?.length) {
+    const { card: c, body: sb } = card('Memory by service', 'layout-grid');
+    sb.classList.add('p-0');
+    sb.append(
+      table(
+        ['Service', 'State', { label: 'Memory', align: 'right' }, { label: 'PID', align: 'right' }],
+        data.services.map((s) => [
+          { text: s.label, className: 'fw-semibold small' },
+          s.state === 'active'
+            ? { text: 'running', className: 'kd-faint small' }
+            : { text: s.state, className: 'text-danger small' },
+          { text: gb(s.rss), align: 'right', className: 'small' },
+          { text: String(s.pid), align: 'right', className: 'kd-faint ad-meta' },
+        ]),
+      ),
+    );
+    // Resident memory double-counts shared pages, so the column does not add
+    // up to the host figure above and should not be presented as if it did.
+    sb.append(
+      el('div', 'kd-faint ad-meta px-3 py-2',
+        'Resident memory per process. Shared pages are counted more than once, ' +
+          'so these do not sum to the total above.'),
+    );
+    root.append(c);
+  }
+
+  // ── Databases ──
+  if (data.databases?.length) {
+    const { card: c, body: db } = card('Database sizes', 'database');
+    db.classList.add('p-0');
+    db.append(
+      table(
+        ['Database', { label: 'On disk', align: 'right' }],
+        data.databases.map((d) => [
+          { text: d.name, className: 'small' },
+          { text: gb(d.bytes), align: 'right', className: 'small' },
+        ]),
+      ),
+    );
+    root.append(c);
+  }
+
+  return root;
+}
+
 // ── Routing ─────────────────────────────────────────────────────────────────
 
 const TITLES = {
@@ -1845,6 +1996,7 @@ const TITLES = {
   users: 'Team',
   schedule: 'Scheduled changes',
   settings: 'Settings',
+  resources: 'Server resources',
   alerts: 'Alerts',
   account: 'Your account',
 };
@@ -1870,6 +2022,9 @@ async function route() {
     } else if (hash.startsWith('/settings')) {
       const service = hash.split('/')[2] || SERVICES[0];
       view.replaceChildren(await viewSettings(service));
+    } else if (hash === '/resources') {
+      $('pageTitle').textContent = TITLES.resources;
+      view.replaceChildren(await viewResources());
     } else if (hash === '/schedule') {
       $('pageTitle').textContent = TITLES.schedule;
       view.replaceChildren(await viewSchedule());
