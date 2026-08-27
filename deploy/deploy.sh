@@ -32,7 +32,14 @@ PLATFORM_LOGIN_URL=https://config.hamaprojects.com
 # A whole directory is the blunt default and it is not always right: a service
 # can keep hand-maintained source beside generated state in the same folder, in
 # which case it must name the generated file instead of the directory.
-PRESERVE_DEFAULT=(node_modules .git .env data storage wallpapers uploads)
+#
+# The data directories are anchored with a leading slash, which rsync reads as
+# "relative to the transfer root". Unanchored, `wallpapers` matches a directory
+# of that name at ANY depth - so src/wallpapers/ was silently skipped and the
+# service failed to start on a module that was never copied. node_modules,
+# .git and .env stay unanchored on purpose: those should be skipped wherever
+# they appear.
+PRESERVE_DEFAULT=(node_modules .git .env /data /storage /wallpapers /uploads)
 
 DRY_RUN=0
 
