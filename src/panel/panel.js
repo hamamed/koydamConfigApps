@@ -71,6 +71,25 @@ function statTile(label, value, iconName, colClass) {
   return col;
 }
 
+/**
+ * Transient feedback, bottom right.
+ *
+ * The same shape as the platform dashboard's, because two panels on one box
+ * confirming an action in two different ways is the sort of difference nobody
+ * can articulate but everybody notices.
+ */
+function toast(message, kind = 'ok') {
+  const host = document.getElementById('toasts');
+  if (!host) return;
+
+  const t = el('div', 'ad-toast ' + kind);
+  t.append(icon(kind === 'ok' ? 'circle-check' : 'circle-alert'));
+  t.append(el('span', null, message));
+  host.append(t);
+
+  setTimeout(() => t.remove(), 4000);
+}
+
 function pill(node, text, tone) {
   // ad-status carries its own colour per state, so the tone maps onto the
   // published/draft/archived trio the design system already defines.
@@ -483,7 +502,7 @@ async function loadWallpapers() {
 
   if (!data.items.length) {
     grid.replaceChildren(
-      el('div', 'kd-faint small', 'Nothing here yet. Upload a few images above.'),
+      el('div', 'ad-empty', 'Nothing here yet. Upload a few images above.'),
     );
     return;
   }
@@ -511,10 +530,28 @@ function wallpaperCard(item) {
   body.append(el('div', 'kd-faint ad-meta text-truncate', meta));
 
   const remove = el('button', 'btn btn-sm btn-link text-danger p-0 ad-meta', 'Delete');
+
+  // Two taps rather than a browser dialog. A wallpaper is a file the app is
+  // serving right now, so it deserves a confirmation - but window.confirm
+  // looks like the page broke, and it is the one piece of this panel that
+  // could not be styled to match the rest.
+  let armed = false;
+  const disarm = () => {
+    armed = false;
+    remove.textContent = 'Delete';
+    remove.classList.remove('fw-semibold');
+  };
+
   remove.addEventListener('click', async () => {
-    // A wallpaper is a file, and the app is serving it right now. One
-    // confirmation is cheap next to restoring from a backup.
-    if (!window.confirm(`Delete “${item.name}”? This removes the file.`)) return;
+    if (!armed) {
+      armed = true;
+      remove.textContent = 'Really delete?';
+      remove.classList.add('fw-semibold');
+      // Reverts on its own, so a half-pressed delete does not sit armed
+      // waiting for a stray click later.
+      setTimeout(() => { if (armed) disarm(); }, 4000);
+      return;
+    }
 
     remove.disabled = true;
     try {
@@ -524,10 +561,12 @@ function wallpaperCard(item) {
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.message ?? 'Could not delete it.');
+      toast('Deleted');
       loadWallpapers();
     } catch (err) {
-      window.alert(err.message);
+      toast(err.message, 'err');
       remove.disabled = false;
+      disarm();
     }
   });
 
@@ -570,6 +609,7 @@ async function uploadWallpapers() {
     const parts = [];
     if (body.stored?.length) {
       parts.push(el('div', 'small mb-1', `Added ${body.stored.length}.`));
+      toast(`Added ${body.stored.length} wallpaper${body.stored.length === 1 ? '' : 's'}`);
     }
     // Named individually: "3 of 5 failed" without saying which three means
     // uploading all five again to find out.
@@ -582,6 +622,7 @@ async function uploadWallpapers() {
     loadWallpapers();
   } catch (err) {
     result.replaceChildren(el('div', 'text-danger small mb-2', err.message));
+    toast(err.message, 'err');
   } finally {
     button.disabled = false;
   }
