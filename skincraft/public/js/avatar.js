@@ -61,8 +61,22 @@
   // the frame instead of hanging off the bottom of it.
   const TOP = TORSO[1] + 0.05 + HEAD[1];
   const BOTTOM = -2;
-  const HEIGHT = TOP - BOTTOM;
   const CENTRE_Y = (TOP + BOTTOM) / 2;
+  const HALF_HEIGHT = (TOP - BOTTOM) / 2;
+
+  /**
+   * Radius of the cylinder the body turns inside.
+   *
+   * Fitting to the silhouette of whatever is currently facing us would be
+   * tighter, but the silhouette changes as it turns — so the avatar would
+   * breathe while being dragged. This is the widest it can ever project, at any
+   * yaw, so the fit is computed once and holds.
+   */
+  const RADIUS = PARTS.reduce((widest, part) => {
+    const x = Math.abs(part.at[0]) + part.size[0] / 2;
+    const z = Math.abs(part.at[2]) + part.size[2] / 2;
+    return Math.max(widest, Math.hypot(x, z));
+  }, 0);
 
   /**
    * Corners per face as [origin, +u edge, +v edge], in half-extent units.
@@ -155,6 +169,10 @@
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
 
+    // Measured before the browser has laid it out — draw nothing rather than
+    // draw at the wrong size, and let the next frame try again.
+    if (width < 2 || height < 2) return false;
+
     if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -163,9 +181,19 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Fit the body's real height with a margin, rather than a number picked to
-    // look right for one garment.
-    const scale = (Math.min(width / 4.6, height / (HEIGHT + 1.1))) * dpr;
+    // Derived from the model, not from constants chosen to look right in one
+    // tile. Hand-picked divisors clip the moment the frame is a different shape
+    // — which is exactly what happened when the card layout changed underneath
+    // this and the arms went off both edges.
+    //
+    // Tipping the camera trades height for depth, so the vertical extent grows
+    // by the radius as the pitch increases.
+    const reach = HALF_HEIGHT * Math.cos(pitch) + RADIUS * Math.abs(Math.sin(pitch));
+    const scale = Math.min(
+      (width * dpr) / (2 * RADIUS),
+      (height * dpr) / (2 * reach),
+    ) * 0.94;
+
     const originX = (width * dpr) / 2;
     const originY = (height * dpr) / 2;
 
@@ -240,9 +268,10 @@
     }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    return true;
   }
 
-  const Avatar = { PARTS, FACES, SHADE, rotate, buildFaces, render };
+  const Avatar = { PARTS, FACES, SHADE, RADIUS, rotate, buildFaces, render };
   root.SkinCraftAvatar = Avatar;
 
   if (typeof document === 'undefined') return;
@@ -271,11 +300,22 @@
 
     texture.onload = () => {
       holder.appendChild(canvas);
-      render(canvas, texture, config.category, layout.layouts, layout.size,
-        cardAngle.yaw, cardAngle.pitch);
-      // Only now: swapping first would flash an empty box on a slow template,
-      // and leave a permanently blank card if the image never arrives.
-      holder.classList.add('is-worn');
+
+      // A canvas appended this frame can measure zero before layout runs, and
+      // drawing then would size the body to nothing. Retry until it has a box,
+      // and give up rather than spin if it never gets one.
+      let attempts = 0;
+      const draw = () => {
+        if (render(canvas, texture, config.category, layout.layouts, layout.size,
+          cardAngle.yaw, cardAngle.pitch)) {
+          // Only now: swapping first would flash an empty box on a slow
+          // template, and leave a permanently blank card if it never arrives.
+          holder.classList.add('is-worn');
+          return;
+        }
+        if (attempts++ < 10) window.requestAnimationFrame(draw);
+      };
+      draw();
     };
     // No handler on error — the flat preview underneath is already the answer.
     texture.src = config.texture;

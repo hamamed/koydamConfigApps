@@ -549,6 +549,13 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 }
 
 .ad-skin-card {
+  /* An <a> is inline by default, and this one used to hold nothing but an
+     inline <img>. Once the thumbnail became a block element the inline box
+     fragmented, and .ad-skin-body — absolutely positioned to "the bottom of
+     the card" — resolved against a degenerate fragment instead, collapsing the
+     caption into a narrow strip down the left. `overflow: hidden` was being
+     ignored for the same reason: it does not apply to non-replaced inlines. */
+  display: block;
   position: relative;
   overflow: hidden;
   border-radius: var(--kd-radius);
