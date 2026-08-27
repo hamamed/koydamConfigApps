@@ -521,12 +521,21 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   box-shadow: 0 0 0 .18rem rgba(79, 70, 229, .14);
 }
 
+/* The icon that sits inside a field, and the padding its input needs so the
+   text does not run underneath it. These were one class: .ad-input-icon was
+   put on the input, which then inherited position:absolute and
+   pointer-events:none and could not be typed into. */
+.ad-has-icon { padding-left: 2.15rem; }
+
 .ad-input-icon {
   position: absolute;
   left: .7rem; top: 50%;
   transform: translateY(-50%);
   color: var(--kd-faint);
   pointer-events: none;
+  /* A wrapper, so the rule survives lucide replacing the <i> inside it. */
+  display: inline-flex;
+  line-height: 0;
 }
 
 .ad-range { accent-color: var(--kd-accent); }
