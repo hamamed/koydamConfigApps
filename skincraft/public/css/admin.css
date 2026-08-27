@@ -521,12 +521,21 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   box-shadow: 0 0 0 .18rem rgba(79, 70, 229, .14);
 }
 
+/* The icon that sits inside a field, and the padding its input needs so the
+   text does not run underneath it. These were one class: .ad-input-icon was
+   put on the input, which then inherited position:absolute and
+   pointer-events:none and could not be typed into. */
+.ad-has-icon { padding-left: 2.15rem; }
+
 .ad-input-icon {
   position: absolute;
   left: .7rem; top: 50%;
   transform: translateY(-50%);
   color: var(--kd-faint);
   pointer-events: none;
+  /* A wrapper, so the rule survives lucide replacing the <i> inside it. */
+  display: inline-flex;
+  line-height: 0;
 }
 
 .ad-range { accent-color: var(--kd-accent); }
@@ -701,3 +710,34 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 
 .ad-wp-body { padding: .5rem .6rem; }
 .ad-wp-name { font-size: .8rem; font-weight: 550; }
+
+/* ── Resource meters ──────────────────────────────────────────────────────── */
+
+/* A bar, not a gauge. The question is "how close to full", and a filled track
+   answers that at a glance in a way a number does not. */
+.ad-meter {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--kd-surface-2);
+  overflow: hidden;
+}
+
+.ad-meter-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--kd-accent);
+  transition: width var(--kd-slow) var(--kd-ease);
+}
+
+/* Colour is the second signal, never the only one: the figure beside the bar
+   already says the number. */
+.ad-meter-fill.is-warn { background: var(--kd-warn); }
+.ad-meter-fill.is-bad  { background: var(--kd-danger); }
+
+/* A warning that is past advisory. Same shape as .ad-warn so a page of them
+   reads as one list, with the fill carrying the difference. */
+.ad-warn.is-critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
