@@ -115,6 +115,13 @@ jobs:
           done
           exit $fail
 
+      # A source directory sharing a name with an unanchored exclude is
+      # silently dropped from the deploy, and the service then fails to start
+      # on a module that was never copied. That is how src/wallpapers/ broke
+      # Brawl: `--exclude wallpapers` matches any component of that name.
+      - name: No source path collides with an exclude
+        run: bash platform-api/deploy/check-excludes.sh
+
       - name: services.conf is valid
         run: |
           # deploy.sh validates the registry and exits non-zero on a bad block;
