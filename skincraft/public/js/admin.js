@@ -17,14 +17,18 @@
   const scrim = document.getElementById('scScrim');
   const toggle = document.getElementById('scMenuToggle');
 
+  // is-open, not d-none. The stylesheet holds the scrim at opacity 0 with
+  // pointer-events: none until it is opened, so removing d-none revealed an
+  // invisible element nothing could click: the backdrop never appeared and
+  // tapping outside the drawer did nothing.
   function closeSidebar() {
     sidebar?.classList.remove('is-open');
-    scrim?.classList.add('d-none');
+    scrim?.classList.remove('is-open');
   }
 
   toggle?.addEventListener('click', () => {
-    sidebar?.classList.toggle('is-open');
-    scrim?.classList.toggle('d-none', !sidebar?.classList.contains('is-open'));
+    const open = sidebar?.classList.toggle('is-open');
+    scrim?.classList.toggle('is-open', Boolean(open));
   });
   scrim?.addEventListener('click', closeSidebar);
   document.addEventListener('keydown', (event) => {

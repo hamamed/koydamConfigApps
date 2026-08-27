@@ -1,7 +1,7 @@
 <%- include('partials/head', { title }) %>
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
-  <div class="ad-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim" id="scScrim"></div>
 
   <main class="ad-main">
     <%- include('partials/topbar', {
@@ -9,6 +9,7 @@
       subheading: 'What creators are searching for in the app'
     }) %>
 
+      <div class="ad-content">
     <%- include('partials/flash') %>
 
     <% if (tags.length === 0) { %>
@@ -37,6 +38,7 @@
         </div>
       </div>
     <% } %>
+      </div>
   </main>
 </div>
 <%- include('partials/foot') %>

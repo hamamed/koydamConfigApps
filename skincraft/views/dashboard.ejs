@@ -1,7 +1,7 @@
 <%- include('partials/head', { title }) %>
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
-  <div class="ad-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim" id="scScrim"></div>
 
   <main class="ad-main">
     <%- include('partials/topbar', {
@@ -11,6 +11,7 @@
                   <i data-lucide="upload" width="16" height="16" class="me-1"></i>Upload skin</a>`
     }) %>
 
+      <div class="ad-content">
     <%- include('partials/flash') %>
 
     <!-- Headline metrics -->
@@ -295,6 +296,7 @@
       </p>
       <code class="ad-code"><%= publicUrl %>/api/v1/skins?category=shirts&amp;page=1&amp;limit=20</code>
     </div>
+      </div>
   </main>
 </div>
 <%- include('partials/foot') %>
