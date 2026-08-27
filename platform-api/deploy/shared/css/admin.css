@@ -785,3 +785,123 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 }
 
 .ad-ai-error { margin-top: .9rem; margin-bottom: 0; }
+
+/* The planner's reasoning
+   ----------------------
+   Reads as a transcript rather than a form field: this is the model's words,
+   and styling them like an input would suggest they are yours to type over.
+   The reply box underneath is the part that is. */
+.ad-plan {
+  margin-top: .9rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface);
+  overflow: hidden;
+}
+
+.ad-plan-head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+  font-size: .875rem;
+}
+
+.ad-plan-icon { color: var(--kd-accent); width: 16px; height: 16px; }
+
+/* pre-wrap, not a paragraph: the planner writes in short lines and its own
+   breaks are part of how the plan reads. Capped and scrollable so a long one
+   cannot push the controls below the fold while it is still being written. */
+.ad-plan-body {
+  padding: .9rem;
+  margin: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: .9rem;
+  line-height: 1.5;
+  color: var(--kd-ink);
+}
+
+.ad-plan-body:empty { display: none; }
+
+.ad-plan-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .7rem .9rem;
+  border-top: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+}
+
+.ad-plan-foot input { flex: 1 1 12rem; min-width: 0; }
+
+/* Preview tabs, and the avatar
+   ---------------------------
+   The flat sheet answers whether the artwork is right; the avatar answers
+   whether it survives the seams. Both are needed, so neither gets to be the
+   one that is buried. */
+.ad-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+}
+
+.ad-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .6rem .5rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--kd-muted);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ad-tab .lucide { width: 15px; height: 15px; }
+.ad-tab:hover { color: var(--kd-ink); }
+
+/* is-active, matching every other selected thing in this panel. `active` is
+   Bootstrap's and is styled by something else entirely. */
+.ad-tab.is-active {
+  color: var(--kd-accent);
+  border-bottom-color: var(--kd-accent);
+  background: var(--kd-surface);
+}
+
+/* ad-skinview, because the two obvious names were both taken and neither
+   failed loudly. `.ad-view` is the SPA route-view for the other panels and is
+   display:none until .is-active — these would have rendered as nothing at all.
+   `.ad-preview` is the bordered scroll box used elsewhere, which would have
+   boxed the avatar in padding and a 420px scroller. Both are defined; neither
+   is defined for this. */
+.ad-skinview { background: var(--kd-surface); }
+
+.ad-avatar {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  /* grab, because the only way to discover it turns is to try. */
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 50% 38%, var(--kd-surface-2), var(--kd-surface) 70%);
+}
+
+.ad-avatar:active { cursor: grabbing; }
+
+.ad-skinview-hint {
+  margin: 0;
+  padding: .55rem .9rem;
+  border-top: 1px solid var(--kd-line);
+  font-size: .78rem;
+  color: var(--kd-faint);
+}

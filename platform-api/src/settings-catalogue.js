@@ -123,6 +123,10 @@ export const CATALOGUE = {
           { key: 'AI_IMAGE_BASE_URL', label: 'Provider base URL', type: 'text', restart: false,
             help: 'Any OpenAI-compatible endpoint. Default https://api.openai.com/v1' },
           { key: 'AI_IMAGE_MODEL', label: 'Model', type: 'text', restart: false },
+          { key: 'AI_TEXT_MODEL', label: 'Planner model', type: 'text', restart: false,
+            help: 'Writes the design in words before any image is drawn, so the reasoning can '
+              + 'be read and corrected while it still costs only text tokens. Blank turns '
+              + 'planning off and leaves image generation alone. Default gpt-4o-mini.' },
         ],
       },
       {

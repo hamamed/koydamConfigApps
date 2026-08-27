@@ -210,11 +210,11 @@ export function createSkin(data) {
       `INSERT INTO skins (
          id, title, category, description, template_file, preview_file,
          template_w, template_h, file_bytes, is_featured, is_published, created_by,
-         color_hue, color_sat, color_light, color_hex
+         color_hue, color_sat, color_light, color_hex, design_meta
        ) VALUES (
          @id, @title, @category, @description, @templateFile, @previewFile,
          @templateW, @templateH, @fileBytes, @isFeatured, @isPublished, @createdBy,
-         @colorHue, @colorSat, @colorLight, @colorHex
+         @colorHue, @colorSat, @colorLight, @colorHex, @designMeta
        )`
     ).run({
       id,
@@ -233,6 +233,9 @@ export function createSkin(data) {
       colorSat: data.color?.saturation ?? null,
       colorLight: data.color?.lightness ?? null,
       colorHex: data.color?.hex ?? null,
+      // Stored as text rather than a column per field: it is a record to read,
+      // never something to query on, and its shape will change as the planner does.
+      designMeta: data.designMeta ? JSON.stringify(data.designMeta) : null,
     });
     setTags(id, tags);
   })();

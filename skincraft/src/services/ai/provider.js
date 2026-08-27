@@ -25,6 +25,86 @@ export function isConfigured() {
 }
 
 /**
+ * Whether the planning step is available.
+ *
+ * Separate from `isConfigured` because it is a different model on the same
+ * key: an install can generate images without ever planning in words, and
+ * should keep working if the text model is unset or withdrawn.
+ */
+export function isTextConfigured() {
+  return Boolean(config.ai?.apiKey && config.ai?.textModel);
+}
+
+/**
+ * Streams a chat completion, yielding text as it is written.
+ *
+ * The point of streaming here is not speed — it is that the plan is the one
+ * part of this pipeline a person can still change their mind about. Watching
+ * it arrive is what makes it feel like something you can interrupt, rather
+ * than a paragraph that appears once the decision has already been made.
+ *
+ * Yields deltas; returns nothing. The caller accumulates, because it is the
+ * caller that knows whether it wants the whole thing or just to forward it.
+ */
+export async function* streamPlan(messages, { signal } = {}) {
+  if (!isTextConfigured()) {
+    throw new Error(
+      'Design planning is not configured. Set AI_TEXT_MODEL to switch it on.',
+    );
+  }
+
+  const res = await fetch(`${config.ai.baseUrl}/chat/completions`, {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.ai.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: config.ai.textModel,
+      messages,
+      stream: true,
+      // Enough for a plan and the three prompts; past this it is padding, and
+      // padding is what turns a plan into something nobody reads.
+      max_tokens: 700,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Planner returned ${res.status}. ${detail.slice(0, 200)}`);
+  }
+
+  // Server-sent events, decoded by hand: `data: {json}` per line, `[DONE]` to
+  // finish. A chunk can split mid-line, so the tail is carried over rather
+  // than parsed — dropping it loses whole words at random.
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+
+      const payload = trimmed.slice(5).trim();
+      if (payload === '[DONE]') return;
+
+      try {
+        const delta = JSON.parse(payload)?.choices?.[0]?.delta?.content;
+        if (delta) yield delta;
+      } catch {
+        // A malformed chunk is one lost word, not a reason to abandon a plan
+        // that is otherwise arriving fine.
+      }
+    }
+  }
+}
+
+/**
  * One square image, as a PNG buffer.
  *
  * Square because every rectangle it will be scaled into is either square or

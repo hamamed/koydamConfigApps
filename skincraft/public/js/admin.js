@@ -159,114 +159,276 @@
     });
   });
 
-  // ── AI generation progress ──────────────────────────────────────────────
+  // ── Preview tabs (skin page) ────────────────────────────────────────────
   //
-  // Generation is a single request that can run for minutes. Left as a plain
-  // form post, the only sign anything is happening is the browser's tab
-  // spinner — so the page looks frozen, people submit again, and every retry
-  // is another image billed to the key.
+  // `hidden` rather than a class, because the avatar canvas has to be laid out
+  // before it is drawn: a canvas in a `display:none` parent measures zero, and
+  // the renderer would size itself to nothing and paint an empty box.
+  const viewTabs = Array.from(document.querySelectorAll('[data-view-tab]'));
+
+  viewTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const wanted = tab.dataset.viewTab;
+      viewTabs.forEach((t) => t.classList.toggle('is-active', t === tab));
+      document.querySelectorAll('[data-view-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.viewPanel !== wanted;
+      });
+      // The avatar sizes itself from its element, which only has a size once
+      // it is visible. Nudging resize makes it re-measure on first reveal.
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+
+  // ── AI: planning, then generating ───────────────────────────────────────
   //
-  // Posting it in the background instead lets the wait say what it is doing,
-  // and lets a failure land on this page with the provider's own words rather
-  // than as a gateway error page with none.
+  // Both are one long request, and both used to be silent. Generation showed
+  // nothing but the browser's tab spinner — indistinguishable from a hung page,
+  // which is how the same prompt got submitted twice and billed twice.
+  //
+  // Planning exists so the argument about what the design should be happens
+  // while it is still only text tokens. It streams because a plan you can watch
+  // arrive is one you interrupt; a paragraph that appears all at once has
+  // already decided.
   const aiForm = document.querySelector('form[data-ai-form]');
 
   if (aiForm) {
-    const status = aiForm.querySelector('[data-ai-status]');
-    const statusTitle = aiForm.querySelector('[data-ai-status-title]');
-    const statusDetail = aiForm.querySelector('[data-ai-status-detail]');
-    const errorBox = aiForm.querySelector('[data-ai-error]');
-    const errorText = aiForm.querySelector('[data-ai-error-text]');
-    const submit = aiForm.querySelector('[data-ai-submit]');
+    const el = (name) => aiForm.querySelector(`[data-ai-${name}]`);
 
-    // What the wait is actually spending time on. Each image is a separate
-    // round trip to the provider, so "Detailed" is genuinely three times the
-    // wait — saying so is what stops it reading as a hang.
+    const status = el('status');
+    const statusTitle = el('status-title');
+    const statusDetail = el('status-detail');
+    const errorBox = el('error');
+    const errorText = el('error-text');
+    const submit = el('submit');
+
+    const planButton = el('plan');
+    const panel = el('plan-panel');
+    const planText = el('plan-text');
+    const planSpinner = el('plan-spinner');
+    const planIcon = el('plan-icon');
+    const planReply = el('plan-reply');
+    const planSend = el('plan-send');
+    const planAccept = el('plan-accept');
+
+    // Each image is its own round trip to the provider, so "Detailed" really is
+    // three times the wait. Saying which one it is on is what stops the pause
+    // reading as a hang.
     const images = { simple: 1, standard: 2, detailed: 3 };
+    const faceNames = { front: 'the front', back: 'the back', pattern: 'the side pattern' };
 
+    // The conversation so far, so a follow-up is a correction rather than a
+    // fresh start. Sent back on each turn and bounded server-side.
+    let history = [];
+    let directions = null;
     let ticker = null;
-    // Set once the result is in and the browser is on its way to the draft.
-    // Without it the `finally` below tears the busy state down mid-navigation:
-    // the spinner vanishes and the button comes back live for the moment
-    // before the page unloads, which is exactly long enough to submit again
-    // and pay for a second generation.
     let navigating = false;
 
-    const stopTicker = () => {
-      if (ticker) window.clearInterval(ticker);
-      ticker = null;
+    const csrf = () => aiForm.querySelector('[name="_csrf"]').value;
+    const field = (name) => aiForm.querySelector(`[name="${name}"]`);
+    const stopTicker = () => { if (ticker) window.clearInterval(ticker); ticker = null; };
+
+    const fail = (message) => {
+      errorText.textContent = message;
+      errorBox.hidden = false;
+      iconsReady();
     };
 
-    aiForm.addEventListener('submit', async (event) => {
-      if (!aiForm.reportValidity()) return;
-      event.preventDefault();
+    /**
+     * Reads a server-sent-event stream from a POST.
+     *
+     * `EventSource` cannot do this — it is GET-only, and these need a CSRF
+     * header and a body. Events are separated by a blank line and a chunk can
+     * split anywhere, so the tail is carried rather than parsed.
+     */
+    async function stream(url, body, onEvent) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Accept: 'text/event-stream', 'X-CSRF-Token': csrf() },
+        body,
+      });
 
-      const count = images[aiForm.querySelector('[name="quality"]')?.value] ?? 2;
+      // A failure before the stream opened is still a normal response, and its
+      // body is likelier to explain itself than its status code is.
+      if (!response.ok || !response.body) {
+        throw new Error(`The server returned ${response.status} before the stream started.`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+        for (const frame of frames) {
+          const line = frame.split('\n').find((l) => l.startsWith('data:'));
+          if (!line) continue;
+          try {
+            onEvent(JSON.parse(line.slice(5).trim()));
+          } catch {
+            // One unreadable frame is one lost update, not a dead stream.
+          }
+        }
+      }
+    }
+
+    // ── Planning ──────────────────────────────────────────────────────────
+    async function plan(instruction) {
+      const description = field('description').value.trim();
+      if (!description) { field('description').reportValidity(); return; }
+
+      errorBox.hidden = true;
+      panel.hidden = false;
+      planSpinner.hidden = false;
+      planIcon.hidden = true;
+      planText.textContent = '';
+      planAccept.setAttribute('disabled', 'disabled');
+      planButton?.setAttribute('disabled', 'disabled');
+      planSend.setAttribute('disabled', 'disabled');
+      iconsReady();
+
+      const body = new URLSearchParams({
+        description: instruction || description,
+        category: field('category').value,
+        history: JSON.stringify(history),
+      });
+
+      let full = '';
+      try {
+        await stream('/admin/skins/ai/plan', body, (event) => {
+          if (event.type === 'delta') {
+            full += event.text;
+            planText.textContent = full;
+            // Follow the newest line rather than making someone chase it.
+            planText.scrollTop = planText.scrollHeight;
+          } else if (event.type === 'plan') {
+            // The prose is what a person reads; the JSON block underneath is
+            // for the image model, and showing it would be noise.
+            planText.textContent = event.reasoning || full;
+            directions = event.directions;
+            history = history.concat(
+              { role: 'user', content: instruction || description },
+              { role: 'assistant', content: full },
+            );
+            planAccept.removeAttribute('disabled');
+          } else if (event.type === 'error') {
+            throw new Error(event.message);
+          }
+        });
+      } catch (error) {
+        fail(error.message);
+        panel.hidden = !full;
+      } finally {
+        planSpinner.hidden = true;
+        planIcon.hidden = false;
+        planButton?.removeAttribute('disabled');
+        planSend.removeAttribute('disabled');
+        iconsReady();
+      }
+    }
+
+    planButton?.addEventListener('click', () => { history = []; plan(null); });
+
+    planSend.addEventListener('click', () => {
+      const reply = planReply.value.trim();
+      if (!reply) return;
+      planReply.value = '';
+      plan(reply);
+    });
+
+    // Enter sends the follow-up instead of submitting the form, which would
+    // start a generation nobody asked for.
+    planReply.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); planSend.click(); }
+    });
+
+    // ── Generating ────────────────────────────────────────────────────────
+    async function generate() {
+      const count = images[field('quality').value] ?? 2;
       const started = Date.now();
 
       errorBox.hidden = true;
       status.hidden = false;
       status.classList.add('is-busy');
       statusTitle.textContent = count === 1 ? 'Generating 1 image…' : `Generating ${count} images…`;
+      statusDetail.textContent = 'Starting…';
       submit.setAttribute('disabled', 'disabled');
+      planAccept.setAttribute('disabled', 'disabled');
       iconsReady();
 
+      let step = 'Starting…';
       const tick = () => {
         const seconds = Math.round((Date.now() - started) / 1000);
-        statusDetail.textContent =
-          `${seconds}s elapsed — drawing the artwork, then composing the template. ` +
-          'Leaving this page cancels nothing, but you will not see the result.';
+        statusDetail.textContent = `${step} · ${seconds}s elapsed`;
       };
       tick();
       ticker = window.setInterval(tick, 1000);
 
+      const body = new URLSearchParams({
+        description: field('description').value.trim(),
+        category: field('category').value,
+        quality: field('quality').value,
+        title: field('title').value,
+        directions: JSON.stringify(directions),
+        plan: planText.textContent || '',
+      });
+
       try {
-        const response = await fetch(aiForm.action, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'X-CSRF-Token': aiForm.querySelector('[name="_csrf"]').value,
-          },
-          body: new URLSearchParams(new FormData(aiForm)),
+        await stream('/admin/skins/ai/generate', body, (event) => {
+          if (event.type === 'progress') {
+            if (event.stage === 'image') {
+              step = `Drawing ${faceNames[event.face] ?? event.face} — image ${event.index + 1} of ${event.total}`;
+            } else if (event.stage === 'compose') {
+              step = 'Composing the template sheet';
+            } else if (event.stage === 'storing') {
+              step = 'Saving the draft';
+            }
+            tick();
+          } else if (event.type === 'done') {
+            navigating = true;
+            stopTicker();
+            statusTitle.textContent = 'Done — opening the draft';
+            statusDetail.textContent = '';
+            window.location.assign(event.location);
+          } else if (event.type === 'error') {
+            throw new Error(event.message);
+          }
         });
 
-        // Read the body before checking `ok`: the useful sentence — which
-        // provider failed and why — is in the error payload, not the status.
-        const payload = await response.json().catch(() => null);
-
-        if (response.ok && payload?.data?.location) {
-          navigating = true;
-          statusTitle.textContent = 'Done — opening the draft';
-          statusDetail.textContent = '';
-          stopTicker();
-          window.location.assign(payload.data.location);
-          return;
-        }
-
-        throw new Error(
-          payload?.message ||
-            `The server returned ${response.status} and no explanation. ` +
-            'Check the SkinCraft log for what happened.',
-        );
+        // The stream ended without saying it finished. Treat it as a failure
+        // rather than leaving a spinner up forever.
+        if (!navigating) throw new Error('The connection closed before the design finished. Check Drafts before retrying, so you are not billed twice.');
       } catch (error) {
-        // A dropped connection is the likeliest failure on a request this
-        // long, and it means the generation may well have finished anyway.
         const message =
           error instanceof TypeError
             ? 'Lost the connection while generating. It may still have completed — check Drafts before trying again, so you are not billed twice.'
             : error.message;
-
-        errorText.textContent = message;
-        errorBox.hidden = false;
-        iconsReady();
+        fail(message);
       } finally {
         stopTicker();
         if (!navigating) {
           status.hidden = true;
           status.classList.remove('is-busy');
           submit.removeAttribute('disabled');
+          if (directions) planAccept.removeAttribute('disabled');
         }
       }
+    }
+
+    planAccept.addEventListener('click', () => generate());
+
+    aiForm.addEventListener('submit', (event) => {
+      if (!aiForm.reportValidity()) return;
+      event.preventDefault();
+      // A plain Generate ignores any plan on screen: the button says "as
+      // draft", not "as planned", and silently folding in a plan the person
+      // did not accept would be the page deciding for them.
+      directions = null;
+      generate();
     });
   }
 })();

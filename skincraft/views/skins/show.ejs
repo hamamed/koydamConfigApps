@@ -14,9 +14,49 @@
     <div class="row g-3">
       <!-- Artwork -->
       <div class="col-12 col-lg-5">
+        <!--
+          Three ways of looking at the same skin. The flat sheet answers "is
+          the artwork right"; only the avatar answers "does it line up across
+          the seams", which is the question that decides whether it is worth
+          uploading. Roblox moderates on upload, so being wrong here costs the
+          fee and the wait.
+        -->
         <div class="ad-card overflow-hidden mb-3">
-          <img src="<%= skin.previewUrl %>" alt="<%= skin.title %> card artwork"
-               style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block;">
+          <div class="ad-tabs" role="tablist">
+            <button class="ad-tab is-active" role="tab" type="button" data-view-tab="worn">
+              <i data-lucide="person-standing"></i> On an avatar
+            </button>
+            <button class="ad-tab" role="tab" type="button" data-view-tab="sheet">
+              <i data-lucide="grid-2x2"></i> Template
+            </button>
+            <button class="ad-tab" role="tab" type="button" data-view-tab="art">
+              <i data-lucide="image"></i> Art
+            </button>
+          </div>
+
+          <div class="ad-skinview" data-view-panel="worn">
+            <canvas class="ad-avatar" data-avatar='<%- JSON.stringify({
+              texture: skin.templateUrl,
+              category: skin.category,
+              layouts: layout.layouts,
+              sheet: layout.size
+            }) %>' aria-label="<%= skin.title %> shown on a Roblox avatar"></canvas>
+            <p class="ad-skinview-hint">Drag to turn it. <%= skin.category === 'pants'
+              ? 'Pants paint the waist and both legs.'
+              : skin.category === 'avatar'
+                ? 'A full-body sheet paints the arm and leg on each side from the same artwork.'
+                : 'Bare legs are correct — a shirt paints the torso and arms only.' %></p>
+          </div>
+
+          <div class="ad-skinview" data-view-panel="sheet" hidden>
+            <img src="<%= skin.templateUrl %>" alt="<%= skin.title %> template sheet"
+                 style="width:100%;display:block;background:var(--kd-surface-2);">
+          </div>
+
+          <div class="ad-skinview" data-view-panel="art" hidden>
+            <img src="<%= skin.previewUrl %>" alt="<%= skin.title %> card artwork"
+                 style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block;">
+          </div>
         </div>
 
         <div class="ad-card ad-card-pad">
@@ -126,6 +166,39 @@
         </div>
 
         <!-- Per-skin history -->
+        <% if (design) { %>
+          <!--
+            Why this skin looks the way it does. Without it the only record of
+            the intent is the picture, and "why is the back plainer than the
+            front" becomes unanswerable a month later.
+          -->
+          <div class="ad-card ad-card-pad mb-3">
+            <h2 class="h6 mb-3">
+              <i data-lucide="sparkles" width="15" height="15"></i>
+              How this was designed
+            </h2>
+
+            <% if (design.plan) { %>
+              <div class="ad-plan-body px-0 pt-0"><%= design.plan %></div>
+            <% } %>
+
+            <div class="small mb-2" style="color:var(--kd-faint);">
+              Asked for: <span class="fst-italic"><%= design.description %></span>
+              · <%= design.quality %> · <%= (design.pieces || []).length %> image<%= (design.pieces || []).length === 1 ? '' : 's' %>
+            </div>
+
+            <details>
+              <summary class="small" style="cursor:pointer;">The exact prompts sent</summary>
+              <% for (const [face, prompt] of Object.entries(design.prompts || {})) { %>
+                <div class="mt-2">
+                  <div class="small fw-semibold text-capitalize"><%= face %></div>
+                  <div class="ad-plan-body px-0 py-1 small"><%= prompt %></div>
+                </div>
+              <% } %>
+            </details>
+          </div>
+        <% } %>
+
         <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-3">Download history</h2>
           <% const spark = sparklinePath(series, { width: 640, height: 90 }); %>
@@ -250,4 +323,6 @@
       </div>
   </main>
 </div>
+<!-- Only this page draws an avatar, so only this page pays for the renderer. -->
+<script src="/assets/js/avatar.js?v=<%= assetVersion %>"></script>
 <%- include('../partials/foot') %>

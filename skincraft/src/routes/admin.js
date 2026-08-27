@@ -18,7 +18,13 @@ import {
 import { generateSkinId, slugify, parseTags } from '../utils/ids.js';
 import { LAYOUTS, FACE_SHADE, heroRegion, TEMPLATE_SIZE } from '../utils/template-layout.js';
 import { REPORT_REASONS } from '../utils/validate.js';
-import { designSkin, isAvailable as isAiAvailable, availableQualities } from '../services/ai/design.js';
+import {
+  designSkin,
+  isAvailable as isAiAvailable,
+  isPlanningAvailable,
+  planDesign,
+  availableQualities,
+} from '../services/ai/design.js';
 import { PUBLISH_CHECKLIST } from '../services/ai/guidelines.js';
 import { layoutProof } from '../services/ai/compose.js';
 
@@ -297,12 +303,33 @@ adminRouter.post('/skins', uploadSkinFiles, handleUploadErrors, csrfProtect, asy
   }
 });
 
+/**
+ * The stored record of how an AI-designed skin was made.
+ *
+ * Tolerant: this is displayed, never relied on. A row written by an older
+ * version of the planner should show what it can rather than break the page
+ * that is the only way to look at the skin.
+ */
+function parseDesignMeta(raw) {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 // MARK: - Detail
 
 adminRouter.get('/skins/:id', (req, res, next) => {
   const found = getSkin(req.params.id);
   if (!found) return next();
 
+  // The unwrap, handed to the browser as data rather than reimplemented there.
+  // A second copy of these rectangles is how a preview quietly stops matching
+  // what Roblox paints — the same reason the seeder and the designer read them
+  // from one file.
   return res.render('skins/show', {
     title: found.row.title,
     skin: toAdminShape(found.row, found.tags),
@@ -310,6 +337,9 @@ adminRouter.get('/skins/:id', (req, res, next) => {
     reports: reports.reportsForSkin(found.row.id),
     apiUrl: `${config.publicUrl}/api/v1/skins/${found.row.id}`,
     shareUrl: `${config.publicUrl}/s/${found.row.id}`,
+    layout: { size: TEMPLATE_SIZE, layouts: LAYOUTS },
+    // Only AI-designed skins carry one; everything else shows no plan card.
+    design: parseDesignMeta(found.row.design_meta),
   });
 });
 
@@ -458,6 +488,9 @@ adminRouter.get('/skins/ai', (req, res) => {
   res.render('skins/ai', {
     title: 'Design a skin',
     available: isAiAvailable(),
+    // Planning is a second model on the same key, so it can be off while
+    // generation works. The page has to say which of the two it has.
+    planningAvailable: isPlanningAvailable(),
     qualities: availableQualities(),
     checklist: PUBLISH_CHECKLIST,
   });
@@ -561,6 +594,168 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
     }
 
     return next(error);
+  }
+});
+
+/**
+ * Server-sent events, by hand.
+ *
+ * `no-transform` is doing real work: the compression middleware buffers a
+ * stream to compress it, which turns a live commentary into one silent pause
+ * followed by everything at once. It honours that directive; nginx is told
+ * separately by X-Accel-Buffering.
+ */
+function sseOpen(res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.flushHeaders?.();
+}
+
+function sseSend(res, payload) {
+  res.write(`data: ${JSON.stringify(payload)}\n\n`);
+}
+
+/**
+ * An error after the stream has opened cannot be a status code — the 200 went
+ * out with the headers. It has to be an event, and the client has to treat it
+ * as one, or a failed generation looks like a stream that simply stopped.
+ */
+function sseFail(res, error) {
+  sseSend(res, { type: 'error', message: error.message });
+  res.end();
+}
+
+/**
+ * Earlier turns of the conversation, made safe to replay.
+ *
+ * Bounded because it is client-supplied and goes straight into a paid request:
+ * without a cap, a tampered-with page could bill the key for an arbitrarily
+ * long context. Roles are whitelisted so it cannot smuggle in a second system
+ * prompt and rewrite the brief.
+ */
+function sanitiseHistory(raw) {
+  let parsed;
+  try {
+    parsed = JSON.parse(String(raw || '[]'));
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .slice(-6)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+}
+
+/**
+ * Plans the design in words, streamed.
+ *
+ * Nothing is drawn and nothing is saved. This is the step that exists so the
+ * argument about what the design should be happens while it is still free.
+ */
+adminRouter.post('/skins/ai/plan', async (req, res) => {
+  const description = String(req.body?.description ?? '').trim();
+  const category = CATEGORIES.includes(String(req.body?.category))
+    ? String(req.body.category)
+    : 'shirt';
+
+  sseOpen(res);
+
+  if (!isPlanningAvailable()) {
+    return sseFail(res, new Error('Planning is not configured. Set a planner model to switch it on.'));
+  }
+
+  try {
+    const plan = await planDesign(
+      { description, category, history: sanitiseHistory(req.body?.history) },
+      (delta) => sseSend(res, { type: 'delta', text: delta }),
+    );
+
+    sseSend(res, { type: 'plan', reasoning: plan.reasoning, directions: plan.directions });
+    return res.end();
+  } catch (error) {
+    return sseFail(res, error);
+  }
+});
+
+/**
+ * Generates from an approved plan, reporting which image it is on.
+ *
+ * The directions are passed back in rather than re-planned, so what gets drawn
+ * is what was read and agreed to — re-planning here would mean the words on
+ * screen described a design nobody generated.
+ */
+adminRouter.post('/skins/ai/generate', async (req, res) => {
+  const description = String(req.body?.description ?? '').trim();
+  const category = CATEGORIES.includes(String(req.body?.category))
+    ? String(req.body.category)
+    : 'shirt';
+  const quality = String(req.body?.quality ?? 'standard');
+  const title = String(req.body?.title ?? '').trim() || description.slice(0, 60);
+
+  let directions = null;
+  try {
+    const parsed = JSON.parse(String(req.body?.directions || 'null'));
+    if (parsed && typeof parsed === 'object') directions = parsed;
+  } catch {
+    // A plan that cannot be read is a plan that is not used. The built prompts
+    // still produce a skin, which is better than refusing to make one.
+  }
+
+  sseOpen(res);
+
+  try {
+    const result = await designSkin({
+      description,
+      category,
+      quality,
+      directions,
+      onProgress: (progress) => sseSend(res, { type: 'progress', ...progress }),
+    });
+
+    const id = generateSkinId();
+    const base = `${slugify(title, id)}-${id.slice(5)}`;
+
+    sseSend(res, { type: 'progress', stage: 'storing' });
+
+    const stored = await storeTemplate(result.template, `${base}.png`);
+    const preview = await storePreview(result.preview, `${base}.webp`);
+
+    createSkin({
+      id,
+      title,
+      category,
+      description: `AI generated — “${result.meta.description}”`,
+      tags: ['ai'],
+      isFeatured: false,
+      isPublished: false,
+      color: await dominantColor(result.template, category),
+      templateFile: stored.filename,
+      previewFile: preview.filename,
+      templateW: stored.width,
+      templateH: stored.height,
+      fileBytes: stored.bytes + preview.bytes,
+      createdBy: req.user.id,
+      designMeta: {
+        ...result.meta,
+        plan: String(req.body?.plan ?? '').slice(0, 8000) || null,
+      },
+    });
+
+    logAudit(req.user.id, 'skin.design', id, result.meta.description);
+
+    sseSend(res, { type: 'done', id, location: `/admin/skins/${id}` });
+    return res.end();
+  } catch (error) {
+    if (!(error.code === 'prompt_rejected' || /provider|configured|rate limit|too long/i.test(error.message))) {
+      console.error(error);
+    }
+    return sseFail(res, error);
   }
 });
 

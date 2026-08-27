@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS skins (
   color_sat     REAL,
   color_light   REAL,
   color_hex     TEXT,
+  -- How an AI-designed skin came to look like this: the plan in words, the
+  -- per-face directions, and the exact prompts sent. JSON, and null for
+  -- anything uploaded or drawn by hand.
+  design_meta   TEXT,
   is_featured   INTEGER NOT NULL DEFAULT 0,
   is_published  INTEGER NOT NULL DEFAULT 1,
   created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,

@@ -56,6 +56,11 @@ export const config = {
     get model() {
       return liveStr('AI_IMAGE_MODEL', process.env.AI_IMAGE_MODEL || 'gpt-image-1');
     },
+    // The planner. Blank switches planning off and leaves image generation
+    // exactly as it was — the two are on the same key but are not a package.
+    get textModel() {
+      return liveStr('AI_TEXT_MODEL', process.env.AI_TEXT_MODEL || 'gpt-4o-mini');
+    },
   },
 
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 12) * 1024 * 1024,

@@ -15,8 +15,16 @@
     <% if (!available) { %>
       <div class="alert alert-warning">
         <strong>Not switched on.</strong>
-        Set <code>AI_IMAGE_API_KEY</code> in <code>/opt/skincraft/.env</code>
-        and restart. Nothing else is needed — the rest is already here.
+        Set <code>AI_IMAGE_API_KEY</code> in the panel, or in
+        <code>/opt/skincraft/.env</code>. Nothing else is needed — the rest is
+        already here.
+      </div>
+    <% } else if (!planningAvailable) { %>
+      <div class="alert alert-info">
+        <strong>Planning is off.</strong>
+        Generation works, but nothing writes the design out in words first. Set
+        <code>AI_TEXT_MODEL</code> under <em>AI design</em> in the panel to see
+        what it intends — and change its mind — before paying for images.
       </div>
     <% } %>
 
@@ -73,12 +81,21 @@
               </div>
             </div>
 
-            <button class="btn btn-kd" type="submit" data-ai-submit <%= available ? '' : 'disabled' %>>
-              Generate as draft
-            </button>
-            <span class="small ms-2" style="color:var(--kd-faint);">
-              A minute or two, longer on Detailed. It arrives unpublished.
-            </span>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+              <% if (planningAvailable) { %>
+                <button class="btn btn-kd-outline" type="button" data-ai-plan
+                        <%= available ? '' : 'disabled' %>>
+                  <i data-lucide="message-square"></i>
+                  Plan it first
+                </button>
+              <% } %>
+              <button class="btn btn-kd" type="submit" data-ai-submit <%= available ? '' : 'disabled' %>>
+                Generate as draft
+              </button>
+              <span class="small" style="color:var(--kd-faint);">
+                A minute or two, longer on Detailed. It arrives unpublished.
+              </span>
+            </div>
 
             <!--
               Progress lives here rather than in the tab spinner. Generation is
@@ -101,6 +118,38 @@
             <div class="alert alert-danger ad-ai-error" data-ai-error hidden>
               <i data-lucide="circle-alert" class="me-1"></i>
               <span data-ai-error-text></span>
+            </div>
+
+            <!--
+              The planner's reasoning, written before anything is drawn.
+              Hidden until asked for: planning costs text tokens, and someone
+              who just wants a skin should not have to read an essay first.
+            -->
+            <div class="ad-plan" data-ai-plan-panel hidden>
+              <div class="ad-plan-head">
+                <span class="ad-spin" data-ai-plan-spinner hidden aria-hidden="true">
+                  <i data-lucide="loader-circle"></i>
+                </span>
+                <i data-lucide="message-square" class="ad-plan-icon" data-ai-plan-icon></i>
+                <strong>What it's planning</strong>
+                <span class="small ms-auto" style="color:var(--kd-faint);"
+                      data-ai-plan-model></span>
+              </div>
+
+              <!-- aria-live so the streamed text is announced as it arrives
+                   rather than sitting silently for a screen reader. -->
+              <div class="ad-plan-body" data-ai-plan-text aria-live="polite"></div>
+
+              <div class="ad-plan-foot">
+                <input class="form-control form-control-sm" data-ai-plan-reply
+                       maxlength="300" placeholder="Change something — “colder colours, no stars”">
+                <button class="btn btn-sm btn-kd-outline" type="button" data-ai-plan-send>
+                  Send
+                </button>
+                <button class="btn btn-sm btn-kd" type="button" data-ai-plan-accept>
+                  Generate from this plan
+                </button>
+              </div>
             </div>
           </form>
         </div>

@@ -27,6 +27,7 @@ export function migrate() {
   ensureColumn('skins', 'color_sat', 'REAL');
   ensureColumn('skins', 'color_light', 'REAL');
   ensureColumn('skins', 'color_hex', 'TEXT');
+  ensureColumn('skins', 'design_meta', 'TEXT');
 }
 
 function ensureColumn(table, column, definition) {

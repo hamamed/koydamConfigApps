@@ -1,6 +1,12 @@
 import { composeTemplate } from './compose.js';
-import { buildPrompt, checkPrompt, PUBLISH_CHECKLIST } from './guidelines.js';
-import { generateImage, isConfigured } from './provider.js';
+import {
+  buildPrompt,
+  checkPrompt,
+  parsePlan,
+  PLANNER_SYSTEM,
+  PUBLISH_CHECKLIST,
+} from './guidelines.js';
+import { generateImage, isConfigured, isTextConfigured, streamPlan } from './provider.js';
 
 /**
  * Designing a skin from a description.
@@ -33,6 +39,45 @@ export function isAvailable() {
   return isConfigured();
 }
 
+export function isPlanningAvailable() {
+  return isTextConfigured();
+}
+
+/**
+ * Plans the design in words, streaming as it is written.
+ *
+ * Costs text tokens and draws nothing, which is the entire point: this is the
+ * step where "actually, make it colder" is free.
+ *
+ * `history` carries earlier turns so a follow-up is a correction rather than a
+ * fresh start — the difference between talking to it and typing at it.
+ */
+export async function planDesign(
+  { description, category = 'shirt', history = [] } = {},
+  onDelta,
+) {
+  const gate = checkPrompt(description);
+  if (!gate.ok) {
+    const err = new Error(gate.reason);
+    err.code = 'prompt_rejected';
+    throw err;
+  }
+
+  const messages = [
+    { role: 'system', content: PLANNER_SYSTEM },
+    ...history,
+    { role: 'user', content: `Garment: ${category}. Design: ${String(description).trim()}` },
+  ];
+
+  let text = '';
+  for await (const delta of streamPlan(messages)) {
+    text += delta;
+    onDelta?.(delta);
+  }
+
+  return { text, ...parsePlan(text) };
+}
+
 export function availableQualities() {
   return Object.keys(PIECES);
 }
@@ -46,6 +91,12 @@ export async function designSkin({
   description,
   category = 'shirt',
   quality = 'standard',
+  /** Per-face art direction from an approved plan. Falls back to the built
+   *  prompt for any face the planner did not cover. */
+  directions = null,
+  /** Called before and after each image, so a caller can say which of the
+   *  three minutes it is currently in. */
+  onProgress = null,
 } = {}) {
   const gate = checkPrompt(description);
   if (!gate.ok) {
@@ -58,8 +109,14 @@ export async function designSkin({
   const prompts = {};
   const art = {};
 
-  for (const face of pieces) {
-    prompts[face] = buildPrompt(description, { face, category });
+  for (const [index, face] of pieces.entries()) {
+    prompts[face] = buildPrompt(description, {
+      face,
+      category,
+      direction: directions?.[face] ?? null,
+    });
+
+    onProgress?.({ stage: 'image', face, index, total: pieces.length });
 
     // Sequential rather than parallel. Providers rate limit per minute, and a
     // 429 halfway through means paying for the pieces that did land and
@@ -67,6 +124,7 @@ export async function designSkin({
     art[face] = await generateImage(prompts[face]);
   }
 
+  onProgress?.({ stage: 'compose', total: pieces.length });
   const template = await composeTemplate(art, category);
 
   return {
@@ -80,6 +138,9 @@ export async function designSkin({
       quality,
       pieces,
       prompts,
+      // Kept so the skin page can answer "why does it look like this" months
+      // later, when the only other record is the picture itself.
+      directions: directions ?? null,
       generatedAt: new Date().toISOString(),
     },
     checklist: PUBLISH_CHECKLIST,

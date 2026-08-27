@@ -134,8 +134,15 @@ const ART_DIRECTION = [
  * a continuation of it. Asking for the same artwork for both produces a shirt
  * whose sleeves are four copies of the chest logo.
  */
-export function buildPrompt(description, { face = 'front', category = 'shirt' } = {}) {
-  const subject = String(description ?? '').trim();
+export function buildPrompt(
+  description,
+  { face = 'front', category = 'shirt', direction = null } = {},
+) {
+  // A planned direction replaces the subject, never the framing or the art
+  // rules. Those exist because their absence produced unusable art, and a
+  // planner that could drop them would be a planner that can quietly undo
+  // every lesson encoded above.
+  const subject = String(direction || description || '').trim();
 
   const garment =
     category === 'pants' ? 'trousers' : category === 'avatar' ? 'full body outfit' : 'shirt';
@@ -165,3 +172,77 @@ export const PUBLISH_CHECKLIST = [
   'The artwork lines up across the seams when worn.',
   'Roblox moderates every upload. This has not been reviewed by them.',
 ];
+
+
+/**
+ * The planner's brief.
+ *
+ * It writes in words first, for two reasons. A person can read a sentence and
+ * say "not orange" before any money is spent, which is not true of an image.
+ * And the model that is good at deciding what a design should be is not the
+ * one that draws it — asking the image model to plan and execute in one step
+ * means the plan only ever exists as pixels, where it cannot be corrected.
+ *
+ * It is told the same content rules the blocklist enforces, so it declines at
+ * the point where a person is still in the conversation rather than producing
+ * a plan that `checkPrompt` will reject a moment later.
+ */
+export const PLANNER_SYSTEM = [
+  'You are an art director for Roblox classic clothing templates.',
+  'Given a description, plan the artwork. Be concrete: palette, motifs, mood,',
+  'and what differs between the front, the back and the side pattern.',
+  '',
+  'Rules you must respect, because Roblox moderates every upload:',
+  'no brand logos, no real people or characters, no gore, nothing revealing,',
+  'no drug or weapon imagery, and no text or lettering of any kind.',
+  'If the request breaks one of these, say so plainly and stop.',
+  '',
+  'Write 2 to 4 short sentences of plain English first — this is read by a',
+  'person deciding whether to spend money generating it, so no preamble and',
+  'no restating the request back.',
+  '',
+  'Then output a line containing only ---',
+  'Then a JSON object, and nothing after it, of the form:',
+  '{"front": "...", "back": "...", "pattern": "..."}',
+  'Each value describes the ARTWORK for that face in one sentence: subject,',
+  'colours, composition. Never describe a garment, a body, or a person —',
+  'these become texture prompts, and a prompt that mentions a shirt produces',
+  'a picture of a shirt printed onto a shirt.',
+].join('\n');
+
+/**
+ * Splits the planner's answer into the part a person reads and the part the
+ * image model is given.
+ *
+ * Tolerant on purpose. A plan whose JSON is malformed is still a plan worth
+ * showing, and the caller falls back to the built prompts — losing the
+ * planner's wording is a worse result than a plain generation, but it is a far
+ * better one than an error where a design used to be.
+ */
+export function parsePlan(text) {
+  const raw = String(text ?? '');
+  const separator = raw.indexOf('\n---');
+
+  const reasoning = (separator === -1 ? raw : raw.slice(0, separator)).trim();
+  if (separator === -1) return { reasoning, directions: null };
+
+  // The model sometimes wraps the JSON in a code fence despite being asked not
+  // to. Taking the outermost braces is what survives that without a parser.
+  const tail = raw.slice(separator + 4);
+  const start = tail.indexOf('{');
+  const end = tail.lastIndexOf('}');
+  if (start === -1 || end <= start) return { reasoning, directions: null };
+
+  try {
+    const parsed = JSON.parse(tail.slice(start, end + 1));
+    const directions = {};
+    for (const face of ['front', 'back', 'pattern']) {
+      if (typeof parsed[face] === 'string' && parsed[face].trim()) {
+        directions[face] = parsed[face].trim();
+      }
+    }
+    return { reasoning, directions: Object.keys(directions).length ? directions : null };
+  } catch {
+    return { reasoning, directions: null };
+  }
+}
