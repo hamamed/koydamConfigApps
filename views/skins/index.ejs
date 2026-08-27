@@ -20,9 +20,14 @@
         <div class="col-12 col-lg-4">
           <label class="form-label" for="q">Search</label>
           <div class="position-relative">
-            <i data-lucide="search" width="15" height="15"
-               style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--kd-faint);"></i>
-            <input class="form-control ad-input-icon" id="q" name="q" type="search"
+            <%# ad-input-icon positions the ICON. It was on the input, which
+                gave the search box position:absolute and pointer-events:none -
+                it could not be clicked or typed into, and it had been pulled
+                out of the column it was meant to fill. %>
+            <%# The span carries the positioning, not the <i>: lucide replaces
+                the placeholder with an <svg> and the wrapper is what survives. %>
+            <span class="ad-input-icon"><i data-lucide="search" width="15" height="15"></i></span>
+            <input class="form-control ad-has-icon" id="q" name="q" type="search"
                    value="<%= filters.q %>" placeholder="Title, description or tag">
           </div>
         </div>
