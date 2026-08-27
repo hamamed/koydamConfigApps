@@ -236,7 +236,7 @@ function viewHome() {
         const adsOn = platforms.filter((p) => p.adsEnabled).length;
         const maint = platforms.filter((p) => p.maintenance).map((p) => p.platform);
 
-        const open = el('a', 'btn btn-sm btn-outline-secondary', 'Open');
+        const open = el('a', 'btn btn-sm btn-kd-outline', 'Open');
         open.href = '#/app/' + a.slug;
 
         return [
@@ -372,7 +372,7 @@ function announcementsCard(slug) {
 
             const toggle = el(
               'button',
-              'btn btn-sm btn-outline-secondary',
+              'btn btn-sm btn-kd-outline',
               a.active ? 'Turn off' : 'Turn on',
             );
             toggle.addEventListener('click', async () => {
@@ -384,7 +384,7 @@ function announcementsCard(slug) {
               }
             });
 
-            const del = el('button', 'btn btn-sm btn-outline-danger', 'Delete');
+            const del = el('button', 'btn btn-sm btn-kd-danger', 'Delete');
             del.addEventListener('click', async () => {
               try {
                 await api(`/api/apps/${slug}/announcements/${a.id}`, { method: 'DELETE' });
@@ -479,7 +479,7 @@ function announcementsCard(slug) {
   dismissWrap.append(dismissible, dismissLabel);
   c.body.append(dismissWrap);
 
-  const add = el('button', 'btn btn-sm btn-primary mt-2', 'Publish banner');
+  const add = el('button', 'btn btn-sm btn-kd mt-2', 'Publish banner');
   add.addEventListener('click', async () => {
     if (!title.value.trim()) return toast('Give it a title', 'err');
 
@@ -564,7 +564,7 @@ function ratingCard(detail) {
     const minDays = mk('Not before day', existing.minDaysInstalled, 3);
     const cooldown = mk('Ask again after (days)', existing.cooldownDays, 90);
 
-    const save = el('button', 'btn btn-sm btn-outline-secondary', 'Save');
+    const save = el('button', 'btn btn-sm btn-kd-accent', 'Save');
     save.addEventListener('click', async () => {
       save.disabled = true;
       try {
@@ -620,7 +620,7 @@ function releaseNotesCard(slug) {
         table(
           ['Version', 'Scope', 'Title', 'State', ''],
           notes.map((n) => {
-            const del = el('button', 'btn btn-sm btn-outline-danger', 'Delete');
+            const del = el('button', 'btn btn-sm btn-kd-danger', 'Delete');
             del.addEventListener('click', async () => {
               try {
                 await api(
@@ -691,7 +691,7 @@ function releaseNotesCard(slug) {
   pubWrap.append(published, el('label', 'form-check-label small', 'Publish now'));
   c.body.append(pubWrap);
 
-  const save = el('button', 'btn btn-sm btn-primary mt-2', 'Save notes');
+  const save = el('button', 'btn btn-sm btn-kd-accent mt-2', 'Save notes');
   save.addEventListener('click', async () => {
     if (!version.value.trim()) return toast('Which version?', 'err');
     if (!body.value.trim()) return toast('Write the notes', 'err');
@@ -786,7 +786,7 @@ function platformCard(detail, platform) {
   const maintMsg = labelledInput('Maintenance message', existing.maintenanceMessage, 'Back shortly…', ro);
   c.body.append(maintMsg.wrap);
 
-  const preview = el('a', 'btn btn-sm btn-outline-secondary mt-3', 'Preview what the app receives');
+  const preview = el('a', 'btn btn-sm btn-kd-outline mt-3', 'Preview what the app receives');
   preview.href = `#/preview/${detail.slug}/${platform}`;
   c.body.append(preview);
 
@@ -806,7 +806,7 @@ function platformCard(detail, platform) {
     row.append(code);
 
     if (!ro) {
-      const rm = el('button', 'btn btn-sm btn-outline-danger py-0 px-1');
+      const rm = el('button', 'btn btn-sm btn-kd-danger py-0 px-1');
       rm.type = 'button';
       rm.append(icon('trash-2', 14));
       rm.addEventListener('click', async () => {
@@ -838,7 +838,7 @@ function platformCard(detail, platform) {
     const unitId = el('input', 'form-control form-control-sm');
     unitId.placeholder = 'ca-app-pub-…/…';
 
-    const addBtn = el('button', 'btn btn-sm btn-primary', 'Add');
+    const addBtn = el('button', 'btn btn-sm btn-kd', 'Add');
     addBtn.type = 'button';
     addBtn.addEventListener('click', async () => {
       if (!unitId.value.trim()) return;
@@ -868,7 +868,7 @@ function platformCard(detail, platform) {
   c.body.append(pacing);
 
   if (!ro) {
-    const save = el('button', 'btn btn-sm btn-primary mt-3 d-flex align-items-center gap-2');
+    const save = el('button', 'btn btn-sm btn-kd mt-3 d-flex align-items-center gap-2');
     save.type = 'button';
     save.append(icon('save', 15), el('span', null, 'Save ' + platform.toUpperCase()));
 
@@ -933,7 +933,7 @@ function flagsCard(detail) {
     row.append(el('code', 'small kd-muted flex-grow-1', JSON.stringify(f.value)));
 
     if (!ro) {
-      const rm = el('button', 'btn btn-sm btn-outline-danger py-0 px-1');
+      const rm = el('button', 'btn btn-sm btn-kd-danger py-0 px-1');
       rm.type = 'button';
       rm.append(icon('trash-2', 14));
       rm.addEventListener('click', async () => {
@@ -969,7 +969,7 @@ function flagsCard(detail) {
     const value = el('input', 'form-control form-control-sm');
     value.placeholder = 'true, 42, or "text"';
 
-    const addBtn = el('button', 'btn btn-sm btn-primary', 'Set');
+    const addBtn = el('button', 'btn btn-sm btn-kd', 'Set');
     addBtn.type = 'button';
     addBtn.addEventListener('click', async () => {
       if (!key.value.trim()) return;
@@ -1015,7 +1015,7 @@ function versionsCard(detail) {
         let action = el('span', 'kd-faint small', '—');
 
         if (detail.canEdit) {
-          const btn = el('button', 'btn btn-sm btn-outline-secondary', 'Restore');
+          const btn = el('button', 'btn btn-sm btn-kd-outline', 'Restore');
           btn.type = 'button';
 
           // Two taps rather than a browser dialog. Restoring rewrites an app's
@@ -1026,16 +1026,16 @@ function versionsCard(detail) {
           const disarm = () => {
             armed = false;
             btn.textContent = 'Restore';
-            btn.classList.remove('btn-outline-danger');
-            btn.classList.add('btn-outline-secondary');
+            btn.classList.remove('btn-kd-danger');
+            btn.classList.add('btn-kd-outline');
           };
 
           btn.addEventListener('click', async () => {
             if (!armed) {
               armed = true;
               btn.textContent = 'Confirm restore';
-              btn.classList.remove('btn-outline-secondary');
-              btn.classList.add('btn-outline-danger');
+              btn.classList.remove('btn-kd-outline');
+              btn.classList.add('btn-kd-danger');
               setTimeout(() => { if (armed) disarm(); }, 4000);
               return;
             }
@@ -1139,13 +1139,13 @@ async function viewUsers() {
 
         const actions = el('div', 'd-flex gap-1');
 
-        const grant = el('button', 'btn btn-sm btn-outline-secondary', 'Grant app');
+        const grant = el('button', 'btn btn-sm btn-kd-outline', 'Grant app');
         grant.type = 'button';
         grant.addEventListener('click', () => grantDialog(u));
         actions.append(grant);
 
         if (u.email !== me.email) {
-          const toggle = el('button', 'btn btn-sm btn-outline-danger', u.disabled ? 'Enable' : 'Disable');
+          const toggle = el('button', 'btn btn-sm btn-kd-danger', u.disabled ? 'Enable' : 'Disable');
           toggle.type = 'button';
           toggle.addEventListener('click', async () => {
             try {
@@ -1209,7 +1209,7 @@ async function viewUsers() {
     'app_admin sees only the apps you grant. admin sees every app but cannot manage the team. owner can do everything.');
   add.body.append(hint);
 
-  const create = el('button', 'btn btn-sm btn-primary mt-2', 'Create account');
+  const create = el('button', 'btn btn-sm btn-kd mt-2', 'Create account');
   create.type = 'button';
   create.addEventListener('click', async () => {
     try {
@@ -1266,7 +1266,7 @@ async function viewPreview(slug, platform) {
   const wrap = el('div');
   const { card: c, body } = card(`Preview — ${platform}`, 'scroll-text');
 
-  body.append(el('div', 'ad-loading kd-faint small', 'Loading…'));
+  body.append(el('div', 'kd-faint small', 'Loading…'));
   wrap.append(c);
 
   try {
@@ -1288,7 +1288,7 @@ async function viewPreview(slug, platform) {
     pre.textContent = JSON.stringify(data.config, null, 2);
     body.append(pre);
 
-    const copy = el('button', 'btn btn-sm btn-outline-secondary mt-2', 'Copy JSON');
+    const copy = el('button', 'btn btn-sm btn-kd-outline mt-2', 'Copy JSON');
     copy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(JSON.stringify(data.config, null, 2));
@@ -1369,7 +1369,7 @@ async function viewSchedule() {
 
   fb.append(grid);
 
-  const add = el('button', 'btn btn-sm btn-primary mt-2', 'Schedule');
+  const add = el('button', 'btn btn-sm btn-kd mt-2', 'Schedule');
   add.addEventListener('click', async () => {
     const map = {
       'ads-off': { adsEnabled: false },
@@ -1414,7 +1414,7 @@ async function viewSchedule() {
     table(
       ['When', 'App', 'Change', 'By', ''],
       pending.map((s) => {
-        const cancel = el('button', 'btn btn-sm btn-outline-danger', 'Cancel');
+        const cancel = el('button', 'btn btn-sm btn-kd-danger', 'Cancel');
         cancel.addEventListener('click', async () => {
           try {
             await api('/api/schedule/' + s.id, { method: 'DELETE' });
@@ -1492,7 +1492,7 @@ async function viewAlerts() {
     table(
       ['Type', 'Chat', 'Last sent', 'Last error', ''],
       alerts.map((a) => {
-        const del = el('button', 'btn btn-sm btn-outline-danger', 'Remove');
+        const del = el('button', 'btn btn-sm btn-kd-danger', 'Remove');
         del.addEventListener('click', async () => {
           try {
             await api('/api/alerts/' + a.id, { method: 'DELETE' });
@@ -1541,7 +1541,7 @@ async function viewAlerts() {
 
   const buttons = el('div', 'd-flex gap-2 mt-2');
 
-  const add = el('button', 'btn btn-sm btn-primary', 'Add');
+  const add = el('button', 'btn btn-sm btn-kd', 'Add');
   add.addEventListener('click', async () => {
     add.disabled = true;
     try {
@@ -1562,7 +1562,7 @@ async function viewAlerts() {
     }
   });
 
-  const test = el('button', 'btn btn-sm btn-outline-secondary', 'Send a test');
+  const test = el('button', 'btn btn-sm btn-kd-outline', 'Send a test');
   test.addEventListener('click', async () => {
     test.disabled = true;
     try {
@@ -1626,7 +1626,7 @@ async function viewAccount() {
     ),
   );
 
-  const save = el('button', 'btn btn-sm btn-primary mt-2', 'Change password');
+  const save = el('button', 'btn btn-sm btn-kd mt-2', 'Change password');
   save.addEventListener('click', async () => {
     if (next.value !== again.value) return toast('The two new passwords differ', 'err');
     if (next.value.length < 10) return toast('At least 10 characters', 'err');
@@ -1689,7 +1689,7 @@ async function viewSettings(service) {
 
   const tabs = el('div', 'd-flex gap-2 mb-3 flex-wrap');
   for (const s of SERVICES) {
-    const b = el('a', 'btn btn-sm ' + (s === service ? 'btn-primary' : 'btn-outline-secondary'), s);
+    const b = el('a', 'btn btn-sm ' + (s === service ? 'btn-kd' : 'btn-kd-outline'), s);
     b.href = '#/settings/' + s;
     tabs.append(b);
   }
@@ -1799,7 +1799,7 @@ function settingRow(service, spec) {
   );
   actionCol.append(state);
 
-  const save = el('button', 'btn btn-sm btn-outline-secondary ms-auto', 'Save');
+  const save = el('button', 'btn btn-sm btn-kd-accent ms-auto', 'Save');
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
@@ -1818,7 +1818,7 @@ function settingRow(service, spec) {
   actionCol.append(save);
 
   if (spec.isSet) {
-    const reset = el('button', 'btn btn-sm btn-link kd-faint p-0', 'reset');
+    const reset = el('button', 'btn btn-sm btn-kd-ghost p-0', 'reset');
     reset.title = 'Remove this override and fall back to .env';
     reset.addEventListener('click', async () => {
       try {
