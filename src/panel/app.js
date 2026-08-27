@@ -1937,8 +1937,10 @@ async function boot() {
     return location.replace('/login');
   }
 
-  $('userEmail').textContent = me.email;
-  $('userRole').textContent = me.role;
+  // One chip: the address, with the role as its tooltip. Two lines of identity
+  // in the sidebar foot was the only thing there, and it is not a destination.
+  $('userChip').textContent = me.email;
+  $('userChip').title = me.role;
 
   // Hidden *and* enforced server-side. Hiding alone stops nobody who opens
   // devtools; the API checks the role on every request regardless.
