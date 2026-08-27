@@ -167,6 +167,15 @@ function renderTotals(data) {
 }
 
 function renderHeader(data) {
+  // The signed-in address, as a chip. Hidden until it is known rather than
+  // showing a placeholder that never fills in.
+  const chip = document.getElementById('user-chip');
+  if (chip) {
+    chip.textContent = data.user?.email ?? '';
+    chip.title = data.user?.role ?? 'Signed in';
+    chip.classList.toggle('d-none', !data.user);
+  }
+
   const s = data.summary ?? {};
   const c = data.crawler ?? {};
 

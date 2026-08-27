@@ -66,12 +66,16 @@
       </a>
     </nav>
 
+    <!-- A destination and a way out, as on every other panel. The subsystem
+         pills moved to the topbar: they report state, and the foot is for
+         places you can go. -->
     <div class="ad-sidebar-foot">
-      <div class="d-flex flex-column gap-1">
-        <span class="ad-status" id="db-pill">db</span>
-        <span class="ad-status" id="crawl-pill">crawler</span>
-        <span class="ad-status" id="source-pill">source</span>
-      </div>
+      <a class="ad-nav-link" href="https://config.hamaprojects.com" target="_blank" rel="noopener">
+        <svg class="lucide"><use href="#i-external-link"></use></svg> Control panel
+      </a>
+      <a class="ad-nav-link" href="https://config.hamaprojects.com/api/logout">
+        <svg class="lucide"><use href="#i-log-out"></use></svg> Sign out
+      </a>
     </div>
   </aside>
 
@@ -85,6 +89,10 @@
         <div class="kd-faint ad-meta" id="subtitle">Connecting…</div>
       </div>
       <div class="ms-auto d-flex align-items-center gap-2">
+        <span class="kd-tag d-none d-lg-inline" id="user-chip" title="Signed in"></span>
+        <span class="ad-status" id="db-pill">db</span>
+        <span class="ad-status" id="crawl-pill">crawler</span>
+        <span class="ad-status d-none d-md-inline" id="source-pill">source</span>
         <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                 id="refresh" type="button">
           <svg class="lucide" width="15" height="15" id="refresh-icon">
