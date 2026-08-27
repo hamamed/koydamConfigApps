@@ -31,7 +31,7 @@
     <% nav.forEach((group) => { %>
       <div class="ad-nav-label"><%= group.section %></div>
       <% group.items.forEach((item) => { %>
-        <a class="ad-nav-link <%= item.active ? 'active' : '' %>" href="<%= item.href %>">
+        <a class="ad-nav-link <%= item.active ? 'is-active' : '' %>" href="<%= item.href %>">
           <i data-lucide="<%= item.icon %>" width="17" height="17"></i>
           <span><%= item.label %></span>
           <% if (item.badge) { %><span class="ad-nav-badge"><%= item.badge %></span><% } %>
@@ -40,15 +40,15 @@
     <% }) %>
 
     <div class="ad-nav-label">Create</div>
-    <a class="ad-nav-link <%= currentPath === '/skins/new' ? 'active' : '' %>" href="/admin/skins/new">
+    <a class="ad-nav-link <%= currentPath === '/skins/new' ? 'is-active' : '' %>" href="/admin/skins/new">
       <i data-lucide="upload" width="17" height="17"></i>
       <span>Upload skin</span>
     </a>
-    <a class="ad-nav-link <%= currentPath === '/skins/design' ? 'active' : '' %>" href="/admin/skins/design">
+    <a class="ad-nav-link <%= currentPath === '/skins/design' ? 'is-active' : '' %>" href="/admin/skins/design">
       <i data-lucide="wand-sparkles" width="17" height="17"></i>
       <span>Design a skin</span>
     </a>
-    <a class="ad-nav-link <%= currentPath === '/skins/ai' ? 'active' : '' %>" href="/admin/skins/ai">
+    <a class="ad-nav-link <%= currentPath === '/skins/ai' ? 'is-active' : '' %>" href="/admin/skins/ai">
       <i data-lucide="sparkles" width="17" height="17"></i>
       <span>Design with AI</span>
     </a>
