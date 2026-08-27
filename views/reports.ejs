@@ -1,7 +1,7 @@
 <%- include('partials/head', { title }) %>
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
-  <div class="ad-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim" id="scScrim"></div>
 
   <main class="ad-main">
     <%
@@ -16,6 +16,7 @@
       actions: picker
     }) %>
 
+      <div class="ad-content">
     <%- include('partials/flash') %>
 
     <% if (reports.length === 0) { %>
@@ -99,6 +100,7 @@
 
       <%- include('partials/pagination', { basePath: '/admin/reports', filters }) %>
     <% } %>
+      </div>
   </main>
 </div>
 <%- include('partials/foot') %>

@@ -1,7 +1,7 @@
 <%- include('../partials/head', { title }) %>
 <div class="ad-shell">
   <%- include('../partials/sidebar') %>
-  <div class="ad-scrim d-none" id="scScrim"></div>
+  <div class="ad-scrim" id="scScrim"></div>
 
   <main class="ad-main">
     <%- include('../partials/topbar', {
@@ -9,6 +9,7 @@
       subheading: 'Compose a template, then publish it straight to the catalogue'
     }) %>
 
+      <div class="ad-content">
     <%- include('../partials/flash') %>
 
     <!-- The layout the canvas draws through: injected rather than duplicated in JS, so it stays
@@ -191,6 +192,7 @@
         </div>
       </div>
     </div>
+      </div>
   </main>
 </div>
 <script src="/assets/js/designer.js?v=<%= assetVersion %>"></script>
