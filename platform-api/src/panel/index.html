@@ -62,19 +62,15 @@
       </a>
     </nav>
 
+    <!-- Nav links, like every other panel on this box: a destination and a way
+         out. Who you are signed in as belongs in the topbar chip. -->
     <div class="ad-sidebar-foot">
-      <div class="d-flex align-items-center gap-2">
-        <!-- The whole block is the link to your own account: a password change
-             belongs where your name already is, not in a nav section. -->
-        <a class="flex-grow-1 min-w-0 text-decoration-none" href="#/account"
-           title="Your account">
-          <div class="small fw-semibold text-truncate" id="userEmail">…</div>
-          <div class="kd-faint ad-meta" id="userRole"></div>
-        </a>
-        <button class="btn btn-sm btn-link kd-muted p-1" id="logout" type="button" title="Sign out">
-          <svg class="lucide" width="16" height="16"><use href="/panel/icons.svg#i-log-out"></use></svg>
-        </button>
-      </div>
+      <a class="ad-nav-link" href="#/account">
+        <svg class="lucide"><use href="/panel/icons.svg#i-shield"></use></svg> Your account
+      </a>
+      <button class="ad-nav-link w-100 border-0 bg-transparent text-start" id="logout" type="button">
+        <svg class="lucide"><use href="/panel/icons.svg#i-log-out"></use></svg> Sign out
+      </button>
     </div>
   </aside>
 
@@ -87,6 +83,7 @@
       <h1 class="ad-page-title mb-0" id="pageTitle">Dashboard</h1>
       <div class="ms-auto d-flex align-items-center gap-2">
         <span class="kd-faint small" id="lastUpdated"></span>
+        <span class="kd-tag" id="userChip" title="Signed in">…</span>
         <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
                 id="refresh" type="button">
           <svg class="lucide" width="15" height="15" id="refreshIcon">
