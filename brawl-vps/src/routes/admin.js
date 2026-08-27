@@ -126,7 +126,7 @@ const ICONS = [
   'database', 'activity', 'users', 'swords', 'hard-drive', 'clock',
   'trending-up', 'trending-down', 'circle-check', 'circle-alert', 'table',
   'refresh-cw', 'map', 'gauge', 'layers', 'search', 'server', 'list',
-  'chart-column', 'trophy', 'image',
+  'chart-column', 'trophy', 'image', 'external-link', 'log-out',
 ];
 
 async function buildSprite() {
@@ -167,7 +167,7 @@ adminRouter.get('/admin', (_req, res) => {
  * would multiply both the round trips and the chances of showing a half-updated
  * dashboard where the counters and the run list disagree.
  */
-adminRouter.get('/admin/data', async (_req, res) => {
+adminRouter.get('/admin/data', async (req, res) => {
   const [db, summary, runs, standings, movers, sizes, universe, counts] =
     await Promise.all([
       dbHealth(),
@@ -182,6 +182,11 @@ adminRouter.get('/admin/data', async (_req, res) => {
 
   res.json({
     now: new Date().toISOString(),
+    // Who is signed in, for the topbar chip. The panel sits behind the platform
+    // login and had no way to say whose session it was rendering under.
+    user: req.platformUser
+      ? { email: req.platformUser.email, role: req.platformUser.role }
+      : null,
     db,
     crawler: {
       enabled: config.crawler.enabled,
