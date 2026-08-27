@@ -422,23 +422,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   color: var(--kd-faint);
 }
 
-.ad-nav-badge, .ad-badge {
-  margin-left: auto;
-  font-size: .68rem;
-  font-weight: 700;
-  padding: .05rem .38rem;
-  border-radius: 999px;
-  background: var(--kd-accent-soft);
-  color: var(--kd-accent-ink);
-}
 
-.ad-sidebar-footer {
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--kd-line);
-  font-size: .78rem;
-  color: var(--kd-faint);
-}
 
 .ad-card-pad { padding: 1.15rem; }
 
