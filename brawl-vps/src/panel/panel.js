@@ -82,7 +82,9 @@ function toast(message, kind = 'ok') {
   const host = document.getElementById('toasts');
   if (!host) return;
 
-  const t = el('div', 'ad-toast ' + kind);
+  // is-error is the only modifier the stylesheet defines; 'err' matched
+  // nothing, so a failure looked exactly like a success.
+  const t = el('div', 'ad-toast' + (kind === 'ok' ? '' : ' is-error'));
   t.append(icon(kind === 'ok' ? 'circle-check' : 'circle-alert'));
   t.append(el('span', null, message));
   host.append(t);
