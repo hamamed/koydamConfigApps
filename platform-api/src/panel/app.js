@@ -38,7 +38,11 @@ function icon(name, size = 16) {
 }
 
 function toast(message, kind = 'ok') {
-  const t = el('div', 'ad-toast ' + kind);
+  // The stylesheet knows one modifier: is-error. Call sites have used 'err'
+  // and 'bad' interchangeably, and neither matched anything - so every failure
+  // has been rendering as an ordinary ink toast, indistinguishable from a
+  // success. Mapped here rather than at thirty-four call sites.
+  const t = el('div', 'ad-toast' + (kind === 'ok' ? '' : ' is-error'));
   t.append(icon(kind === 'ok' ? 'circle-check' : 'circle-alert', 15));
   t.append(el('span', null, message));
   $('toasts').append(t);
@@ -1851,7 +1855,7 @@ async function route() {
 
   // Mark the active nav entry before awaiting, so the click feels instant.
   for (const link of document.querySelectorAll('.ad-nav-link')) {
-    link.classList.toggle('active', link.getAttribute('href') === '#' + hash);
+    link.classList.toggle('is-active', link.getAttribute('href') === '#' + hash);
   }
 
   try {
