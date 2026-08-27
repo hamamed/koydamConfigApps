@@ -1013,14 +1013,37 @@ function versionsCard(detail) {
         if (detail.canEdit) {
           const btn = el('button', 'btn btn-sm btn-outline-secondary', 'Restore');
           btn.type = 'button';
+
+          // Two taps rather than a browser dialog. Restoring rewrites an app's
+          // whole configuration, so it deserves a confirmation - but a native
+          // dialog is the one thing on the page that cannot be styled, and it
+          // reads as the panel having broken rather than as a question.
+          let armed = false;
+          const disarm = () => {
+            armed = false;
+            btn.textContent = 'Restore';
+            btn.classList.remove('btn-outline-danger');
+            btn.classList.add('btn-outline-secondary');
+          };
+
           btn.addEventListener('click', async () => {
-            if (!confirm('Restore this app to how it looked at ' + new Date(v.at).toLocaleString() + '?')) return;
+            if (!armed) {
+              armed = true;
+              btn.textContent = 'Confirm restore';
+              btn.classList.remove('btn-outline-secondary');
+              btn.classList.add('btn-outline-danger');
+              setTimeout(() => { if (armed) disarm(); }, 4000);
+              return;
+            }
             try {
               await api(`/api/apps/${encodeURIComponent(detail.slug)}/restore/${v.id}`, { method: 'POST' });
               toast('Restored');
               route();
             } catch (err) {
               toast(err.message, 'bad');
+              // Back to a plain Restore, so a failed attempt does not leave the
+              // button sitting armed for a stray click.
+              disarm();
             }
           });
           action = btn;
