@@ -39,7 +39,10 @@ while read -r modifier; do
   found=0
   for dir in "${SOURCES[@]}"; do
     [[ -d "$dir" ]] || continue
-    if grep -rq "$modifier" "$dir" 2>/dev/null; then
+    # Markup and scripts only. The panels each carry a copy of the stylesheet
+    # under src/panel/css, and searching that would find every modifier in its
+    # own definition - the check would pass by reading itself.
+    if grep -rq --include='*.js' --include='*.html' --include='*.ejs'          "$modifier" "$dir" 2>/dev/null; then
       found=1
       break
     fi
