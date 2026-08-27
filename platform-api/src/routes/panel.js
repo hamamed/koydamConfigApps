@@ -115,7 +115,7 @@ const ICONS = [
   'layout-grid', 'smartphone', 'apple', 'server', 'gauge', 'flag', 'users',
   'user-plus', 'scroll-text', 'history', 'save', 'trash-2', 'refresh-cw',
   'circle-check', 'circle-alert', 'log-in', 'log-out', 'menu', 'chart-column',
-  'plus', 'settings', 'shield', 'calendar-clock', 'bell', 'database',
+  'plus', 'settings', 'shield', 'calendar-clock', 'bell', 'database', 'cpu',
 ];
 
 let spriteCache = null;
