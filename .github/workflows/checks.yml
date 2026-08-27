@@ -122,6 +122,12 @@ jobs:
       - name: No source path collides with an exclude
         run: bash platform-api/deploy/check-excludes.sh
 
+      # A .x.is-y rule no panel ever sets is either dead CSS or a name nobody
+      # is matching. The nav highlight and every error toast were styled and
+      # never produced, because the markup spelled them differently.
+      - name: State classes are set by something
+        run: bash platform-api/deploy/check-state-classes.sh
+
       - name: services.conf is valid
         run: |
           # deploy.sh validates the registry and exits non-zero on a bad block;
