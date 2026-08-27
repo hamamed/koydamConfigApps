@@ -10,7 +10,12 @@
       <% } %>
     </div>
   </div>
-  <% if (typeof actions !== 'undefined' && actions) { %>
-    <div class="d-flex align-items-center gap-2"><%- actions %></div>
-  <% } %>
+  <div class="d-flex align-items-center gap-2">
+    <%# Who is signed in, as a chip. The design reference puts identity in the
+        topbar; the sidebar foot is for destinations. %>
+    <% if (typeof user !== 'undefined' && user) { %>
+      <span class="kd-tag d-none d-md-inline" title="<%= user.role %>"><%= user.username %></span>
+    <% } %>
+    <% if (typeof actions !== 'undefined' && actions) { %><%- actions %><% } %>
+  </div>
 </div>

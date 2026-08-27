@@ -34,7 +34,7 @@
         <a class="ad-nav-link <%= item.active ? 'is-active' : '' %>" href="<%= item.href %>">
           <i data-lucide="<%= item.icon %>" width="17" height="17"></i>
           <span><%= item.label %></span>
-          <% if (item.badge) { %><span class="ad-nav-badge"><%= item.badge %></span><% } %>
+          <% if (item.badge) { %><span class="ad-badge"><%= item.badge %></span><% } %>
         </a>
       <% }) %>
     <% }) %>
@@ -54,21 +54,19 @@
     </a>
   </nav>
 
-  <div class="ad-sidebar-footer">
-    <div class="d-flex align-items-center gap-2 px-2 py-2">
-      <div class="ad-stat-icon" style="width:30px;height:30px;">
-        <i data-lucide="user" width="15" height="15"></i>
-      </div>
-      <div class="flex-grow-1" style="min-width:0;">
-        <div class="small fw-semibold text-truncate"><%= user.username %></div>
-        <div style="font-size:0.7rem;color:var(--kd-faint);"><%= user.role %></div>
-      </div>
-      <form method="post" action="/admin/logout" class="m-0">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <button class="ad-icon-btn" type="submit" title="Sign out" aria-label="Sign out">
-          <i data-lucide="log-out" width="15" height="15"></i>
-        </button>
-      </form>
-    </div>
+  <!-- A destination and a way out, as on every other panel. Who you are
+       signed in as belongs in the topbar. -->
+  <div class="ad-sidebar-foot">
+    <a class="ad-nav-link" href="/" target="_blank" rel="noopener">
+      <i data-lucide="external-link" width="17" height="17"></i>
+      <span>View site</span>
+    </a>
+    <form method="post" action="/admin/logout" class="m-0">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ad-nav-link w-100 border-0 bg-transparent text-start" type="submit">
+        <i data-lucide="log-out" width="17" height="17"></i>
+        <span>Sign out</span>
+      </button>
+    </form>
   </div>
 </aside>
