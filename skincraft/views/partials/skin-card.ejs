@@ -1,6 +1,17 @@
 <div class="ad-skin-card-wrap position-relative">
   <a class="ad-skin-card" href="/admin/skins/<%= skin.id %>">
-    <img class="ad-skin-thumb" src="<%= skin.previewUrl %>" alt="" loading="lazy" width="320" height="400">
+    <!--
+      The derived preview stays as the markup: it is what a person sees with
+      JavaScript off, while the template loads, or if the canvas fails. The
+      renderer paints the garment on a body over the top and only then hides
+      this, so a card is never blank.
+    -->
+    <div class="ad-skin-thumb" data-avatar-card='<%- JSON.stringify({
+      texture: skin.templateUrl,
+      category: skin.category
+    }) %>'>
+      <img class="ad-skin-flat" src="<%= skin.previewUrl %>" alt="" loading="lazy" width="320" height="400">
+    </div>
     <div class="ad-skin-body">
       <p class="ad-skin-title"><%= skin.title %></p>
       <div class="ad-skin-meta">

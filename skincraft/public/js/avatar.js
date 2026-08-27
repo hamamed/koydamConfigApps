@@ -32,16 +32,37 @@
 (function (root) {
   'use strict';
 
-  // R6 proportions in studs. The sheet is 64px to the stud, which is why the
-  // torso front rectangle is 128x128 and a limb is 64x128.
+  // R6 proportions in studs, matching AvatarRigKind.r6 in the iOS app so the
+  // panel and the app show the same body rather than two interpretations of it.
+  // The sheet is 64px to the stud, which is why the torso front rectangle is
+  // 128x128 and a limb is 64x128.
+  //
+  // Two numbers are not the obvious ones. Shoulders sit at 1.55 rather than
+  // 1.5: flush arms and torso are geometrically correct and read as a single
+  // slab, and the 0.05 gap is what makes them look like arms. The head sits
+  // 0.05 above the shoulders for the same reason — it reads as a neck without
+  // modelling one.
+  const SHOULDER_X = 1.55;
+  const HIP_X = 0.5;
+  const TORSO = [2, 2, 1];
+  const HEAD = [1.6, 1.4, 1.6];
+
+  // Origin at the hips, as in the app.
   const PARTS = [
-    { name: 'head',     group: null,       size: [1.3, 1.3, 1.3], at: [0, 1.65, 0] },
-    { name: 'torso',    group: 'torso',    size: [2, 2, 1],       at: [0, 0, 0] },
-    { name: 'rightArm', group: 'rightArm', size: [1, 2, 1],       at: [-1.5, 0, 0] },
-    { name: 'leftArm',  group: 'leftArm',  size: [1, 2, 1],       at: [1.5, 0, 0] },
-    { name: 'rightLeg', group: 'rightLeg', size: [1, 2, 1],       at: [-0.5, -2, 0] },
-    { name: 'leftLeg',  group: 'leftLeg',  size: [1, 2, 1],       at: [0.5, -2, 0] },
+    { name: 'head',     group: null,       size: HEAD,    at: [0, TORSO[1] + HEAD[1] / 2 + 0.05, 0], head: true },
+    { name: 'torso',    group: 'torso',    size: TORSO,   at: [0, TORSO[1] / 2, 0] },
+    { name: 'rightArm', group: 'rightArm', size: [1, 2, 1], at: [-SHOULDER_X, TORSO[1] - 1, 0] },
+    { name: 'leftArm',  group: 'leftArm',  size: [1, 2, 1], at: [SHOULDER_X, TORSO[1] - 1, 0] },
+    { name: 'rightLeg', group: 'rightLeg', size: [1, 2, 1], at: [-HIP_X, -1, 0] },
+    { name: 'leftLeg',  group: 'leftLeg',  size: [1, 2, 1], at: [HIP_X, -1, 0] },
   ];
+
+  // Feet at -2, top of head at 3.45. Centring on the midpoint keeps the body in
+  // the frame instead of hanging off the bottom of it.
+  const TOP = TORSO[1] + 0.05 + HEAD[1];
+  const BOTTOM = -2;
+  const HEIGHT = TOP - BOTTOM;
+  const CENTRE_Y = (TOP + BOTTOM) / 2;
 
   /**
    * Corners per face as [origin, +u edge, +v edge], in half-extent units.
@@ -64,7 +85,7 @@
   const SHADE = { front: 1, left: 0.88, right: 0.88, back: 0.8, top: 1.1, bottom: 0.66 };
 
   const UNCLOTHED = '#d9c9a3';
-  const HEAD = '#f2d68c';
+  const HEAD_TONE = '#f2d68c';
 
   function rotate(point, yaw, pitch) {
     const [x, y, z] = point;
@@ -97,7 +118,11 @@
         if (normal[2] <= 0.0001) continue;
 
         const corner = (c) => rotate(
-          [part.at[0] + c[0] * half[0], part.at[1] + c[1] * half[1], part.at[2] + c[2] * half[2]],
+          [
+            part.at[0] + c[0] * half[0],
+            part.at[1] + c[1] * half[1] - CENTRE_Y,
+            part.at[2] + c[2] * half[2],
+          ],
           yaw,
           pitch,
         );
@@ -113,7 +138,10 @@
           depth: (o[2] + u[2] + v[2]) / 3,
           rect: group ? group[face] : null,
           shade: SHADE[face] ?? 1,
-          fill: part.name === 'head' ? HEAD : UNCLOTHED,
+          fill: part.head ? HEAD_TONE : UNCLOTHED,
+          // The classic smile goes on one face only, and only when that face is
+          // the one pointing at us.
+          isHeadFront: Boolean(part.head) && face === 'front',
         });
       }
     }
@@ -135,10 +163,11 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 5 studs of body plus headroom; the avatar is ~7 studs tall.
-    const scale = (Math.min(width, height) / 7.6) * dpr;
+    // Fit the body's real height with a margin, rather than a number picked to
+    // look right for one garment.
+    const scale = (Math.min(width / 4.6, height / (HEIGHT + 1.1))) * dpr;
     const originX = (width * dpr) / 2;
-    const originY = (height * dpr) / 2 + 0.4 * scale;
+    const originY = (height * dpr) / 2;
 
     const flat = (p) => [originX + p[0] * scale, originY - p[1] * scale];
 
@@ -184,6 +213,29 @@
         ctx.globalAlpha = f.shade > 1 ? 1 : f.shade;
         ctx.fill();
         ctx.globalAlpha = 1;
+
+        // The classic face. Without it a bare head reads as a crate balanced on
+        // the shoulders, and the whole thing stops looking like a character.
+        if (f.isHeadFront) {
+          ctx.save();
+          // Unit square across the face, so the features are placed in
+          // proportions rather than pixels and survive any tile size.
+          ctx.setTransform(
+            u[0] - o[0], u[1] - o[1],
+            v[0] - o[0], v[1] - o[1],
+            o[0], o[1],
+          );
+          ctx.fillStyle = '#2b2118';
+          ctx.fillRect(0.27, 0.33, 0.11, 0.17);
+          ctx.fillRect(0.62, 0.33, 0.11, 0.17);
+          ctx.beginPath();
+          ctx.lineWidth = 0.055;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#2b2118';
+          ctx.arc(0.5, 0.5, 0.21, 0.16 * Math.PI, 0.84 * Math.PI);
+          ctx.stroke();
+          ctx.restore();
+        }
       }
     }
 
@@ -194,6 +246,66 @@
   root.SkinCraftAvatar = Avatar;
 
   if (typeof document === 'undefined') return;
+
+  // ── Catalogue cards ─────────────────────────────────────────────────────
+  //
+  // Static, not interactive: two dozen avatars each running an animation frame
+  // would spend the whole page's budget spinning thumbnails nobody is looking
+  // at. Rendered once, at the angle that shows a front, a side and the top.
+  //
+  // Lazy, because each card needs the full template sheet rather than the small
+  // derived preview. Off-screen cards never fetch one.
+  const cardAngle = { yaw: 0.55, pitch: 0.1 };
+
+  function paintCard(holder, layout) {
+    let config;
+    try {
+      config = JSON.parse(holder.dataset.avatarCard);
+    } catch {
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'ad-skin-worn';
+    const texture = new Image();
+
+    texture.onload = () => {
+      holder.appendChild(canvas);
+      render(canvas, texture, config.category, layout.layouts, layout.size,
+        cardAngle.yaw, cardAngle.pitch);
+      // Only now: swapping first would flash an empty box on a slow template,
+      // and leave a permanently blank card if the image never arrives.
+      holder.classList.add('is-worn');
+    };
+    // No handler on error — the flat preview underneath is already the answer.
+    texture.src = config.texture;
+  }
+
+  document.querySelectorAll('[data-avatar-layouts]').forEach((grid) => {
+    let layout;
+    try {
+      layout = JSON.parse(grid.dataset.avatarLayouts);
+    } catch {
+      return;
+    }
+
+    const cards = grid.querySelectorAll('[data-avatar-card]');
+
+    if (!('IntersectionObserver' in window)) {
+      cards.forEach((holder) => paintCard(holder, layout));
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        observer.unobserve(entry.target);
+        paintCard(entry.target, layout);
+      }
+    }, { rootMargin: '300px' });
+
+    cards.forEach((holder) => observer.observe(holder));
+  });
 
   document.querySelectorAll('[data-avatar]').forEach((canvas) => {
     const config = JSON.parse(canvas.dataset.avatar);

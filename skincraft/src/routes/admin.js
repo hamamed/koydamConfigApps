@@ -197,6 +197,9 @@ adminRouter.get('/skins', (req, res) => {
   });
 
   res.render('skins/index', {
+    // Once per page, not once per card: the same object on 24 cards is 24
+    // copies of the same geometry in the HTML.
+    layout: { size: TEMPLATE_SIZE, layouts: LAYOUTS },
     title: 'Skins',
     skins: result.rows.map((row) => toAdminShape(row, result.tags.get(row.id))),
     pagination: {

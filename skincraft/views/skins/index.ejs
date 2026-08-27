@@ -87,7 +87,7 @@
         </a>
       </div>
     <% } else { %>
-      <div class="ad-grid">
+      <div class="ad-grid" data-avatar-layouts='<%- JSON.stringify(layout) %>'>
         <% skins.forEach((skin) => { %>
           <%- include('../partials/skin-card', { skin }) %>
         <% }) %>
@@ -98,4 +98,6 @@
       </div>
   </main>
 </div>
+<!-- The catalogue draws avatars, so it loads the renderer. -->
+<script src="/assets/js/avatar.js?v=<%= assetVersion %>"></script>
 <%- include('../partials/foot') %>
