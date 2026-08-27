@@ -290,6 +290,20 @@ a { text-decoration: none; transition: color var(--kd-fast) var(--kd-ease); }
   color: var(--kd-ink);
 }
 
+/* Destructive. The reference recolours .btn-kd inline for its one confirm
+   modal; there are nine of these across the panels, so it is a variant rather
+   than nine inline overrides. */
+.btn-kd-danger {
+  background: var(--kd-danger);
+  border: 1px solid var(--kd-danger);
+  color: #fff;
+}
+.btn-kd-danger:hover, .btn-kd-danger:focus-visible {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  box-shadow: 0 10px 26px -12px rgba(220,38,38,.6);
+}
+
 .btn-kd-ghost {
   background: transparent;
   border: 1px solid transparent;
