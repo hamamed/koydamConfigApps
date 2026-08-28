@@ -23,6 +23,7 @@ import {
   isAvailable as isAiAvailable,
   isPlanningAvailable,
   planDesign,
+  suggestIdeas,
   availableQualities,
 } from '../services/ai/design.js';
 import { PUBLISH_CHECKLIST } from '../services/ai/guidelines.js';
@@ -688,6 +689,50 @@ function sanitiseHistory(raw) {
     .slice(-6)
     .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
 }
+
+/**
+ * Suggests ideas to start from.
+ *
+ * Plain JSON rather than a stream: the reply is a handful of short lines, and
+ * a list that appears complete is easier to choose from than one that arrives
+ * a word at a time and moves while being read.
+ */
+adminRouter.post('/skins/ai/ideas', async (req, res) => {
+  if (!isPlanningAvailable()) {
+    return res.status(503).json({
+      status: 'error',
+      message: 'Ideas need a planner model. Set one under AI design in the panel.',
+    });
+  }
+
+  const category = CATEGORIES.includes(String(req.body?.category))
+    ? String(req.body.category)
+    : 'shirt';
+
+  try {
+    const ideas = await suggestIdeas({
+      theme: String(req.body?.theme ?? '').slice(0, 200),
+      category,
+    });
+
+    if (!ideas.length) {
+      return res.status(502).json({
+        status: 'error',
+        message: 'The planner replied, but nothing in it could be read as an idea. Try again.',
+      });
+    }
+
+    return res.json({ status: 'success', data: { ideas } });
+  } catch (error) {
+    if (error.code === 'prompt_rejected') {
+      return res.status(400).json({ status: 'error', message: error.message });
+    }
+    // 502: the fault is upstream of this service, and saying so is what keeps
+    // a provider's bad afternoon from reading as a SkinCraft bug.
+    console.error(error);
+    return res.status(502).json({ status: 'error', message: error.message });
+  }
+});
 
 /**
  * Plans the design in words, streamed.

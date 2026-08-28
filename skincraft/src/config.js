@@ -56,10 +56,19 @@ export const config = {
     get model() {
       return liveStr('AI_IMAGE_MODEL', process.env.AI_IMAGE_MODEL || 'gpt-image-1');
     },
-    // The planner. Blank switches planning off and leaves image generation
-    // exactly as it was — the two are on the same key but are not a package.
+    /**
+     * The planner, which writes the design in words and suggests ideas.
+     *
+     * On by default, because it is the cheap half of this feature and a key
+     * that can draw can also plan. `off` is the switch, and it has to be a
+     * word rather than a blank: remote-settings treats an empty panel value as
+     * "not set" and falls back, so clearing the field cannot mean anything.
+     */
     get textModel() {
-      return liveStr('AI_TEXT_MODEL', process.env.AI_TEXT_MODEL || 'gpt-4o-mini');
+      const value = String(
+        liveStr('AI_TEXT_MODEL', process.env.AI_TEXT_MODEL || 'gpt-4o-mini'),
+      ).trim();
+      return /^(off|none|disabled)$/i.test(value) ? '' : value;
     },
   },
 

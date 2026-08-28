@@ -276,6 +276,80 @@
       }
     }
 
+    // ── Ideas ─────────────────────────────────────────────────────────────
+    //
+    // Fills the description rather than generating anything. Choosing an idea
+    // is the start of the process, not a commitment to it: the plan step still
+    // follows, and nothing is drawn until Generate.
+    const ideasTheme = el('ideas-theme');
+    const ideasGo = el('ideas-go');
+    const ideasList = el('ideas-list');
+
+    if (ideasGo) {
+      ideasGo.addEventListener('click', async () => {
+        errorBox.hidden = true;
+        ideasGo.setAttribute('disabled', 'disabled');
+        ideasList.hidden = false;
+        ideasList.textContent = 'Thinking of ideas…';
+
+        try {
+          const response = await fetch('/admin/skins/ai/ideas', {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-CSRF-Token': csrf() },
+            body: new URLSearchParams({
+              theme: ideasTheme.value.trim(),
+              category: field('category').value,
+            }),
+          });
+
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.data?.ideas?.length) {
+            throw new Error(payload?.message || `The server returned ${response.status}.`);
+          }
+
+          ideasList.textContent = '';
+          for (const idea of payload.data.ideas) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'ad-idea';
+
+            const name = document.createElement('strong');
+            name.textContent = idea.name;
+            const detail = document.createElement('span');
+            detail.textContent = idea.description;
+            button.append(name, detail);
+
+            button.addEventListener('click', () => {
+              field('description').value = idea.description;
+              // Choosing a different idea must not leave the previous plan on
+              // screen looking like it describes this one.
+              directions = null;
+              history = [];
+              panel.hidden = true;
+              ideasList.querySelectorAll('.ad-idea').forEach((other) => {
+                other.classList.toggle('is-chosen', other === button);
+              });
+              field('description').focus();
+            });
+
+            ideasList.appendChild(button);
+          }
+        } catch (error) {
+          ideasList.hidden = true;
+          fail(error.message);
+        } finally {
+          ideasGo.removeAttribute('disabled');
+          iconsReady();
+        }
+      });
+
+      // Enter asks for ideas rather than submitting the form, which would
+      // start a generation from an empty description.
+      ideasTheme.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); ideasGo.click(); }
+      });
+    }
+
     // ── Planning ──────────────────────────────────────────────────────────
     async function plan(instruction) {
       const description = field('description').value.trim();

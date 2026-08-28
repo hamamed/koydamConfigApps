@@ -246,3 +246,66 @@ export function parsePlan(text) {
     return { reasoning, directions: null };
   }
 }
+
+
+/**
+ * The brief for suggesting ideas.
+ *
+ * A blank textarea is the hardest part of this screen. Someone who knows they
+ * want "something for autumn" still has to turn that into a sentence an image
+ * model can draw, and the gap between those two things is where people give up
+ * or type the thing that produces a picture of a shirt.
+ *
+ * Ideas are cheap — text tokens, no images — so this is the one place to be
+ * generous with options.
+ */
+export const IDEAS_SYSTEM = [
+  'You suggest artwork ideas for Roblox classic clothing.',
+  '',
+  'Rules, because Roblox moderates every upload: no brand logos, no real',
+  'people or characters, no gore, nothing revealing, no drug or weapon',
+  'imagery, and no text or lettering.',
+  '',
+  'Each idea describes ARTWORK — a pattern, a scene, a texture. Never a',
+  'garment, a body or a person: these become texture prompts, and one that',
+  'mentions a shirt produces a picture of a shirt printed onto a shirt.',
+  '',
+  'Make them genuinely different from each other — different palettes, moods',
+  'and subjects. Six variations on one idea is one idea.',
+  '',
+  'Reply with a JSON array and nothing else:',
+  '[{"name": "Short name", "description": "One sentence of artwork detail."}]',
+].join('\n');
+
+/**
+ * Pulls the ideas out of the model's reply.
+ *
+ * Tolerant in the same way `parsePlan` is: a code fence or a sentence of
+ * preamble is common, and losing every idea to one stray character would be a
+ * worse outcome than showing the ones that parsed.
+ */
+export function parseIdeas(text) {
+  const raw = String(text ?? '');
+  const start = raw.indexOf('[');
+  const end = raw.lastIndexOf(']');
+  if (start === -1 || end <= start) return [];
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .filter((idea) => idea && typeof idea.description === 'string' && idea.description.trim())
+    .map((idea) => ({
+      name: String(idea.name ?? '').trim().slice(0, 60) || 'Idea',
+      description: idea.description.trim().slice(0, 300),
+    }))
+    // An idea that breaks the content rules is not shown at all: offering it
+    // and refusing it a moment later wastes the one thing this step saves.
+    .filter((idea) => checkPrompt(idea.description).ok)
+    .slice(0, 8);
+}

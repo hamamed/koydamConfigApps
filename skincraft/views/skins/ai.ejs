@@ -21,10 +21,11 @@
       </div>
     <% } else if (!planningAvailable) { %>
       <div class="alert alert-info">
-        <strong>Planning is off.</strong>
-        Generation works, but nothing writes the design out in words first. Set
-        <code>AI_TEXT_MODEL</code> under <em>AI design</em> in the panel to see
-        what it intends — and change its mind — before paying for images.
+        <strong>The planner is off.</strong>
+        Generation still works, but nothing suggests ideas or writes the design
+        out in words first. Clear <code>Planner model</code> back to the default
+        under <em>AI design</em> in the panel to see what it intends — and
+        change its mind — before paying for images.
       </div>
     <% } %>
 
@@ -36,6 +37,27 @@
 
           <form method="post" action="/admin/skins/ai" data-ai-form>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <% if (planningAvailable) { %>
+              <!--
+                The blank textarea is the hardest part of this screen. Ideas are
+                text tokens and draw nothing, so this is the cheap end of the
+                process and the right place to be generous with options.
+              -->
+              <div class="ad-ideas" data-ideas>
+                <div class="ad-ideas-ask">
+                  <i data-lucide="lightbulb" class="ad-ideas-icon"></i>
+                  <input class="form-control form-control-sm" data-ideas-theme maxlength="200"
+                         placeholder="A theme, or leave blank — “autumn”, “deep sea”, “90s arcade”"
+                         <%= available ? '' : 'disabled' %>>
+                  <button class="btn btn-sm btn-kd-outline" type="button" data-ideas-go
+                          <%= available ? '' : 'disabled' %>>
+                    Suggest ideas
+                  </button>
+                </div>
+                <div class="ad-ideas-list" data-ideas-list hidden></div>
+              </div>
+            <% } %>
 
             <div class="mb-3">
               <label class="form-label" for="description">What should it look like?</label>

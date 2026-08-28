@@ -935,3 +935,50 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   font-size: .78rem;
   color: var(--kd-faint);
 }
+
+/* Starting from an idea
+   --------------------
+   The cheap end of the AI flow: text only, nothing drawn. Laid out as a list
+   of real choices rather than a dropdown, because the description is the part
+   that decides what gets made and it deserves to be read before it is picked. */
+.ad-ideas {
+  margin-bottom: 1rem;
+  padding: .75rem;
+  border: 1px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+}
+
+.ad-ideas-ask { display: flex; align-items: center; gap: .5rem; }
+.ad-ideas-ask input { flex: 1 1 12rem; min-width: 0; }
+.ad-ideas-icon { flex: none; width: 17px; height: 17px; color: var(--kd-warn); }
+
+.ad-ideas-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: .5rem;
+  margin-top: .7rem;
+  font-size: .8rem;
+  color: var(--kd-muted);
+}
+
+.ad-idea {
+  display: block;
+  text-align: left;
+  padding: .6rem .7rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+}
+
+.ad-idea:hover { border-color: var(--kd-accent-soft); }
+.ad-idea strong { display: block; font-size: .84rem; color: var(--kd-ink); margin-bottom: .15rem; }
+.ad-idea span { display: block; font-size: .78rem; line-height: 1.4; color: var(--kd-muted); }
+
+/* Which one is in the box now. Without it, picking a second idea replaces the
+   description silently and the first still looks selected. */
+.ad-idea.is-chosen {
+  border-color: var(--kd-accent);
+  box-shadow: inset 0 0 0 1px var(--kd-accent);
+}

@@ -2,6 +2,8 @@ import { composeTemplate } from './compose.js';
 import {
   buildPrompt,
   checkPrompt,
+  IDEAS_SYSTEM,
+  parseIdeas,
   parsePlan,
   PLANNER_SYSTEM,
   PUBLISH_CHECKLIST,
@@ -41,6 +43,50 @@ export function isAvailable() {
 
 export function isPlanningAvailable() {
   return isTextConfigured();
+}
+
+/**
+ * Suggests distinct artwork ideas to start from.
+ *
+ * `theme` is optional — with nothing to go on it proposes a spread, which is
+ * the point when the honest answer to "what do you want" is "something good".
+ *
+ * Text tokens only, nothing drawn, so browsing ideas costs a fraction of a
+ * penny and rejecting all of them costs nothing.
+ */
+export async function suggestIdeas({ theme = '', category = 'shirt', count = 6 } = {}) {
+  const wanted = Math.min(Math.max(Number(count) || 6, 3), 8);
+  const subject = String(theme).trim();
+
+  // A theme is checked before it is spent on. Without one there is nothing to
+  // check: the model is bound by the rules in its own brief.
+  if (subject) {
+    const gate = checkPrompt(subject);
+    if (!gate.ok) {
+      const err = new Error(gate.reason);
+      err.code = 'prompt_rejected';
+      throw err;
+    }
+  }
+
+  const garment = category === 'pants' ? 'trousers'
+    : category === 'avatar' ? 'a full body outfit'
+    : category === 'tshirt' ? 'a t-shirt'
+    : 'a shirt';
+
+  const ask = subject
+    ? `Suggest ${wanted} artwork ideas for ${garment}, on the theme: ${subject}.`
+    : `Suggest ${wanted} artwork ideas for ${garment}. Range widely.`;
+
+  let text = '';
+  for await (const delta of streamPlan([
+    { role: 'system', content: IDEAS_SYSTEM },
+    { role: 'user', content: ask },
+  ])) {
+    text += delta;
+  }
+
+  return parseIdeas(text);
 }
 
 /**
