@@ -31,6 +31,8 @@ export function migrate() {
 
   // ALTER TABLE cannot add a UNIQUE column in SQLite, so the column goes on
   // plain and the index follows. Both are idempotent.
+  ensureColumn('skins', 'likes', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('skins', 'dislikes', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('users', 'platform_id', 'INTEGER');
   db.exec(
     'CREATE UNIQUE INDEX IF NOT EXISTS users_platform_id_idx '

@@ -56,7 +56,7 @@
         <div class="col-6 col-lg-2">
           <label class="form-label" for="sort">Sort</label>
           <select class="form-select" id="sort" name="sort" data-auto-submit>
-            <% [['newest','Newest'],['oldest','Oldest'],['mostDownloaded','Most downloaded'],['trending','Trending'],['title','Title A–Z']].forEach(([value, label]) => { %>
+            <% [['newest','Newest'],['oldest','Oldest'],['mostDownloaded','Most downloaded'],['mostLiked','Most liked'],['trending','Trending'],['title','Title A–Z']].forEach(([value, label]) => { %>
               <option value="<%= value %>" <%= filters.sort === value ? 'selected' : '' %>><%= label %></option>
             <% }) %>
           </select>

@@ -199,6 +199,42 @@
           </div>
         <% } %>
 
+        <!--
+          Approval, with the numbers under it. The bar is the shape of the
+          opinion; the counts are what it is made of, because a ratio alone
+          hides whether three people voted or three thousand.
+        -->
+        <div class="ad-card ad-card-pad mb-3">
+          <h2 class="h6 mb-3">Reactions</h2>
+          <% const up = skin.likes || 0, down = skin.dislikes || 0, total = up + down; %>
+          <% if (total === 0) { %>
+            <p class="small mb-0" style="color:var(--kd-faint);">
+              Nobody has reacted to this yet.
+            </p>
+          <% } else { %>
+            <div class="d-flex justify-content-between align-items-baseline mb-2">
+              <span class="ad-approval-figure"><%= Math.round((up / total) * 100) %>%</span>
+              <span class="small" style="color:var(--kd-faint);">
+                <%= formatNumber(total) %> reaction<%= total === 1 ? '' : 's' %>
+              </span>
+            </div>
+            <div class="ad-approval" role="img"
+                 aria-label="<%= up %> liked, <%= down %> disliked">
+              <span class="ad-approval-up" style="width:<%= ((up / total) * 100).toFixed(1) %>%;"></span>
+            </div>
+            <div class="d-flex justify-content-between small mt-2">
+              <span class="ad-approval-up-label">
+                <i data-lucide="thumbs-up" width="13" height="13"></i>
+                <%= formatNumber(up) %>
+              </span>
+              <span class="ad-approval-down-label">
+                <%= formatNumber(down) %>
+                <i data-lucide="thumbs-down" width="13" height="13"></i>
+              </span>
+            </div>
+          <% } %>
+        </div>
+
         <div class="ad-card ad-card-pad mb-3">
           <h2 class="h6 mb-3">Download history</h2>
           <% const spark = sparklinePath(series, { width: 640, height: 90 }); %>

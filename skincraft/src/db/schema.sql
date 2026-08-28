@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS skins (
   -- per-face directions, and the exact prompts sent. JSON, and null for
   -- anything uploaded or drawn by hand.
   design_meta   TEXT,
+  -- Kept alongside the reactions they summarise, and recomputed from them on
+  -- every write. Sorting and listing read these; counting rows for each of
+  -- twenty-four cards would not survive a catalogue worth having.
+  likes         INTEGER NOT NULL DEFAULT 0,
+  dislikes      INTEGER NOT NULL DEFAULT 0,
   is_featured   INTEGER NOT NULL DEFAULT 0,
   is_published  INTEGER NOT NULL DEFAULT 1,
   created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -105,6 +110,28 @@ CREATE INDEX IF NOT EXISTS idx_download_events_skin ON download_events(skin_id, 
 
 -- Session store. Kept in the same database so a restart doesn't sign every admin out, and so
 -- there's exactly one file to back up.
+-- How people reacted to a skin.
+--
+-- One row per client per skin, not one per tap: a reaction is an opinion, and
+-- an opinion can be changed or withdrawn. The uniqueness is enforced by the
+-- index rather than by reading before writing, which would race two taps
+-- against each other.
+--
+-- `value` is 1 or -1. Withdrawing removes the row rather than storing a zero,
+-- so "has no opinion" and "has never seen it" are the same thing, which is what
+-- they are.
+CREATE TABLE IF NOT EXISTS reactions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  skin_id    TEXT NOT NULL REFERENCES skins(id) ON DELETE CASCADE,
+  client_key TEXT NOT NULL,
+  value      INTEGER NOT NULL CHECK (value IN (-1, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reactions_client
+  ON reactions(skin_id, client_key);
+
 CREATE TABLE IF NOT EXISTS sessions (
   sid        TEXT PRIMARY KEY,
   data       TEXT NOT NULL,

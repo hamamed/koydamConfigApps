@@ -46,6 +46,8 @@ export function toApiShape(row, tags) {
     title: row.title,
     category: row.category,
     downloads: row.downloads,
+    likes: row.likes ?? 0,
+    dislikes: row.dislikes ?? 0,
     preview_url: previewUrl,
     template_url: templateUrl,
     is_featured: Boolean(row.is_featured),
@@ -77,6 +79,9 @@ const SORT_CLAUSES = {
     ) * 1.0 / (julianday('now') - julianday(s.created_at) + 2) DESC, s.downloads DESC`,
   newest: 's.created_at DESC',
   mostDownloaded: 's.downloads DESC',
+  // Net approval, not raw likes: something with 40 likes and 60 dislikes is not
+  // more liked than something with 12 and none.
+  mostLiked: '(s.likes - s.dislikes) DESC, s.likes DESC',
   title: 's.title COLLATE NOCASE ASC',
   oldest: 's.created_at ASC',
 };
@@ -311,6 +316,58 @@ export async function deleteSkin(id) {
   db.prepare('DELETE FROM skins WHERE id = ?').run(id);
   await removeAssets({ templateFile: row.template_file, previewFile: row.preview_file });
   return true;
+}
+
+/**
+ * Records how someone feels about a skin, or that they no longer do.
+ *
+ * `value` is 1, -1, or 0 to withdraw. Changing your mind updates the row you
+ * already have rather than adding another, so the totals count people rather
+ * than taps — the same reason downloads are collapsed per client per day.
+ *
+ * The counters on `skins` are recomputed from the reactions themselves inside
+ * the same transaction rather than incremented. Incrementing is faster and
+ * drifts: a retry, a crash between two writes, or a reaction removed by a
+ * cascading delete all leave a total nobody can reconcile. Recomputing cannot
+ * disagree with the rows it is derived from.
+ */
+export const setReaction = transaction((id, clientKey, value) => {
+  const skin = db.prepare('SELECT id FROM skins WHERE id = ? AND is_published = 1').get(id);
+  if (!skin) return null;
+  if (!clientKey) return null;
+
+  if (value === 0) {
+    db.prepare('DELETE FROM reactions WHERE skin_id = ? AND client_key = ?').run(id, clientKey);
+  } else {
+    db.prepare(
+      `INSERT INTO reactions (skin_id, client_key, value) VALUES (?, ?, ?)
+       ON CONFLICT(skin_id, client_key)
+       DO UPDATE SET value = excluded.value, updated_at = datetime('now')`,
+    ).run(id, clientKey, value);
+  }
+
+  db.prepare(
+    `UPDATE skins SET
+       likes    = (SELECT COUNT(*) FROM reactions WHERE skin_id = ? AND value = 1),
+       dislikes = (SELECT COUNT(*) FROM reactions WHERE skin_id = ? AND value = -1)
+     WHERE id = ?`,
+  ).run(id, id, id);
+
+  const totals = db.prepare('SELECT likes, dislikes FROM skins WHERE id = ?').get(id);
+  const mine = db
+    .prepare('SELECT value FROM reactions WHERE skin_id = ? AND client_key = ?')
+    .get(id, clientKey);
+
+  return { ...totals, yours: mine?.value ?? 0 };
+});
+
+/** What this client already said about a skin, for the app to show its own state. */
+export function reactionFor(id, clientKey) {
+  if (!clientKey) return 0;
+  const row = db
+    .prepare('SELECT value FROM reactions WHERE skin_id = ? AND client_key = ?')
+    .get(id, clientKey);
+  return row?.value ?? 0;
 }
 
 /**

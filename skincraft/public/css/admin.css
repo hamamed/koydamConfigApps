@@ -1081,3 +1081,27 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   border-color: var(--kd-accent);
   box-shadow: 0 0 0 2px var(--kd-accent-soft);
 }
+
+/* Approval
+   --------
+   One bar, filled by the share who liked it. Two stacked bars would invite
+   comparing lengths across skins, which is a different question from the one
+   this answers. */
+.ad-approval {
+  display: flex;
+  height: 8px;
+  border-radius: 99px;
+  overflow: hidden;
+  /* The remainder IS the dislikes — the track is the second colour rather than
+     a second element, so the two always add to the whole. */
+  background: var(--kd-danger);
+}
+
+.ad-approval-up {
+  background: var(--kd-ok);
+  transition: width var(--kd-slow) var(--kd-ease);
+}
+
+.ad-approval-figure { font-size: 1.4rem; font-weight: 700; color: var(--kd-ink); }
+.ad-approval-up-label { color: var(--kd-ok); display: inline-flex; align-items: center; gap: .3rem; }
+.ad-approval-down-label { color: var(--kd-danger); display: inline-flex; align-items: center; gap: .3rem; }

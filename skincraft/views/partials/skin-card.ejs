@@ -17,6 +17,15 @@
       <div class="ad-skin-meta">
         <i data-lucide="download" width="12" height="12"></i>
         <span><%= formatNumber(skin.downloads) %></span>
+        <% if (skin.likes || skin.dislikes) { %>
+          <span>·</span>
+          <i data-lucide="thumbs-up" width="12" height="12"></i>
+          <span><%= formatNumber(skin.likes) %></span>
+          <% if (skin.dislikes) { %>
+            <i data-lucide="thumbs-down" width="12" height="12" class="ms-1"></i>
+            <span><%= formatNumber(skin.dislikes) %></span>
+          <% } %>
+        <% } %>
         <span>·</span>
         <span><%= categoryLabels[skin.category] %></span>
       </div>

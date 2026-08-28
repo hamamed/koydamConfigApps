@@ -3,7 +3,9 @@ import crypto from 'node:crypto';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import {
-  listSkins, getSkin, toApiShape, recordDownload, allTags, relatedSkins, logSearch,
+  listSkins, getSkin, toApiShape, recordDownload,
+  reactionFor,
+  setReaction, allTags, relatedSkins, logSearch,
 } from '../services/skins.js';
 import {
   normaliseCategory, normaliseSort, clampInt, normaliseReason, cleanText, REPORT_REASONS,
@@ -89,8 +91,16 @@ apiRouter.get('/skins/:id', (req, res) => {
   if (!found) {
     return res.status(404).json({ status: 'error', message: 'Skin not found' });
   }
-  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-  return res.json({ status: 'success', data: toApiShape(found.row, found.tags) });
+  // Private, and briefly: `your_reaction` differs per caller, so a shared cache
+  // would hand one device another device's opinion back as its own.
+  res.set('Cache-Control', 'private, max-age=30');
+  return res.json({
+    status: 'success',
+    data: {
+      ...toApiShape(found.row, found.tags),
+      your_reaction: reactionFor(found.row.id, clientFingerprint(req)),
+    },
+  });
 });
 
 /**
@@ -107,6 +117,34 @@ apiRouter.post('/skins/:id/download', writeLimiter, (req, res) => {
     return res.status(404).json({ status: 'error', message: 'Skin not found' });
   }
   return res.json({ status: 'success', data: { id: req.params.id, downloads } });
+});
+
+/**
+ * POST /api/v1/skins/:id/reaction — like it, dislike it, or take it back.
+ *
+ * Body: `{ "value": 1 | -1 | 0 }`. Unauthenticated like everything else here,
+ * and identified the same way downloads are: by client fingerprint. That is
+ * honest about what it measures — approval from the devices that reached this
+ * server, not from verified people — and it is the same guarantee the download
+ * counter has always given.
+ */
+apiRouter.post('/skins/:id/reaction', writeLimiter, (req, res) => {
+  const raw = req.body?.value;
+  const value = Number(raw);
+
+  if (![1, -1, 0].includes(value)) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'value must be 1 to like, -1 to dislike, or 0 to withdraw.',
+    });
+  }
+
+  const result = setReaction(req.params.id, clientFingerprint(req), value);
+
+  if (result === null) {
+    return res.status(404).json({ status: 'error', message: 'Skin not found' });
+  }
+  return res.json({ status: 'success', data: { id: req.params.id, ...result } });
 });
 
 /** GET /api/v1/skins/:id/related — the "more like this" row on the detail screen. */
