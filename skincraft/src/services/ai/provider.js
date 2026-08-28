@@ -46,14 +46,23 @@ export function isTextConfigured() {
  * Yields deltas; returns nothing. The caller accumulates, because it is the
  * caller that knows whether it wants the whole thing or just to forward it.
  */
-export async function* streamPlan(messages, { signal } = {}) {
-  if (!isTextConfigured()) {
-    throw new Error(
-      'Design planning is not configured. Set AI_TEXT_MODEL to switch it on.',
-    );
-  }
+/**
+ * Which name this provider gives the output cap.
+ *
+ * OpenAI renamed `max_tokens` to `max_completion_tokens` and its newer models
+ * reject the old one outright; plenty of OpenAI-compatible endpoints only know
+ * the old one. The base URL here is deliberately configurable, so neither can
+ * be assumed — the first rejection settles it and the answer is remembered for
+ * the life of the process.
+ */
+let tokenLimitParam = 'max_tokens';
 
-  const res = await fetch(`${config.ai.baseUrl}/chat/completions`, {
+/** Enough for a plan and the three prompts; past this it is padding, and
+ *  padding is what turns a plan into something nobody reads. */
+const PLAN_TOKEN_LIMIT = 700;
+
+async function requestPlan(messages, signal) {
+  return fetch(`${config.ai.baseUrl}/chat/completions`, {
     method: 'POST',
     signal,
     headers: {
@@ -64,15 +73,36 @@ export async function* streamPlan(messages, { signal } = {}) {
       model: config.ai.textModel,
       messages,
       stream: true,
-      // Enough for a plan and the three prompts; past this it is padding, and
-      // padding is what turns a plan into something nobody reads.
-      max_tokens: 700,
+      [tokenLimitParam]: PLAN_TOKEN_LIMIT,
     }),
   });
+}
+
+export async function* streamPlan(messages, { signal } = {}) {
+  if (!isTextConfigured()) {
+    throw new Error(
+      'Design planning is not configured. Set AI_TEXT_MODEL to switch it on.',
+    );
+  }
+
+  let res = await requestPlan(messages, signal);
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Planner returned ${res.status}. ${detail.slice(0, 200)}`);
+    let detail = await res.text().catch(() => '');
+
+    // The provider told us the name it wants. Switching and retrying once is
+    // better than making someone read a parameter name out of an error and go
+    // looking for a setting that does not exist.
+    const other = tokenLimitParam === 'max_tokens' ? 'max_completion_tokens' : 'max_tokens';
+    if (res.status === 400 && detail.includes(other)) {
+      tokenLimitParam = other;
+      res = await requestPlan(messages, signal);
+      if (!res.ok) detail = await res.text().catch(() => '');
+    }
+
+    if (!res.ok) {
+      throw new Error(`Planner returned ${res.status}. ${detail.slice(0, 200)}`);
+    }
   }
 
   // Server-sent events, decoded by hand: `data: {json}` per line, `[DONE]` to
