@@ -14,7 +14,22 @@ set -euo pipefail
 DOMAIN="${DOMAIN:-}"
 EMAIL="${EMAIL:-}"
 APP_DIR="${APP_DIR:-/opt/minebox}"
-APP_USER="${APP_USER:-minebox}"
+# The account the service runs as.
+#
+# On a box running the platform this has to be the account platform-api deploys
+# with, because deploy.sh chowns every service it manages to that one account.
+# Given its own user, MineBox starts fine and then dies on the first deploy:
+# /opt/minebox becomes the shared account\'s, the unit is still minebox\'s, and
+# SQLite reports "attempt to write a readonly database" — which reads like a
+# permissions bug in the app rather than two installers disagreeing about who
+# owns the directory.
+#
+# Standalone there is no such account, and MineBox gets its own as before.
+if id -u brawl >/dev/null 2>&1; then
+  APP_USER="${APP_USER:-brawl}"
+else
+  APP_USER="${APP_USER:-minebox}"
+fi
 NODE_MAJOR="${NODE_MAJOR:-22}"
 # Each app on the box needs its own loopback port. 3000 is SkinCraft, 8080 Brawl, 8090 the
 # platform panel; 3100 is MineBox's.

@@ -9,7 +9,14 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/minebox}"
-APP_USER="${APP_USER:-minebox}"
+# Matched to setup.sh: the shared platform account where there is one, MineBox's
+# own where there is not. Running this as the wrong user leaves files the service
+# cannot read back.
+if id -u brawl >/dev/null 2>&1; then
+  APP_USER="${APP_USER:-brawl}"
+else
+  APP_USER="${APP_USER:-minebox}"
+fi
 BRANCH="${BRANCH:-main}"
 
 if [[ $EUID -ne 0 ]]; then
