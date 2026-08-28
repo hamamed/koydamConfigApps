@@ -139,6 +139,22 @@ const server = app.listen(config.port, config.host, () => {
   console.log(`  Listening on    ${config.host}:${config.port} (${config.env})`);
 });
 
+/**
+ * One bad request must not take the site down.
+ *
+ * Express does not catch a rejected async handler, and Node's default for an
+ * unhandled rejection is to exit. On this box that means the admin panel, the
+ * public catalogue API and the app's config fetch all stop together, and nginx
+ * answers 503 until systemd restarts us — a page that should have shown one
+ * error instead becomes an outage for everyone, including the mobile app.
+ *
+ * Logged loudly rather than swallowed: the request that caused it still hangs
+ * and still needs fixing, and this line is how it gets found.
+ */
+process.on('unhandledRejection', (reason) => {
+  console.error('  Unhandled rejection — the request that caused it will hang:', reason);
+});
+
 // Let in-flight requests finish before the process exits, so a deploy never truncates an upload.
 for (const signal of ['SIGTERM', 'SIGINT']) {
   process.on(signal, () => {

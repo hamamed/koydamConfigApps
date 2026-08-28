@@ -28,6 +28,14 @@ export function migrate() {
   ensureColumn('skins', 'color_light', 'REAL');
   ensureColumn('skins', 'color_hex', 'TEXT');
   ensureColumn('skins', 'design_meta', 'TEXT');
+
+  // ALTER TABLE cannot add a UNIQUE column in SQLite, so the column goes on
+  // plain and the index follows. Both are idempotent.
+  ensureColumn('users', 'platform_id', 'INTEGER');
+  db.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS users_platform_id_idx '
+    + 'ON users (platform_id) WHERE platform_id IS NOT NULL',
+  );
 }
 
 function ensureColumn(table, column, definition) {

@@ -104,18 +104,25 @@ adminRouter.use(requireAuth);
 
 // MARK: - Dashboard
 
-adminRouter.get('/', async (req, res) => {
-  res.render('dashboard', {
-    title: 'Dashboard',
-    overview: stats.overview(),
-    series: stats.downloadSeries(14),
-    searches: stats.searchInsights(),
-    breakdown: stats.categoryBreakdown(),
-    top: stats.topSkins(6),
-    activity: stats.recentActivity(8),
-    storage: await stats.storage(),
-    publicUrl: config.publicUrl,
-  });
+adminRouter.get('/', async (req, res, next) => {
+  try {
+    res.render('dashboard', {
+      title: 'Dashboard',
+      overview: stats.overview(),
+      series: stats.downloadSeries(14),
+      searches: stats.searchInsights(),
+      breakdown: stats.categoryBreakdown(),
+      top: stats.topSkins(6),
+      activity: stats.recentActivity(8),
+      // The only await here, and it walks the storage tree — an unreadable or
+      // missing directory rejects. Express does not catch a rejected async
+      // handler, so unguarded this did not fail the page, it ended the process.
+      storage: await stats.storage(),
+      publicUrl: config.publicUrl,
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // MARK: - Analytics

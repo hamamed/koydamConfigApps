@@ -14,8 +14,12 @@ export async function loadUser(req, res, next) {
   if (process.env.PLATFORM_URL) {
     const platform = await platformUser(req);
     if (platform) {
+      const local = mirrorPlatformUser(platform);
       req.user = {
-        id: platform.id,
+        // The LOCAL row's id, not the platform's. Everything that records who
+        // did something is a foreign key into this database's users table.
+        id: local.id,
+        platformId: platform.id,
         username: platform.email,
         role: platform.role,
         platform: true,
@@ -55,6 +59,61 @@ export function requireAuth(req, res, next) {
   return res.redirect(`/admin/login?next=${encodeURIComponent(returnTo)}`);
 }
 
+
+/**
+ * The local row standing in for a platform account, created on first sight.
+ *
+ * Needed because skins.created_by, audit_log.user_id and reports.resolved_by
+ * are foreign keys into this database. Under SSO the person exists in
+ * platform-api, not here, and their id there is meaningless here — passing it
+ * straight through produced "FOREIGN KEY constraint failed" on every create,
+ * upload and design. It worked for exactly one account: whoever happened to
+ * share an id with the bootstrap admin.
+ *
+ * The mirror also makes the audit log readable. A row saying user 7 is no use
+ * once user 7 is someone nobody remembers.
+ */
+function mirrorPlatformUser(platform) {
+  const existing = db
+    .prepare('SELECT id, username, role FROM users WHERE platform_id = ?')
+    .get(platform.id);
+
+  if (existing) {
+    // Keep the name and role current — someone renamed at the platform should
+    // not show up here under the address they signed up with two years ago.
+    if (existing.username !== platform.email || existing.role !== platform.role) {
+      try {
+        db.prepare('UPDATE users SET username = ?, role = ? WHERE id = ?')
+          .run(platform.email, platform.role, existing.id);
+      } catch {
+        // Their new address collides with another local row. The stale name is
+        // cosmetic; refusing to load the user over it would not be.
+      }
+    }
+    return existing;
+  }
+
+  // Never a usable password. `verifyCredentials` also refuses these rows
+  // outright, so this is the second of two locks rather than the only one.
+  const insert = (username) =>
+    db.prepare(
+      `INSERT INTO users (username, password_hash, role, platform_id)
+       VALUES (?, '!sso', ?, ?)`,
+    ).run(username, platform.role, platform.id);
+
+  try {
+    insert(platform.email);
+  } catch {
+    // A local account already holds that username — most often the bootstrap
+    // admin. Suffixing keeps both, rather than one silently becoming the other.
+    insert(`${platform.email}#${platform.id}`);
+  }
+
+  return db
+    .prepare('SELECT id, username, role FROM users WHERE platform_id = ?')
+    .get(platform.id);
+}
+
 export function verifyCredentials(username, password) {
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(String(username || '').trim());
 
@@ -64,6 +123,12 @@ export function verifyCredentials(username, password) {
   const ok = bcrypt.compareSync(String(password || ''), hash);
 
   if (!user || !ok) return null;
+
+  // An SSO mirror row is a foreign-key target, not an account. Its stored hash
+  // is not a hash and cannot match, but the check is explicit rather than
+  // relying on that: whoever changes the sentinel one day should not be able to
+  // turn every SSO user into a local login by accident.
+  if (user.platform_id != null) return null;
 
   db.prepare("UPDATE users SET last_login_at = datetime('now') WHERE id = ?").run(user.id);
   return { id: user.id, username: user.username, role: user.role };

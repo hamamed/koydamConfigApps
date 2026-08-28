@@ -13,8 +13,22 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'admin',
   created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-  last_login_at TEXT
+  last_login_at TEXT,
+  -- The platform-api account this row mirrors, when signing in through SSO.
+  --
+  -- skins.created_by, audit_log.user_id and reports.resolved_by are foreign
+  -- keys into this table, so a signed-in person must exist here before they can
+  -- create or change anything. Under SSO they exist in platform-api instead,
+  -- and their id there means nothing here: the owner's happened to collide with
+  -- the bootstrap admin's id 1, which is why this worked for exactly one person
+  -- and failed with a foreign-key error for everyone granted access afterwards.
+  platform_id   INTEGER
 );
+
+-- The unique index on platform_id is created in index.js, not here. This file
+-- is applied before the ensureColumn calls that add columns to tables which
+-- already exist, so an index naming platform_id would fail with "no such
+-- column" on every existing install — that is, on boot, everywhere.
 
 CREATE TABLE IF NOT EXISTS skins (
   id            TEXT PRIMARY KEY,
