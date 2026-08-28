@@ -1,0 +1,112 @@
+<%- include('partials/head', { title }) %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <div class="ad-scrim" id="mbScrim"></div>
+
+  <main class="ad-main">
+    <%
+      const statuses = [['open','Open'],['resolved','Resolved'],['dismissed','Dismissed'],['all','All']];
+      const picker = `<div class="btn-group btn-group-sm" role="group" aria-label="Filter by status">${statuses.map(([value, label]) =>
+        `<a href="/admin/reports?status=${value}" class="btn ${value === filters.status ? 'btn-kd' : 'btn-kd-outline'}">${label}</a>`
+      ).join('')}</div>`;
+    %>
+    <%- include('partials/topbar', {
+      heading: 'Reports',
+      subheading: `${pagination.total} ${filters.status === 'all' ? 'total' : filters.status}`,
+      actions: picker
+    }) %>
+
+      <div class="ad-content">
+    <%- include('partials/flash') %>
+
+    <% if (reports.length === 0) { %>
+      <div class="ad-card ad-empty">
+        <div class="ad-empty-icon"><i data-lucide="shield-check" width="28" height="28"></i></div>
+        <h2 class="h6 mb-1">Nothing to review</h2>
+        <p class="small mb-0" style="color:var(--kd-faint);">
+          <%= filters.status === 'open' ? 'No open reports — the catalogue is clean.' : 'No reports with that status.' %>
+        </p>
+      </div>
+    <% } else { %>
+      <div class="ad-card overflow-hidden">
+        <% reports.forEach((report, index) => { %>
+          <div class="ad-report-row p-3
+                      <%= index < reports.length - 1 ? 'border-bottom' : '' %>"
+               style="border-color: var(--kd-line) !important;">
+            <div class="d-flex gap-3 align-items-start flex-wrap">
+              <a href="/admin/items/<%= report.item_id %>" class="flex-shrink-0">
+                <img src="/storage/previews/<%= report.preview_file %>" alt="" width="46" height="58"
+                     style="border-radius:8px;object-fit:cover;display:block;" loading="lazy">
+              </a>
+
+              <div class="flex-grow-1" style="min-width:220px;">
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                  <span class="ad-reason">
+                    <% if (report.isUrgent) { %><i data-lucide="triangle-alert" width="11" height="11"></i><% } %>
+                    <%= report.reasonLabel %>
+                  </span>
+                  <% if (report.isUrgent) { %><span class="kd-tag kd-tag-warn">Safety</span><% } %>
+                  <span class="kd-tag"><%= kindLabels[report.kind] || report.kind %></span>
+                  <span class="kd-tag"><%= categoryLabels[report.category] || report.category %></span>
+                  <% if (!report.is_published) { %>
+                    <span class="ad-status ad-status-draft">Draft</span>
+                  <% } %>
+                  <% if (report.status !== 'open') { %>
+                    <span class="ad-status <%= report.status === 'resolved' ? 'ad-status-published' : 'ad-status-archived' %>">
+                      <%= report.status %>
+                    </span>
+                  <% } %>
+                </div>
+
+                <a class="fw-semibold text-decoration-none text-body" href="/admin/items/<%= report.item_id %>">
+                  <%= report.title %>
+                </a>
+
+                <% if (report.note) { %>
+                  <p class="small mb-1 mt-1" style="color:var(--kd-muted);">“<%= report.note %>”</p>
+                <% } %>
+
+                <div style="font-size:0.72rem;color:var(--kd-faint);">
+                  <%= timeAgo(report.created_at) %>
+                  <% if (report.resolver) { %> · handled by <%= report.resolver %><% } %>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 align-items-center ms-auto">
+                <a class="btn btn-kd-ghost btn-sm" href="/admin/items/<%= report.item_id %>/edit">
+                  <i data-lucide="pencil" width="14" height="14" class="me-1"></i>Fix
+                </a>
+                <% if (report.status === 'open') { %>
+                  <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="status" value="resolved">
+                    <button class="btn btn-kd btn-sm" type="submit">
+                      <i data-lucide="check" width="14" height="14" class="me-1"></i>Resolve
+                    </button>
+                  </form>
+                  <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="status" value="dismissed">
+                    <button class="ad-icon-btn" type="submit" title="Dismiss" aria-label="Dismiss">
+                      <i data-lucide="x" width="14" height="14"></i>
+                    </button>
+                  </form>
+                <% } else { %>
+                  <form method="post" action="/admin/reports/<%= report.id %>/status" class="m-0">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="status" value="open">
+                    <button class="btn btn-kd-ghost btn-sm" type="submit">Reopen</button>
+                  </form>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <%- include('partials/pagination', { basePath: '/admin/reports', filters }) %>
+    <% } %>
+      </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

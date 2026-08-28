@@ -1,0 +1,193 @@
+import express from 'express';
+import session from 'express-session';
+import helmet from 'helmet';
+import compression from 'compression';
+import cors from 'cors';
+import morgan from 'morgan';
+import path from 'node:path';
+import { config } from './config.js';
+import { startRemoteSettings } from './remote-settings.js';
+import { migrate } from './db/index.js';
+import { SqliteSessionStore } from './middleware/session-store.js';
+import { loadUser, flash } from './middleware/auth.js';
+import { notFound, errorHandler } from './middleware/errors.js';
+import { ensurePreviewDir } from './services/previews.js';
+import { ensureFileDir } from './services/files.js';
+import { apiRouter } from './routes/api.js';
+import { shareRouter } from './routes/share.js';
+import { adminRouter } from './routes/admin.js';
+import { formatBytes, formatNumber, formatDate, timeAgo, sparklinePath } from './utils/format.js';
+
+migrate();
+await Promise.all([ensurePreviewDir(), ensureFileDir()]);
+
+const app = express();
+
+// Behind nginx, so the client IP for rate limiting and download fingerprints comes from
+// X-Forwarded-For. Trusting exactly one hop — trusting them all lets a client spoof its IP.
+app.set('trust proxy', 1);
+app.set('view engine', 'ejs');
+app.set('views', path.join(config.root, 'views'));
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
+        // Google Fonts is two hosts and both are needed: the stylesheet comes from
+        // fonts.googleapis.com and the faces it names come from fonts.gstatic.com. The share
+        // page's pixel typeface is the whole visual identity, so a blocked stylesheet there is
+        // not a cosmetic loss — and a blocked stylesheet is silent, not broken.
+        styleSrc: [
+          "'self'", "'unsafe-inline'",
+          'https://cdn.jsdelivr.net',
+          'https://fonts.googleapis.com',
+        ],
+        fontSrc: [
+          "'self'",
+          'https://cdn.jsdelivr.net',
+          'https://fonts.gstatic.com',
+          'data:',
+        ],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: config.isProduction ? [] : null,
+      },
+    },
+    // Assets are fetched cross-origin by the mobile app; the default policy blocks that.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
+
+app.use(compression());
+app.use(morgan(config.isProduction ? 'combined' : 'dev'));
+app.use(express.urlencoded({ extended: false, limit: '256kb' }));
+app.use(express.json({ limit: '256kb' }));
+
+app.use(
+  session({
+    name: 'minebox.sid',
+    secret: config.sessionSecret,
+    store: new SqliteSessionStore(),
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: config.isProduction,
+      maxAge: 12 * 60 * 60 * 1000,
+    },
+  }),
+);
+
+app.use(loadUser);
+app.use(flash);
+
+// Cache-buster for the admin's own CSS and JS.
+//
+// `/assets` is served with a long max-age, which is right for production and actively hostile
+// during development: a style change lands but every already-open browser keeps the old file.
+// Stamping the boot time onto the URLs means a restart is enough to pick up changes.
+app.locals.assetVersion = Date.now().toString(36);
+
+// View helpers, available to every template without importing anything.
+app.locals.formatBytes = formatBytes;
+app.locals.formatNumber = formatNumber;
+app.locals.formatDate = formatDate;
+app.locals.timeAgo = timeAgo;
+app.locals.sparklinePath = sparklinePath;
+
+// MARK: - Public asset serving
+//
+// Previews only. The downloadable files are deliberately *not* here: they are served by
+// `/d/:id`, which restores the uploader's filename and counts the download. Exposing the
+// files directory as well would create a second URL for the same bytes that does neither.
+app.use(
+  '/storage/previews',
+  cors({ origin: config.corsOrigins.length ? config.corsOrigins : true }),
+  express.static(path.join(config.storageDir, 'previews'), {
+    maxAge: '7d',
+    etag: true,
+    index: false,
+    dotfiles: 'ignore',
+    setHeaders(res) {
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  }),
+);
+
+app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '1d' }));
+
+// MARK: - Routes
+
+app.use(
+  '/api/v1',
+  cors({ origin: config.corsOrigins.length ? config.corsOrigins : true }),
+  apiRouter,
+);
+app.use('/admin', adminRouter);
+
+// Share pages, downloads and the app-site-association file live at the domain root.
+app.use('/', shareRouter);
+
+app.get('/', (req, res) => res.redirect('/admin'));
+
+app.use(notFound);
+app.use(errorHandler);
+
+// Settings from the panel, layered over .env. Started here rather than awaited: nothing in the
+// first few requests needs one, and a slow or unreachable panel must not delay the port
+// opening.
+startRemoteSettings('minebox', {
+  info: (msg) => console.log('  ' + msg),
+  warn: (msg, d) => console.warn('  ' + msg, d ?? ''),
+}).catch(() => {});
+
+const server = app.listen(config.port, config.host, () => {
+  console.log(`  MineBox API     ${config.publicUrl}/api/v1/items`);
+  console.log(`  Admin panel     ${config.publicUrl}/admin`);
+  console.log(`  Listening on    ${config.host}:${config.port} (${config.env})`);
+});
+
+/**
+ * Outlive nginx's idea of how long a connection is good for.
+ *
+ * The upstream block keeps connections pooled and reuses them, with no idle timeout of its
+ * own — it assumes a pooled connection stays usable until told otherwise. Node closes an idle
+ * one after five seconds. Most of the time traffic keeps them warm; a long upload is the
+ * exception, and the request after it is then sent into a socket that is already gone, which
+ * nginx reports as a 502 on a page that works when refreshed.
+ *
+ * headersTimeout must stay above keepAliveTimeout, or it fires first and undoes this.
+ */
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 70_000;
+
+/**
+ * One bad request must not take the site down.
+ *
+ * Express does not catch a rejected async handler, and Node's default for an unhandled
+ * rejection is to exit. Here that would stop the admin panel, the catalogue API and every
+ * in-flight download together, and nginx would answer 503 until systemd restarted us — a page
+ * that should have shown one error instead becomes an outage for everyone.
+ *
+ * Logged loudly rather than swallowed: the request that caused it still hangs and still needs
+ * fixing, and this line is how it gets found.
+ */
+process.on('unhandledRejection', (reason) => {
+  console.error('  Unhandled rejection — the request that caused it will hang:', reason);
+});
+
+// Let in-flight requests finish before the process exits, so a deploy never truncates an
+// upload or a download.
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => {
+    console.log(`\n  ${signal} received, shutting down.`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  });
+}

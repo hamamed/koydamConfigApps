@@ -1,0 +1,85 @@
+<%#
+  One card in the catalogue grid.
+
+  The `ad-skin-*` class names come from the shared stylesheet, where they describe a catalogue
+  card rather than anything skin-specific — thumbnail, body, title, meta, flags, actions, the
+  selection checkbox. Reusing them is deliberate: the alternative is a parallel set of
+  `ad-item-*` rules that look identical and drift apart, and the repository's own rule is to
+  use the names the stylesheet defines rather than near-misses of them.
+%>
+<div class="ad-skin-card-wrap position-relative">
+  <a class="ad-skin-card" href="/admin/items/<%= item.id %>">
+    <div class="ad-skin-thumb">
+      <img class="ad-skin-flat" src="<%= item.previewUrl %>" alt="" loading="lazy"
+           width="320" height="400">
+    </div>
+    <div class="ad-skin-body">
+      <p class="ad-skin-title"><%= item.title %></p>
+      <div class="ad-skin-meta">
+        <i data-lucide="download" width="12" height="12"></i>
+        <span><%= formatNumber(item.downloads) %></span>
+        <% if (item.likes || item.dislikes) { %>
+          <span>·</span>
+          <i data-lucide="thumbs-up" width="12" height="12"></i>
+          <span><%= formatNumber(item.likes) %></span>
+          <% if (item.dislikes) { %>
+            <i data-lucide="thumbs-down" width="12" height="12" class="ms-1"></i>
+            <span><%= formatNumber(item.dislikes) %></span>
+          <% } %>
+        <% } %>
+        <span>·</span>
+        <span><%= categoryLabels[item.category] || item.category %></span>
+        <% if (item.mc_version) { %>
+          <span>·</span>
+          <span><%= item.mc_version %></span>
+        <% } %>
+      </div>
+    </div>
+  </a>
+
+  <!-- Outside the card's link, like the other controls, so ticking it does not also open
+       the item. -->
+  <label class="ad-skin-pick" title="Select <%= item.title %>">
+    <input type="checkbox" name="ids" value="<%= item.id %>" form="mbBulk"
+           aria-label="Select <%= item.title %>">
+  </label>
+
+  <div class="ad-skin-flags">
+    <% if (item.isFeatured) { %>
+      <span class="kd-tag kd-tag-accent">Featured</span>
+    <% } %>
+    <% if (!item.isPublished) { %>
+      <span class="ad-status ad-status-draft">Draft</span>
+    <% } %>
+    <span class="kd-tag"><%= item.kindLabel %></span>
+  </div>
+
+  <div class="ad-skin-actions">
+    <form method="post" action="/admin/items/<%= item.id %>/feature" class="m-0" data-quick-action>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ad-icon-btn <%= item.isFeatured ? 'is-on' : '' %>" type="submit"
+              title="<%= item.isFeatured ? 'Remove from Featured' : 'Add to Featured' %>"
+              aria-label="Toggle featured">
+        <i data-lucide="star" width="14" height="14"
+           <%= item.isFeatured ? 'fill="currentColor"' : '' %>></i>
+      </button>
+    </form>
+    <a class="ad-icon-btn" href="/admin/items/<%= item.id %>/edit" title="Edit"
+       aria-label="Edit <%= item.title %>">
+      <i data-lucide="pencil" width="14" height="14"></i>
+    </a>
+    <!--
+      Deliberately a real form post, not the background request the star uses. Removing an item
+      deletes its files as well, so it should reload and show the flash that says it happened,
+      rather than a card quietly vanishing.
+    -->
+    <form method="post" action="/admin/items/<%= item.id %>/delete" class="m-0"
+          data-confirm="Delete “<%= item.title %>”? This removes the files too and can't be undone.">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ad-icon-btn ad-icon-btn-danger" type="submit" title="Delete"
+              aria-label="Delete <%= item.title %>">
+        <i data-lucide="trash-2" width="14" height="14"></i>
+      </button>
+    </form>
+  </div>
+</div>

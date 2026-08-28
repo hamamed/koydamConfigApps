@@ -1,0 +1,1107 @@
+/* Dashboard chrome — shared by platform-api and Brawl.
+
+   Both panels are hand-written HTML using the `ad-*` vocabulary, so one file
+   serves them. SkinCraft does NOT load this: its EJS templates use ~55 `sc-*`
+   class names, and rather than edit every view in a third-party repo with no
+   tests, those classes are redefined against the same Koydam tokens in
+   deploy/overlays/skincraft/css/admin.css. Two files, one design.
+
+   Load order: bootstrap -> koydam.css -> this. */
+:root {
+  --ad-sidebar-w: 254px;
+  --ad-topbar-h: 60px;
+}
+
+body.ad-body { background: var(--kd-surface); }
+
+/* --------------------------------------------------------------- shell -- */
+.ad-shell { display: flex; min-height: 100vh; }
+
+.ad-sidebar {
+  width: var(--ad-sidebar-w);
+  flex: none;
+  background: #fff;
+  border-right: 1px solid var(--kd-line);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 1045;
+  transform: translateX(0);
+  transition: transform var(--kd-slow) var(--kd-ease);
+}
+
+.ad-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: var(--ad-sidebar-w);
+}
+
+.ad-topbar {
+  height: var(--ad-topbar-h);
+  background: rgba(255, 255, 255, .86);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--kd-line);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-inline: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.ad-content { padding: clamp(1.25rem, 2.6vw, 2rem) clamp(1rem, 2.5vw, 1.75rem) 4rem; }
+
+@media (max-width: 991.98px) {
+  .ad-sidebar { transform: translateX(-100%); box-shadow: var(--kd-shadow-lift); }
+  .ad-sidebar.is-open { transform: translateX(0); }
+  .ad-main { margin-left: 0; }
+  .ad-backdrop {
+    position: fixed; inset: 0; z-index: 1040;
+    background: rgba(11, 18, 32, .38);
+    backdrop-filter: blur(1px);
+  }
+}
+
+/* ------------------------------------------------------------- sidebar -- */
+/* The glyph tile beside the wordmark. The markup carries this class in both
+   panels but nothing defined it, so the span was laying out as bare inline
+   text and the icon sat unaligned against the label. */
+/* Secondary line under a heading: the signed-in role, a status subtitle. */
+/* Secondary line under a heading: a signed-in role, a status subtitle. */
+.ad-meta { font-size: 0.7rem; }
+
+/* Win-rate column, wide enough for the inline bar the cell draws. */
+.ad-col-winrate { width: 38%; }
+
+.ad-brand {
+  display: flex; align-items: center; gap: .6rem;
+  padding: 1.05rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  color: var(--kd-ink);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+/* The admin brand keeps its wordmark, so the glyph stays at text scale. */
+.ad-brand .kd-brand-mark { height: 26px; }
+.ad-brand small {
+  display: block;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+}
+
+.ad-nav { padding: .85rem .7rem; overflow-y: auto; flex: 1 1 auto; }
+
+.ad-nav-label {
+  font-size: .66rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  padding: .9rem .55rem .4rem;
+}
+
+.ad-nav-link {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .52rem .6rem;
+  border-radius: 9px;
+  color: var(--kd-muted);
+  font-size: .9rem;
+  font-weight: 500;
+  transition: background var(--kd-fast) var(--kd-ease), color var(--kd-fast) var(--kd-ease);
+}
+.ad-nav-link:hover { background: var(--kd-surface-2); color: var(--kd-ink); }
+.ad-nav-link.is-active { background: var(--kd-ink); color: #fff; }
+.ad-nav-link.is-active .lucide { color: #fff; }
+.ad-nav-link .lucide { width: 16px; height: 16px; color: var(--kd-faint); }
+.ad-nav-link .ad-badge {
+  margin-left: auto;
+  background: var(--kd-accent-soft);
+  color: var(--kd-accent-ink);
+  border-radius: 99px;
+  font-size: .7rem;
+  font-weight: 650;
+  padding: .05rem .45rem;
+}
+.ad-nav-link.is-active .ad-badge { background: rgba(255,255,255,.18); color: #fff; }
+
+.ad-sidebar-foot { padding: .8rem; border-top: 1px solid var(--kd-line); }
+
+/* --------------------------------------------------------------- views -- */
+.ad-view { display: none; }
+.ad-view.is-active { display: block; animation: ad-fade .22s var(--kd-ease); }
+@keyframes ad-fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.ad-page-title { font-size: 1.4rem; letter-spacing: -0.028em; margin: 0; }
+
+.ad-card {
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+}
+.ad-card-head {
+  padding: .9rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ad-card-head h2 { font-size: .95rem; margin: 0; letter-spacing: -0.015em; }
+.ad-card-body { padding: 1.15rem; }
+
+/* KPI tiles */
+.ad-kpi { padding: 1.15rem; }
+.ad-kpi .lucide { width: 17px; height: 17px; color: var(--kd-faint); }
+.ad-kpi-value { font-size: 1.75rem; font-weight: 640; letter-spacing: -0.035em; color: var(--kd-ink); line-height: 1.1; }
+.ad-kpi-label { font-size: .8rem; color: var(--kd-faint); }
+
+/* -------------------------------------------------------------- tables -- */
+.ad-table { width: 100%; margin: 0; font-size: .885rem; }
+.ad-table th {
+  font-size: .7rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  padding: .7rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface);
+  white-space: nowrap;
+}
+.ad-table td {
+  padding: .8rem 1.15rem;
+  border-bottom: 1px solid var(--kd-line);
+  vertical-align: middle;
+  color: var(--kd-ink-2);
+}
+.ad-table tbody tr:last-child td { border-bottom: 0; }
+.ad-table tbody tr { transition: background var(--kd-fast) var(--kd-ease); }
+.ad-table tbody tr:hover { background: var(--kd-surface); }
+
+.ad-table-wrap { overflow-x: auto; }
+
+/* ------------------------------------------------------------- editors -- */
+.ad-section-label {
+  font-size: .72rem;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  margin-bottom: .85rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--kd-line);
+}
+
+/* Markdown/HTML editor toolbar */
+.ad-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  padding: .4rem;
+  border: 1px solid var(--kd-line-strong);
+  border-bottom: 0;
+  border-radius: var(--kd-radius-sm) var(--kd-radius-sm) 0 0;
+  background: var(--kd-surface);
+}
+.ad-toolbar button {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 7px;
+  padding: .28rem .5rem;
+  color: var(--kd-muted);
+  font-size: .8rem;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-toolbar button:hover { background: #fff; border-color: var(--kd-line); color: var(--kd-ink); }
+.ad-editor {
+  border-radius: 0 0 var(--kd-radius-sm) var(--kd-radius-sm);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .82rem;
+  line-height: 1.7;
+  min-height: 260px;
+  resize: vertical;
+}
+.ad-preview {
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  max-height: 420px;
+  overflow: auto;
+}
+
+/* Image pickers */
+.ad-thumb {
+  position: relative;
+  width: 92px; height: 92px;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  overflow: hidden;
+  background: var(--kd-surface-2);
+  flex: none;
+}
+.ad-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ad-thumb button {
+  position: absolute; top: 4px; right: 4px;
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 6px;
+  background: rgba(11, 18, 32, .72);
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--kd-fast) var(--kd-ease);
+}
+.ad-thumb:hover button { opacity: 1; }
+
+.ad-drop {
+  border: 1px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  padding: 1.1rem;
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: all var(--kd-fast) var(--kd-ease);
+}
+.ad-drop:hover, .ad-drop.is-dragging { border-color: var(--kd-accent); background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Repeatable list rows (features, bullets) */
+.ad-repeat-row { display: flex; gap: .5rem; margin-bottom: .5rem; }
+.ad-repeat-row .btn { flex: none; }
+
+/* Toasts */
+.ad-toasts { position: fixed; right: 1rem; bottom: 1rem; z-index: 1080; display: grid; gap: .5rem; }
+.ad-toast {
+  display: flex; align-items: center; gap: .55rem;
+  background: var(--kd-ink);
+  color: #fff;
+  border-radius: 10px;
+  padding: .65rem .9rem;
+  font-size: .875rem;
+  box-shadow: var(--kd-shadow-lift);
+  animation: ad-toast-in .24s var(--kd-ease);
+}
+.ad-toast.is-error { background: var(--kd-danger); }
+.ad-toast .lucide { width: 16px; height: 16px; }
+@keyframes ad-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Status pills */
+.ad-status { font-size: .72rem; font-weight: 600; padding: .18rem .5rem; border-radius: 99px; text-transform: capitalize; }
+.ad-status-published { background: #ecfdf5; color: var(--kd-ok); }
+.ad-status-draft     { background: var(--kd-surface-2); color: var(--kd-muted); }
+.ad-status-archived  { background: #fef2f2; color: var(--kd-danger); }
+.ad-status-sent      { background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+
+/* Empty states */
+.ad-empty { padding: 3rem 1rem; text-align: center; color: var(--kd-faint); }
+.ad-empty .lucide { width: 26px; height: 26px; }
+
+/* Login screen */
+.ad-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 1px 1px, var(--kd-line-strong) 1px, transparent 0) 0 0 / 28px 28px,
+    var(--kd-surface);
+}
+.ad-login-card {
+  width: min(410px, 100%);
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: var(--kd-shadow-lift);
+  padding: 2rem;
+}
+
+/* Sub-line under the sign-in lockup. Centred with it, and quiet enough that
+   the logo stays the largest thing on the page. */
+.ad-login-lede {
+  text-align: center;
+  color: var(--kd-muted);
+  font-size: 0.875rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ── Operations views ─────────────────────────────────────────────────────── */
+
+/* The config preview. Monospace and scrollable in its own box: a config is
+   read by comparing lines, and a document that widens the page instead of
+   scrolling itself makes every other panel jump. */
+.ad-json {
+  background: var(--kd-surface);
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  padding: .85rem 1rem;
+  margin: 0;
+  max-height: 26rem;
+  overflow: auto;
+  font-size: .78rem;
+  line-height: 1.55;
+  color: var(--kd-ink-2);
+}
+
+/* A note about something worth checking before a release - not an error, so
+   it reads as amber rather than red. */
+.ad-warn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--kd-radius);
+  padding: .55rem .75rem;
+  font-size: .82rem;
+  color: #92400e;
+}
+.ad-warn .lucide { flex: none; margin-top: .1rem; }
+
+/* Backup age on the dashboard. Quiet when recent, loud when not - the whole
+   point is that a stale backup is visible without being looked for. */
+.ad-backup {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .78rem;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  border: 1px solid var(--kd-line);
+  color: var(--kd-muted);
+}
+.ad-backup.stale {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SkinCraft components
+
+   The shell above - sidebar, cards, tables, nav - is shared by all three
+   panels. What follows is SkinCraft's own furniture: skin cards, charts, the
+   template designer's canvas and stickers. It lives here rather than in a
+   second stylesheet so there is one file to change when the design does, and
+   costs the other two panels nothing but unused selectors.
+
+   These were `sc-*` in a separate sheet. The shell rules that duplicated the
+   ones above were dropped rather than ported - keeping them would have
+   redefined .ad-card and .ad-sidebar for every panel that loads this file.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Two values with no equivalent in the Koydam tokens. Everything else the
+     components need is already a --kd- token. */
+  --ad-cyan: #0891b2;
+  --ad-gradient: linear-gradient(90deg, var(--kd-accent), #818cf8);
+}
+body { background: var(--kd-surface); color: var(--kd-ink-2); }
+
+.ad-brand-mark {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  background: var(--kd-accent-soft);
+  color: var(--kd-accent);
+  flex: none;
+}
+
+.ad-brand-name { font-weight: 650; letter-spacing: -.01em; color: var(--kd-ink); }
+
+.ad-brand-name small {
+  display: block;
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+}
+
+
+
+.ad-card-pad { padding: 1.15rem; }
+
+.ad-divider { height: 1px; background: var(--kd-line); border: 0; margin: 1rem 0; }
+
+.ad-page-sub { color: var(--kd-muted); font-size: .9rem; margin: .15rem 0 0; }
+
+/* ── Stats ──────────────────────────────────────────────────────────────── */
+
+.ad-stat { position: relative; overflow: hidden; }
+
+.ad-stat-icon {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--kd-accent-soft);
+  color: var(--kd-accent);
+}
+
+.ad-stat-value {
+  font-size: 1.75rem;
+  font-weight: 640;
+  letter-spacing: -.035em;
+  color: var(--kd-ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-stat-label { font-size: .8rem; color: var(--kd-faint); }
+
+.ad-delta { font-size: .78rem; font-weight: 600; }
+.ad-delta.up { color: var(--kd-ok); }
+.ad-delta.down { color: var(--kd-danger); }
+
+/* ── Buttons and chips ──────────────────────────────────────────────────── */
+
+.ad-primary {
+  background: var(--kd-accent);
+  border: 1px solid var(--kd-accent);
+  color: #fff;
+}
+.ad-primary:hover { background: var(--kd-accent-ink); border-color: var(--kd-accent-ink); color: #fff; }
+
+.ad-ghost {
+  background: #fff;
+  border: 1px solid var(--kd-line);
+  color: var(--kd-ink-2);
+}
+.ad-ghost:hover { border-color: var(--kd-line-strong); background: var(--kd-surface); color: var(--kd-ink); }
+
+.ad-icon-btn {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  border: 1px solid var(--kd-line);
+  background: #fff;
+  color: var(--kd-muted);
+}
+.ad-icon-btn:hover { color: var(--kd-ink); border-color: var(--kd-line-strong); }
+
+.ad-tag {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .74rem; font-weight: 600;
+  padding: .16rem .5rem;
+  border-radius: 999px;
+  background: var(--kd-surface-2);
+  color: var(--kd-ink-2);
+  border: 1px solid var(--kd-line);
+}
+
+.ad-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .78rem;
+  color: var(--kd-muted);
+  background: var(--kd-surface-2);
+  border-radius: 6px;
+  padding: .08rem .32rem;
+}
+
+.ad-swatch {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--kd-line-strong);
+  display: inline-block;
+}
+
+/* ── Forms ──────────────────────────────────────────────────────────────── */
+
+.form-control, .form-select {
+  border-color: var(--kd-line);
+  color: var(--kd-ink);
+  background: #fff;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--kd-accent);
+  box-shadow: 0 0 0 .18rem rgba(79, 70, 229, .14);
+}
+
+/* The icon that sits inside a field, and the padding its input needs so the
+   text does not run underneath it. These were one class: .ad-input-icon was
+   put on the input, which then inherited position:absolute and
+   pointer-events:none and could not be typed into. */
+.ad-has-icon { padding-left: 2.15rem; }
+
+.ad-input-icon {
+  position: absolute;
+  left: .7rem; top: 50%;
+  transform: translateY(-50%);
+  color: var(--kd-faint);
+  pointer-events: none;
+  /* A wrapper, so the rule survives lucide replacing the <i> inside it. */
+  display: inline-flex;
+  line-height: 0;
+}
+
+.ad-range { accent-color: var(--kd-accent); }
+
+/* ── Skins grid ─────────────────────────────────────────────────────────── */
+
+.ad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.ad-skin-card {
+  /* An <a> is inline by default, and this one used to hold nothing but an
+     inline <img>. Once the thumbnail became a block element the inline box
+     fragmented, and .ad-skin-body — absolutely positioned to "the bottom of
+     the card" — resolved against a degenerate fragment instead, collapsing the
+     caption into a narrow strip down the left. `overflow: hidden` was being
+     ignored for the same reason: it does not apply to non-replaced inlines. */
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--kd-radius);
+  border: 1px solid var(--kd-line);
+  background: #fff;
+  transition: box-shadow var(--kd-fast) var(--kd-ease),
+              border-color var(--kd-fast) var(--kd-ease);
+}
+.ad-skin-card:hover { border-color: var(--kd-line-strong); box-shadow: var(--kd-shadow); }
+
+/* The thumbnail is a frame holding two things: the flat derived preview, and
+   the avatar drawn over it once the template has loaded. Both fill the frame,
+   so the swap does not move anything. */
+.ad-skin-thumb {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  width: 100%;
+  display: block;
+  overflow: hidden;
+  /* Light, so a transparent PNG reads as artwork rather than a hole. */
+  background: var(--kd-surface-2);
+}
+
+.ad-skin-flat,
+.ad-skin-worn {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Hidden rather than removed: a card whose canvas is later cleared by the
+   browser still has something to show. */
+.ad-skin-thumb.is-worn .ad-skin-flat { visibility: hidden; }
+
+.ad-skin-worn {
+  background:
+    radial-gradient(circle at 50% 38%, var(--kd-surface), var(--kd-surface-2) 72%);
+}
+
+.ad-skin-body {
+  position: absolute; inset: auto 0 0 0;
+  padding: .8rem;
+  /* Kept dark: it sits over artwork, not over the page. */
+  background: linear-gradient(to top, rgba(0,0,0,.82) 20%, rgba(0,0,0,.3) 65%, transparent);
+  color: #fff;
+}
+
+.ad-skin-title { font-weight: 600; font-size: .9rem; color: #fff; }
+.ad-skin-meta  { font-size: .74rem; color: rgba(255,255,255,.8); }
+.ad-skin-flags { display: flex; gap: .25rem; }
+.ad-skin-actions { position: absolute; top: .55rem; right: .55rem; display: flex; gap: .3rem; }
+
+.ad-sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: .5rem; }
+.ad-sticker { border: 1px solid var(--kd-line); border-radius: 9px; padding: .35rem; background: #fff; }
+
+/* ── Upload ─────────────────────────────────────────────────────────────── */
+
+.ad-dropzone {
+  border: 2px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface);
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--kd-muted);
+  transition: border-color var(--kd-fast) var(--kd-ease),
+              background var(--kd-fast) var(--kd-ease);
+}
+.ad-dropzone-preview { max-height: 240px; border-radius: var(--kd-radius-sm); }
+.ad-canvas-wrap { background: var(--kd-surface-2); border-radius: var(--kd-radius); padding: 1rem; }
+
+/* ── Charts ─────────────────────────────────────────────────────────────── */
+
+.ad-chart { width: 100%; height: 220px; }
+.ad-chart-grid { stroke: var(--kd-line); stroke-width: 1; }
+.ad-chart-line { stroke: var(--kd-accent); stroke-width: 2; fill: none; }
+.ad-chart-area { fill: rgba(79, 70, 229, .10); }
+.ad-spark { width: 100%; height: 38px; }
+.ad-spark-line { stroke: var(--kd-accent); stroke-width: 1.8; fill: none; }
+
+/* ── Reports ────────────────────────────────────────────────────────────── */
+
+.ad-report-row { border-bottom: 1px solid var(--kd-line); }
+.ad-report-row:last-child { border-bottom: 0; }
+.ad-reason { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--kd-warn); }
+.ad-empty-icon {
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  display: grid; place-items: center;
+  margin: 0 auto .75rem;
+  background: var(--kd-surface-2);
+  color: var(--kd-faint);
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+
+.table { --bs-table-hover-bg: var(--kd-surface); color: var(--kd-ink-2); }
+.table thead th {
+  font-size: .7rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--kd-faint);
+  font-weight: 600;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface);
+  white-space: nowrap;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+.ad-menu-toggle { display: none; }
+.ad-scrim { display: none; }
+
+@media (max-width: 991.98px) {
+  .ad-sidebar {
+    position: fixed; inset: 0 auto 0 0;
+    transform: translateX(-100%);
+    transition: transform var(--kd-slow) var(--kd-ease);
+    box-shadow: var(--kd-shadow-lift);
+  }
+  .ad-sidebar.is-open { transform: translateX(0); }
+  .ad-main { padding: 1rem 1rem 3rem; }
+  .ad-menu-toggle { display: grid; }
+
+  .ad-scrim {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(11, 18, 32, .35);
+    opacity: 0; pointer-events: none;
+    transition: opacity var(--kd-fast) var(--kd-ease);
+    z-index: 1040;
+  }
+  .ad-scrim.is-open { opacity: 1; pointer-events: auto; }
+}
+
+/* The wrapper the skins grid puts around each card. */
+.ad-skin-card-wrap { position: relative; }
+
+/* Two state classes the scripts toggle and no stylesheet ever defined, so the
+   drop zone gave no feedback while a file was over it and a toggled button
+   looked identical to an untoggled one. */
+.ad-dropzone.is-dragging {
+  border-color: var(--kd-accent);
+  background: var(--kd-accent-soft);
+}
+
+.btn.is-on,
+.ad-icon-btn.is-on {
+  background: var(--kd-accent);
+  border-color: var(--kd-accent);
+  color: #fff;
+}
+
+/* ── Wallpaper gallery ────────────────────────────────────────────────────── */
+
+/* auto-fill rather than a fixed column count, so the grid reflows from a phone
+   to a wide monitor without breakpoints. */
+.ad-wp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: .75rem;
+}
+
+.ad-wp {
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  overflow: hidden;
+  background: var(--kd-surface);
+}
+
+/* Phone-shaped, because that is what these are. A square thumbnail of a
+   portrait wallpaper crops the subject out of the middle. */
+.ad-wp img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  background: var(--kd-line);
+}
+
+.ad-wp-body { padding: .5rem .6rem; }
+.ad-wp-name { font-size: .8rem; font-weight: 550; }
+
+/* ── Resource meters ──────────────────────────────────────────────────────── */
+
+/* A bar, not a gauge. The question is "how close to full", and a filled track
+   answers that at a glance in a way a number does not. */
+.ad-meter {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--kd-surface-2);
+  overflow: hidden;
+}
+
+.ad-meter-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--kd-accent);
+  transition: width var(--kd-slow) var(--kd-ease);
+}
+
+/* Colour is the second signal, never the only one: the figure beside the bar
+   already says the number. */
+.ad-meter-fill.is-warn { background: var(--kd-warn); }
+.ad-meter-fill.is-bad  { background: var(--kd-danger); }
+
+/* A warning that is past advisory. Same shape as .ad-warn so a page of them
+   reads as one list, with the fill carrying the difference. */
+.ad-warn.is-critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* AI generation progress
+   ----------------------
+   A long request needs to say so on the page. The browser's tab spinner is the
+   only other signal, and it is both easy to miss and indistinguishable from a
+   page that has hung — which is how a two-minute generation gets submitted
+   three times, each one billed to the image key. */
+.ad-ai-status {
+  display: flex;
+  align-items: flex-start;
+  gap: .7rem;
+  margin-top: .9rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+  color: var(--kd-ink);
+}
+
+/* The accent border is what separates "working" from a static notice sitting
+   in the same slot. */
+.ad-ai-status.is-busy { border-color: var(--kd-accent-soft); }
+
+.ad-ai-status-text { line-height: 1.35; }
+.ad-ai-status-text span { color: var(--kd-muted); }
+
+.ad-spin {
+  display: inline-flex;
+  flex: none;
+  color: var(--kd-accent);
+  animation: ad-spin 1s linear infinite;
+}
+
+.ad-spin .lucide { width: 18px; height: 18px; }
+
+@keyframes ad-spin { to { transform: rotate(360deg); } }
+
+/* Spinning is decoration; the elapsed counter beside it is the real signal, so
+   removing the motion loses nothing for someone who asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  .ad-spin { animation: none; }
+}
+
+.ad-ai-error { margin-top: .9rem; margin-bottom: 0; }
+
+/* The planner's reasoning
+   ----------------------
+   Reads as a transcript rather than a form field: this is the model's words,
+   and styling them like an input would suggest they are yours to type over.
+   The reply box underneath is the part that is. */
+.ad-plan {
+  margin-top: .9rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface);
+  overflow: hidden;
+}
+
+.ad-plan-head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+  font-size: .875rem;
+}
+
+.ad-plan-icon { color: var(--kd-accent); width: 16px; height: 16px; }
+
+/* pre-wrap, not a paragraph: the planner writes in short lines and its own
+   breaks are part of how the plan reads. Capped and scrollable so a long one
+   cannot push the controls below the fold while it is still being written. */
+.ad-plan-body {
+  padding: .9rem;
+  margin: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-size: .9rem;
+  line-height: 1.5;
+  color: var(--kd-ink);
+}
+
+.ad-plan-body:empty { display: none; }
+
+.ad-plan-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .7rem .9rem;
+  border-top: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+}
+
+.ad-plan-foot input { flex: 1 1 12rem; min-width: 0; }
+
+/* Preview tabs, and the avatar
+   ---------------------------
+   The flat sheet answers whether the artwork is right; the avatar answers
+   whether it survives the seams. Both are needed, so neither gets to be the
+   one that is buried. */
+.ad-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--kd-line);
+  background: var(--kd-surface-2);
+}
+
+.ad-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  padding: .6rem .5rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--kd-muted);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ad-tab .lucide { width: 15px; height: 15px; }
+.ad-tab:hover { color: var(--kd-ink); }
+
+/* is-active, matching every other selected thing in this panel. `active` is
+   Bootstrap's and is styled by something else entirely. */
+.ad-tab.is-active {
+  color: var(--kd-accent);
+  border-bottom-color: var(--kd-accent);
+  background: var(--kd-surface);
+}
+
+/* ad-skinview, because the two obvious names were both taken and neither
+   failed loudly. `.ad-view` is the SPA route-view for the other panels and is
+   display:none until .is-active — these would have rendered as nothing at all.
+   `.ad-preview` is the bordered scroll box used elsewhere, which would have
+   boxed the avatar in padding and a 420px scroller. Both are defined; neither
+   is defined for this. */
+.ad-skinview { background: var(--kd-surface); }
+
+.ad-avatar {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  /* grab, because the only way to discover it turns is to try. */
+  cursor: grab;
+  touch-action: none;
+  background:
+    radial-gradient(circle at 50% 38%, var(--kd-surface-2), var(--kd-surface) 70%);
+}
+
+.ad-avatar:active { cursor: grabbing; }
+
+.ad-skinview-hint {
+  margin: 0;
+  padding: .55rem .9rem;
+  border-top: 1px solid var(--kd-line);
+  font-size: .78rem;
+  color: var(--kd-faint);
+}
+
+/* Starting from an idea
+   --------------------
+   The cheap end of the AI flow: text only, nothing drawn. Laid out as a list
+   of real choices rather than a dropdown, because the description is the part
+   that decides what gets made and it deserves to be read before it is picked. */
+.ad-ideas {
+  margin-bottom: 1rem;
+  padding: .75rem;
+  border: 1px dashed var(--kd-line-strong);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+}
+
+.ad-ideas-ask { display: flex; align-items: center; gap: .5rem; }
+.ad-ideas-ask input { flex: 1 1 12rem; min-width: 0; }
+.ad-ideas-icon { flex: none; width: 17px; height: 17px; color: var(--kd-warn); }
+
+.ad-ideas-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: .5rem;
+  margin-top: .7rem;
+  font-size: .8rem;
+  color: var(--kd-muted);
+}
+
+.ad-idea {
+  display: block;
+  text-align: left;
+  padding: .6rem .7rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+}
+
+.ad-idea:hover { border-color: var(--kd-accent-soft); }
+.ad-idea strong { display: block; font-size: .84rem; color: var(--kd-ink); margin-bottom: .15rem; }
+.ad-idea span { display: block; font-size: .78rem; line-height: 1.4; color: var(--kd-muted); }
+
+/* Which one is in the box now. Without it, picking a second idea replaces the
+   description silently and the first still looks selected. */
+.ad-idea.is-chosen {
+  border-color: var(--kd-accent);
+  box-shadow: inset 0 0 0 1px var(--kd-accent);
+}
+
+/* Choosing what kind of skin
+   -------------------------
+   Radios rather than a select, because the difference between the two decides
+   what you type in the next field and what the images cost. A dropdown hides
+   the option you did not pick, and with it the reason to reconsider. */
+.ad-style {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.ad-style legend { float: none; width: auto; }
+
+.ad-style-option {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;
+  padding: .6rem .7rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+}
+
+.ad-style-option + .ad-style-option { margin-top: .4rem; }
+.ad-style-option:hover { border-color: var(--kd-accent-soft); }
+.ad-style-option input { margin-top: .2rem; flex: none; }
+.ad-style-option strong { display: block; font-size: .86rem; color: var(--kd-ink); }
+.ad-style-option span { font-size: .78rem; line-height: 1.4; color: var(--kd-muted); }
+
+/* :has, so the chosen row is outlined without the script having to track it. */
+.ad-style-option:has(input:checked) {
+  border-color: var(--kd-accent);
+  background: var(--kd-surface-2);
+}
+
+/* Reads as a field so it lines up with the controls beside it, but it is
+   output — nothing here is typed into. */
+.ad-cost { background: var(--kd-surface-2); color: var(--kd-muted); }
+
+/* The finished draft. Sits with the other AI feedback rather than replacing it,
+   so a page that has just generated shows what happened without moving. */
+.ad-ai-done { margin-top: .9rem; margin-bottom: 0; }
+
+/* Destructive, and it has to look it. The star and pencil beside this one are
+   reversible; this deletes the files. */
+.ad-icon-btn-danger { color: var(--kd-danger); }
+.ad-icon-btn-danger:hover {
+  color: #fff;
+  background: var(--kd-danger);
+  border-color: var(--kd-danger);
+}
+
+/* Selecting several skins at once
+   ------------------------------
+   The bar is always visible rather than appearing on the first tick: with
+   JavaScript off there is nothing to reveal it, and a control that only exists
+   once you have guessed it exists is not a control. */
+.ad-bulk {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .9rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+  font-size: .82rem;
+}
+
+.ad-bulk-all { display: flex; align-items: center; gap: .4rem; margin: 0; cursor: pointer; }
+.ad-bulk-count { color: var(--kd-muted); margin-right: auto; }
+
+/* Top-left, opposite the star and pencil, so nothing overlaps and the two
+   kinds of action stay visually separate. */
+.ad-skin-pick {
+  position: absolute;
+  top: .55rem;
+  left: .55rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--kd-line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.ad-skin-pick input { cursor: pointer; margin: 0; }
+
+/* A ticked card should be obvious from across the grid, not from its checkbox. */
+.ad-skin-card-wrap:has(.ad-skin-pick input:checked) .ad-skin-card {
+  border-color: var(--kd-accent);
+  box-shadow: 0 0 0 2px var(--kd-accent-soft);
+}
+
+/* Approval
+   --------
+   One bar, filled by the share who liked it. Two stacked bars would invite
+   comparing lengths across skins, which is a different question from the one
+   this answers. */
+.ad-approval {
+  display: flex;
+  height: 8px;
+  border-radius: 99px;
+  overflow: hidden;
+  /* The remainder IS the dislikes — the track is the second colour rather than
+     a second element, so the two always add to the whole. */
+  background: var(--kd-danger);
+}
+
+.ad-approval-up {
+  background: var(--kd-ok);
+  transition: width var(--kd-slow) var(--kd-ease);
+}
+
+.ad-approval-figure { font-size: 1.4rem; font-weight: 700; color: var(--kd-ink); }
+.ad-approval-up-label { color: var(--kd-ok); display: inline-flex; align-items: center; gap: .3rem; }
+.ad-approval-down-label { color: var(--kd-danger); display: inline-flex; align-items: center; gap: .3rem; }

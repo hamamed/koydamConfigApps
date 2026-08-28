@@ -1,0 +1,277 @@
+<%- include('../partials/head', { title }) %>
+<div class="ad-shell">
+  <%- include('../partials/sidebar') %>
+  <div class="ad-scrim" id="mbScrim"></div>
+
+  <main class="ad-main">
+    <%- include('../partials/topbar', {
+      heading: mode === 'create' ? 'Add an item' : 'Edit item',
+      subheading: mode === 'create'
+        ? 'A skin, an addon, a texture pack, a world or a seed'
+        : item.title
+    }) %>
+
+    <div class="ad-content">
+      <%- include('../partials/flash') %>
+
+      <% if (errors.length) { %>
+        <div class="alert alert-danger" role="alert">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i data-lucide="circle-alert" width="17" height="17"></i>
+            <strong>That didn't save.</strong>
+          </div>
+          <ul class="mb-0 ps-4">
+            <% errors.forEach((error) => { %><li><%= error %></li><% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <form method="post"
+            action="<%= mode === 'create' ? '/admin/items' : `/admin/items/${item.id}` %>"
+            enctype="multipart/form-data" data-item-form
+            data-accepted='<%- JSON.stringify(accepted) %>'
+            data-install-hints='<%- JSON.stringify(installHints) %>'>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="row g-4">
+          <div class="col-12 col-xl-7">
+            <div class="ad-card ad-card-pad">
+              <h2 class="h6 mb-3">What is it</h2>
+
+              <div class="mb-3">
+                <label class="form-label" for="kind">Kind</label>
+                <%#
+                  Fixed once the item exists. Changing it would leave a .mcworld filed as a
+                  skin, with a skin's model recorded against it and the wrong install
+                  instructions shown in the app — so the server refuses it too, and this is
+                  only the half of that the person can see.
+                %>
+                <select class="form-select" id="kind" name="kind"
+                        <%= mode === 'edit' ? 'disabled' : '' %> data-kind-select>
+                  <% kinds.forEach((kind) => { %>
+                    <option value="<%= kind %>" <%= item.kind === kind ? 'selected' : '' %>>
+                      <%= kindLabels[kind] %>
+                    </option>
+                  <% }) %>
+                </select>
+                <% if (mode === 'edit') { %>
+                  <input type="hidden" name="kind" value="<%= item.kind %>">
+                  <div class="form-text">
+                    The kind can't be changed. Delete this and add it again to move it.
+                  </div>
+                <% } %>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="title">Title</label>
+                <input class="form-control" id="title" name="title" maxlength="90" required
+                       value="<%= item.title %>" placeholder="Dragon Mounts">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="description">Description</label>
+                <textarea class="form-control" id="description" name="description" rows="3"
+                          maxlength="600"
+                          placeholder="What it adds, and anything a player needs to know."><%= item.description %></textarea>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <label class="form-label" for="category">Category</label>
+                  <%#
+                    Every kind's categories are rendered, grouped by kind, and the script hides
+                    the groups that don't apply. With JavaScript off all forty are listed and
+                    the server rejects a mismatch by name — which is worse to use and still
+                    correct, rather than an empty control that cannot be used at all.
+                  %>
+                  <select class="form-select" id="category" name="category" data-category-select>
+                    <% kinds.forEach((kind) => { %>
+                      <optgroup label="<%= kindLabels[kind] %>" data-kind="<%= kind %>">
+                        <% categories[kind].forEach((category) => { %>
+                          <option value="<%= category %>"
+                                  <%= item.kind === kind && item.category === category ? 'selected' : '' %>>
+                            <%= categoryLabels[category] || category %>
+                          </option>
+                        <% }) %>
+                      </optgroup>
+                    <% }) %>
+                  </select>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="edition">Edition</label>
+                  <select class="form-select" id="edition" name="edition">
+                    <% editions.forEach((edition) => { %>
+                      <option value="<%= edition %>" <%= item.edition === edition ? 'selected' : '' %>>
+                        <%= editionLabels[edition] %>
+                      </option>
+                    <% }) %>
+                  </select>
+                  <div class="form-text">Java content can be browsed but not installed on a phone.</div>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="mc_version">Minecraft version</label>
+                  <input class="form-control" id="mc_version" name="mc_version" maxlength="24"
+                         value="<%= item.mc_version || '' %>" placeholder="1.21">
+                  <div class="form-text">Optional, and worth filling in — it is the top report reason.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Seeds: no file, a code instead. -->
+            <div class="ad-card ad-card-pad mt-4" data-kind-only="seed" hidden>
+              <h2 class="h6 mb-3">The seed</h2>
+
+              <div class="mb-3">
+                <label class="form-label" for="seed_code">Seed code</label>
+                <input class="form-control ad-code" id="seed_code" name="seed_code" maxlength="40"
+                       value="<%= item.seed_code || '' %>" placeholder="-1497927406">
+                <div class="form-text">
+                  Exactly as it is typed into the world creator. Minecraft hashes any text, so a
+                  word is as valid as a number.
+                </div>
+              </div>
+
+              <label class="form-label">Places worth going</label>
+              <p class="form-text mt-0">
+                Coordinates the app shows under the seed. Leave a row blank to skip it.
+              </p>
+              <div data-highlights>
+                <%
+                  const highlights = (item.seedMeta && item.seedMeta.highlights) || [];
+                  const rows = highlights.length ? highlights : [{ label: '', x: '', y: '', z: '' }];
+                %>
+                <% rows.forEach((highlight) => { %>
+                  <%#
+                    .ad-repeat-row is the stylesheet's own flex row for exactly this. It was
+                    combined with Bootstrap's .row + .col-* here, and the two disagree: the
+                    class adds a gap on top of columns that already total 100%, so the last
+                    field wrapped onto its own line.
+                  %>
+                  <div class="ad-repeat-row" data-highlight-row>
+                    <input class="form-control form-control-sm flex-grow-1" name="highlight_label"
+                           maxlength="40" placeholder="Village" value="<%= highlight.label || '' %>">
+                    <input class="form-control form-control-sm" name="highlight_x" type="number"
+                           placeholder="X" value="<%= highlight.x ?? '' %>" style="flex:none;width:78px;">
+                    <input class="form-control form-control-sm" name="highlight_y" type="number"
+                           placeholder="Y" value="<%= highlight.y ?? '' %>" style="flex:none;width:78px;">
+                    <input class="form-control form-control-sm" name="highlight_z" type="number"
+                           placeholder="Z" value="<%= highlight.z ?? '' %>" style="flex:none;width:78px;">
+                  </div>
+                <% }) %>
+              </div>
+              <button class="btn btn-kd-ghost btn-sm" type="button" data-add-highlight>
+                <i data-lucide="plus" width="14" height="14" class="me-1"></i>Another place
+              </button>
+            </div>
+
+            <div class="ad-card ad-card-pad mt-4">
+              <h2 class="h6 mb-3">Findability</h2>
+
+              <div class="mb-3">
+                <label class="form-label" for="tags">Tags</label>
+                <input class="form-control" id="tags" name="tags"
+                       value="<%= (item.tags || []).join(', ') %>"
+                       placeholder="dragons, mobs, rideable">
+                <div class="form-text">Comma separated, up to twelve.</div>
+                <% if (knownTags.length) { %>
+                  <div class="d-flex flex-wrap gap-1 mt-2">
+                    <% knownTags.forEach((tag) => { %>
+                      <button class="ad-tag border-0" type="button" data-tag-suggestion="<%= tag.name %>">
+                        <%= tag.name %>
+                      </button>
+                    <% }) %>
+                  </div>
+                <% } %>
+              </div>
+
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="is_published" name="is_published" <%= item.isPublished !== false ? 'checked' : '' %>>
+                <label class="form-check-label" for="is_published">
+                  Published — visible in the app
+                </label>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="is_featured" name="is_featured" <%= item.isFeatured ? 'checked' : '' %>>
+                <label class="form-check-label" for="is_featured">
+                  Featured — shown in the app's carousel
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-5">
+            <!-- The file. Hidden for seeds, which have none. -->
+            <div class="ad-card ad-card-pad" data-kind-except="seed">
+              <h2 class="h6 mb-1">The file</h2>
+              <p class="form-text mt-0 mb-3" data-accepted-hint></p>
+
+              <label class="ad-dropzone d-block" data-dropzone data-file-drop>
+                <input class="d-none" type="file" name="file" data-file-input>
+                <span data-dropzone-empty>
+                  <i data-lucide="upload-cloud" width="26" height="26"></i>
+                  <span class="d-block mt-2 small">Drop a file here, or click to choose</span>
+                </span>
+                <span class="d-none" data-file-chosen>
+                  <i data-lucide="file-check-2" width="26" height="26"></i>
+                  <span class="d-block mt-2 small fw-semibold" data-file-name></span>
+                  <span class="d-block small kd-faint" data-file-size></span>
+                </span>
+              </label>
+
+              <% if (mode === 'edit' && item.file_name) { %>
+                <div class="ad-meta mt-3">
+                  <div class="d-flex justify-content-between small">
+                    <span class="kd-faint">Current file</span>
+                    <span class="fw-semibold text-truncate ms-2"><%= item.original_name %></span>
+                  </div>
+                  <div class="d-flex justify-content-between small mt-1">
+                    <span class="kd-faint">Size</span>
+                    <span class="fw-semibold"><%= formatBytes(item.file_bytes) %></span>
+                  </div>
+                  <div class="form-text">Choosing a new file replaces it. Leave empty to keep it.</div>
+                </div>
+              <% } %>
+            </div>
+
+            <div class="ad-card ad-card-pad mt-4">
+              <h2 class="h6 mb-1">Card image</h2>
+              <p class="form-text mt-0 mb-3" data-preview-hint>
+                Optional. A skin is drawn from its own texture and a pack uses its
+                <code>pack_icon.png</code>, so this is only needed to override that.
+              </p>
+
+              <label class="ad-dropzone d-block" data-dropzone data-preview="mbPreviewImage">
+                <input class="d-none" type="file" name="preview" accept="image/png,image/jpeg,image/webp">
+                <span data-dropzone-empty>
+                  <i data-lucide="image-plus" width="26" height="26"></i>
+                  <span class="d-block mt-2 small">Drop an image, or click to choose</span>
+                </span>
+                <img class="ad-dropzone-preview d-none" id="mbPreviewImage" alt="">
+              </label>
+
+              <% if (mode === 'edit' && item.previewUrl) { %>
+                <img class="ad-dropzone-preview mt-3 d-block mx-auto" src="<%= item.previewUrl %>"
+                     alt="Current card image" width="180" height="225">
+              <% } %>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button class="btn btn-kd flex-grow-1" type="submit">
+                <i data-lucide="check" width="16" height="16" class="me-1"></i>
+                <%= mode === 'create' ? 'Add to the catalogue' : 'Save changes' %>
+              </button>
+              <a class="btn btn-kd-ghost"
+                 href="<%= mode === 'create' ? '/admin/items' : `/admin/items/${item.id}` %>">Cancel</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/item-form.js?v=<%= assetVersion %>"></script>
+<%- include('../partials/foot') %>

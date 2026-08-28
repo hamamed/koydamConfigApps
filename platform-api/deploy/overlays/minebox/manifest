@@ -1,0 +1,20 @@
+# What platform-api owns inside the MineBox install.
+#
+# Left: a path under deploy/. Right: where it lands in /opt/minebox.
+#
+# The same set SkinCraft receives, for the same reason: the panel authenticates against the
+# platform rather than against itself, and it reads its design tokens from one place so four
+# panels cannot drift into four slightly different products.
+#
+# MineBox was written against these files rather than having a login of its own replaced
+# afterwards, so its copies here are the originals rather than a fork of an upstream checkout.
+
+shared/platform-auth.js                    src/middleware/platform-auth.js
+shared/remote-settings.js                  src/remote-settings.js
+shared/css/bootstrap.min.css               public/css/bootstrap.min.css
+shared/css/koydam.css                      public/css/koydam.css
+shared/css/admin.css                       public/css/admin.css
+shared/logo/logo.png                       public/logo/logo.png
+shared/logo/logoText.png                   public/logo/logoText.png
+overlays/minebox/src/middleware/auth.js    src/middleware/auth.js
+overlays/minebox/views/partials/head.ejs   views/partials/head.ejs

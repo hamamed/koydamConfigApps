@@ -1,0 +1,48 @@
+# systemd unit for the MineBox catalogue API and admin panel.
+#
+#   sudo cp deploy/minebox.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now minebox
+
+[Unit]
+Description=MineBox catalogue API and admin panel
+Documentation=https://github.com/hamamed/koydamConfigApps
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=minebox
+Group=minebox
+WorkingDirectory=/opt/minebox
+EnvironmentFile=/opt/minebox/.env
+ExecStart=/usr/bin/node src/server.js
+
+Restart=always
+RestartSec=5
+# Give in-flight uploads and downloads a chance to finish; the app closes its listener on
+# SIGTERM and waits for open requests.
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Hardening. The process only ever needs to write to its own data and storage directories.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+# sharp's libvips allocates executable pages for its JIT-compiled pipelines.
+MemoryDenyWriteExecute=false
+ReadWritePaths=/opt/minebox/data /opt/minebox/storage
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=minebox
+
+[Install]
+WantedBy=multi-user.target
