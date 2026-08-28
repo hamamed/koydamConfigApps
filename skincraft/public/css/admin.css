@@ -1022,3 +1022,7 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 /* Reads as a field so it lines up with the controls beside it, but it is
    output — nothing here is typed into. */
 .ad-cost { background: var(--kd-surface-2); color: var(--kd-muted); }
+
+/* The finished draft. Sits with the other AI feedback rather than replacing it,
+   so a page that has just generated shows what happened without moving. */
+.ad-ai-done { margin-top: .9rem; margin-bottom: 0; }

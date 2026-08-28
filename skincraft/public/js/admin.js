@@ -209,6 +209,8 @@
     const planReply = el('plan-reply');
     const planSend = el('plan-send');
     const planAccept = el('plan-accept');
+    const donePanel = el('done');
+    const doneLink = el('done-link');
 
     // The conversation so far, so a follow-up is a correction rather than a
     // fresh start. Sent back on each turn and bounded server-side.
@@ -338,10 +340,20 @@
         for (const frame of frames) {
           const line = frame.split('\n').find((l) => l.startsWith('data:'));
           if (!line) continue;
+
+          let payload;
           try {
-            onEvent(JSON.parse(line.slice(5).trim()));
+            payload = JSON.parse(line.slice(5).trim());
           } catch {
             // One unreadable frame is one lost update, not a dead stream.
+            continue;
+          }
+
+          // A handler that says it is finished ends the read here, so the
+          // response is closed deliberately rather than abandoned half-read.
+          if (onEvent(payload) === 'stop') {
+            await reader.cancel().catch(() => {});
+            return;
           }
         }
       }
@@ -508,6 +520,7 @@
       planAccept.setAttribute('disabled', 'disabled');
       iconsReady();
 
+      let location = null;
       let step = 'Starting…';
       const tick = () => {
         const seconds = Math.round((Date.now() - started) / 1000);
@@ -539,14 +552,29 @@
             tick();
           } else if (event.type === 'done') {
             navigating = true;
+            location = event.location;
             stopTicker();
             statusTitle.textContent = 'Done — opening the draft';
             statusDetail.textContent = '';
-            window.location.assign(event.location);
+            // Stop reading before going anywhere. Navigating out of a response
+            // that is still open leaves the browser tearing down a connection
+            // at the same moment it is trying to use one, and the draft is
+            // already saved by this point — there is nothing left to wait for.
+            return 'stop';
           } else if (event.type === 'error') {
             throw new Error(event.message);
           }
         });
+
+        if (navigating && location) {
+          // The link goes up before the navigation is attempted, so a failed
+          // navigation leaves a working page pointing at the finished draft
+          // instead of a browser error and no way back to it.
+          doneLink.href = location;
+          donePanel.hidden = false;
+          window.location.assign(location);
+          return;
+        }
 
         // The stream ended without saying it finished. Treat it as a failure
         // rather than leaving a spinner up forever — but say what almost

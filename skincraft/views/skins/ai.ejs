@@ -169,6 +169,19 @@
               </div>
             </div>
 
+            <!--
+              Shown the moment the draft exists, before the browser is asked to
+              go there. If the navigation fails for any reason, this is a
+              working page with a link to the finished skin rather than a
+              browser error and no way back to it.
+            -->
+            <div class="alert alert-success ad-ai-done" data-ai-done hidden>
+              <i data-lucide="check" class="me-1"></i>
+              Your draft is ready.
+              <a class="alert-link" data-ai-done-link href="/admin/skins">Open it</a>
+              — it is unpublished until you say otherwise.
+            </div>
+
             <div class="alert alert-danger ad-ai-error" data-ai-error hidden>
               <i data-lucide="circle-alert" class="me-1"></i>
               <span data-ai-error-text></span>
