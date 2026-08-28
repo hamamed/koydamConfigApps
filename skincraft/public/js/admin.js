@@ -210,6 +210,17 @@
     const planSend = el('plan-send');
     const planAccept = el('plan-accept');
 
+    // The conversation so far, so a follow-up is a correction rather than a
+    // fresh start. Sent back on each turn and bounded server-side.
+    let history = [];
+    let directions = null;
+    let ticker = null;
+    let navigating = false;
+
+    const csrf = () => aiForm.querySelector('[name="_csrf"]').value;
+    const field = (name) => aiForm.querySelector(`[name="${name}"]`);
+    const stopTicker = () => { if (ticker) window.clearInterval(ticker); ticker = null; };
+
     // Each image is its own round trip to the provider, so three panels really
     // is three times the wait. Saying which one it is on is what stops the
     // pause reading as a hang.
@@ -286,16 +297,6 @@
 
     // ── Planning ──────────────────────────────────────────────────────────
 
-    // The conversation so far, so a follow-up is a correction rather than a
-    // fresh start. Sent back on each turn and bounded server-side.
-    let history = [];
-    let directions = null;
-    let ticker = null;
-    let navigating = false;
-
-    const csrf = () => aiForm.querySelector('[name="_csrf"]').value;
-    const field = (name) => aiForm.querySelector(`[name="${name}"]`);
-    const stopTicker = () => { if (ticker) window.clearInterval(ticker); ticker = null; };
 
     const fail = (message) => {
       errorText.textContent = message;

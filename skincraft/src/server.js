@@ -35,8 +35,22 @@ app.use(
         defaultSrc: ["'self'"],
         // Bootstrap and Lucide are served from jsDelivr; everything else is same-origin.
         scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-        fontSrc: ["'self'", 'https://cdn.jsdelivr.net', 'data:'],
+        // Google Fonts is two hosts, and both are needed: the stylesheet comes
+        // from fonts.googleapis.com and the faces it names come from
+        // fonts.gstatic.com. head.ejs has asked for Inter all along while the
+        // policy blocked it, so every panel has been rendering in the fallback
+        // face — silently, because a blocked stylesheet is not a broken one.
+        styleSrc: [
+          "'self'", "'unsafe-inline'",
+          'https://cdn.jsdelivr.net',
+          'https://fonts.googleapis.com',
+        ],
+        fontSrc: [
+          "'self'",
+          'https://cdn.jsdelivr.net',
+          'https://fonts.gstatic.com',
+          'data:',
+        ],
         imgSrc: ["'self'", 'data:', 'blob:'],
         connectSrc: ["'self'"],
         objectSrc: ["'none'"],
