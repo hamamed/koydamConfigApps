@@ -370,10 +370,34 @@ ensure_platform_config() {
     changed=1
   fi
 
-  if [[ -z "$(env_get "$env_file" ALLOWED_REDIRECT_HOSTS)" && -n "$hosts" ]]; then
-    env_set "$env_file" ALLOWED_REDIRECT_HOSTS "$hosts"
-    ok "ALLOWED_REDIRECT_HOSTS=$hosts"
-    changed=1
+  # Merged, not written once.
+  #
+  # This used to be set only when the variable was empty, which meant the list
+  # was frozen at whatever was installed on the day the box was set up. Adding a
+  # fourth service registered it everywhere except here, so signing in bounced
+  # to the platform and was refused on the way back — with nothing in the list
+  # to suggest why, because the list looked deliberate.
+  #
+  # services.conf is the registry: a service listed there is one whose host may
+  # be returned to. Hosts already present are kept, including any added by hand.
+  local current="$(env_get "$env_file" ALLOWED_REDIRECT_HOSTS)" host added=""
+  if [[ -z "$current" ]]; then
+    if [[ -n "$hosts" ]]; then
+      env_set "$env_file" ALLOWED_REDIRECT_HOSTS "$hosts"
+      ok "ALLOWED_REDIRECT_HOSTS=$hosts"
+      changed=1
+    fi
+  else
+    for host in ${hosts//,/ }; do
+      case ",$current," in *",$host,"*) continue ;; esac
+      current="$current,$host"
+      added="${added:+$added }$host"
+    done
+    if [[ -n "$added" ]]; then
+      env_set "$env_file" ALLOWED_REDIRECT_HOSTS "$current"
+      ok "ALLOWED_REDIRECT_HOSTS += $added"
+      changed=1
+    fi
   fi
 
   if [[ -z "$(env_get "$env_file" SECURE_COOKIES)" ]]; then
