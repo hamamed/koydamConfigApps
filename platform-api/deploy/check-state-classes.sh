@@ -24,6 +24,8 @@ SOURCES=(
   brawl-vps/src/panel
   skincraft/views
   skincraft/public/js
+  minebox/views
+  minebox/public/js
 )
 
 [[ -f "$CSS" ]] || { echo "  no stylesheet at $CSS"; exit 1; }

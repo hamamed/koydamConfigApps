@@ -1,13 +1,14 @@
 # koydamConfigApps
 
-Everything that runs on the VPS, in one repository. Three Node services behind
+Everything that runs on the VPS, in one repository. Four Node services behind
 nginx on a single box, sharing one sign-in and one design system.
 
 | Directory | What it is | Domain | Port | Store |
 |---|---|---|---|---|
 | [`platform-api/`](platform-api/) | Config dashboard, single sign-on, AdMob settings for every app | config.hamaprojects.com | 8090 | Postgres |
 | [`brawl-vps/`](brawl-vps/) | Brawl Stars API — Supercell proxy, meta crawler, wallpapers | api.hamaprojects.com | 8080 | Postgres + Redis |
-| [`skincraft/`](skincraft/) | Skin catalogue and admin | skincraft.hamaprojects.com | 3000 | SQLite |
+| [`skincraft/`](skincraft/) | Roblox clothing catalogue and admin | skincraft.hamaprojects.com | 3000 | SQLite |
+| [`minebox/`](minebox/) | Minecraft skins, addons, worlds and seeds | minebox.hamaprojects.com | 3100 | SQLite |
 
 ---
 
@@ -20,7 +21,7 @@ git push                       # here
 sudo /opt/deploy.sh            # on the box
 ```
 
-**One login covers all three.** Accounts live in `platform-api`; the other two
+**One login covers all four.** Accounts live in `platform-api`; the others
 ask it who you are. There are no separate passwords and no admin key in a URL.
 
 **Nothing a deploy does can take your data.** `.env`, the databases, the
@@ -82,9 +83,26 @@ secret is not published.
 
 ### skincraft
 
-Skin catalogue and admin at **skincraft.hamaprojects.com**. SQLite, EJS
-templates, uploads on disk. Its theme and sign-in are replaced by the overlay
-described below.
+Roblox clothing catalogue and admin at **skincraft.hamaprojects.com**. SQLite,
+EJS templates, uploads on disk. Its theme and sign-in are replaced by the
+overlay described below.
+
+### minebox
+
+Minecraft content catalogue at **minebox.hamaprojects.com** — skins, addons,
+texture packs, worlds and seeds, behind the MineBox iOS app.
+
+Two things in it are worth knowing about. Every `.mcaddon` and `.mcworld` is
+**opened and checked** before it is stored, against what Minecraft itself
+requires: a missing `manifest.json` or `level.dat` is invisible from the
+server's side and silently refused by the game, so the player reports a working
+catalogue as broken. And a skin's card artwork is **drawn from its own
+texture** — the same UV table also tells classic from slim, which the file
+itself does not record.
+
+Downloads go through the app rather than nginx, because Minecraft names an
+imported pack after the file it arrived in and the name on disk is a slug plus
+an id fragment. Preview images are served by nginx as usual.
 
 ---
 
@@ -142,8 +160,12 @@ sudo /opt/backup.sh verify <f>   # check an archive is readable and complete
 ```
 
 Code is in git, so it is not backed up. What is: every Postgres database,
-SkinCraft's SQLite file, the wallpapers, the generated brawler metadata, every
-`.env`, and the TLS certificates.
+SkinCraft's and MineBox's SQLite files, the wallpapers, MineBox's uploaded
+files, the generated brawler metadata, every `.env`, and the TLS certificates.
+
+MineBox's uploads are the only copy there is — nothing regenerates an addon
+somebody uploaded. Its previews are not, since
+`npm run regenerate-previews` rebuilds every one of them from its source file.
 
 Databases are enumerated rather than listed, so one added later cannot be
 silently missing. A failed `pg_dump` aborts rather than writing an archive
@@ -161,7 +183,7 @@ echo '0 3 * * * root /opt/backup.sh >/dev/null 2>&1' > /etc/cron.d/hamaprojects-
 ## Single sign-on
 
 `platform-api` owns the accounts. Its session cookie is set on
-`.hamaprojects.com`, so the browser already sends it to the other two — what
+`.hamaprojects.com`, so the browser already sends it to the others — what
 they cannot do is *read* it. They ask:
 
 ```
@@ -169,8 +191,8 @@ POST /api/session/introspect   { sid }   X-Service-Token: …
 ```
 
 Introspection rather than a signed token, because a signed token cannot be
-revoked: disabling an account would leave that person signed into Brawl and
-SkinCraft until it expired. Callers cache for a minute.
+revoked: disabling an account would leave that person signed into Brawl,
+SkinCraft and MineBox until it expired. Callers cache for a minute.
 
 Roles: `owner` (everything, including accounts), `admin` (every app),
 `app_admin` (only apps explicitly granted), `viewer` (read-only).
@@ -206,11 +228,12 @@ shared/
 overlays/
   brawl/manifest        what lands in /opt/brawl-vps
   skincraft/manifest    what lands in /opt/skincraft, plus its own files
+  minebox/manifest      what lands in /opt/minebox, plus its own files
 ```
 
 Each service declares what it receives in a `manifest` — `source → destination`,
-one per line. They are copied outward on every deploy, so three panels cannot
-drift into three slightly different products.
+one per line. They are copied outward on every deploy, so four panels cannot
+drift into four slightly different products.
 
 SkinCraft keeps its own `admin.css`: its templates use `sc-*` class names while
 the dashboards use `ad-*`, so the same tokens are expressed twice rather than
@@ -259,6 +282,9 @@ Useful scripts:
 | | `npm run db:migrate` | apply schema |
 | skincraft | `npm run migrate` | apply schema |
 | | `npm run regenerate-previews` | rebuild preview images |
+| minebox | `npm run migrate` | apply schema |
+| | `npm run seed 60` | sample catalogue, with real files |
+| | `npm run regenerate-previews` | redraw every card image |
 
 ---
 
