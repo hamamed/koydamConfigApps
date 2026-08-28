@@ -75,10 +75,30 @@ jobs:
             -e POSTGRES_PASSWORD=test -e POSTGRES_DB=platform \
             -p 5432:5432 postgres:16-alpine
 
-          for i in $(seq 1 30); do
-            docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break
+          # Wait for the database this step actually uses, not for "a server is
+          # listening".
+          #
+          # The postgres image runs a *temporary* server on a unix socket while
+          # initdb creates the cluster and applies POSTGRES_DB, then shuts it
+          # down and starts the real one. pg_isready answers yes to that
+          # temporary server, so the loop below used to fall through into the
+          # migrations mid-restart — and this step has failed on every push for
+          # days, in three different disguises: "database platform does not
+          # exist", "the database system is shutting down", and "terminating
+          # connection due to administrator command". All the same race.
+          #
+          # Querying the named database is the readiness condition, because it
+          # is the thing the next line needs and it cannot be true until initdb
+          # has finished and the real server is up.
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec pg psql -U postgres -d platform -c 'select 1' >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
             sleep 1
           done
+          [ "$ready" = 1 ] || { echo "::error::Postgres never became ready"; docker logs pg; exit 1; }
 
           for f in platform-api/src/db/migrations/*.sql; do
             echo "-- $f"
