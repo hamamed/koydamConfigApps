@@ -44,18 +44,18 @@
                 text tokens and draw nothing, so this is the cheap end of the
                 process and the right place to be generous with options.
               -->
-              <div class="ad-ideas" data-ideas>
+              <div class="ad-ideas">
                 <div class="ad-ideas-ask">
                   <i data-lucide="lightbulb" class="ad-ideas-icon"></i>
-                  <input class="form-control form-control-sm" data-ideas-theme maxlength="200"
+                  <input class="form-control form-control-sm" data-ai-ideas-theme maxlength="200"
                          placeholder="A theme, or leave blank — “autumn”, “deep sea”, “90s arcade”"
                          <%= available ? '' : 'disabled' %>>
-                  <button class="btn btn-sm btn-kd-outline" type="button" data-ideas-go
+                  <button class="btn btn-sm btn-kd-outline" type="button" data-ai-ideas-go
                           <%= available ? '' : 'disabled' %>>
                     Suggest ideas
                   </button>
                 </div>
-                <div class="ad-ideas-list" data-ideas-list hidden></div>
+                <div class="ad-ideas-list" data-ai-ideas-list hidden></div>
               </div>
             <% } %>
 
@@ -154,8 +154,6 @@
                 </span>
                 <i data-lucide="message-square" class="ad-plan-icon" data-ai-plan-icon></i>
                 <strong>What it's planning</strong>
-                <span class="small ms-auto" style="color:var(--kd-faint);"
-                      data-ai-plan-model></span>
               </div>
 
               <!-- aria-live so the streamed text is announced as it arrives
