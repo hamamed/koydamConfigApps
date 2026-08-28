@@ -400,12 +400,21 @@
         });
 
         // The stream ended without saying it finished. Treat it as a failure
-        // rather than leaving a spinner up forever.
-        if (!navigating) throw new Error('The connection closed before the design finished. Check Drafts before retrying, so you are not billed twice.');
+        // rather than leaving a spinner up forever — but say what almost
+        // certainly happened, because the images were paid for either way and
+        // the server finishes and saves the draft regardless of this end of the
+        // connection surviving.
+        if (!navigating) {
+          throw new Error(
+            'The connection dropped before the design finished, but the server keeps going — '
+            + 'your draft is almost certainly in Drafts. Check there before generating again, '
+            + 'so you are not billed twice.',
+          );
+        }
       } catch (error) {
         const message =
           error instanceof TypeError
-            ? 'Lost the connection while generating. It may still have completed — check Drafts before trying again, so you are not billed twice.'
+            ? 'Lost the connection while generating. The server keeps going, so the draft is probably in Drafts — check there before trying again, so you are not billed twice.'
             : error.message;
         fail(message);
       } finally {

@@ -608,6 +608,8 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
  * followed by everything at once. It honours that directive; nginx is told
  * separately by X-Accel-Buffering.
  */
+const HEARTBEAT_MS = 15_000;
+
 function sseOpen(res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -616,9 +618,34 @@ function sseOpen(res) {
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders?.();
+
+  // A comment frame on a timer, and the reason it matters more than it looks.
+  //
+  // nginx's proxy_read_timeout is the gap allowed *between two reads* from
+  // upstream, not the duration of the whole response. This stream's only
+  // content is one event per image, so a provider taking longer than that gap
+  // to draw one leaves nginx reading nothing and closing the connection —
+  // while the generation carries on here and saves a draft the person was
+  // never told about, so they retry and pay twice.
+  //
+  // Fifteen seconds keeps it alive under any proxy configuration, which is
+  // better than depending on every deployment having been reconfigured.
+  const beat = setInterval(() => {
+    if (res.writableEnded || res.destroyed) return;
+    res.write(': keep-alive\n\n');
+  }, HEARTBEAT_MS);
+
+  // Never hold the process open for a heartbeat.
+  beat.unref?.();
+
+  const stop = () => clearInterval(beat);
+  res.on('close', stop);
+  res.on('finish', stop);
 }
 
+/** Writing to a stream the browser has already abandoned throws; it is not an error. */
 function sseSend(res, payload) {
+  if (res.writableEnded || res.destroyed) return;
   res.write(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
@@ -629,7 +656,7 @@ function sseSend(res, payload) {
  */
 function sseFail(res, error) {
   sseSend(res, { type: 'error', message: error.message });
-  res.end();
+  if (!res.writableEnded) res.end();
 }
 
 /**
@@ -711,6 +738,16 @@ adminRouter.post('/skins/ai/generate', async (req, res) => {
   }
 
   sseOpen(res);
+
+  // If the browser goes away mid-generation, keep going. The images are already
+  // paid for, and finishing means the draft is waiting in Drafts rather than
+  // the money having bought nothing. Logged, because otherwise a draft appears
+  // that nobody remembers asking for.
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      console.warn('  AI generation continuing after the client disconnected; the draft will be saved.');
+    }
+  });
 
   try {
     const result = await designSkin({
