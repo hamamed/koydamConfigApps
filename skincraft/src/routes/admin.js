@@ -446,6 +446,32 @@ adminRouter.post('/skins/:id/publish', (req, res, next) => {
   return res.redirect(req.get('referer') || '/admin/skins');
 });
 
+/**
+ * Where to land after deleting.
+ *
+ * Deleting from the catalogue should come back to the page it was done from —
+ * being thrown to page one having tidied something on page three is its own
+ * small punishment. Deleting from the skin's own page cannot, because that page
+ * no longer exists.
+ *
+ * The Referer is client-supplied, so only a same-host path is used. Following
+ * it anywhere would turn this into an open redirect, and the existing routes
+ * that redirect back to it are already looser than they should be.
+ */
+function backToList(req, skinId) {
+  const referer = req.get('referer');
+  if (!referer) return '/admin/skins';
+
+  try {
+    const url = new URL(referer, `${req.protocol}://${req.get('host')}`);
+    if (url.host !== req.get('host')) return '/admin/skins';
+    if (url.pathname.startsWith(`/admin/skins/${skinId}`)) return '/admin/skins';
+    return url.pathname + url.search;
+  } catch {
+    return '/admin/skins';
+  }
+}
+
 adminRouter.post('/skins/:id/delete', async (req, res, next) => {
   try {
     const found = getSkin(req.params.id);
@@ -455,7 +481,7 @@ adminRouter.post('/skins/:id/delete', async (req, res, next) => {
     logAudit(req.user.id, 'skin.delete', req.params.id, found.row.title);
 
     req.flash('success', `Deleted “${found.row.title}”.`);
-    return res.redirect('/admin/skins');
+    return res.redirect(backToList(req, req.params.id));
   } catch (error) {
     return next(error);
   }

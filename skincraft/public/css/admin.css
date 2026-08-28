@@ -1026,3 +1026,12 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
 /* The finished draft. Sits with the other AI feedback rather than replacing it,
    so a page that has just generated shows what happened without moving. */
 .ad-ai-done { margin-top: .9rem; margin-bottom: 0; }
+
+/* Destructive, and it has to look it. The star and pencil beside this one are
+   reversible; this deletes the files. */
+.ad-icon-btn-danger { color: var(--kd-danger); }
+.ad-icon-btn-danger:hover {
+  color: #fff;
+  background: var(--kd-danger);
+  border-color: var(--kd-danger);
+}
