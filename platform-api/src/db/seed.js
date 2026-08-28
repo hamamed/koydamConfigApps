@@ -88,6 +88,26 @@ const APPS = [
     },
     flags: { reporting: true },
   },
+  {
+    slug: 'minebox',
+    name: 'MineBox for Minecraft',
+    notes: 'Skins, addons, texture packs, worlds and seeds. Backend: minebox.hamaprojects.com',
+    platforms: {
+      ios: { bundleId: 'com.koydam.minebox' },
+    },
+    // One per kind the catalogue serves, so a section can be closed from the
+    // panel without a release — which matters more here than for a skin app:
+    // an addon is a file Minecraft executes, and "stop offering addons" needs
+    // to be one switch rather than an App Store review.
+    flags: {
+      skins: true,
+      addons: true,
+      textures: true,
+      worlds: true,
+      seeds: true,
+      reporting: true,
+    },
+  },
 ];
 
 async function seed() {

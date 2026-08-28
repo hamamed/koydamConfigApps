@@ -1,5 +1,6 @@
 import 'dotenv/config';
 
+import { num as liveNum, str as liveStr } from './remote-settings.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,17 +40,36 @@ export const config = {
    * `utils/validate.js`; this is the outer bound multer enforces before a byte
    * reaches the application.
    */
-  maxUploadBytes: Number(process.env.MAX_UPLOAD_MB || 64) * 1024 * 1024,
+  /// Getters, not values, for everything the panel can change.
+  ///
+  /// `startRemoteSettings` was already being called and its answers were going
+  /// nowhere: read once at import, a setting edited in the panel would not
+  /// apply until the next restart, which is most of the reason for having a
+  /// panel. Read per access, it lands within the refresh interval.
+  ///
+  /// The layering is the same as everywhere else: a value set in the panel,
+  /// then .env, then the default here. .env stays the floor so the service
+  /// still boots when config is unreachable.
+  get maxUploadBytes() {
+    return liveNum('MAX_UPLOAD_MB', Number(process.env.MAX_UPLOAD_MB || 64)) * 1024 * 1024;
+  },
 
-  corsOrigins: (process.env.CORS_ORIGINS || '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  get corsOrigins() {
+    return liveStr('CORS_ORIGINS', process.env.CORS_ORIGINS || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  },
 
   /// Universal-link identity. Both appear verbatim in the app-site-association file, so they
   /// must match the shipping app exactly — a mismatch fails silently: iOS just opens Safari.
-  appleTeamID: process.env.APPLE_TEAM_ID || 'TEAMID',
-  iosBundleID: process.env.IOS_BUNDLE_ID || 'com.koydam.minebox',
+  get appleTeamID() {
+    return liveStr('APPLE_TEAM_ID', process.env.APPLE_TEAM_ID || 'TEAMID');
+  },
+
+  get iosBundleID() {
+    return liveStr('IOS_BUNDLE_ID', process.env.IOS_BUNDLE_ID || 'com.koydam.minebox');
+  },
 
   bootstrapAdmin: {
     username: process.env.ADMIN_USERNAME || 'admin',

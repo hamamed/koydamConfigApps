@@ -78,6 +78,16 @@ const KNOWN_SERVICES = [
     notes: 'Skin catalogue API and admin panel. SQLite.',
     sortOrder: 30,
   },
+  {
+    slug: 'minebox',
+    name: 'MineBox',
+    domain: 'minebox.hamaprojects.com',
+    healthUrl: 'https://minebox.hamaprojects.com/api/v1/health',
+    systemdUnit: 'minebox',
+    appSlug: 'minebox',
+    notes: 'Minecraft skins, addons, texture packs, worlds and seeds. SQLite.',
+    sortOrder: 40,
+  },
 ];
 
 export async function seedServices() {

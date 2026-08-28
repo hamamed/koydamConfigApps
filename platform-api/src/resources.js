@@ -134,6 +134,7 @@ const UNITS = [
   { unit: 'platform-api', label: 'Platform config' },
   { unit: 'brawl-api', label: 'Brawl Stats API' },
   { unit: 'skincraft', label: 'SkinCraft' },
+  { unit: 'minebox', label: 'MineBox' },
   { unit: 'postgresql', label: 'Postgres' },
   { unit: 'redis-server', label: 'Redis' },
   { unit: 'nginx', label: 'nginx' },

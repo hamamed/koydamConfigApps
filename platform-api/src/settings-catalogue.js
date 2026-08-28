@@ -149,6 +149,33 @@ export const CATALOGUE = {
     ],
   },
 
+  minebox: {
+    name: 'MineBox',
+    groups: [
+      {
+        title: 'Uploads',
+        settings: [
+          { key: 'MAX_UPLOAD_MB', label: 'Maximum upload (MB)', type: 'number',
+            min: 1, max: 256, restart: false,
+            help: 'The outer bound before a byte reaches the app. Worlds and addons are '
+              + 'tens of megabytes where a skin is six kilobytes, so this is far higher '
+              + 'than SkinCraft\'s. Per-kind limits are stricter and live in the code.' },
+          { key: 'CORS_ORIGINS', label: 'Allowed origins', type: 'text', restart: false,
+            help: 'Comma separated. Blank allows any origin, which is what the iOS app needs.' },
+        ],
+      },
+      {
+        title: 'App Store',
+        settings: [
+          { key: 'APPLE_TEAM_ID', label: 'Apple team id', type: 'text', restart: false,
+            help: 'Appears verbatim in the app-site-association file. A mismatch fails '
+              + 'silently — iOS just opens Safari instead of the app.' },
+          { key: 'IOS_BUNDLE_ID', label: 'iOS bundle id', type: 'text', restart: false },
+        ],
+      },
+    ],
+  },
+
   platform: {
     name: 'Platform config',
     groups: [
