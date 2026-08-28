@@ -372,10 +372,12 @@ export function parseIdeas(text) {
  */
 const GARMENT_DIRECTION = [
   'Draw the fabric SURFACE itself, straight on, filling the whole frame.',
-  'There is no background and no garment outline: this is a close crop of the',
-  'cloth, and the cloth runs off all four edges. Never draw the silhouette of a',
-  'garment sitting on a backdrop, and never leave a border, margin or white',
-  'edge of any kind.',
+  'Crop in tightly enough that the garment is cut off by all four edges of the',
+  'image. If any part of its outline or silhouette is visible, you have zoomed',
+  'out too far — the shoulders and side seams must run off the edges, not sit',
+  'inside them.',
+  'There is no background: no backdrop, no surface it rests on, no border,',
+  'margin or white space anywhere in the image.',
   'No body, no mannequin, no person, no hanger, and no photograph of a folded garment.',
   'No perspective, no 3D render, no drop shadow.',
   'Fabric detail is wanted: weave, knit, ribbing, stitching, seams, buttons where asked for.',

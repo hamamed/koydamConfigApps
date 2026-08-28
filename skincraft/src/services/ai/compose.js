@@ -121,32 +121,48 @@ async function trimFlatBorder(buffer) {
 
     const frame = at(0, 0);
 
-    // A margin surrounds the artwork; a collar does not. Requiring all four
-    // edges to be the same flat colour is what separates "the model framed it
-    // in white" from "the shirt has a white collar along the top", which look
-    // identical if only one edge is examined — and cutting a collar off would
-    // be a worse fault than leaving a border on.
     const line = (pts) => pts.every((p) => near(at(p[0], p[1]), frame));
     const across = (n) => [...Array(n).keys()];
-    const framed =
-      line(across(w).map((x) => [x, 0]))
-      && line(across(w).map((x) => [x, h - 1]))
-      && line(across(h).map((y) => [0, y]))
-      && line(across(h).map((y) => [w - 1, y]));
 
-    if (!framed) return buffer;
+    const topFlat = line(across(w).map((x) => [x, 0]));
+    const bottomFlat = line(across(w).map((x) => [x, h - 1]));
+    const leftFlat = line(across(h).map((y) => [0, y]));
+    const rightFlat = line(across(h).map((y) => [w - 1, y]));
 
     // The centre has to be something else, or this is a plain panel and the
     // "frame" is the garment.
     if (near(at(w >> 1, h >> 1), frame)) return buffer;
 
-    // How deep it goes on each side, capped so a mistake cannot eat the panel.
+    // Which edges may be cut, and why they are not treated alike.
+    //
+    // The top and bottom of a panel are where the garment's own bands live: a
+    // collar, a yoke, a cuff, a hem. A flat strip there is design as often as
+    // it is background, and cutting a collar off is worse than leaving a
+    // border on — so those only come off when all four edges agree, which is a
+    // frame and cannot be a collar.
+    //
+    // The far left and right are not like that. The panel wraps around a limb
+    // or a torso, so those edges are a seam with the next panel; a flat band at
+    // both of them is the model centring a garment on a background, which is
+    // exactly what it does when asked for a shirt front. Nothing a garment has
+    // looks like that.
+    const framed = topFlat && bottomFlat && leftFlat && rightFlat;
+    const sidesOnly = leftFlat && rightFlat;
+
+    if (!framed && !sidesOnly) return buffer;
+
     const limitX = Math.floor(w * 0.42);
     const limitY = Math.floor(h * 0.42);
+
     let left = 0; while (left < limitX && line(across(h).map((y) => [left, y]))) left++;
     let right = 0; while (right < limitX && line(across(h).map((y) => [w - 1 - right, y]))) right++;
-    let top = 0; while (top < limitY && line(across(w).map((x) => [x, top]))) top++;
-    let bottom = 0; while (bottom < limitY && line(across(w).map((x) => [x, h - 1 - bottom]))) bottom++;
+
+    let top = 0;
+    let bottom = 0;
+    if (framed) {
+      while (top < limitY && line(across(w).map((x) => [x, top]))) top++;
+      while (bottom < limitY && line(across(w).map((x) => [x, h - 1 - bottom]))) bottom++;
+    }
 
     if (left + right + top + bottom === 0) return buffer;
 
