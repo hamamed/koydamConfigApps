@@ -172,13 +172,19 @@ jobs:
 
       # Every class the panels use must exist in the stylesheet they load. A
       # missing one is invisible until someone looks at that screen.
+      #
+      # Whole tokens only. `\b(ad|kd)-...` finds a word boundary in the middle
+      # of `btn-kd-ghost` — the hyphen is a non-word character — so it reported
+      # `.kd-ghost` and `.kd-outline` as undefined on two panels that use the
+      # buttons correctly. Splitting on everything that cannot appear in a class
+      # name makes `btn-kd-ghost` one token, which does not start with `kd-`.
       - name: Panel classes are defined
         run: |
           fail=0
           css="platform-api/deploy/shared/css"
           for f in platform-api/src/panel/*.html brawl-vps/src/panel/*.html; do
             [ -f "$f" ] || continue
-            for c in $(grep -oE '\b(ad|kd)-[a-z0-9-]+' "$f" | sort -u); do
+            for c in $(tr -c 'a-zA-Z0-9_-' '\n' < "$f" | grep -E '^(ad|kd)-[a-z0-9-]+$' | sort -u); do
               grep -qh "\.$c\b" "$css/admin.css" "$css/koydam.css" || {
                 echo "::error file=$f::.$c is used but not defined"
                 fail=1
