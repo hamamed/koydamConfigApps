@@ -152,9 +152,21 @@ export function buildPrompt(
       ? `The main design for the front of a ${garment}.`
       : face === 'back'
         ? `A simpler companion design for the back of a ${garment}, matching the front's colours and style.`
-        : `A repeating pattern in the same colours and style, for the sleeves and sides of a ${garment}. Keep it simple and even.`;
+        : `A repeating pattern in the same colours and style, for the sleeves of a ${garment}. `
+          + 'Keep it simple and even, with no focal point — it is worn on all four sides of '
+          + 'each arm, so the left and right edges meet and the design must run across them '
+          + 'without a join.';
 
-  return `${framing} Subject: ${subject}. ${ART_DIRECTION}`;
+  // The same shape note garment mode gets. The sleeve piece is painted into a
+  // 64x128 rectangle, and artwork composed for a square arrives there with a
+  // quarter of its width cropped off.
+  const panel = REGION_PANEL[PATTERN_PANEL[face] ?? 'chest'];
+  const shape = panel
+    ? `This artwork is painted into a ${panel.pixels} pixel area — ${panel.proportion} — `
+      + `covering ${panel.part} of a blocky Roblox avatar. Fill it edge to edge. `
+    : '';
+
+  return `${framing} ${shape}Subject: ${subject}. ${ART_DIRECTION}`;
 }
 
 /**
@@ -471,8 +483,18 @@ export const REGION_PANEL = {
  * the crop, and the model spends that quarter drawing something. Asking for a
  * portrait image instead leaves far less on the floor.
  */
+/**
+ * Pattern mode's pieces, mapped onto the same panels.
+ *
+ * `front` is the chest, `back` the back, and `pattern` is what the limbs wear —
+ * so the pattern piece is a 1:2 sleeve and wants drawing as one, exactly like
+ * garment mode's sleeve.
+ */
+const PATTERN_PANEL = { front: 'chest', back: 'back', pattern: 'sleeve' };
+
 export function sizeForRegion(region) {
-  return REGION_PANEL[region]?.shape === 'portrait' ? '1024x1536' : '1024x1024';
+  const key = PATTERN_PANEL[region] ?? region;
+  return REGION_PANEL[key]?.shape === 'portrait' ? '1024x1536' : '1024x1024';
 }
 
 /** What each region becomes on the avatar, said in edges the model can act on. */

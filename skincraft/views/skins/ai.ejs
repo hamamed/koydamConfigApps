@@ -114,11 +114,14 @@
                 <label class="form-label" for="quality">Detail</label>
                 <select class="form-select" id="quality" name="quality"
                         <%= available ? '' : 'disabled' %>>
-                  <option value="simple">Simple — 1 image</option>
-                  <option value="standard" selected>Standard — 2 images</option>
-                  <option value="detailed">Detailed — 3 images</option>
+                  <option value="simple">Simple — 1 image, the same everywhere</option>
+                  <option value="standard" selected>Standard — 2, sleeves get their own</option>
+                  <option value="detailed">Detailed — 3, chest, back and sleeves</option>
                 </select>
-                <div class="form-text">Each image costs a generation.</div>
+                <div class="form-text">
+                  Each image costs a generation. More of them means the arms and
+                  back are designed rather than copied from the chest.
+                </div>
               </div>
 
               <div class="col-6 col-md-4" data-ai-cost-field hidden>

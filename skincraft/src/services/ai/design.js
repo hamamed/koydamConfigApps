@@ -33,10 +33,11 @@ const PIECES = {
   // One image, reused on every face with per-face shading. The cheapest
   // usable result, and for a bold graphic it is often the right one.
   simple: ['front'],
-  // Front and a matching back. What most clothing actually wants.
+  // A main design and a quieter companion. The companion carries the back and
+  // both sleeves, so the arms stop being a second copy of the chest — which is
+  // the difference between a skin and a texture wrapped round a body.
   standard: ['front', 'back'],
-  // Plus a quieter pattern for sleeves and sides, so they read as fabric
-  // rather than as three more copies of the chest design.
+  // Chest, back and sleeves each drawn for themselves.
   detailed: ['front', 'back', 'pattern'],
 };
 

@@ -31,12 +31,21 @@ import {
  */
 
 /** Every face gets artwork; this decides which of the generated pieces it uses. */
-function patternSource(face, art) {
+function patternSource(part, face, art) {
+  // Limbs get the piece drawn for them, on every one of their faces.
+  //
+  // This used to key on the face alone, so an arm's front face took `art.front`
+  // — the chest design — and the pattern drawn "for sleeves and sides" only
+  // ever reached sides, tops and bottoms. The two faces of an arm anyone
+  // actually looks at were a second and third copy of the chest, which is what
+  // made every pattern skin look like one design smeared over a body.
+  if (part !== 'torso') return art.pattern ?? art.back ?? art.front;
+
   if (face === 'front') return art.front;
   if (face === 'back') return art.back ?? art.front;
-  // Sides, top and bottom: the pattern if one was generated, else the front
-  // artwork. A sleeve showing the chest design is worse than a sleeve showing
-  // a plain continuation, but it is better than a hole.
+
+  // The torso's own sides, shoulders and hem underside: the quieter piece, so
+  // the flanks read as fabric rather than as the chest seen edge-on.
   return art.pattern ?? art.back ?? art.front;
 }
 
@@ -235,7 +244,7 @@ export async function composeTemplate(art, category = 'shirt', style = 'pattern'
     for (const [face, rect] of Object.entries(group)) {
       const source = garment
         ? garmentSource(part, face, art)
-        : patternSource(face, art);
+        : patternSource(part, face, art);
       const shade = FACE_SHADE[face] ?? 1;
 
       composites.push({
