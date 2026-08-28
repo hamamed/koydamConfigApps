@@ -23,6 +23,13 @@
     </div>
   </a>
 
+  <!-- Outside the card's link, like the other controls, so ticking it does
+       not also open the skin. -->
+  <label class="ad-skin-pick" title="Select <%= skin.title %>">
+    <input type="checkbox" name="ids" value="<%= skin.id %>" form="scBulk"
+           aria-label="Select <%= skin.title %>">
+  </label>
+
   <div class="ad-skin-flags">
     <% if (skin.isFeatured) { %>
       <span class="ad-badge featured"><i data-lucide="sparkles" width="10" height="10"></i> Featured</span>

@@ -159,6 +159,59 @@
     });
   });
 
+  // ── Selecting several skins ─────────────────────────────────────────────
+  //
+  // Enhancement only. The checkboxes point at the bulk form through their
+  // `form` attribute, so ticking and submitting already works without this —
+  // what this adds is the count, the select-all, and being asked before
+  // something irreversible happens to a dozen things at once.
+  const bulkForm = document.querySelector('[data-bulk]');
+
+  if (bulkForm) {
+    const count = bulkForm.querySelector('[data-bulk-count]');
+    const submit = bulkForm.querySelector('[data-bulk-delete]');
+    const all = bulkForm.querySelector('[data-bulk-all]');
+    const boxes = Array.from(document.querySelectorAll('.ad-skin-pick input[type="checkbox"]'));
+
+    const selected = () => boxes.filter((b) => b.checked);
+
+    function reflect() {
+      const n = selected().length;
+      count.textContent = n === 0
+        ? 'None selected'
+        : `${n} selected`;
+      submit.disabled = n === 0;
+      if (all) {
+        all.checked = n > 0 && n === boxes.length;
+        // Neither on nor off: some are ticked. Without this the header box
+        // claims everything is selected the moment one card is.
+        all.indeterminate = n > 0 && n < boxes.length;
+      }
+    }
+
+    boxes.forEach((box) => box.addEventListener('change', reflect));
+
+    all?.addEventListener('change', () => {
+      boxes.forEach((box) => { box.checked = all.checked; });
+      reflect();
+    });
+
+    bulkForm.addEventListener('submit', (event) => {
+      const n = selected().length;
+      if (n === 0) { event.preventDefault(); return; }
+      // Named rather than counted when it is one, because "delete 1 skin" reads
+      // like a rounding error and this removes files.
+      const what = n === 1
+        ? `“${selected()[0].closest('.ad-skin-card-wrap')?.querySelector('.ad-skin-title')?.textContent?.trim() ?? 'this skin'}”`
+        : `${n} skins`;
+      if (!window.confirm(`Delete ${what}? This removes their files too and can't be undone.`)) {
+        event.preventDefault();
+      }
+    });
+
+    reflect();
+  }
+
   // ── Preview tabs (skin page) ────────────────────────────────────────────
   //
   // `hidden` rather than a class, because the avatar canvas has to be laid out

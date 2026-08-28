@@ -458,19 +458,70 @@ adminRouter.post('/skins/:id/publish', (req, res, next) => {
  * it anywhere would turn this into an open redirect, and the existing routes
  * that redirect back to it are already looser than they should be.
  */
-function backToList(req, skinId) {
+function backToList(req, skinId = null) {
   const referer = req.get('referer');
   if (!referer) return '/admin/skins';
 
   try {
     const url = new URL(referer, `${req.protocol}://${req.get('host')}`);
     if (url.host !== req.get('host')) return '/admin/skins';
-    if (url.pathname.startsWith(`/admin/skins/${skinId}`)) return '/admin/skins';
+    if (skinId && url.pathname.startsWith(`/admin/skins/${skinId}`)) return '/admin/skins';
     return url.pathname + url.search;
   } catch {
     return '/admin/skins';
   }
 }
+
+/**
+ * Deletes several at once.
+ *
+ * Two segments after /skins on purpose. A single one would be matched by the
+ * `/skins/:id` edit route defined above it, which would try to update a skin
+ * called "selected" before this ever ran.
+ */
+adminRouter.post('/skins/selected/delete', async (req, res, next) => {
+  // A single checkbox arrives as a string, several as an array.
+  const ids = [].concat(req.body?.ids ?? [])
+    .map((id) => String(id).trim())
+    .filter(Boolean)
+    // Bounded because it is a list from the page and every entry deletes files.
+    .slice(0, 200);
+
+  if (!ids.length) {
+    req.flash('error', 'Nothing was selected.');
+    return res.redirect(backToList(req));
+  }
+
+  try {
+    let deleted = 0;
+    let missing = 0;
+
+    for (const id of ids) {
+      const found = getSkin(id);
+      // Already gone — someone deleted it in another tab, or the page is stale.
+      // Not a failure worth abandoning the rest of the batch for.
+      if (!found) { missing += 1; continue; }
+
+      await deleteSkin(id);
+      // One line per skin rather than one for the batch: the audit log is read
+      // to answer "what happened to this skin", and a batch entry answers that
+      // for none of them.
+      logAudit(req.user.id, 'skin.delete', id, found.row.title);
+      deleted += 1;
+    }
+
+    req.flash(
+      deleted ? 'success' : 'error',
+      deleted
+        ? `Deleted ${deleted} skin${deleted === 1 ? '' : 's'}.`
+          + (missing ? ` ${missing} had already gone.` : '')
+        : 'None of those skins still existed.',
+    );
+    return res.redirect(backToList(req));
+  } catch (error) {
+    return next(error);
+  }
+});
 
 adminRouter.post('/skins/:id/delete', async (req, res, next) => {
   try {

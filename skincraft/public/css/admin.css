@@ -1035,3 +1035,49 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   background: var(--kd-danger);
   border-color: var(--kd-danger);
 }
+
+/* Selecting several skins at once
+   ------------------------------
+   The bar is always visible rather than appearing on the first tick: with
+   JavaScript off there is nothing to reveal it, and a control that only exists
+   once you have guessed it exists is not a control. */
+.ad-bulk {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .9rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius);
+  background: var(--kd-surface-2);
+  font-size: .82rem;
+}
+
+.ad-bulk-all { display: flex; align-items: center; gap: .4rem; margin: 0; cursor: pointer; }
+.ad-bulk-count { color: var(--kd-muted); margin-right: auto; }
+
+/* Top-left, opposite the star and pencil, so nothing overlaps and the two
+   kinds of action stay visually separate. */
+.ad-skin-pick {
+  position: absolute;
+  top: .55rem;
+  left: .55rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--kd-line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.ad-skin-pick input { cursor: pointer; margin: 0; }
+
+/* A ticked card should be obvious from across the grid, not from its checkbox. */
+.ad-skin-card-wrap:has(.ad-skin-pick input:checked) .ad-skin-card {
+  border-color: var(--kd-accent);
+  box-shadow: 0 0 0 2px var(--kd-accent-soft);
+}
