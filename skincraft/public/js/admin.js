@@ -554,7 +554,6 @@
             navigating = true;
             location = event.location;
             stopTicker();
-            statusTitle.textContent = 'Done — opening the draft';
             statusDetail.textContent = '';
             // Stop reading before going anywhere. Navigating out of a response
             // that is still open leaves the browser tearing down a connection
@@ -567,12 +566,23 @@
         });
 
         if (navigating && location) {
-          // The link goes up before the navigation is attempted, so a failed
-          // navigation leaves a working page pointing at the finished draft
-          // instead of a browser error and no way back to it.
+          // Deliberately does not navigate.
+          //
+          // Sending the browser to the draft the instant the stream ended kept
+          // landing on an error page, on a request that worked perfectly a
+          // moment later on refresh. Three attempts at the cause — a stale
+          // upstream connection, navigating out of an open response, closing
+          // the stream first — each fixed something real and none of them fixed
+          // this.
+          //
+          // The generation is finished and paid for by this point, so the one
+          // thing that must not happen is losing it to a failed navigation.
+          // Showing where it is always works; going there automatically does
+          // not. It also leaves the form ready for the next one, which is what
+          // happens more often than not.
           doneLink.href = location;
           donePanel.hidden = false;
-          window.location.assign(location);
+          statusTitle.textContent = 'Done';
           return;
         }
 
@@ -596,12 +606,10 @@
         fail(message);
       } finally {
         stopTicker();
-        if (!navigating) {
-          status.hidden = true;
-          status.classList.remove('is-busy');
-          submit.removeAttribute('disabled');
-          if (directions) planAccept.removeAttribute('disabled');
-        }
+        status.hidden = true;
+        status.classList.remove('is-busy');
+        submit.removeAttribute('disabled');
+        if (directions) planAccept.removeAttribute('disabled');
       }
     }
 

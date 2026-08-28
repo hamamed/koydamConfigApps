@@ -102,47 +102,68 @@ function garmentSource(part, face, art) {
  */
 async function trimFlatBorder(buffer) {
   try {
-    const before = await sharp(buffer).metadata();
+    const meta = await sharp(buffer).metadata();
+    if (!meta.width || !meta.height) return buffer;
 
-    const { data, info } = await sharp(buffer)
-      // Generous threshold: model borders are rarely one exact value, and
-      // JPEG-ish artefacts around an edge are not a reason to leave it.
-      .trim({ threshold: 12 })
+    // Measured on a small copy. A margin is a large-scale feature, and scanning
+    // a thumbnail is hundreds of times cheaper than scanning the panel.
+    const w = 96;
+    const h = Math.max(16, Math.round((meta.height / meta.width) * w));
+    const { data } = await sharp(buffer)
+      .resize(w, h, { fit: 'fill' })
+      .removeAlpha()
+      .raw()
       .toBuffer({ resolveWithObject: true });
 
-    const kept = (info.width * info.height) / (before.width * before.height);
+    const at = (x, y) => { const i = (y * w + x) * 3; return [data[i], data[i + 1], data[i + 2]]; };
+    const gap = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+    const near = (a, b) => gap(a, b) < 34;
 
-    // Nothing recognisable left. Whatever that was, it was not a margin.
-    if (kept < 0.08 || info.width < 16 || info.height < 16) return buffer;
-    if (kept > 0.995) return buffer;
+    const frame = at(0, 0);
 
-    // How much was removed cannot decide this on its own. A sleeve drawn small
-    // on a white field leaves very little, and so does a plain white shirt —
-    // the difference is not the amount, it is whether what remains looks like
-    // the thing that was removed.
-    const edge = await sharp(buffer)
-      .extract({
-        left: 0,
-        top: 0,
-        width: Math.max(2, Math.round(before.width * 0.02)),
-        height: Math.max(2, Math.round(before.height * 0.02)),
-      })
-      .stats();
-    const inner = await sharp(data).stats();
+    // A margin surrounds the artwork; a collar does not. Requiring all four
+    // edges to be the same flat colour is what separates "the model framed it
+    // in white" from "the shirt has a white collar along the top", which look
+    // identical if only one edge is examined — and cutting a collar off would
+    // be a worse fault than leaving a border on.
+    const line = (pts) => pts.every((p) => near(at(p[0], p[1]), frame));
+    const across = (n) => [...Array(n).keys()];
+    const framed =
+      line(across(w).map((x) => [x, 0]))
+      && line(across(w).map((x) => [x, h - 1]))
+      && line(across(h).map((y) => [0, y]))
+      && line(across(h).map((y) => [w - 1, y]));
 
-    const distance = [0, 1, 2].reduce(
-      (total, c) => total + Math.abs((edge.channels[c]?.mean ?? 0) - (inner.channels[c]?.mean ?? 0)),
-      0,
-    );
+    if (!framed) return buffer;
 
-    // Same colour inside and out: the border is the garment, and cutting it
-    // away would cut away the shirt.
-    if (distance < 40) return buffer;
+    // The centre has to be something else, or this is a plain panel and the
+    // "frame" is the garment.
+    if (near(at(w >> 1, h >> 1), frame)) return buffer;
 
-    return data;
+    // How deep it goes on each side, capped so a mistake cannot eat the panel.
+    const limitX = Math.floor(w * 0.42);
+    const limitY = Math.floor(h * 0.42);
+    let left = 0; while (left < limitX && line(across(h).map((y) => [left, y]))) left++;
+    let right = 0; while (right < limitX && line(across(h).map((y) => [w - 1 - right, y]))) right++;
+    let top = 0; while (top < limitY && line(across(w).map((x) => [x, top]))) top++;
+    let bottom = 0; while (bottom < limitY && line(across(w).map((x) => [x, h - 1 - bottom]))) bottom++;
+
+    if (left + right + top + bottom === 0) return buffer;
+
+    // Back to full resolution, a hair inside the boundary so a soft edge does
+    // not survive as a pale line along the seam.
+    const bleed = 1;
+    const sx = Math.round(((left + bleed) / w) * meta.width);
+    const sy = Math.round(((top + bleed) / h) * meta.height);
+    const sw = meta.width - sx - Math.round(((right + bleed) / w) * meta.width);
+    const sh = meta.height - sy - Math.round(((bottom + bleed) / h) * meta.height);
+
+    if (sw < meta.width * 0.15 || sh < meta.height * 0.15) return buffer;
+
+    return sharp(buffer).extract({ left: sx, top: sy, width: sw, height: sh }).png().toBuffer();
   } catch {
-    // A panel that cannot be trimmed is a panel that keeps its border, which is
-    // the situation this started from.
+    // A panel that cannot be trimmed keeps its border, which is where this
+    // started from.
     return buffer;
   }
 }
