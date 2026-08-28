@@ -86,6 +86,76 @@ function garmentSource(part, face, art) {
 }
 
 /**
+ * Removes a flat border the model added despite being told not to.
+ *
+ * Asking for a surface rather than an object stops most of it, but not all: a
+ * sleeve is a narrow thing, and a model drawing one will sometimes still centre
+ * it on a background. Composition then scales that border onto the avatar,
+ * where it reads as a white seam down the arm.
+ *
+ * The guard matters more than the trim. `trim` works from the corner pixel, so
+ * a genuinely plain panel — a white dress shirt, a black sweater — is a border
+ * all the way through and would collapse to almost nothing. When that happens
+ * the original is kept: a panel that is meant to be one colour is not a panel
+ * with a margin, and there is no way to tell them apart except by how much is
+ * left.
+ */
+async function trimFlatBorder(buffer) {
+  try {
+    const before = await sharp(buffer).metadata();
+
+    const { data, info } = await sharp(buffer)
+      // Generous threshold: model borders are rarely one exact value, and
+      // JPEG-ish artefacts around an edge are not a reason to leave it.
+      .trim({ threshold: 12 })
+      .toBuffer({ resolveWithObject: true });
+
+    const kept = (info.width * info.height) / (before.width * before.height);
+
+    // Nothing recognisable left. Whatever that was, it was not a margin.
+    if (kept < 0.08 || info.width < 16 || info.height < 16) return buffer;
+    if (kept > 0.995) return buffer;
+
+    // How much was removed cannot decide this on its own. A sleeve drawn small
+    // on a white field leaves very little, and so does a plain white shirt —
+    // the difference is not the amount, it is whether what remains looks like
+    // the thing that was removed.
+    const edge = await sharp(buffer)
+      .extract({
+        left: 0,
+        top: 0,
+        width: Math.max(2, Math.round(before.width * 0.02)),
+        height: Math.max(2, Math.round(before.height * 0.02)),
+      })
+      .stats();
+    const inner = await sharp(data).stats();
+
+    const distance = [0, 1, 2].reduce(
+      (total, c) => total + Math.abs((edge.channels[c]?.mean ?? 0) - (inner.channels[c]?.mean ?? 0)),
+      0,
+    );
+
+    // Same colour inside and out: the border is the garment, and cutting it
+    // away would cut away the shirt.
+    if (distance < 40) return buffer;
+
+    return data;
+  } catch {
+    // A panel that cannot be trimmed is a panel that keeps its border, which is
+    // the situation this started from.
+    return buffer;
+  }
+}
+
+/**
+ * Public because the pipeline trims each panel once as it arrives, rather than
+ * once per face — the same sleeve is composed onto six of them.
+ */
+export async function tidyPanel(buffer) {
+  return trimFlatBorder(buffer);
+}
+
+/**
  * Scales artwork to a rectangle and shades it.
  *
  * `cover` rather than `contain`: a face must be filled edge to edge. Letterbox

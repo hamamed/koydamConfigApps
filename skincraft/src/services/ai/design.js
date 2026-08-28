@@ -1,4 +1,4 @@
-import { composeTemplate } from './compose.js';
+import { composeTemplate, tidyPanel } from './compose.js';
 import {
   buildGarmentPrompt,
   buildPrompt,
@@ -214,9 +214,13 @@ export async function designSkin({
     // Garment panels are drawn at the proportion they will occupy. A sleeve is
     // half as wide as it is tall, and asking for a square meant a quarter of
     // every sleeve was drawn and then cropped off.
-    art[piece] = await generateImage(prompts[piece], {
+    const drawn = await generateImage(prompts[piece], {
       size: garment ? sizeForRegion(piece) : '1024x1024',
     });
+
+    // Once per panel, not once per face: the same sleeve is composed onto six
+    // of them, and a border removed six times is five wasted decodes.
+    art[piece] = await tidyPanel(drawn);
   }
 
   onProgress?.({ stage: 'compose', total: pieces.length });

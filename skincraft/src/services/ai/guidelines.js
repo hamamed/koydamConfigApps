@@ -371,10 +371,13 @@ export function parseIdeas(text) {
  * artwork is an edge on the avatar.
  */
 const GARMENT_DIRECTION = [
-  'Draw the flat fabric panel itself, straight on, filling the square edge to edge.',
+  'Draw the fabric SURFACE itself, straight on, filling the whole frame.',
+  'There is no background and no garment outline: this is a close crop of the',
+  'cloth, and the cloth runs off all four edges. Never draw the silhouette of a',
+  'garment sitting on a backdrop, and never leave a border, margin or white',
+  'edge of any kind.',
   'No body, no mannequin, no person, no hanger, and no photograph of a folded garment.',
-  'No perspective, no 3D render, no drop shadow, no background behind it —',
-  'the panel IS the whole square.',
+  'No perspective, no 3D render, no drop shadow.',
   'Fabric detail is wanted: weave, knit, ribbing, stitching, seams, buttons where asked for.',
   'Shading only as the fabric would fold, never as scene lighting.',
   'No text, letters, numbers, logos or brand marks.',
@@ -473,17 +476,20 @@ export function sizeForRegion(region) {
 /** What each region becomes on the avatar, said in edges the model can act on. */
 const REGION_FRAMING = {
   chest:
-    'The FRONT panel of the garment, from shoulders to hem. The collar or '
-    + 'neckline sits across the TOP edge. Any button placket, zip or print runs '
-    + 'down the CENTRE. The hem is along the BOTTOM edge.',
+    'The cloth across the FRONT of the garment, chest to hem, filling the frame. '
+    + 'The collar or neckline sits across the TOP edge. Any button placket, zip '
+    + 'or print runs down the CENTRE. The fabric reaches the left and right '
+    + 'edges — the garment is wider than this crop.',
   back:
-    'The BACK panel of the same garment. A yoke or collar band across the TOP '
-    + 'edge, hem along the BOTTOM. Plainer than the front — the same fabric and '
-    + 'colours, without the placket or the main graphic.',
+    'The cloth across the BACK of the same garment, filling the frame. A yoke or '
+    + 'collar band across the TOP edge. Plainer than the front — the same fabric '
+    + 'and colours, without the placket or the main graphic. The fabric reaches '
+    + 'every edge; do not draw the outline of a back panel on a background.',
   sleeve:
-    'ONE SLEEVE of the same garment, laid flat. The shoulder seam is along the '
-    + 'TOP edge and the cuff is a band across the BOTTOM edge. No collar, no '
-    + 'buttons down it, no chest graphic — this is the arm.',
+    'The cloth of ONE SLEEVE, filling the frame. The shoulder end is the TOP '
+    + 'edge and the cuff is a band across the BOTTOM edge. The sleeve is wider '
+    + 'than this crop, so the fabric runs off the left and right edges. No '
+    + 'collar, no buttons down it, no chest graphic — this is the arm.',
   waist:
     'The waist and hips of the trousers. The waistband runs across the TOP '
     + 'edge, with belt loops on it, and the fly runs down the CENTRE. The fabric '
@@ -499,7 +505,7 @@ const REGION_FRAMING = {
     'One trouser leg of the outfit, laid flat. The fabric continues past the '
     + 'TOP edge and the hem is a band across the BOTTOM edge.',
   limb:
-    'ONE LIMB of the outfit, laid flat. On a full-body sheet this same panel '
+    'The cloth of ONE LIMB, filling the frame. On a full-body sheet this same panel '
     + 'becomes both the sleeve and the trouser leg, so keep it plain and '
     + 'continuous: the fabric runs past the TOP edge, and the BOTTOM edge is a '
     + 'simple band that reads as either a cuff or a hem. No collar, no buttons, '
