@@ -142,12 +142,23 @@ export async function* streamPlan(messages, { signal } = {}) {
  * itself. 1024 because the largest face it fills is 128px - anything bigger is
  * paying for pixels that get thrown away.
  */
+/**
+ * Sizes this provider has already refused, so a panel shape it cannot draw
+ * costs one rejection rather than one per image for the rest of time.
+ */
+const refusedSizes = new Set();
+
 export async function generateImage(prompt, { size = '1024x1024' } = {}) {
   if (!isConfigured()) {
     throw new Error(
       'Image generation is not configured. Set AI_IMAGE_API_KEY to switch it on.',
     );
   }
+
+  // Every provider that implements this API draws a square; the portrait sizes
+  // are newer and not universal. Falling back costs a crop, which is what this
+  // did everywhere before — failing outright would cost the whole design.
+  if (refusedSizes.has(size)) size = '1024x1024';
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -170,6 +181,13 @@ export async function generateImage(prompt, { size = '1024x1024' } = {}) {
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
+
+      // A size this provider does not offer. Remember it and draw the square.
+      if (res.status === 400 && /size|dimension/i.test(detail) && size !== '1024x1024') {
+        refusedSizes.add(size);
+        clearTimeout(timer);
+        return generateImage(prompt, { size: '1024x1024' });
+      }
 
       // The provider's own safety system refusing is not a fault to retry; it
       // is an answer, and the person asking should be told which it was.

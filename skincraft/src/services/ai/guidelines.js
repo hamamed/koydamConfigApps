@@ -404,6 +404,72 @@ export function regionsFor(category) {
   return GARMENT_REGIONS[category] ?? GARMENT_REGIONS.shirt;
 }
 
+/**
+ * The shape and job of each panel, in the terms the model needs.
+ *
+ * The chest looked right and the arms did not, and this is why: a chest fills a
+ * 128x128 rectangle and a sleeve fills 64x128. Both were being drawn as
+ * squares, so the sleeve was composed for a shape it was never going to
+ * occupy, and a quarter of its width was cropped away to make it fit.
+ *
+ * Telling the model the real proportion — and asking the provider for an image
+ * that already has roughly that proportion — is the difference between a sleeve
+ * designed for the arm and a shirt squeezed into one.
+ */
+export const REGION_PANEL = {
+  chest: {
+    pixels: '128 x 128', shape: 'square', proportion: 'square',
+    part: 'the front of the torso', studs: '2 studs wide by 2 studs tall',
+    wraps: false,
+  },
+  back: {
+    pixels: '128 x 128', shape: 'square', proportion: 'square',
+    part: 'the back of the torso', studs: '2 studs wide by 2 studs tall',
+    wraps: false,
+  },
+  sleeve: {
+    pixels: '64 x 128', shape: 'portrait', proportion: 'exactly twice as tall as it is wide',
+    part: 'the arm', studs: '1 stud wide by 2 studs tall',
+    wraps: true,
+  },
+  limb: {
+    pixels: '64 x 128', shape: 'portrait', proportion: 'exactly twice as tall as it is wide',
+    part: 'the arm and the leg', studs: '1 stud wide by 2 studs tall',
+    wraps: true,
+  },
+  waist: {
+    pixels: '128 x 128', shape: 'square', proportion: 'square',
+    part: 'the hips and waist', studs: '2 studs wide by 2 studs tall',
+    wraps: false,
+  },
+  legFront: {
+    pixels: '64 x 128', shape: 'portrait', proportion: 'exactly twice as tall as it is wide',
+    part: 'the front of the leg', studs: '1 stud wide by 2 studs tall',
+    wraps: false,
+  },
+  legBack: {
+    pixels: '64 x 128', shape: 'portrait', proportion: 'exactly twice as tall as it is wide',
+    part: 'the back of the leg', studs: '1 stud wide by 2 studs tall',
+    wraps: false,
+  },
+  leg: {
+    pixels: '64 x 128', shape: 'portrait', proportion: 'exactly twice as tall as it is wide',
+    part: 'the leg', studs: '1 stud wide by 2 studs tall',
+    wraps: false,
+  },
+};
+
+/**
+ * The generated size closest to the panel it has to fill.
+ *
+ * A square source scaled into a 1:2 rectangle loses a quarter of its width to
+ * the crop, and the model spends that quarter drawing something. Asking for a
+ * portrait image instead leaves far less on the floor.
+ */
+export function sizeForRegion(region) {
+  return REGION_PANEL[region]?.shape === 'portrait' ? '1024x1536' : '1024x1024';
+}
+
 /** What each region becomes on the avatar, said in edges the model can act on. */
 const REGION_FRAMING = {
   chest:
@@ -458,6 +524,26 @@ export function buildGarmentPrompt(
 
   const subject = String(direction || description || '').trim();
 
-  return `A flat clothing texture panel for ${garment}. ${framing} `
+  const panel = REGION_PANEL[region] ?? REGION_PANEL.chest;
+
+  // The shape comes first and in concrete terms. "Twice as tall as it is wide"
+  // is actionable in a way that "a sleeve" is not, and it is the instruction
+  // that was missing when arms came out looking like squeezed shirts.
+  const shape =
+    `PANEL SHAPE: this artwork is painted into a ${panel.pixels} pixel area — `
+    + `${panel.proportion} — which becomes ${panel.part} of a blocky Roblox R6 `
+    + `avatar (${panel.studs}). Compose for that shape: fill it from edge to `
+    + `edge, top to bottom, and do not centre a small design in the middle.`;
+
+  // The four sides of a limb are painted from this one panel, so its left and
+  // right edges are a seam with themselves. Anything important out there gets
+  // cut in half by the wrap.
+  const wrap = panel.wraps
+    ? ' This same panel is painted on all four sides of the limb, so the left '
+      + 'and right edges meet: keep the fabric continuous across them and put '
+      + 'nothing important at the far left or far right.'
+    : '';
+
+  return `A flat clothing texture panel for ${garment}. ${shape}${wrap} ${framing} `
     + `The garment: ${subject}. ${GARMENT_DIRECTION}`;
 }

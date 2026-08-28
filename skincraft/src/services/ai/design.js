@@ -9,6 +9,7 @@ import {
   plannerSystem,
   PUBLISH_CHECKLIST,
   regionsFor,
+  sizeForRegion,
 } from './guidelines.js';
 import { generateImage, isConfigured, isTextConfigured, streamPlan } from './provider.js';
 
@@ -209,7 +210,13 @@ export async function designSkin({
     // Sequential rather than parallel. Providers rate limit per minute, and a
     // 429 halfway through means paying for the pieces that did land and
     // getting nothing usable out of them.
-    art[piece] = await generateImage(prompts[piece]);
+    //
+    // Garment panels are drawn at the proportion they will occupy. A sleeve is
+    // half as wide as it is tall, and asking for a square meant a quarter of
+    // every sleeve was drawn and then cropped off.
+    art[piece] = await generateImage(prompts[piece], {
+      size: garment ? sizeForRegion(piece) : '1024x1024',
+    });
   }
 
   onProgress?.({ stage: 'compose', total: pieces.length });
