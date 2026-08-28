@@ -140,6 +140,27 @@ const server = app.listen(config.port, config.host, () => {
 });
 
 /**
+ * Outlive nginx's idea of how long a connection is good for.
+ *
+ * The upstream block keeps up to 16 connections pooled and reuses them, and it
+ * has no idle timeout of its own — it assumes a pooled connection stays usable
+ * until it is told otherwise. Node closes an idle one after five seconds.
+ *
+ * Most of the time nothing notices, because traffic keeps them warm. An AI
+ * generation is the exception: it runs for a minute or more during which the
+ * browser asks for nothing else, so every pooled connection goes stale. The
+ * navigation to the finished draft is then sent into a socket that is already
+ * gone, nginx answers 502, and Chrome shows "this page isn't working" — while a
+ * refresh, which opens a fresh connection, works. That is the shape of the bug
+ * exactly.
+ *
+ * headersTimeout must stay above keepAliveTimeout, or it fires first and
+ * undoes this.
+ */
+server.keepAliveTimeout = 65_000;
+server.headersTimeout = 70_000;
+
+/**
  * One bad request must not take the site down.
  *
  * Express does not catch a rejected async handler, and Node's default for an
