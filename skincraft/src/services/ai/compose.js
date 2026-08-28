@@ -31,13 +31,58 @@ import {
  */
 
 /** Every face gets artwork; this decides which of the generated pieces it uses. */
-function sourceFor(face, art) {
+function patternSource(face, art) {
   if (face === 'front') return art.front;
   if (face === 'back') return art.back ?? art.front;
   // Sides, top and bottom: the pattern if one was generated, else the front
   // artwork. A sleeve showing the chest design is worse than a sleeve showing
   // a plain continuation, but it is better than a hole.
   return art.pattern ?? art.back ?? art.front;
+}
+
+/**
+ * Which panel of a real garment belongs on this face of this body part.
+ *
+ * This is the whole difference between garment mode and pattern mode. Pattern
+ * mode keys artwork by face, so the one `front` image lands on the chest and on
+ * both sleeve fronts — which is why the pattern rules forbid collars, and why a
+ * shirt drawn that way cannot have one. Keying by part as well means the chest
+ * panel goes only where a chest is.
+ *
+ * The vertical crop is what makes the edges hold. A tall face (64x128) covered
+ * from a square keeps its full height and loses width, so a cuff painted across
+ * the bottom of a sleeve panel arrives at the wrist rather than being cropped
+ * away.
+ *
+ * Every branch falls back rather than returning nothing: a missing panel should
+ * cost detail, never leave a hole for the avatar's skin to show through.
+ */
+function garmentSource(part, face, art) {
+  const anyTorso = art.chest ?? art.back ?? art.waist;
+
+  // A full-body sheet paints the arm and the leg on each side from one limb
+  // group, so both ask for the same panel — anything else pays for artwork that
+  // is composed and then immediately overwritten.
+  if (part === 'rightArm' || part === 'leftArm') {
+    return art.limb ?? art.sleeve ?? anyTorso;
+  }
+
+  if (part === 'rightLeg' || part === 'leftLeg') {
+    if (art.limb) return art.limb;
+    if (face === 'front') return art.legFront ?? art.leg ?? art.sleeve ?? anyTorso;
+    return art.legBack ?? art.leg ?? art.legFront ?? art.sleeve ?? anyTorso;
+  }
+
+  // The torso group. On trousers this is the waist and hips, and it has one
+  // panel rather than a front and a back.
+  if (art.waist) return art.waist;
+
+  if (face === 'front') return art.chest ?? art.back;
+  if (face === 'back') return art.back ?? art.chest;
+  // Sides, shoulders and the underside of the hem: plain fabric reads better
+  // here than a second copy of the chest or the back. The sleeve is that panel
+  // on a shirt, and the limb is on a full-body sheet.
+  return art.sleeve ?? art.limb ?? art.back ?? art.chest;
 }
 
 /**
@@ -67,16 +112,23 @@ async function faceTile(source, rect, shade) {
  * Anything not painted stays transparent, which is how Roblox reads "leave the
  * avatar's own skin showing here".
  */
-export async function composeTemplate(art, category = 'shirt') {
-  if (!art?.front) throw new Error('No artwork to compose');
+export async function composeTemplate(art, category = 'shirt', style = 'pattern') {
+  const garment = style === 'garment';
+
+  if (!garment && !art?.front) throw new Error('No artwork to compose');
+  if (garment && !(art?.chest || art?.waist || art?.legFront || art?.sleeve)) {
+    throw new Error('No artwork to compose');
+  }
 
   const layout = LAYOUTS[category] ?? LAYOUTS.shirt;
 
   const composites = [];
 
-  for (const group of Object.values(layout)) {
+  for (const [part, group] of Object.entries(layout)) {
     for (const [face, rect] of Object.entries(group)) {
-      const source = sourceFor(face, art);
+      const source = garment
+        ? garmentSource(part, face, art)
+        : patternSource(face, art);
       const shade = FACE_SHADE[face] ?? 1;
 
       composites.push({

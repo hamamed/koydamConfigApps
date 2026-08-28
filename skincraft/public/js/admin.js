@@ -210,11 +210,81 @@
     const planSend = el('plan-send');
     const planAccept = el('plan-accept');
 
-    // Each image is its own round trip to the provider, so "Detailed" really is
-    // three times the wait. Saying which one it is on is what stops the pause
-    // reading as a hang.
-    const images = { simple: 1, standard: 2, detailed: 3 };
-    const faceNames = { front: 'the front', back: 'the back', pattern: 'the side pattern' };
+    // Each image is its own round trip to the provider, so three panels really
+    // is three times the wait. Saying which one it is on is what stops the
+    // pause reading as a hang.
+    const faceNames = {
+      front: 'the front', back: 'the back', pattern: 'the side pattern',
+      chest: 'the chest', sleeve: 'a sleeve', waist: 'the waist',
+      legFront: 'the front of a leg', legBack: 'the back of a leg', leg: 'a leg',
+    };
+
+    // What each combination costs, handed over by the server so the page and
+    // the pipeline cannot disagree about it.
+    const costs = JSON.parse(aiForm.dataset.aiCosts || '{}');
+
+    const styleInput = () => aiForm.querySelector('[name="style"]:checked');
+    const currentStyle = () => styleInput()?.value ?? 'pattern';
+    const panelCount = () => {
+      const forCategory = costs[field('category').value] || {};
+      return currentStyle() === 'garment'
+        ? (forCategory.garment ?? 3)
+        : (forCategory[field('quality').value] ?? 2);
+    };
+
+    // ── What the description should say ──────────────────────────────────
+    //
+    // The two modes want opposite things typed into the same box. Pattern mode
+    // must not be told "a shirt", because that draws a picture of a shirt onto
+    // a shirt; garment mode wants exactly that. Leaving one set of instructions
+    // up for both is how someone follows the wrong one.
+    const descriptionLabel = el('description-label');
+    const descriptionHelp = el('description-help');
+    const qualityField = el('quality-field');
+    const costField = el('cost-field');
+    const costOut = el('cost');
+
+    function reflectStyle() {
+      const garment = currentStyle() === 'garment';
+
+      descriptionLabel.textContent = garment
+        ? 'What are the clothes?'
+        : 'What should it look like?';
+
+      descriptionHelp.innerHTML = garment
+        ? 'Describe the <em>garment</em> — “a navy office dress shirt with a white '
+          + 'collar and pearl buttons”, “a charcoal cable-knit sweater”. Cut, fabric '
+          + 'and colour all help.'
+        : 'Describe the <em>artwork</em>, not the garment. “Blue galaxy pattern”, '
+          + 'not “a shirt with a galaxy on it” — asking for a shirt gets you a '
+          + 'picture of a shirt, printed on a shirt.';
+
+      // Detail is a pattern-mode choice. In garment mode the number of panels
+      // is decided by the body, not by taste.
+      qualityField.hidden = garment;
+      costField.hidden = !garment;
+      costOut.textContent = `${panelCount()} panels`;
+
+      const placeholder = garment
+        ? 'A navy office dress shirt with a white collar and pearl buttons'
+        : 'A deep blue galaxy with purple nebula clouds and small white stars';
+      field('description').placeholder = placeholder;
+    }
+
+    aiForm.querySelectorAll('[name="style"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        // A plan describes panels that no longer exist once the mode changes.
+        directions = null;
+        history = [];
+        panel.hidden = true;
+        reflectStyle();
+      });
+    });
+    field('category').addEventListener('change', reflectStyle);
+    field('quality').addEventListener('change', reflectStyle);
+    reflectStyle();
+
+    // ── Planning ──────────────────────────────────────────────────────────
 
     // The conversation so far, so a follow-up is a correction rather than a
     // fresh start. Sent back on each turn and bounded server-side.
@@ -368,6 +438,7 @@
       const body = new URLSearchParams({
         description: instruction || description,
         category: field('category').value,
+        style: currentStyle(),
         history: JSON.stringify(history),
       });
 
@@ -422,13 +493,15 @@
 
     // ── Generating ────────────────────────────────────────────────────────
     async function generate() {
-      const count = images[field('quality').value] ?? 2;
+      const count = panelCount();
       const started = Date.now();
 
       errorBox.hidden = true;
       status.hidden = false;
       status.classList.add('is-busy');
-      statusTitle.textContent = count === 1 ? 'Generating 1 image…' : `Generating ${count} images…`;
+      statusTitle.textContent = count === 1
+        ? 'Generating 1 panel…'
+        : `Generating ${count} panels…`;
       statusDetail.textContent = 'Starting…';
       submit.setAttribute('disabled', 'disabled');
       planAccept.setAttribute('disabled', 'disabled');
@@ -446,6 +519,7 @@
         description: field('description').value.trim(),
         category: field('category').value,
         quality: field('quality').value,
+        style: currentStyle(),
         title: field('title').value,
         directions: JSON.stringify(directions),
         plan: planText.textContent || '',
@@ -455,7 +529,7 @@
         await stream('/admin/skins/ai/generate', body, (event) => {
           if (event.type === 'progress') {
             if (event.stage === 'image') {
-              step = `Drawing ${faceNames[event.face] ?? event.face} — image ${event.index + 1} of ${event.total}`;
+              step = `Drawing ${faceNames[event.face] ?? event.face} — ${event.index + 1} of ${event.total}`;
             } else if (event.stage === 'compose') {
               step = 'Composing the template sheet';
             } else if (event.stage === 'storing') {

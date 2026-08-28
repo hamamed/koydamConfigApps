@@ -22,9 +22,11 @@ import {
   designSkin,
   isAvailable as isAiAvailable,
   isPlanningAvailable,
+  pieceCount,
   planDesign,
   suggestIdeas,
   availableQualities,
+  availableStyles,
 } from '../services/ai/design.js';
 import { PUBLISH_CHECKLIST } from '../services/ai/guidelines.js';
 import { layoutProof } from '../services/ai/compose.js';
@@ -485,6 +487,11 @@ function validateSkinForm(form) {
   return errors;
 }
 
+/** 'garment' draws real clothing panel by panel; anything else is pattern artwork. */
+function readStyle(req) {
+  return String(req.body?.style ?? '') === 'garment' ? 'garment' : 'pattern';
+}
+
 function wantsJson(req) {
   return req.xhr || req.get('accept')?.includes('application/json');
 }
@@ -503,6 +510,20 @@ adminRouter.get('/skins/ai', (req, res) => {
     // generation works. The page has to say which of the two it has.
     planningAvailable: isPlanningAvailable(),
     qualities: availableQualities(),
+    styles: availableStyles(),
+    // How many images each combination costs, so the page can say before it is
+    // spent rather than after.
+    costs: Object.fromEntries(
+      ['shirt', 'tshirt', 'pants', 'avatar'].map((category) => [
+        category,
+        {
+          garment: pieceCount('garment', null, category),
+          ...Object.fromEntries(
+            availableQualities().map((q) => [q, pieceCount('pattern', q, category)]),
+          ),
+        },
+      ]),
+    ),
     checklist: PUBLISH_CHECKLIST,
   });
 });
@@ -530,7 +551,7 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
   }
 
   try {
-    const result = await designSkin({ description, category, quality });
+    const result = await designSkin({ description, category, quality, style: readStyle(req) });
 
     const id = generateSkinId();
     const base = `${slugify(title, id)}-${id.slice(5)}`;
@@ -754,7 +775,7 @@ adminRouter.post('/skins/ai/plan', async (req, res) => {
 
   try {
     const plan = await planDesign(
-      { description, category, history: sanitiseHistory(req.body?.history) },
+      { description, category, style: readStyle(req), history: sanitiseHistory(req.body?.history) },
       (delta) => sseSend(res, { type: 'delta', text: delta }),
     );
 
@@ -806,6 +827,7 @@ adminRouter.post('/skins/ai/generate', async (req, res) => {
       description,
       category,
       quality,
+      style: readStyle(req),
       directions,
       onProgress: (progress) => sseSend(res, { type: 'progress', ...progress }),
     });

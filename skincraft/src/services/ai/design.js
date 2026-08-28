@@ -1,12 +1,14 @@
 import { composeTemplate } from './compose.js';
 import {
+  buildGarmentPrompt,
   buildPrompt,
   checkPrompt,
   IDEAS_SYSTEM,
   parseIdeas,
   parsePlan,
-  PLANNER_SYSTEM,
+  plannerSystem,
   PUBLISH_CHECKLIST,
+  regionsFor,
 } from './guidelines.js';
 import { generateImage, isConfigured, isTextConfigured, streamPlan } from './provider.js';
 
@@ -99,7 +101,7 @@ export async function suggestIdeas({ theme = '', category = 'shirt', count = 6 }
  * fresh start — the difference between talking to it and typing at it.
  */
 export async function planDesign(
-  { description, category = 'shirt', history = [] } = {},
+  { description, category = 'shirt', style = 'pattern', history = [] } = {},
   onDelta,
 ) {
   const gate = checkPrompt(description);
@@ -109,8 +111,12 @@ export async function planDesign(
     throw err;
   }
 
+  const keys = style === 'garment'
+    ? regionsFor(category)
+    : ['front', 'back', 'pattern'];
+
   const messages = [
-    { role: 'system', content: PLANNER_SYSTEM },
+    { role: 'system', content: plannerSystem({ style, category }) },
     ...history,
     { role: 'user', content: `Garment: ${category}. Design: ${String(description).trim()}` },
   ];
@@ -121,11 +127,33 @@ export async function planDesign(
     onDelta?.(delta);
   }
 
-  return { text, ...parsePlan(text) };
+  return { text, ...parsePlan(text, keys) };
 }
 
 export function availableQualities() {
   return Object.keys(PIECES);
+}
+
+/**
+ * The two things this can draw.
+ *
+ * `pattern` is artwork — a galaxy, a camo, a gradient — stretched over the
+ * whole garment. `garment` is clothing: a panel per region, so the collar is at
+ * the neck, the cuffs are at the wrists and the waistband is at the waist.
+ *
+ * They are different enough to need different art direction. Pattern mode
+ * forbids collars and seams because its one image lands on every front face;
+ * garment mode asks for them, on the panel that becomes that part of the body.
+ */
+export function availableStyles() {
+  return ['pattern', 'garment'];
+}
+
+/** How many images a choice costs, so the page can say so before it is spent. */
+export function pieceCount(style, quality, category) {
+  return style === 'garment'
+    ? regionsFor(category).length
+    : (PIECES[quality] ?? PIECES.standard).length;
 }
 
 /**
@@ -137,8 +165,11 @@ export async function designSkin({
   description,
   category = 'shirt',
   quality = 'standard',
-  /** Per-face art direction from an approved plan. Falls back to the built
-   *  prompt for any face the planner did not cover. */
+  /** 'pattern' for artwork stretched over the garment, 'garment' for real
+   *  clothing drawn a panel at a time. */
+  style = 'pattern',
+  /** Per-piece art direction from an approved plan. Falls back to the built
+   *  prompt for any piece the planner did not cover. */
   directions = null,
   /** Called before and after each image, so a caller can say which of the
    *  three minutes it is currently in. */
@@ -151,37 +182,50 @@ export async function designSkin({
     throw err;
   }
 
-  const pieces = PIECES[quality] ?? PIECES.standard;
+  const garment = style === 'garment';
+
+  // In garment mode the pieces are regions of a real garment and the set is
+  // decided by what the category has to cover; in pattern mode they are the
+  // richness the person asked for.
+  const pieces = garment ? regionsFor(category) : (PIECES[quality] ?? PIECES.standard);
   const prompts = {};
   const art = {};
 
-  for (const [index, face] of pieces.entries()) {
-    prompts[face] = buildPrompt(description, {
-      face,
-      category,
-      direction: directions?.[face] ?? null,
-    });
+  for (const [index, piece] of pieces.entries()) {
+    prompts[piece] = garment
+      ? buildGarmentPrompt(description, {
+        region: piece,
+        category,
+        direction: directions?.[piece] ?? null,
+      })
+      : buildPrompt(description, {
+        face: piece,
+        category,
+        direction: directions?.[piece] ?? null,
+      });
 
-    onProgress?.({ stage: 'image', face, index, total: pieces.length });
+    onProgress?.({ stage: 'image', face: piece, index, total: pieces.length });
 
     // Sequential rather than parallel. Providers rate limit per minute, and a
     // 429 halfway through means paying for the pieces that did land and
     // getting nothing usable out of them.
-    art[face] = await generateImage(prompts[face]);
+    art[piece] = await generateImage(prompts[piece]);
   }
 
   onProgress?.({ stage: 'compose', total: pieces.length });
-  const template = await composeTemplate(art, category);
+  const template = await composeTemplate(art, category, style);
 
   return {
     template,
-    // The front artwork doubles as the card preview: it is the design as
-    // drawn, before it was cut up and shaded across eighteen faces.
-    preview: art.front,
+    // The front-facing panel doubles as the card preview: it is the design as
+    // drawn, before it was cut up and shaded across eighteen faces. Garment
+    // mode has no `front`, so the chest — or the waist, on trousers — stands in.
+    preview: art.front ?? art.chest ?? art.waist ?? art.legFront ?? art[pieces[0]],
     meta: {
       description: String(description).trim(),
       category,
       quality,
+      style,
       pieces,
       prompts,
       // Kept so the skin page can answer "why does it look like this" months

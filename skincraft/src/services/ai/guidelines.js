@@ -187,7 +187,7 @@ export const PUBLISH_CHECKLIST = [
  * the point where a person is still in the conversation rather than producing
  * a plan that `checkPrompt` will reject a moment later.
  */
-export const PLANNER_SYSTEM = [
+const PLANNER_BASE = [
   'You are an art director for Roblox classic clothing templates.',
   'Given a description, plan the artwork. Be concrete: palette, motifs, mood,',
   'and what differs between the front, the back and the side pattern.',
@@ -202,13 +202,49 @@ export const PLANNER_SYSTEM = [
   'no restating the request back.',
   '',
   'Then output a line containing only ---',
-  'Then a JSON object, and nothing after it, of the form:',
-  '{"front": "...", "back": "...", "pattern": "..."}',
-  'Each value describes the ARTWORK for that face in one sentence: subject,',
-  'colours, composition. Never describe a garment, a body, or a person —',
-  'these become texture prompts, and a prompt that mentions a shirt produces',
-  'a picture of a shirt printed onto a shirt.',
+  'Then a JSON object, and nothing after it.',
 ].join('\n');
+
+/**
+ * The planner's brief, for the style being planned.
+ *
+ * The two modes want opposite things from the same model. Pattern mode needs
+ * artwork and must be told not to describe clothing, because a prompt that
+ * mentions a shirt produces a picture of a shirt printed onto a shirt. Garment
+ * mode needs clothing described panel by panel, because each panel is drawn
+ * separately and lands somewhere specific.
+ *
+ * One brief trying to cover both would have to contradict itself.
+ */
+export function plannerSystem({ style = 'pattern', category = 'shirt' } = {}) {
+  if (style !== 'garment') {
+    return [
+      PLANNER_BASE,
+      'The object has the form:',
+      '{"front": "...", "back": "...", "pattern": "..."}',
+      'Each value describes the ARTWORK for that face in one sentence: subject,',
+      'colours, composition. Never describe a garment, a body, or a person —',
+      'these become texture prompts, and a prompt that mentions a shirt produces',
+      'a picture of a shirt printed onto a shirt.',
+    ].join('\n');
+  }
+
+  const regions = regionsFor(category);
+
+  return [
+    PLANNER_BASE,
+    `The object has exactly these keys: ${regions.map((r) => `"${r}"`).join(', ')}.`,
+    'Each value describes that PANEL of the garment in one sentence: cut,',
+    'fabric, colour, and the details that belong on it — a collar and placket on',
+    'the chest, a cuff on the sleeve, a waistband on the waist.',
+    'Describe real clothing. Say what it is made of and how it is finished.',
+    'Keep the fabric and colours identical across every panel: they are one',
+    'garment seen in pieces, not several garments.',
+  ].join('\n');
+}
+
+/** Kept for the pattern default, so existing callers read the same as before. */
+export const PLANNER_SYSTEM = plannerSystem({ style: 'pattern' });
 
 /**
  * Splits the planner's answer into the part a person reads and the part the
@@ -219,7 +255,7 @@ export const PLANNER_SYSTEM = [
  * planner's wording is a worse result than a plain generation, but it is a far
  * better one than an error where a design used to be.
  */
-export function parsePlan(text) {
+export function parsePlan(text, keys = ['front', 'back', 'pattern']) {
   const raw = String(text ?? '');
   const separator = raw.indexOf('\n---');
 
@@ -236,9 +272,9 @@ export function parsePlan(text) {
   try {
     const parsed = JSON.parse(tail.slice(start, end + 1));
     const directions = {};
-    for (const face of ['front', 'back', 'pattern']) {
-      if (typeof parsed[face] === 'string' && parsed[face].trim()) {
-        directions[face] = parsed[face].trim();
+    for (const key of keys) {
+      if (typeof parsed[key] === 'string' && parsed[key].trim()) {
+        directions[key] = parsed[key].trim();
       }
     }
     return { reasoning, directions: Object.keys(directions).length ? directions : null };
@@ -308,4 +344,120 @@ export function parseIdeas(text) {
     // and refusing it a moment later wastes the one thing this step saves.
     .filter((idea) => checkPrompt(idea.description).ok)
     .slice(0, 8);
+}
+
+
+/**
+ * Drawing actual clothes instead of a pattern.
+ *
+ * ## Why this needed a second set of rules
+ *
+ * ART_DIRECTION forbids collars, cuffs and seams, and that was right for what
+ * it does: one square is stretched onto every `front` face, so a collar drawn
+ * on the chest lands on both sleeves as well. Forbidding garment features was
+ * the only way to stop the artwork contradicting the geometry.
+ *
+ * Garment mode removes the cause instead. Artwork is generated per region —
+ * chest, back, sleeve — so a collar can be asked for on the panel that becomes
+ * a chest and nowhere else.
+ *
+ * ## Why the framing talks about edges
+ *
+ * Each region maps to a known rectangle on a known part of the body, so where
+ * a feature belongs can be stated in terms the model can act on: a collar
+ * across the TOP edge of the chest panel really does end up at the neck, and a
+ * cuff across the BOTTOM edge of a sleeve panel really does end up at the
+ * wrist. Composition scales each panel to fill its rectangle, so an edge in the
+ * artwork is an edge on the avatar.
+ */
+const GARMENT_DIRECTION = [
+  'Draw the flat fabric panel itself, straight on, filling the square edge to edge.',
+  'No body, no mannequin, no person, no hanger, and no photograph of a folded garment.',
+  'No perspective, no 3D render, no drop shadow, no background behind it —',
+  'the panel IS the whole square.',
+  'Fabric detail is wanted: weave, knit, ribbing, stitching, seams, buttons where asked for.',
+  'Shading only as the fabric would fold, never as scene lighting.',
+  'No text, letters, numbers, logos or brand marks.',
+  'Keep the colours and material identical across every panel of the same garment.',
+].join(' ');
+
+/**
+ * The regions each garment is drawn in.
+ *
+ * Three for the everyday cases, because each one is a paid image and a shirt
+ * is legible from a chest, a back and a sleeve. A full-body sheet needs a leg
+ * as well — its limb groups paint arms and legs from the same rectangles, so
+ * without one the trousers would be made of sleeve.
+ */
+export const GARMENT_REGIONS = {
+  shirt: ['chest', 'back', 'sleeve'],
+  tshirt: ['chest', 'back', 'sleeve'],
+  pants: ['waist', 'legFront', 'legBack'],
+  // Three, not four. A sheet carries two limb groups and a full-body texture
+  // paints the arm and the leg on each side from the same rectangles — so a
+  // separate trouser-leg panel would be paid for and then overwritten by
+  // whichever of the two was composed last.
+  avatar: ['chest', 'back', 'limb'],
+};
+
+export function regionsFor(category) {
+  return GARMENT_REGIONS[category] ?? GARMENT_REGIONS.shirt;
+}
+
+/** What each region becomes on the avatar, said in edges the model can act on. */
+const REGION_FRAMING = {
+  chest:
+    'The FRONT panel of the garment, from shoulders to hem. The collar or '
+    + 'neckline sits across the TOP edge. Any button placket, zip or print runs '
+    + 'down the CENTRE. The hem is along the BOTTOM edge.',
+  back:
+    'The BACK panel of the same garment. A yoke or collar band across the TOP '
+    + 'edge, hem along the BOTTOM. Plainer than the front — the same fabric and '
+    + 'colours, without the placket or the main graphic.',
+  sleeve:
+    'ONE SLEEVE of the same garment, laid flat. The shoulder seam is along the '
+    + 'TOP edge and the cuff is a band across the BOTTOM edge. No collar, no '
+    + 'buttons down it, no chest graphic — this is the arm.',
+  waist:
+    'The waist and hips of the trousers. The waistband runs across the TOP '
+    + 'edge, with belt loops on it, and the fly runs down the CENTRE. The fabric '
+    + 'continues past the BOTTOM edge into the legs.',
+  legFront:
+    'The FRONT of one trouser leg. The fabric continues past the TOP edge from '
+    + 'the hip, and the hem is a band across the BOTTOM edge. Include the '
+    + 'creases and pockets the trousers would have.',
+  legBack:
+    'The BACK of the same trouser leg. Same fabric and colour, plainer, hem '
+    + 'across the BOTTOM edge.',
+  leg:
+    'One trouser leg of the outfit, laid flat. The fabric continues past the '
+    + 'TOP edge and the hem is a band across the BOTTOM edge.',
+  limb:
+    'ONE LIMB of the outfit, laid flat. On a full-body sheet this same panel '
+    + 'becomes both the sleeve and the trouser leg, so keep it plain and '
+    + 'continuous: the fabric runs past the TOP edge, and the BOTTOM edge is a '
+    + 'simple band that reads as either a cuff or a hem. No collar, no buttons, '
+    + 'no pockets, no chest graphic.',
+};
+
+/**
+ * A prompt for one region of a real garment.
+ *
+ * The region's framing comes first so it is the thing the model is least
+ * likely to drop, then what the person asked for, then the rules.
+ */
+export function buildGarmentPrompt(
+  description,
+  { region = 'chest', category = 'shirt', direction = null } = {},
+) {
+  const framing = REGION_FRAMING[region] ?? REGION_FRAMING.chest;
+  const garment = category === 'pants' ? 'trousers'
+    : category === 'avatar' ? 'a full outfit'
+    : category === 'tshirt' ? 'a t-shirt'
+    : 'a shirt';
+
+  const subject = String(direction || description || '').trim();
+
+  return `A flat clothing texture panel for ${garment}. ${framing} `
+    + `The garment: ${subject}. ${GARMENT_DIRECTION}`;
 }

@@ -982,3 +982,43 @@ body { background: var(--kd-surface); color: var(--kd-ink-2); }
   border-color: var(--kd-accent);
   box-shadow: inset 0 0 0 1px var(--kd-accent);
 }
+
+/* Choosing what kind of skin
+   -------------------------
+   Radios rather than a select, because the difference between the two decides
+   what you type in the next field and what the images cost. A dropdown hides
+   the option you did not pick, and with it the reason to reconsider. */
+.ad-style {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.ad-style legend { float: none; width: auto; }
+
+.ad-style-option {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;
+  padding: .6rem .7rem;
+  border: 1px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+}
+
+.ad-style-option + .ad-style-option { margin-top: .4rem; }
+.ad-style-option:hover { border-color: var(--kd-accent-soft); }
+.ad-style-option input { margin-top: .2rem; flex: none; }
+.ad-style-option strong { display: block; font-size: .86rem; color: var(--kd-ink); }
+.ad-style-option span { font-size: .78rem; line-height: 1.4; color: var(--kd-muted); }
+
+/* :has, so the chosen row is outlined without the script having to track it. */
+.ad-style-option:has(input:checked) {
+  border-color: var(--kd-accent);
+  background: var(--kd-surface-2);
+}
+
+/* Reads as a field so it lines up with the controls beside it, but it is
+   output — nothing here is typed into. */
+.ad-cost { background: var(--kd-surface-2); color: var(--kd-muted); }

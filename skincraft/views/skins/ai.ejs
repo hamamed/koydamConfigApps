@@ -35,7 +35,8 @@
         <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-3">Describe the design</h2>
 
-          <form method="post" action="/admin/skins/ai" data-ai-form>
+          <form method="post" action="/admin/skins/ai" data-ai-form
+                data-ai-costs='<%- JSON.stringify(costs) %>'>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
             <% if (planningAvailable) { %>
@@ -59,18 +60,43 @@
               </div>
             <% } %>
 
+            <!--
+              What to draw, before how rich to draw it. Pattern stretches one
+              piece of artwork over the whole garment; garment draws the clothes
+              themselves, a panel at a time, which is the only way a collar can
+              end up at the neck and not on both sleeves.
+            -->
+            <fieldset class="ad-style mb-3">
+              <legend class="form-label mb-2">What kind of skin</legend>
+              <label class="ad-style-option">
+                <input type="radio" name="style" value="garment" checked
+                       <%= available ? '' : 'disabled' %>>
+                <span>
+                  <strong>Real clothing</strong>
+                  Shirts, sweaters, trousers — collars, cuffs, waistbands and hems
+                  drawn where they belong.
+                </span>
+              </label>
+              <label class="ad-style-option">
+                <input type="radio" name="style" value="pattern"
+                       <%= available ? '' : 'disabled' %>>
+                <span>
+                  <strong>Pattern</strong>
+                  One piece of artwork — a galaxy, a camo, a gradient — carried
+                  over the whole garment.
+                </span>
+              </label>
+            </fieldset>
+
             <div class="mb-3">
-              <label class="form-label" for="description">What should it look like?</label>
+              <label class="form-label" for="description" data-ai-description-label>What should it look like?</label>
               <textarea class="form-control" id="description" name="description"
                         rows="3" maxlength="500" required
                         placeholder="A deep blue galaxy with purple nebula clouds and small white stars"
                         <%= available ? '' : 'disabled' %>></textarea>
-              <div class="form-text">
-                Describe the <em>artwork</em>, not the garment. “Blue galaxy
-                pattern”, not “a shirt with a galaxy on it” — asking for a shirt
-                gets you a picture of a shirt, printed on a shirt.
-              </div>
+              <div class="form-text" data-ai-description-help></div>
             </div>
+
 
             <div class="row g-2 mb-3">
               <div class="col-6 col-md-4">
@@ -84,7 +110,7 @@
                 </select>
               </div>
 
-              <div class="col-6 col-md-4">
+              <div class="col-6 col-md-4" data-ai-quality-field>
                 <label class="form-label" for="quality">Detail</label>
                 <select class="form-select" id="quality" name="quality"
                         <%= available ? '' : 'disabled' %>>
@@ -93,6 +119,12 @@
                   <option value="detailed">Detailed — 3 images</option>
                 </select>
                 <div class="form-text">Each image costs a generation.</div>
+              </div>
+
+              <div class="col-6 col-md-4" data-ai-cost-field hidden>
+                <label class="form-label">Panels</label>
+                <div class="form-control form-control-sm ad-cost" data-ai-cost>—</div>
+                <div class="form-text">One image each, drawn separately.</div>
               </div>
 
               <div class="col-12 col-md-4">
