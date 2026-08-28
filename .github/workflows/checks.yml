@@ -75,10 +75,30 @@ jobs:
             -e POSTGRES_PASSWORD=test -e POSTGRES_DB=platform \
             -p 5432:5432 postgres:16-alpine
 
-          for i in $(seq 1 30); do
-            docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break
+          # Wait for the database this step actually uses, not for "a server is
+          # listening".
+          #
+          # The postgres image runs a *temporary* server on a unix socket while
+          # initdb creates the cluster and applies POSTGRES_DB, then shuts it
+          # down and starts the real one. pg_isready answers yes to that
+          # temporary server, so the loop below used to fall through into the
+          # migrations mid-restart — and this step has failed on every push for
+          # days, in three different disguises: "database platform does not
+          # exist", "the database system is shutting down", and "terminating
+          # connection due to administrator command". All the same race.
+          #
+          # Querying the named database is the readiness condition, because it
+          # is the thing the next line needs and it cannot be true until initdb
+          # has finished and the real server is up.
+          ready=0
+          for i in $(seq 1 60); do
+            if docker exec pg psql -U postgres -d platform -c 'select 1' >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
             sleep 1
           done
+          [ "$ready" = 1 ] || { echo "::error::Postgres never became ready"; docker logs pg; exit 1; }
 
           for f in platform-api/src/db/migrations/*.sql; do
             echo "-- $f"
@@ -152,13 +172,19 @@ jobs:
 
       # Every class the panels use must exist in the stylesheet they load. A
       # missing one is invisible until someone looks at that screen.
+      #
+      # Whole tokens only. `\b(ad|kd)-...` finds a word boundary in the middle
+      # of `btn-kd-ghost` — the hyphen is a non-word character — so it reported
+      # `.kd-ghost` and `.kd-outline` as undefined on two panels that use the
+      # buttons correctly. Splitting on everything that cannot appear in a class
+      # name makes `btn-kd-ghost` one token, which does not start with `kd-`.
       - name: Panel classes are defined
         run: |
           fail=0
           css="platform-api/deploy/shared/css"
           for f in platform-api/src/panel/*.html brawl-vps/src/panel/*.html; do
             [ -f "$f" ] || continue
-            for c in $(grep -oE '\b(ad|kd)-[a-z0-9-]+' "$f" | sort -u); do
+            for c in $(tr -c 'a-zA-Z0-9_-' '\n' < "$f" | grep -E '^(ad|kd)-[a-z0-9-]+$' | sort -u); do
               grep -qh "\.$c\b" "$css/admin.css" "$css/koydam.css" || {
                 echo "::error file=$f::.$c is used but not defined"
                 fail=1

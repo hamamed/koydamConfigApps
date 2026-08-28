@@ -5,9 +5,9 @@
 #   ./deploy/sync-overlays.sh          # show what would change
 #   ./deploy/sync-overlays.sh --write  # actually copy
 #
-# The point: brawl-vps and skincraft each commit their own copy of the SSO
-# client and the stylesheet, because both are hard imports and those repos must
-# boot from a bare clone. That copy is a cache of what lives here. Run this
+# The point: each service commits its own copy of the SSO client and the
+# stylesheet, because both are hard imports and every service must boot from a
+# bare clone. That copy is a cache of what lives here. Run this
 # after changing anything under deploy/shared, then commit the siblings.
 #
 set -euo pipefail
@@ -18,6 +18,7 @@ SIBLINGS="$(cd "$HERE/../.." && pwd)"
 declare -A REPO_DIR=(
   [brawl]="$SIBLINGS/brawl-vps"
   [skincraft]="$SIBLINGS/skincraft-work"
+  [minebox]="$SIBLINGS/minebox"
 )
 
 WRITE=0
@@ -26,7 +27,7 @@ WRITE=0
 changed=0
 missing=0
 
-for name in brawl skincraft; do
+for name in brawl skincraft minebox; do
   manifest="$HERE/overlays/$name/manifest"
   repo="${REPO_DIR[$name]}"
 

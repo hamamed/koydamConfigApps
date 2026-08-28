@@ -1,0 +1,48 @@
+<%- include('partials/head', { title }) %>
+<div class="ad-login">
+  <div class="ad-login-card">
+    <div class="text-center mb-4">
+      <span class="ad-brand-mark mx-auto mb-3" style="width:46px;height:46px;border-radius:14px;">
+        <i data-lucide="boxes" width="24" height="24"></i>
+      </span>
+      <h1 class="ad-brand-name" style="font-size:1.5rem;">MineBox</h1>
+      <p class="ad-page-sub">Catalogue administration</p>
+    </div>
+
+    <div class="ad-card ad-card-pad">
+      <% if (error) { %>
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+          <i data-lucide="circle-alert" width="17" height="17"></i>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <form method="post" action="/admin/login" autocomplete="on">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="next" value="<%= next %>">
+
+        <div class="mb-3">
+          <label class="form-label" for="username">Username</label>
+          <input class="form-control" id="username" name="username" type="text"
+                 autocomplete="username" required autofocus>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" name="password" type="password"
+                 autocomplete="current-password" required>
+        </div>
+
+        <button class="btn btn-kd w-100 py-2" type="submit">
+          <i data-lucide="log-in" width="16" height="16" class="me-1"></i>
+          Sign in
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center mt-3 mb-0" style="font-size:0.75rem;color:var(--kd-faint);">
+      Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.
+    </p>
+  </div>
+</div>
+<%- include('partials/foot') %>

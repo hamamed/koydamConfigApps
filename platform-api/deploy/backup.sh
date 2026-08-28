@@ -217,7 +217,7 @@ add() {
 }
 
 # Secrets first: these are unrecoverable, and were lost once already.
-for svc in brawl-vps platform-api skincraft; do
+for svc in brawl-vps platform-api skincraft minebox; do
   add "env/$svc.env" "/opt/$svc/.env"
 done
 
@@ -225,10 +225,16 @@ add "brawl/wallpapers"   /opt/brawl-vps/wallpapers
 add "brawl/data"         /opt/brawl-vps/data
 add "skincraft/storage"  /opt/skincraft/storage
 add "skincraft/data"     /opt/skincraft/data
+# MineBox keeps the uploaded .mcaddon/.mcworld files under storage/files and the rendered
+# previews under storage/previews. The files are the only copy there is — nothing regenerates
+# an addon somebody uploaded — while previews can be rebuilt with `npm run regenerate-previews`.
+add "minebox/storage"    /opt/minebox/storage
+add "minebox/data"       /opt/minebox/data
 add "nginx"              /etc/nginx/sites-available
 add "systemd"            /etc/systemd/system/brawl-api.service
 add "systemd-platform"   /etc/systemd/system/platform-api.service
 add "systemd-skincraft"  /etc/systemd/system/skincraft.service
+add "systemd-minebox"    /etc/systemd/system/minebox.service
 
 # Certificates: reissuing is possible but rate-limited, and an expired site
 # during a restore is an outage you did not need.

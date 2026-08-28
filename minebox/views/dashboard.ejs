@@ -1,0 +1,283 @@
+<%- include('partials/head', { title }) %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <div class="ad-scrim" id="mbScrim"></div>
+
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+      heading: 'Dashboard',
+      subheading: 'How the catalogue is performing right now',
+      actions: `<a class="btn btn-kd" href="/admin/items/new">
+                  <i data-lucide="upload" width="16" height="16" class="me-1"></i>Add an item</a>`
+    }) %>
+
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <!-- Headline metrics -->
+      <div class="row g-3 mb-4">
+        <%
+          const tiles = [
+            { icon: 'boxes',       label: 'Items',           value: formatNumber(overview.totalItems),
+              note: `${overview.draftCount} draft${overview.draftCount === 1 ? '' : 's'}` },
+            { icon: 'download',    label: 'Total downloads', value: formatNumber(overview.totalDownloads),
+              note: `${formatNumber(overview.downloadsToday)} today` },
+            { icon: 'trending-up', label: 'Last 7 days',     value: formatNumber(overview.downloadsLast7),
+              delta: overview.trend },
+            { icon: 'sparkles',    label: 'Featured',        value: formatNumber(overview.featuredCount),
+              note: "shown in the app's carousel" },
+          ];
+        %>
+        <% tiles.forEach((tile) => { %>
+          <div class="col-6 col-xl-3">
+            <div class="ad-card ad-card-pad ad-stat h-100">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="ad-stat-icon"><i data-lucide="<%= tile.icon %>" width="17" height="17"></i></span>
+                <% if (typeof tile.delta === 'number') { %>
+                  <span class="ad-delta <%= tile.delta > 0 ? 'up' : tile.delta < 0 ? 'down' : 'flat' %>">
+                    <i data-lucide="<%= tile.delta > 0 ? 'arrow-up-right' : tile.delta < 0 ? 'arrow-down-right' : 'minus' %>"
+                       width="13" height="13"></i>
+                    <%= Math.abs(tile.delta) %>%
+                  </span>
+                <% } %>
+              </div>
+              <div class="ad-stat-value"><%= tile.value %></div>
+              <div class="ad-stat-label mt-1"><%= tile.label %></div>
+              <% if (tile.note) { %>
+                <div class="small mt-2 kd-faint"><%= tile.note %></div>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="row g-3">
+        <!-- Downloads chart -->
+        <div class="col-12 col-xl-8">
+          <div class="ad-card ad-card-pad h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h2 class="h6 mb-1">Downloads</h2>
+                <p class="mb-0 small kd-faint">Last 14 days</p>
+              </div>
+              <span class="kd-tag">
+                peak <%= formatNumber(Math.max(...series.map((point) => point.count), 0)) %>/day
+              </span>
+            </div>
+
+            <%
+              // Rendered server-side: fourteen data points don't justify shipping a chart library.
+              const spark = sparklinePath(series, { width: 640, height: 150 });
+            %>
+            <svg class="ad-chart" viewBox="0 0 640 150" preserveAspectRatio="none" role="img"
+                 aria-label="Downloads over the last 14 days">
+              <% [0, 0.25, 0.5, 0.75, 1].forEach((fraction) => { %>
+                <line class="ad-chart-grid" x1="0" x2="640"
+                      y1="<%= (fraction * 150).toFixed(1) %>" y2="<%= (fraction * 150).toFixed(1) %>"/>
+              <% }) %>
+              <polygon class="ad-chart-area" points="<%= spark.area %>"/>
+              <polyline class="ad-chart-line" points="<%= spark.line %>"/>
+            </svg>
+
+            <div class="d-flex justify-content-between mt-2 small kd-faint">
+              <span><%= formatDate(series[0].day) %></span>
+              <span><%= formatDate(series[series.length - 1].day) %></span>
+            </div>
+          </div>
+        </div>
+
+        <!--
+          The split by kind, not by category.
+
+          There are forty categories across five kinds and 'survival' means a different thing
+          under addons than under worlds, so one combined list would answer nothing. "Worlds
+          are a tenth of the catalogue and a third of the downloads" is the shape of the whole
+          product in one row.
+        -->
+        <div class="col-12 col-xl-4">
+          <div class="ad-card ad-card-pad h-100">
+            <h2 class="h6 mb-3">By kind</h2>
+            <% if (breakdown.length === 0) { %>
+              <p class="small mb-0 kd-faint">Nothing published yet.</p>
+            <% } else { %>
+              <% const maxDownloads = Math.max(...breakdown.map((entry) => entry.downloads), 1); %>
+              <% breakdown.forEach((entry) => { %>
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-baseline mb-1">
+                    <a class="small fw-semibold text-decoration-none"
+                       href="/admin/items?kind=<%= entry.kind %>"><%= kindLabels[entry.kind] %></a>
+                    <span class="small kd-faint">
+                      <%= entry.items %> · <%= formatNumber(entry.downloads) %>
+                    </span>
+                  </div>
+                  <div class="ad-meter">
+                    <div class="ad-meter-fill"
+                         style="width:<%= Math.max(3, Math.round((entry.downloads / maxDownloads) * 100)) %>%;"></div>
+                  </div>
+                </div>
+              <% }) %>
+            <% } %>
+
+            <hr class="ad-divider">
+            <div class="d-flex justify-content-between small">
+              <span class="kd-faint">Files</span>
+              <span class="fw-semibold"><%= formatBytes(storage.files.bytes) %> · <%= storage.files.count %></span>
+            </div>
+            <div class="d-flex justify-content-between small mt-1">
+              <span class="kd-faint">Previews</span>
+              <span class="fw-semibold"><%= formatBytes(storage.previews.bytes) %> · <%= storage.previews.count %></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trending now -->
+        <div class="col-12 col-xl-8">
+          <div class="ad-card">
+            <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+              <h2 class="h6 mb-0">Trending this week</h2>
+              <a class="small text-decoration-none" href="/admin/items?sort=mostDownloaded">View all</a>
+            </div>
+            <% if (top.length === 0) { %>
+              <p class="small px-3 pb-3 mb-0 kd-faint">No downloads recorded yet.</p>
+            <% } else { %>
+              <div class="table-responsive">
+                <table class="ad-table table align-middle">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th class="d-none d-md-table-cell">Kind</th>
+                      <th class="text-end">7 days</th>
+                      <th class="text-end">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% top.forEach((entry) => { %>
+                      <tr>
+                        <td>
+                          <a class="d-flex align-items-center gap-2 text-decoration-none text-body"
+                             href="/admin/items/<%= entry.id %>">
+                            <img src="/storage/previews/<%= entry.preview_file %>" alt=""
+                                 width="34" height="42" loading="lazy"
+                                 style="border-radius:6px;object-fit:cover;flex-shrink:0;">
+                            <span class="fw-semibold small text-truncate"><%= entry.title %></span>
+                          </a>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                          <span class="kd-tag"><%= kindLabels[entry.kind] %></span>
+                        </td>
+                        <td class="text-end small fw-semibold">+<%= formatNumber(entry.recent) %></td>
+                        <td class="text-end small"><%= formatNumber(entry.downloads) %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="col-12 col-xl-4">
+          <div class="ad-card ad-card-pad h-100">
+            <h2 class="h6 mb-3">Recent activity</h2>
+            <% if (activity.length === 0) { %>
+              <p class="small mb-0 kd-faint">Nothing yet.</p>
+            <% } else { %>
+              <%
+                const icons = {
+                  'item.create': 'plus', 'item.update': 'pencil', 'item.delete': 'trash-2',
+                  'item.feature': 'sparkles', 'item.unfeature': 'sparkle',
+                  'item.publish': 'eye', 'item.unpublish': 'eye-off',
+                  'auth.login': 'log-in', 'auth.logout': 'log-out',
+                };
+              %>
+              <% activity.forEach((entry) => { %>
+                <div class="d-flex align-items-start gap-2 mb-3">
+                  <span class="ad-stat-icon flex-shrink-0">
+                    <i data-lucide="<%= icons[entry.action] || 'activity' %>" width="13" height="13"></i>
+                  </span>
+                  <div class="min-w-0">
+                    <div class="small">
+                      <span class="fw-semibold"><%= entry.username || 'system' %></span>
+                      <span class="kd-muted"><%= entry.action.replace('item.', '').replace('auth.', '') %></span>
+                      <% if (entry.detail) { %>
+                        <span class="text-truncate d-inline-block align-bottom"><%= entry.detail %></span>
+                      <% } %>
+                    </div>
+                    <div class="kd-faint" style="font-size:.72rem;"><%= timeAgo(entry.created_at) %></div>
+                  </div>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!--
+        What people searched for.
+
+        The zero-result half is the one to watch: it is a ranked list of what players want and
+        the catalogue cannot answer, which is better product direction than guessing from what
+        already sells.
+      -->
+      <div class="ad-card mt-3">
+        <div class="p-3 pb-2">
+          <h2 class="h6 mb-1">Search demand</h2>
+          <p class="mb-0 small kd-faint">
+            <%= formatNumber(searches.total) %> searches in the last <%= searches.days %> days
+          </p>
+        </div>
+
+        <div class="row g-0">
+          <div class="col-12 col-md-6 p-3 pt-0">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i data-lucide="search-x" width="15" height="15"></i>
+              <span class="small fw-semibold">Nothing found</span>
+            </div>
+            <% if (searches.missed.length === 0) { %>
+              <p class="small mb-0 kd-faint">Every search returned results.</p>
+            <% } else { %>
+              <p class="small mb-2 kd-faint">Demand the catalogue can't answer yet — add these next.</p>
+              <% searches.missed.forEach((entry) => { %>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <a class="ad-tag" href="/admin/items?q=<%= encodeURIComponent(entry.term) %>"><%= entry.term %></a>
+                  <span class="small kd-faint"><%= entry.searches %>×</span>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+
+          <div class="col-12 col-md-6 p-3 pt-0">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i data-lucide="search" width="15" height="15"></i>
+              <span class="small fw-semibold">Most searched</span>
+            </div>
+            <% if (searches.top.length === 0) { %>
+              <p class="small mb-0 kd-faint">No searches recorded yet.</p>
+            <% } else { %>
+              <% searches.top.forEach((entry) => { %>
+                <div class="d-flex justify-content-between align-items-center py-1">
+                  <a class="ad-tag" href="/admin/items?q=<%= encodeURIComponent(entry.term) %>"><%= entry.term %></a>
+                  <span class="small kd-faint"><%= entry.searches %>× · <%= Math.round(entry.avg_results) %> hits</span>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- The endpoint the app calls -->
+      <div class="ad-card ad-card-pad mt-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <i data-lucide="plug" width="16" height="16"></i>
+          <h2 class="h6 mb-0">Live API endpoint</h2>
+        </div>
+        <p class="small mb-2 kd-faint">
+          This is the URL the iOS app calls. It must match <code>AppConfig.baseURL</code> in the client.
+        </p>
+        <code class="ad-code d-block"><%= publicUrl %>/api/v1/items?kind=addons&amp;page=1&amp;limit=20</code>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -1,0 +1,83 @@
+<%
+  // `currentPath` is the path within the admin router, so the dashboard is '/' not '/admin'.
+  //
+  // The per-kind links are the catalogue list with a filter applied rather than five separate
+  // pages: one list, one set of filters, one place to fix a bug in any of it. Which is why
+  // `active` here compares the query string too — without that, opening Skins would highlight
+  // every kind at once.
+  const kindNav = [
+    { kind: 'skin',    icon: 'shirt',   label: 'Skins' },
+    { kind: 'addon',   icon: 'puzzle',  label: 'Addons' },
+    { kind: 'texture', icon: 'palette', label: 'Texture packs' },
+    { kind: 'world',   icon: 'map',     label: 'Worlds' },
+    { kind: 'seed',    icon: 'sprout',  label: 'Seeds' },
+  ];
+  const activeKind = typeof filters !== 'undefined' && filters ? (filters.kind || '') : '';
+  const onList = currentPath === '/items';
+%>
+<aside class="ad-sidebar" id="mbSidebar">
+  <!-- The Koydam mark, as on every other panel. Delivered by the platform overlay, so all
+       four serve the same file. -->
+  <a class="ad-brand" href="/admin">
+    <img class="kd-brand-mark" src="/assets/logo/logo.png" alt="" width="23" height="26">
+    <span class="ad-brand-name">MineBox<small>Minecraft catalogue</small></span>
+  </a>
+
+  <nav class="ad-nav">
+    <div class="ad-nav-label">Catalogue</div>
+    <a class="ad-nav-link <%= currentPath === '/' ? 'is-active' : '' %>" href="/admin">
+      <i data-lucide="layout-dashboard" width="17" height="17"></i>
+      <span>Dashboard</span>
+    </a>
+    <a class="ad-nav-link <%= onList && !activeKind ? 'is-active' : '' %>" href="/admin/items">
+      <i data-lucide="boxes" width="17" height="17"></i>
+      <span>Everything</span>
+    </a>
+
+    <div class="ad-nav-label">Content</div>
+    <% kindNav.forEach((entry) => { %>
+      <a class="ad-nav-link <%= onList && activeKind === entry.kind ? 'is-active' : '' %>"
+         href="/admin/items?kind=<%= entry.kind %>">
+        <i data-lucide="<%= entry.icon %>" width="17" height="17"></i>
+        <span><%= entry.label %></span>
+      </a>
+    <% }) %>
+
+    <div class="ad-nav-label">Insight</div>
+    <a class="ad-nav-link <%= currentPath.startsWith('/analytics') ? 'is-active' : '' %>" href="/admin/analytics">
+      <i data-lucide="activity" width="17" height="17"></i>
+      <span>Analytics</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/reports') ? 'is-active' : '' %>" href="/admin/reports">
+      <i data-lucide="flag" width="17" height="17"></i>
+      <span>Reports</span>
+      <% if (openReports) { %><span class="ad-badge"><%= openReports %></span><% } %>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/tags') ? 'is-active' : '' %>" href="/admin/tags">
+      <i data-lucide="tags" width="17" height="17"></i>
+      <span>Tags</span>
+    </a>
+
+    <div class="ad-nav-label">Create</div>
+    <a class="ad-nav-link <%= currentPath === '/items/new' ? 'is-active' : '' %>" href="/admin/items/new">
+      <i data-lucide="upload" width="17" height="17"></i>
+      <span>Add an item</span>
+    </a>
+  </nav>
+
+  <!-- A destination and a way out, as on every other panel. Who you are signed in as belongs
+       in the topbar. -->
+  <div class="ad-sidebar-foot">
+    <a class="ad-nav-link" href="/api/v1/items" target="_blank" rel="noopener">
+      <i data-lucide="external-link" width="17" height="17"></i>
+      <span>View the API</span>
+    </a>
+    <form method="post" action="/admin/logout" class="m-0">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ad-nav-link w-100 border-0 bg-transparent text-start" type="submit">
+        <i data-lucide="log-out" width="17" height="17"></i>
+        <span>Sign out</span>
+      </button>
+    </form>
+  </div>
+</aside>

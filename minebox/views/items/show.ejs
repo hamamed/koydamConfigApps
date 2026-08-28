@@ -1,0 +1,268 @@
+<%- include('../partials/head', { title }) %>
+<div class="ad-shell">
+  <%- include('../partials/sidebar') %>
+  <div class="ad-scrim" id="mbScrim"></div>
+
+  <main class="ad-main">
+    <%- include('../partials/topbar', {
+      heading: item.title,
+      subheading: `${item.kindLabel} · ${categoryLabels[item.category] || item.category}`,
+      actions: `<a class="btn btn-kd-ghost btn-sm" href="/admin/items/${item.id}/edit">
+                  <i data-lucide="pencil" width="15" height="15" class="me-1"></i>Edit</a>`
+    }) %>
+
+    <div class="ad-content">
+      <%- include('../partials/flash') %>
+
+      <div class="row g-4">
+        <!-- Artwork and the quick actions that belong with it -->
+        <div class="col-12 col-lg-4">
+          <div class="ad-card ad-card-pad">
+            <img class="img-fluid w-100 d-block" src="<%= item.previewUrl %>" alt="<%= item.title %>"
+                 width="640" height="800">
+
+            <div class="d-flex flex-wrap gap-1 mt-3">
+              <span class="kd-tag"><%= item.kindLabel %></span>
+              <span class="kd-tag"><%= categoryLabels[item.category] || item.category %></span>
+              <span class="kd-tag"><%= editionLabels[item.edition] || item.edition %></span>
+              <% if (item.mc_version) { %><span class="kd-tag"><%= item.mc_version %></span><% } %>
+              <% if (item.isFeatured) { %><span class="kd-tag kd-tag-accent">Featured</span><% } %>
+              <span class="ad-status <%= item.isPublished ? 'ad-status-published' : 'ad-status-draft' %>">
+                <%= item.isPublished ? 'Published' : 'Draft' %>
+              </span>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <form method="post" action="/admin/items/<%= item.id %>/publish" class="flex-grow-1">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-kd-outline btn-sm w-100" type="submit">
+                  <i data-lucide="<%= item.isPublished ? 'eye-off' : 'eye' %>" width="15" height="15" class="me-1"></i>
+                  <%= item.isPublished ? 'Move to drafts' : 'Publish' %>
+                </button>
+              </form>
+              <form method="post" action="/admin/items/<%= item.id %>/feature">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-kd-outline btn-sm" type="submit"
+                        title="<%= item.isFeatured ? 'Remove from Featured' : 'Add to Featured' %>">
+                  <i data-lucide="star" width="15" height="15"
+                     <%= item.isFeatured ? 'fill="currentColor"' : '' %>></i>
+                </button>
+              </form>
+            </div>
+
+            <form method="post" action="/admin/items/<%= item.id %>/delete" class="mt-2"
+                  data-confirm="Delete “<%= item.title %>”? This removes the files too and can't be undone.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-kd-danger btn-sm w-100" type="submit">
+                <i data-lucide="trash-2" width="15" height="15" class="me-1"></i>Delete
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+          <!-- Counters -->
+          <div class="row g-3 mb-4">
+            <%
+              const tiles = [
+                { icon: 'download',    label: 'Downloads', value: formatNumber(item.downloads) },
+                { icon: 'thumbs-up',   label: 'Likes',     value: formatNumber(item.likes) },
+                { icon: 'thumbs-down', label: 'Dislikes',  value: formatNumber(item.dislikes) },
+                { icon: 'hard-drive',  label: 'File size',
+                  value: item.file_bytes ? formatBytes(item.file_bytes) : '—' },
+              ];
+            %>
+            <% tiles.forEach((tile) => { %>
+              <div class="col-6 col-md-3">
+                <div class="ad-card ad-card-pad ad-stat h-100">
+                  <span class="ad-stat-icon mb-2"><i data-lucide="<%= tile.icon %>" width="16" height="16"></i></span>
+                  <div class="ad-stat-value"><%= tile.value %></div>
+                  <div class="ad-stat-label mt-1"><%= tile.label %></div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+
+          <% if (item.description) { %>
+            <div class="ad-card ad-card-pad mb-4">
+              <h2 class="h6 mb-2">Description</h2>
+              <p class="mb-0 small"><%= item.description %></p>
+              <% if (item.tags.length) { %>
+                <div class="d-flex flex-wrap gap-1 mt-3">
+                  <% item.tags.forEach((tag) => { %>
+                    <a class="ad-tag" href="/admin/items?q=<%= encodeURIComponent(tag) %>">#<%= tag %></a>
+                  <% }) %>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+
+          <!--
+            What the file actually is.
+
+            Read out of the archive rather than typed in, so this is the manifest Minecraft
+            will read — the place to look first when somebody reports that an addon does
+            nothing after importing.
+          -->
+          <% if (item.pack && item.pack.packs && item.pack.packs.length) { %>
+            <div class="ad-card ad-card-pad mb-4">
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <i data-lucide="package-check" width="16" height="16"></i>
+                <h2 class="h6 mb-0">Inside the archive</h2>
+                <% if (packSummary) { %><span class="kd-tag ms-auto"><%= packSummary %></span><% } %>
+              </div>
+              <div class="table-responsive">
+                <table class="ad-table table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Pack</th>
+                      <th class="d-none d-md-table-cell">Contains</th>
+                      <th>Version</th>
+                      <th class="d-none d-lg-table-cell">Needs</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% item.pack.packs.forEach((pack) => { %>
+                      <tr>
+                        <td>
+                          <div class="fw-semibold small"><%= pack.name || '(unnamed)' %></div>
+                          <div class="kd-faint" style="font-size:.72rem;"><%= pack.path %></div>
+                        </td>
+                        <td class="d-none d-md-table-cell small"><%= pack.moduleLabels.join(', ') || '—' %></td>
+                        <td class="small"><%= pack.version || '—' %></td>
+                        <td class="d-none d-lg-table-cell small"><%= pack.minEngineVersion || '—' %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <% } %>
+
+          <% if (item.kind === 'skin' && item.skin_model) { %>
+            <div class="ad-card ad-card-pad mb-4">
+              <h2 class="h6 mb-3">The texture</h2>
+              <div class="row g-3 small">
+                <div class="col-6 col-md-4">
+                  <div class="kd-faint">Model</div>
+                  <div class="fw-semibold"><%= item.skin_model === 'slim' ? 'Slim (Alex)' : 'Classic (Steve)' %></div>
+                </div>
+                <div class="col-6 col-md-4">
+                  <div class="kd-faint">Size</div>
+                  <div class="fw-semibold"><%= item.skin_w %>×<%= item.skin_h %></div>
+                </div>
+                <div class="col-12 col-md-4">
+                  <div class="kd-faint">Layout</div>
+                  <div class="fw-semibold"><%= item.skin_h === item.skin_w ? 'Modern (two layers)' : 'Legacy 64×32' %></div>
+                </div>
+              </div>
+              <p class="form-text mb-0 mt-2">
+                Detected from the texture itself. A slim skin worn on a classic body has a
+                one-pixel seam down each arm, which is why it is recorded per item.
+              </p>
+            </div>
+          <% } %>
+
+          <% if (item.kind === 'seed') { %>
+            <div class="ad-card ad-card-pad mb-4">
+              <h2 class="h6 mb-2">The seed</h2>
+              <code class="ad-code d-block mb-3"><%= item.seed_code %></code>
+              <% const places = (item.seedMeta && item.seedMeta.highlights) || []; %>
+              <% if (places.length) { %>
+                <div class="table-responsive">
+                  <table class="ad-table table align-middle mb-0">
+                    <thead><tr><th>Place</th><th>X</th><th>Y</th><th>Z</th></tr></thead>
+                    <tbody>
+                      <% places.forEach((place) => { %>
+                        <tr>
+                          <td class="small fw-semibold"><%= place.label %></td>
+                          <td class="small"><%= place.x %></td>
+                          <td class="small"><%= place.y ?? '—' %></td>
+                          <td class="small"><%= place.z %></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } else { %>
+                <p class="form-text mb-0">No coordinates recorded.</p>
+              <% } %>
+            </div>
+          <% } %>
+
+          <!-- Downloads over time -->
+          <div class="ad-card ad-card-pad mb-4">
+            <h2 class="h6 mb-3">Downloads · last 14 days</h2>
+            <% const spark = sparklinePath(series, { width: 640, height: 120 }); %>
+            <svg class="ad-chart" viewBox="0 0 640 120" preserveAspectRatio="none" role="img"
+                 aria-label="Downloads over the last 14 days">
+              <% [0, 0.5, 1].forEach((fraction) => { %>
+                <line class="ad-chart-grid" x1="0" x2="640"
+                      y1="<%= (fraction * 120).toFixed(1) %>" y2="<%= (fraction * 120).toFixed(1) %>"/>
+              <% }) %>
+              <polygon class="ad-chart-area" points="<%= spark.area %>"/>
+              <polyline class="ad-chart-line" points="<%= spark.line %>"/>
+            </svg>
+            <div class="d-flex justify-content-between mt-2 small kd-faint">
+              <span><%= formatDate(series[0].day) %></span>
+              <span>peak <%= spark.max %>/day</span>
+              <span><%= formatDate(series[series.length - 1].day) %></span>
+            </div>
+          </div>
+
+          <!-- What players said -->
+          <div class="ad-card ad-card-pad mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="h6 mb-0">Reports</h2>
+              <% if (reports.some((report) => report.status === 'open')) { %>
+                <form method="post" action="/admin/items/<%= item.id %>/reports/resolve" class="m-0">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-kd-ghost btn-sm" type="submit">Resolve all open</button>
+                </form>
+              <% } %>
+            </div>
+            <% if (reports.length === 0) { %>
+              <p class="form-text mb-0">Nobody has reported a problem with this.</p>
+            <% } else { %>
+              <% reports.forEach((report) => { %>
+                <div class="ad-report-row d-flex justify-content-between align-items-start gap-2 py-2">
+                  <div>
+                    <div class="small fw-semibold"><%= report.reasonLabel %></div>
+                    <% if (report.note) { %><div class="small kd-muted"><%= report.note %></div><% } %>
+                  </div>
+                  <div class="text-end flex-shrink-0">
+                    <span class="ad-status <%= report.status === 'open' ? 'ad-status-draft' : 'ad-status-published' %>">
+                      <%= report.status %>
+                    </span>
+                    <div class="kd-faint" style="font-size:.72rem;"><%= timeAgo(report.created_at) %></div>
+                  </div>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+
+          <!-- The URLs, for checking against the app -->
+          <div class="ad-card ad-card-pad">
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <i data-lucide="plug" width="16" height="16"></i>
+              <h2 class="h6 mb-0">Live URLs</h2>
+            </div>
+            <label class="form-label">API</label>
+            <code class="ad-code d-block mb-3"><%= apiUrl %></code>
+            <label class="form-label">Share link</label>
+            <code class="ad-code d-block mb-3"><%= shareUrl %></code>
+            <% if (item.fileUrl) { %>
+              <label class="form-label">Download</label>
+              <code class="ad-code d-block"><%= item.fileUrl %></code>
+              <p class="form-text mb-0">
+                Serves the file as <strong><%= item.original_name %></strong> and counts the
+                download. Minecraft names an imported pack after the file it arrived in.
+              </p>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

@@ -1,0 +1,155 @@
+<%- include('../partials/head', { title }) %>
+<div class="ad-shell">
+  <%- include('../partials/sidebar') %>
+  <div class="ad-scrim" id="mbScrim"></div>
+
+  <main class="ad-main">
+    <%
+      const kindName = filters.kind ? kindLabels[filters.kind] : null;
+      const heading = kindName ? `${kindName}s` : 'Catalogue';
+    %>
+    <%- include('../partials/topbar', {
+      heading,
+      subheading: `${pagination.total} ${pagination.total === 1 ? 'item' : 'items'}`,
+      actions: `<a class="btn btn-kd" href="/admin/items/new${filters.kind ? `?kind=${filters.kind}` : ''}">
+                  <i data-lucide="upload" width="16" height="16" class="me-1"></i>Add an item</a>`
+    }) %>
+
+    <div class="ad-content">
+      <%- include('../partials/flash') %>
+
+      <!-- Filters. A GET form so every result set is a shareable, bookmarkable URL. -->
+      <form class="ad-card ad-card-pad mb-4" method="get" action="/admin/items" id="mbFilters">
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-lg-3">
+            <label class="form-label" for="q">Search</label>
+            <div class="position-relative">
+              <%# The span carries the positioning, not the <i>: lucide replaces the placeholder
+                  with an <svg> and the wrapper is what survives. %>
+              <span class="ad-input-icon"><i data-lucide="search" width="15" height="15"></i></span>
+              <input class="form-control ad-has-icon" id="q" name="q" type="search"
+                     value="<%= filters.q %>" placeholder="Title, description, tag or seed">
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <label class="form-label" for="kind">Kind</label>
+            <select class="form-select" id="kind" name="kind" data-auto-submit>
+              <option value="">All</option>
+              <% kinds.forEach((kind) => { %>
+                <option value="<%= kind %>" <%= filters.kind === kind ? 'selected' : '' %>>
+                  <%= kindLabels[kind] %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <%#
+            The category list depends on the kind, and there is no kind chosen until the form
+            is submitted. Rather than ship all forty and filter them in script — which would
+            leave the control empty with JavaScript off — the selector only appears once a kind
+            is picked, and then lists exactly that kind's categories.
+          %>
+          <% if (filters.kind) { %>
+            <div class="col-6 col-lg-2">
+              <label class="form-label" for="category">Category</label>
+              <select class="form-select" id="category" name="category" data-auto-submit>
+                <option value="">All</option>
+                <% categories[filters.kind].forEach((category) => { %>
+                  <option value="<%= category %>" <%= filters.category === category ? 'selected' : '' %>>
+                    <%= categoryLabels[category] || category %>
+                  </option>
+                <% }) %>
+              </select>
+            </div>
+          <% } %>
+
+          <div class="col-6 col-lg-2">
+            <label class="form-label" for="version">Version</label>
+            <select class="form-select" id="version" name="version" data-auto-submit>
+              <option value="">Any</option>
+              <% versions.forEach((entry) => { %>
+                <option value="<%= entry.version %>" <%= filters.version === entry.version ? 'selected' : '' %>>
+                  <%= entry.version %> (<%= entry.items %>)
+                </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="col-6 col-lg-<%= filters.kind ? '1' : '2' %>">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select" id="status" name="status" data-auto-submit>
+              <% [['all','All'],['published','Published'],['draft','Drafts'],['featured','Featured']].forEach(([value, label]) => { %>
+                <option value="<%= value %>" <%= filters.status === value ? 'selected' : '' %>><%= label %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="col-6 col-lg-2">
+            <label class="form-label" for="sort">Sort</label>
+            <select class="form-select" id="sort" name="sort" data-auto-submit>
+              <% [['newest','Newest'],['oldest','Oldest'],['mostDownloaded','Most downloaded'],['mostLiked','Most liked'],['trending','Trending'],['title','Title A–Z'],['biggest','Largest file']].forEach(([value, label]) => { %>
+                <option value="<%= value %>" <%= filters.sort === value ? 'selected' : '' %>><%= label %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="col-12 d-flex gap-2 justify-content-end">
+            <% if (filters.q || filters.kind || filters.category || filters.version || filters.status !== 'all' || filters.sort !== 'newest') { %>
+              <a class="btn btn-kd-ghost btn-sm" href="/admin/items">
+                <i data-lucide="x" width="15" height="15" class="me-1"></i>Clear
+              </a>
+            <% } %>
+            <button class="btn btn-kd-ghost btn-sm" type="submit">
+              <i data-lucide="filter" width="15" height="15" class="me-1"></i>Apply
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <% if (items.length === 0) { %>
+        <div class="ad-card ad-empty">
+          <div class="ad-empty-icon"><i data-lucide="package-open" width="28" height="28"></i></div>
+          <h2 class="h6 mb-1">Nothing matches those filters</h2>
+          <p class="small mb-3 kd-faint">
+            <%= filters.q ? `Nothing found for “${filters.q}”.` : 'Add your first item to get started.' %>
+          </p>
+          <a class="btn btn-kd btn-sm" href="/admin/items/new<%= filters.kind ? `?kind=${filters.kind}` : '' %>">
+            <i data-lucide="upload" width="15" height="15" class="me-1"></i>Add an item
+          </a>
+        </div>
+      <% } else { %>
+        <!--
+          The bulk form is a sibling of the grid, not a wrapper around it. Every card already
+          contains its own forms for featuring and deleting, and a form inside a form is
+          invalid markup that browsers resolve by dropping one of them. The checkboxes point at
+          this one by id instead, which is what the `form` attribute is for.
+
+          It works with JavaScript off: tick boxes, press the button. The script only adds the
+          count and the question.
+        -->
+        <form method="post" action="/admin/items/selected/delete" id="mbBulk"
+              class="ad-bulk" data-bulk>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="ad-bulk-all">
+            <input type="checkbox" data-bulk-all>
+            Select all on this page
+          </label>
+          <span class="ad-bulk-count" data-bulk-count>None selected</span>
+          <button class="btn btn-sm btn-kd-danger" type="submit" data-bulk-delete disabled>
+            <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>Delete selected
+          </button>
+        </form>
+
+        <div class="ad-grid">
+          <% items.forEach((item) => { %>
+            <%- include('../partials/item-card', { item }) %>
+          <% }) %>
+        </div>
+
+        <%- include('../partials/pagination', { basePath: '/admin/items' }) %>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>
