@@ -221,12 +221,36 @@ apiRouter.get('/health', (req, res) => {
 });
 
 /**
- * A coarse, non-identifying client key: a daily-salted hash of IP and user agent.
+ * A non-identifying client key.
  *
- * The salt rotates with the date, so yesterday's keys can't be correlated with today's, and the
- * raw IP is never stored — we only need "is this the same client, today", not "who is this".
+ * Two sources, in order of preference.
+ *
+ * `X-Device-Id` is a random UUID the app generates once and keeps in its keychain. It is the
+ * only one of the two that is actually stable, which reactions need: a like is a standing
+ * opinion, so the key that recorded it has to still be the same key an hour, a week or a
+ * network change later, or the same person can like the same skin over and over.
+ *
+ * The IP-and-user-agent hash is the fallback for callers that send no header — the web panel,
+ * curl, anything that isn't the app. It is salted with the date, so yesterday's keys can't be
+ * correlated with today's. That rotation is a real privacy property and it stays, but it is
+ * also why this cannot be the primary source: it changes at midnight UTC, and it changes again
+ * every time a phone moves between Wi-Fi and cellular. Both look identical to a person who
+ * simply reopened the app, and both let them vote twice.
+ *
+ * Neither form stores the raw IP, and the device id is hashed with the session secret before it
+ * goes anywhere near the database, so a leaked table cannot be joined back to a device.
  */
 function clientFingerprint(req) {
+  const device = (req.get('x-device-id') || '').trim();
+
+  if (device) {
+    return crypto
+      .createHash('sha256')
+      .update(`device|${config.sessionSecret}|${device.slice(0, 200)}`)
+      .digest('hex')
+      .slice(0, 32);
+  }
+
   const day = new Date().toISOString().slice(0, 10);
   const ip = req.ip || req.socket.remoteAddress || '';
   const agent = req.get('user-agent') || '';
