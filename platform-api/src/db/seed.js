@@ -84,7 +84,7 @@ const APPS = [
     name: 'SkinCraft for Roblox',
     notes: 'Skin catalogue. Backend: skincraft.hamaprojects.com',
     platforms: {
-      ios: { bundleId: 'com.skincraft.roblox' },
+      ios: { bundleId: 'koydam.skincraft.for.roblox' },
     },
     flags: { reporting: true },
   },

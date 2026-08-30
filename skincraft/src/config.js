@@ -82,7 +82,7 @@ export const config = {
   /// Universal-link identity. Both appear verbatim in the app-site-association file, so they
   /// must match the shipping app exactly — a mismatch fails silently: iOS just opens Safari.
   appleTeamID: process.env.APPLE_TEAM_ID || 'TEAMID',
-  iosBundleID: process.env.IOS_BUNDLE_ID || 'com.skincraft.roblox',
+  iosBundleID: process.env.IOS_BUNDLE_ID || 'koydam.skincraft.for.roblox',
 
   bootstrapAdmin: {
     username: process.env.ADMIN_USERNAME || 'admin',
@@ -97,4 +97,17 @@ export const config = {
 
 if (config.isProduction && config.sessionSecret === 'insecure-development-secret') {
   throw new Error('SESSION_SECRET must be set in production. See .env.example.');
+}
+
+// Loud, because the alternative is silent. A placeholder team id still serves a
+// syntactically valid app-site-association file, so every check short of opening a
+// shared link on a real iPhone passes — and that link just opens Safari instead of
+// the app. Warn rather than throw: universal links are a feature, not a dependency,
+// and a server that refuses to boot over one is worse than a server without them.
+if (config.isProduction && config.appleTeamID === 'TEAMID') {
+  console.warn(
+    '[config] APPLE_TEAM_ID is still the placeholder "TEAMID". Universal links will not ' +
+      'work: iOS will silently open shared /s/ links in Safari instead of the app. Set ' +
+      'APPLE_TEAM_ID to your Apple Developer Team ID and restart.'
+  );
 }

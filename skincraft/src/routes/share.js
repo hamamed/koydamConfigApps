@@ -18,7 +18,7 @@ shareRouter.get('/.well-known/apple-app-site-association', (req, res) => {
     applinks: {
       details: [
         {
-          // Replace TEAMID with your Apple Developer Team ID before shipping.
+          // From APPLE_TEAM_ID; boot warns if it is still the placeholder.
           appIDs: [`${config.appleTeamID}.${config.iosBundleID}`],
           components: [
             { '/': '/s/*', comment: 'Shared skin links open the skin in the app' },
