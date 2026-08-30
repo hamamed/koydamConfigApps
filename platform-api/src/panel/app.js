@@ -337,38 +337,27 @@ function appstoreCard(slug) {
 
     let status;
     try {
-      status = await api('/api/apps/' + encodeURIComponent(slug) + '/appstore/status');
+      status = await api('/api/appstore/account');
     } catch (err) {
       body.append(el('div', 'kd-faint small', err.message));
       return;
     }
 
-    if (!status.bundleId) {
-      body.append(el('div', 'kd-faint small',
-        'No iOS bundle id is set for this app, so there is nothing to look up.'));
-      return;
-    }
-
     if (!status.configured) {
-      body.append(credentialsForm(slug, status, render));
+      // One key covers every app, so there is nothing to set up here — the
+      // card says where it is set instead of offering a second place to set it.
+      const note = el('div', 'kd-faint small');
+      note.append('No App Store Connect key yet. ');
+      if (status.canEdit) {
+        const link = el('a', null, 'Add one');
+        link.href = '#/appstore';
+        note.append(link, ' and every app is covered, including ones added later.');
+      } else {
+        note.append('An owner or admin can add one, which covers every app at once.');
+      }
+      body.append(note);
       return;
     }
-
-    // Who this is, and how to stop being it.
-    const head = el('div', 'd-flex align-items-center gap-2 mb-3 flex-wrap');
-    head.append(el('span', 'badge text-bg-light', 'Key ' + status.keyId));
-    head.append(el('span', 'kd-faint small', status.bundleId));
-    if (status.updatedAt) {
-      head.append(el('span', 'kd-faint small', 'saved ' + ago(status.updatedAt)));
-    }
-    if (status.canEdit) {
-      const replace = el('button', 'btn btn-sm btn-outline-secondary ms-auto', 'Replace key');
-      replace.addEventListener('click', () => {
-        body.replaceChildren(credentialsForm(slug, status, render));
-      });
-      head.append(replace);
-    }
-    body.append(head);
 
     let data;
     try {
@@ -424,39 +413,74 @@ function prettyState(state) {
   return String(state).toLowerCase().replace(/_/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
 }
 
-function credentialsForm(slug, status, onSaved) {
-  const wrap = el('div');
+// ── App Store Connect account ───────────────────────────────────────────────
+
+/**
+ * The single key, for the whole estate.
+ *
+ * One page rather than a field on every app, because an App Store Connect key
+ * is issued against an Apple team and lists every app that team owns. Per-app
+ * keys would have meant pasting the same secret once per app and giving every
+ * new app a setup step before it could show anything.
+ */
+async function viewAppstore() {
+  const status = await api('/api/appstore/account');
+  const root = el('div');
+  const c = card('App Store Connect key', 'apple');
+
+  c.body.append(el('p', 'kd-faint small',
+    'One key for every app, now and later. It is issued against your Apple team, so any app '
+    + 'with an iOS bundle id is covered the moment it is added — there is nothing to set per app.'));
 
   if (!status.encryptionReady) {
-    wrap.append(el('div', 'alert alert-warning py-2 small',
+    c.body.append(el('div', 'alert alert-warning py-2 small mb-0',
       'SETTINGS_KEY is not set, so the private key cannot be stored safely. Set it and restart.'));
-    return wrap;
-  }
-  if (!status.canEdit) {
-    wrap.append(el('div', 'kd-faint small', 'No key saved. You do not have edit rights on this app.'));
-    return wrap;
+    root.append(c.card);
+    return root;
   }
 
-  wrap.append(el('p', 'kd-faint small',
+  if (status.configured) {
+    const head = el('div', 'd-flex align-items-center gap-2 mb-3 flex-wrap');
+    head.append(el('span', 'badge text-bg-light', 'Key ' + status.keyId));
+    head.append(el('span', 'kd-faint small', 'issuer ' + (status.issuerId ?? '—')));
+    if (status.updatedAt) {
+      head.append(el('span', 'kd-faint small',
+        'saved ' + ago(status.updatedAt) + (status.updatedBy ? ' by ' + status.updatedBy : '')));
+    }
+    c.body.append(head);
+  }
+
+  if (!status.canEdit) {
+    c.body.append(el('div', 'kd-faint small',
+      status.configured ? 'Only an owner or admin can replace it.' : 'Only an owner or admin can set it.'));
+    root.append(c.card);
+    return root;
+  }
+
+  c.body.append(el('p', 'kd-faint small',
     'From App Store Connect → Users and Access → Integrations → App Store Connect API. '
-    + 'Apple lets you download the .p8 once, so keep your copy.'));
+    + 'App Manager role for TestFlight; Developer is enough for read-only. Apple lets you '
+    + 'download the .p8 once, so keep your copy.'));
 
   const issuer = labelledInput('Issuer ID', status.issuerId ?? '', '69a6de7e-…', false);
   const keyId = labelledInput('Key ID', status.keyId ?? '', 'ABCD123456', false);
   const vendor = labelledInput('Vendor number (sales only)', status.vendorNumber ?? '', '80123456', false);
-  wrap.append(issuer.wrap, keyId.wrap);
+  c.body.append(issuer.wrap, keyId.wrap);
 
   const keyLabel = el('label', 'form-label small fw-semibold mt-2', 'Private key (.p8 contents)');
   const key = el('textarea', 'form-control font-monospace');
-  key.rows = 4;
-  key.placeholder = '-----BEGIN PRIVATE KEY-----';
-  wrap.append(keyLabel, key, vendor.wrap);
+  key.rows = 5;
+  key.placeholder = status.configured
+    ? 'Paste a new .p8 to replace the stored one'
+    : '-----BEGIN PRIVATE KEY-----';
+  c.body.append(keyLabel, key, vendor.wrap);
 
-  const save = el('button', 'btn btn-sm btn-primary mt-3', 'Save key');
+  const row = el('div', 'd-flex gap-2 mt-3');
+  const save = el('button', 'btn btn-sm btn-primary', status.configured ? 'Replace key' : 'Save key');
   save.addEventListener('click', async () => {
     save.disabled = true;
     try {
-      await api('/api/apps/' + encodeURIComponent(slug) + '/appstore/credentials', {
+      await api('/api/appstore/account', {
         method: 'PUT',
         body: JSON.stringify({
           issuerId: issuer.input.value.trim(),
@@ -465,15 +489,33 @@ function credentialsForm(slug, status, onSaved) {
           vendorNumber: vendor.input.value.trim(),
         }),
       });
-      toast('App Store Connect key saved');
-      onSaved();
+      toast('App Store Connect key saved — every app is covered');
+      route();
     } catch (err) {
       toast(err.message, 'bad');
       save.disabled = false;
     }
   });
-  wrap.append(save);
-  return wrap;
+  row.append(save);
+
+  if (status.configured) {
+    const remove = el('button', 'btn btn-sm btn-outline-danger', 'Remove');
+    remove.addEventListener('click', async () => {
+      if (!confirm('Remove the App Store Connect key? Every app loses its store data.')) return;
+      try {
+        await api('/api/appstore/account', { method: 'DELETE' });
+        toast('Key removed');
+        route();
+      } catch (err) {
+        toast(err.message, 'bad');
+      }
+    });
+    row.append(remove);
+  }
+
+  c.body.append(row);
+  root.append(c.card);
+  return root;
 }
 
 // ── Announcements ───────────────────────────────────────────────────────────
@@ -2160,6 +2202,7 @@ const TITLES = {
   resources: 'Server resources',
   alerts: 'Alerts',
   account: 'Your account',
+  appstore: 'App Store Connect',
 };
 
 async function route() {
@@ -2192,6 +2235,9 @@ async function route() {
     } else if (hash === '/alerts') {
       $('pageTitle').textContent = TITLES.alerts;
       view.replaceChildren(await viewAlerts());
+    } else if (hash === '/appstore') {
+      $('pageTitle').textContent = TITLES.appstore;
+      view.replaceChildren(await viewAppstore());
     } else if (hash === '/account') {
       $('pageTitle').textContent = TITLES.account;
       view.replaceChildren(await viewAccount());

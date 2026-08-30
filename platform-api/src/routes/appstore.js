@@ -1,6 +1,13 @@
 import { Router } from 'express';
 
-import { audit, canEditApp, canViewApp, requireAuth, requireCsrf } from '../auth.js';
+import {
+  audit,
+  canViewApp,
+  isAdmin,
+  requireAdminRole,
+  requireAuth,
+  requireCsrf,
+} from '../auth.js';
 import { decryptSecret, encryptSecret, isEncryptionConfigured } from '../secrets.js';
 import { appDetail } from '../db/repo.js';
 import { query } from '../db/pool.js';
@@ -11,17 +18,22 @@ export const appstoreRouter = Router();
 
 appstoreRouter.use('/api', requireAuth, requireCsrf);
 
-/** The iOS bundle id this app is configured with — the key the API looks apps up by. */
+/** The iOS bundle id this app is configured with — how the API finds it. */
 async function iosBundleId(slug) {
   const detail = await appDetail(slug);
   return detail?.platforms?.find((p) => p.platform === 'ios')?.bundleId ?? null;
 }
 
-async function credentialsFor(slug) {
+/**
+ * The one App Store Connect credential, shared by every app.
+ *
+ * Team-scoped by nature: the key is issued against an Apple team and the API
+ * lists every app that team owns, so one key covers the whole estate and a new
+ * app needs no setup at all.
+ */
+async function account() {
   const res = await query(
-    `SELECT issuer_id, key_id, private_key, vendor_number
-       FROM appstore_credentials WHERE app_slug = $1`,
-    [slug],
+    `SELECT issuer_id, key_id, private_key, vendor_number FROM appstore_account WHERE id`,
   );
   const row = res?.rows?.[0];
   if (!row) return null;
@@ -44,16 +56,12 @@ async function credentialsFor(slug) {
   };
 }
 
-// ── Status: what the panel needs before it can show anything ────────────────
+// ── The account, set once for everything ────────────────────────────────────
 
-appstoreRouter.get('/api/apps/:slug/appstore/status', async (req, res) => {
-  const slug = String(req.params.slug).toLowerCase();
-  if (!canViewApp(req.user, slug)) return res.status(403).json({ error: 'forbidden' });
-
+appstoreRouter.get('/api/appstore/account', async (req, res) => {
   const row = await query(
     `SELECT issuer_id, key_id, vendor_number, updated_at, updated_by
-       FROM appstore_credentials WHERE app_slug = $1`,
-    [slug],
+       FROM appstore_account WHERE id`,
   );
   const found = row?.rows?.[0] ?? null;
 
@@ -69,18 +77,14 @@ appstoreRouter.get('/api/apps/:slug/appstore/status', async (req, res) => {
     vendorNumber: found?.vendor_number ?? null,
     updatedAt: found?.updated_at ?? null,
     updatedBy: found?.updated_by ?? null,
-    bundleId: await iosBundleId(slug),
-    canEdit: canEditApp(req.user, slug),
+    // Only admins may change it, but everyone may know whether it is set —
+    // otherwise an app card cannot explain why it is empty.
+    canEdit: isAdmin(req.user),
     encryptionReady: isEncryptionConfigured(),
   });
 });
 
-// ── Saving credentials ──────────────────────────────────────────────────────
-
-appstoreRouter.put('/api/apps/:slug/appstore/credentials', async (req, res) => {
-  const slug = String(req.params.slug).toLowerCase();
-  if (!canEditApp(req.user, slug)) return res.status(403).json({ error: 'forbidden' });
-
+appstoreRouter.put('/api/appstore/account', requireAdminRole, async (req, res) => {
   if (!isEncryptionConfigured()) {
     return res.status(400).json({
       error: 'encryption_unavailable',
@@ -109,30 +113,27 @@ appstoreRouter.put('/api/apps/:slug/appstore/credentials', async (req, res) => {
   }
 
   await query(
-    `INSERT INTO appstore_credentials (app_slug, issuer_id, key_id, private_key, vendor_number, updated_by)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT (app_slug) DO UPDATE SET
+    `INSERT INTO appstore_account (id, issuer_id, key_id, private_key, vendor_number, updated_by)
+     VALUES (TRUE, $1, $2, $3, $4, $5)
+     ON CONFLICT (id) DO UPDATE SET
        issuer_id     = EXCLUDED.issuer_id,
        key_id        = EXCLUDED.key_id,
        private_key   = EXCLUDED.private_key,
        vendor_number = EXCLUDED.vendor_number,
        updated_by    = EXCLUDED.updated_by,
        updated_at    = now()`,
-    [slug, issuerId, keyId, encryptSecret(privateKey), vendorNumber, req.user?.email ?? null],
+    [issuerId, keyId, encryptSecret(privateKey), vendorNumber, req.user?.email ?? null],
   );
 
   forgetTokens();
-  await audit(req, 'appstore.credentials.save', { app: slug }, `key ${keyId}`);
+  await audit(req, 'appstore.account.save', {}, `key ${keyId}`);
   res.json({ ok: true });
 });
 
-appstoreRouter.delete('/api/apps/:slug/appstore/credentials', async (req, res) => {
-  const slug = String(req.params.slug).toLowerCase();
-  if (!canEditApp(req.user, slug)) return res.status(403).json({ error: 'forbidden' });
-
-  await query('DELETE FROM appstore_credentials WHERE app_slug = $1', [slug]);
+appstoreRouter.delete('/api/appstore/account', requireAdminRole, async (req, res) => {
+  await query('DELETE FROM appstore_account WHERE id');
   forgetTokens();
-  await audit(req, 'appstore.credentials.delete', { app: slug });
+  await audit(req, 'appstore.account.delete', {});
   res.json({ ok: true });
 });
 
@@ -144,7 +145,7 @@ appstoreRouter.get('/api/apps/:slug/appstore', async (req, res) => {
 
   let credentials;
   try {
-    credentials = await credentialsFor(slug);
+    credentials = await account();
   } catch (err) {
     return res.status(err.status ?? 500).json({ error: 'key_unreadable', message: err.message });
   }
@@ -180,7 +181,7 @@ appstoreRouter.get('/api/apps/:slug/appstore/sales', async (req, res) => {
 
   let credentials;
   try {
-    credentials = await credentialsFor(slug);
+    credentials = await account();
   } catch (err) {
     return res.status(err.status ?? 500).json({ error: 'key_unreadable', message: err.message });
   }
