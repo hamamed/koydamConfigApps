@@ -311,8 +311,169 @@ async function viewApp(slug) {
   root.append(ratingCard(detail));
   root.append(releaseNotesCard(detail.slug));
 
+  root.append(appstoreCard(detail.slug));
+
   root.append(versionsCard(detail));
   return root;
+}
+
+// ── App Store Connect ───────────────────────────────────────────────────────
+
+/**
+ * What Apple knows about this app: its record, versions and their review
+ * state, recent builds, TestFlight groups and customer reviews.
+ *
+ * Loaded after the page draws, like the other secondary cards, and for the
+ * same reason with more force: this one is four round trips to Apple's API,
+ * and the platform editors above are what someone came for.
+ */
+function appstoreCard(slug) {
+  const c = card('App Store Connect', 'apple');
+  const body = c.body;
+  body.append(el('div', 'kd-faint small', 'Loading…'));
+
+  const render = async () => {
+    body.replaceChildren();
+
+    let status;
+    try {
+      status = await api('/api/apps/' + encodeURIComponent(slug) + '/appstore/status');
+    } catch (err) {
+      body.append(el('div', 'kd-faint small', err.message));
+      return;
+    }
+
+    if (!status.bundleId) {
+      body.append(el('div', 'kd-faint small',
+        'No iOS bundle id is set for this app, so there is nothing to look up.'));
+      return;
+    }
+
+    if (!status.configured) {
+      body.append(credentialsForm(slug, status, render));
+      return;
+    }
+
+    // Who this is, and how to stop being it.
+    const head = el('div', 'd-flex align-items-center gap-2 mb-3 flex-wrap');
+    head.append(el('span', 'badge text-bg-light', 'Key ' + status.keyId));
+    head.append(el('span', 'kd-faint small', status.bundleId));
+    if (status.updatedAt) {
+      head.append(el('span', 'kd-faint small', 'saved ' + ago(status.updatedAt)));
+    }
+    if (status.canEdit) {
+      const replace = el('button', 'btn btn-sm btn-outline-secondary ms-auto', 'Replace key');
+      replace.addEventListener('click', () => {
+        body.replaceChildren(credentialsForm(slug, status, render));
+      });
+      head.append(replace);
+    }
+    body.append(head);
+
+    let data;
+    try {
+      data = await api('/api/apps/' + encodeURIComponent(slug) + '/appstore');
+    } catch (err) {
+      body.append(el('div', 'alert alert-warning py-2 mb-0 small', err.message));
+      return;
+    }
+
+    body.append(el('div', 'fw-semibold mb-1', data.app.name ?? slug));
+    body.append(el('div', 'kd-faint small mb-3',
+      [data.app.sku && 'SKU ' + data.app.sku, data.app.locale, 'Apple ID ' + data.app.id]
+        .filter(Boolean).join(' · ')));
+
+    section('Versions', data.versions, ['Version', 'State', 'Platform'],
+      (v) => [v.version ?? '—', prettyState(v.state), v.platform ?? '—']);
+
+    section('Builds', data.builds, ['Build', 'State', 'Uploaded'],
+      (b) => [b.version ?? '—', prettyState(b.state), b.uploaded ? ago(b.uploaded) : '—']);
+
+    section('TestFlight', data.testflight, ['Group', 'Public link'],
+      (g) => [g.name ?? '—', g.publicLink ? 'yes' : 'no']);
+
+    section('Reviews', data.reviews, ['Rating', 'Title', 'Where', 'When'],
+      (r) => ['★'.repeat(r.rating ?? 0) || '—', r.title ?? '—', r.territory ?? '—',
+              r.at ? ago(r.at) : '—']);
+
+    function section(title, block, headers, shape) {
+      body.append(el('div', 'fw-semibold small mt-3 mb-1', title));
+
+      // A section can legitimately be unavailable: sales needs a Finance role
+      // and TestFlight needs App Manager, so a key scoped to read metadata
+      // will fail some of these. Saying why beats an empty table.
+      if (!block.ok) {
+        body.append(el('div', 'kd-faint small', block.error ?? 'Unavailable for this key.'));
+        return;
+      }
+      if (!block.items.length) {
+        body.append(el('div', 'kd-faint small', 'Nothing yet.'));
+        return;
+      }
+      body.append(table(headers, block.items.map(shape)));
+    }
+  };
+
+  render();
+  return c.card;
+}
+
+/** APP_STORE_REVIEW_IN_PROGRESS is not a thing to show a person. */
+function prettyState(state) {
+  if (!state) return '—';
+  return String(state).toLowerCase().replace(/_/g, ' ').replace(/^./, (ch) => ch.toUpperCase());
+}
+
+function credentialsForm(slug, status, onSaved) {
+  const wrap = el('div');
+
+  if (!status.encryptionReady) {
+    wrap.append(el('div', 'alert alert-warning py-2 small',
+      'SETTINGS_KEY is not set, so the private key cannot be stored safely. Set it and restart.'));
+    return wrap;
+  }
+  if (!status.canEdit) {
+    wrap.append(el('div', 'kd-faint small', 'No key saved. You do not have edit rights on this app.'));
+    return wrap;
+  }
+
+  wrap.append(el('p', 'kd-faint small',
+    'From App Store Connect → Users and Access → Integrations → App Store Connect API. '
+    + 'Apple lets you download the .p8 once, so keep your copy.'));
+
+  const issuer = labelledInput('Issuer ID', status.issuerId ?? '', '69a6de7e-…', false);
+  const keyId = labelledInput('Key ID', status.keyId ?? '', 'ABCD123456', false);
+  const vendor = labelledInput('Vendor number (sales only)', status.vendorNumber ?? '', '80123456', false);
+  wrap.append(issuer.wrap, keyId.wrap);
+
+  const keyLabel = el('label', 'form-label small fw-semibold mt-2', 'Private key (.p8 contents)');
+  const key = el('textarea', 'form-control font-monospace');
+  key.rows = 4;
+  key.placeholder = '-----BEGIN PRIVATE KEY-----';
+  wrap.append(keyLabel, key, vendor.wrap);
+
+  const save = el('button', 'btn btn-sm btn-primary mt-3', 'Save key');
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    try {
+      await api('/api/apps/' + encodeURIComponent(slug) + '/appstore/credentials', {
+        method: 'PUT',
+        body: JSON.stringify({
+          issuerId: issuer.input.value.trim(),
+          keyId: keyId.input.value.trim(),
+          privateKey: key.value.trim(),
+          vendorNumber: vendor.input.value.trim(),
+        }),
+      });
+      toast('App Store Connect key saved');
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'bad');
+      save.disabled = false;
+    }
+  });
+  wrap.append(save);
+  return wrap;
 }
 
 // ── Announcements ───────────────────────────────────────────────────────────

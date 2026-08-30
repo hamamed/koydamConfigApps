@@ -13,6 +13,7 @@ import { bootstrapOwner, seedServices } from './db/bootstrap.js';
 import { checkAllServices, pruneChecks } from './health-monitor.js';
 import { reportStatusChanges } from './alerts.js';
 import { applyDueChanges, expireStaleChanges } from './scheduler.js';
+import { appstoreRouter } from './routes/appstore.js';
 import { authRouter } from './routes/auth.js';
 import { configRouter } from './routes/config.js';
 import { dashboardRouter } from './routes/dashboard.js';
@@ -91,6 +92,7 @@ app.use(authRouter);
 // Service-to-service: how the Brawl and SkinCraft panels resolve a session.
 app.use(ssoRouter);
 app.use(dashboardRouter);
+app.use(appstoreRouter);
 app.use(configRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
