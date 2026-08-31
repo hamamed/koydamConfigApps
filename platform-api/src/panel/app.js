@@ -287,7 +287,27 @@ function viewHome() {
   return root;
 }
 
-async function viewApp(slug) {
+/**
+ * One app, in tabs.
+ *
+ * It used to be one column: two platform editors, flags, three messaging
+ * cards, the store card and the history, all stacked. Everything was reachable
+ * and nothing was findable — checking a review meant scrolling past every
+ * field you could edit by accident on the way down.
+ *
+ * The tab lives in the URL rather than in a variable, so a link to an app's
+ * store data stays a link to its store data, and a refresh does not drop you
+ * back at the top of the config.
+ */
+const APP_TABS = [
+  { id: 'config', label: 'Configuration', icon: 'smartphone' },
+  { id: 'messaging', label: 'Messaging', icon: 'circle-alert' },
+  { id: 'store', label: 'App Store', icon: 'apple' },
+  { id: 'history', label: 'History', icon: 'history' },
+];
+
+async function viewApp(slug, tab) {
+  const active = APP_TABS.some((t) => t.id === tab) ? tab : 'config';
   const detail = await api('/api/apps/' + encodeURIComponent(slug));
   const root = el('div');
 
@@ -299,21 +319,32 @@ async function viewApp(slug) {
   }
   root.append(head);
 
-  for (const platform of ['ios', 'android']) {
-    root.append(platformCard(detail, platform));
+  const tabs = el('ul', 'nav nav-tabs mb-3');
+  for (const t of APP_TABS) {
+    const li = el('li', 'nav-item');
+    const a = el('a', 'nav-link' + (t.id === active ? ' active' : ''));
+    a.href = '#/app/' + encodeURIComponent(slug) + '/' + t.id;
+    a.append(icon(t.icon, 14), el('span', 'ms-1', t.label));
+    li.append(a);
+    tabs.append(li);
+  }
+  root.append(tabs);
+
+  // Only the visible tab is built. The store tab is four calls to Apple, and
+  // someone editing an ad unit should not be paying for them.
+  if (active === 'config') {
+    for (const platform of ['ios', 'android']) root.append(platformCard(detail, platform));
+    root.append(flagsCard(detail));
+  } else if (active === 'messaging') {
+    root.append(announcementsCard(detail.slug));
+    root.append(ratingCard(detail));
+    root.append(releaseNotesCard(detail.slug));
+  } else if (active === 'store') {
+    root.append(appstoreCard(detail.slug));
+  } else {
+    root.append(versionsCard(detail));
   }
 
-  root.append(flagsCard(detail));
-
-  // Everything the panel can say to this app's users, below what it can
-  // configure about it.
-  root.append(announcementsCard(detail.slug));
-  root.append(ratingCard(detail));
-  root.append(releaseNotesCard(detail.slug));
-
-  root.append(appstoreCard(detail.slug));
-
-  root.append(versionsCard(detail));
   return root;
 }
 
@@ -350,7 +381,7 @@ function appstoreCard(slug) {
       note.append('No App Store Connect key yet. ');
       if (status.canEdit) {
         const link = el('a', null, 'Add one');
-        link.href = '#/appstore';
+        link.href = '#/control';
         note.append(link, ' and every app is covered, including ones added later.');
       } else {
         note.append('An owner or admin can add one, which covers every app at once.');
@@ -2454,7 +2485,7 @@ const TITLES = {
   resources: 'Server resources',
   alerts: 'Alerts',
   account: 'Your account',
-  appstore: 'App Store Connect',
+  appstore: 'App Control',
 };
 
 async function route() {
@@ -2462,15 +2493,24 @@ async function route() {
   const view = $('view');
 
   // Mark the active nav entry before awaiting, so the click feels instant.
+  //
+  // Prefix, not equality: an app's page has tabs under it now, so #/app/x/store
+  // has to keep the sidebar entry for #/app/x lit. The boundary check is what
+  // stops #/app/skin also matching #/app/skincraft.
   for (const link of document.querySelectorAll('.ad-nav-link')) {
-    link.classList.toggle('is-active', link.getAttribute('href') === '#' + hash);
+    const target = (link.getAttribute('href') ?? '').replace(/^#/, '');
+    const active =
+      target === hash ||
+      (target !== '/' && hash.startsWith(target) && hash[target.length] === '/');
+    link.classList.toggle('is-active', active);
   }
 
   try {
     if (hash.startsWith('/app/')) {
-      const slug = decodeURIComponent(hash.slice(5));
+      const [, , rawSlug, tab] = hash.split('/');
+      const slug = decodeURIComponent(rawSlug ?? '');
       $('pageTitle').textContent = slug;
-      view.replaceChildren(await viewApp(slug));
+      view.replaceChildren(await viewApp(slug, tab));
     } else if (hash.startsWith('/preview/')) {
       const [, , slug, platform] = hash.split('/');
       $('pageTitle').textContent = slug + ' preview';
@@ -2487,7 +2527,7 @@ async function route() {
     } else if (hash === '/alerts') {
       $('pageTitle').textContent = TITLES.alerts;
       view.replaceChildren(await viewAlerts());
-    } else if (hash === '/appstore') {
+    } else if (hash === '/control' || hash === '/appstore') {
       $('pageTitle').textContent = TITLES.appstore;
       view.replaceChildren(await viewAppstore());
     } else if (hash === '/account') {
