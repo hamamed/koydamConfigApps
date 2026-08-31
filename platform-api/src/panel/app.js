@@ -398,10 +398,18 @@ function appstoreCard(slug) {
       return;
     }
 
-    body.append(el('div', 'fw-semibold mb-1', data.app.name ?? slug));
-    body.append(el('div', 'kd-faint small mb-3',
+    // Icon beside the name, the way it appears on a phone.
+    const identity = el('div', 'd-flex align-items-center gap-3 mb-3');
+    if (data.icon?.ok && data.icon.url) {
+      identity.append(storeImage(data.icon.url, data.app.name ?? slug, 56, 'rounded-3'));
+    }
+    const words = el('div');
+    words.append(el('div', 'fw-semibold', data.app.name ?? slug));
+    words.append(el('div', 'kd-faint small',
       [data.app.sku && 'SKU ' + data.app.sku, data.app.locale, 'Apple ID ' + data.app.id]
         .filter(Boolean).join(' · ')));
+    identity.append(words);
+    body.append(identity);
 
     section('Versions', data.versions, ['Version', 'State', 'Platform'],
       (v) => [v.version ?? '—', prettyState(v.state), v.platform ?? '—']);
@@ -416,7 +424,40 @@ function appstoreCard(slug) {
       (r) => ['★'.repeat(r.rating ?? 0) || '—', r.title ?? '—', r.territory ?? '—',
               r.at ? ago(r.at) : '—']);
 
+    screenshots(data.screenshots);
     listing(data.listing);
+
+    /** Every screenshot set that has images, grouped by device. */
+    function screenshots(block) {
+      if (!block) return;
+      body.append(el('div', 'fw-semibold small mt-3 mb-1', 'Screenshots'));
+
+      if (!block.ok) {
+        body.append(el('div', 'kd-faint small', block.error ?? 'Unavailable for this key.'));
+        return;
+      }
+      if (!block.sets?.length) {
+        body.append(el('div', 'kd-faint small',
+          'None uploaded for this version yet.'));
+        return;
+      }
+
+      for (const set of block.sets) {
+        body.append(el('div', 'kd-faint small mt-2 mb-1', set.device));
+        // Horizontal, because a phone set is ten portrait images and stacking
+        // them would bury everything below.
+        const strip = el('div', 'd-flex gap-2 overflow-auto pb-2');
+        for (const shot of set.images) {
+          const link = el('a');
+          link.href = shot.full;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.append(storeImage(shot.thumb, shot.name ?? 'Screenshot', 120, 'rounded-2 border'));
+          strip.append(link);
+        }
+        body.append(strip);
+      }
+    }
 
     /**
      * The store listing as written. Keywords first, because it is the field
@@ -483,6 +524,32 @@ function appstoreCard(slug) {
 
   render();
   return c.card;
+}
+
+/**
+ * An image from Apple's CDN, with a visible fallback.
+ *
+ * These load cross-origin, so they depend on img-src allowing mzstatic. If
+ * that is ever wrong the browser drops the request with no error anyone would
+ * notice, and the page would just look like an app with no screenshots — so a
+ * failure says so in words instead.
+ */
+function storeImage(url, alt, width, className) {
+  const wrap = el('span', 'd-inline-block');
+  const img = el('img', className ?? null);
+  img.src = url;
+  img.alt = alt;
+  img.width = width;
+  // setAttribute, not the property: the IDL attribute reflects in browsers but
+  // not in every DOM implementation, and a screenshot strip that eagerly loads
+  // forty images is the one place this actually matters.
+  img.setAttribute('loading', 'lazy');
+  img.style.height = 'auto';
+  img.addEventListener('error', () => {
+    wrap.replaceChildren(el('span', 'kd-faint small', 'image blocked'));
+  });
+  wrap.append(img);
+  return wrap;
 }
 
 /** APP_STORE_REVIEW_IN_PROGRESS is not a thing to show a person. */

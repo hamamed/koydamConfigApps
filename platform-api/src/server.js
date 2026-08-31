@@ -44,7 +44,12 @@ app.use(
         // vendoring four font files to save one hostname.
         'style-src': ["'self'", 'https://fonts.googleapis.com'],
         'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'img-src': ["'self'", 'data:'],
+        // Apple's image CDN, for app icons and screenshots on the App Control
+        // page. Narrow on purpose: these are the hosts App Store Connect's
+        // ImageAsset template URLs resolve to, and an image cannot execute.
+        // The alternative was proxying every screenshot through this server,
+        // which is bandwidth and an SSRF surface for no security gained.
+        'img-src': ["'self'", 'data:', 'https://*.mzstatic.com', 'https://*.apple.com'],
         'connect-src': ["'self'"],
         // Dropped: on a plain-HTTP deployment it rewrites every request to
         // https:// and then fails, because there is no certificate yet.

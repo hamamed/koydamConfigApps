@@ -209,7 +209,34 @@ export async function overview(credentials, bundleId) {
     }),
   ]);
 
+  const listing = listingFrom(versions);
+  const newestBuild =
+    builds.status === 'fulfilled' ? builds.value?.data?.[0]?.id ?? null : null;
+
+  // A second phase, because both of these need an id the first phase produced:
+  // the icon belongs to a build, and screenshots belong to a localisation.
+  // Settled again — an app with no uploaded build simply has no icon to show,
+  // which is a fact about the app rather than a failure to report.
+  const [icon, shots] = await Promise.allSettled([
+    newestBuild
+      ? request(credentials, `/builds/${newestBuild}/icons`, {
+          'fields[buildIcons]': 'iconAsset,iconType',
+          limit: 5,
+        })
+      : Promise.resolve(null),
+    listing.ok && listing.id
+      ? request(credentials, `/appStoreVersionLocalizations/${listing.id}/appScreenshotSets`, {
+          include: 'appScreenshots',
+          'fields[appScreenshotSets]': 'screenshotDisplayType,appScreenshots',
+          'fields[appScreenshots]': 'fileName,imageAsset,assetDeliveryState',
+          limit: 10,
+        })
+      : Promise.resolve(null),
+  ]);
+
   return {
+    icon: iconFrom(icon),
+    screenshots: screenshotsFrom(shots),
     app: {
       id,
       name: app.attributes?.name ?? null,
@@ -224,7 +251,7 @@ export async function overview(credentials, bundleId) {
       releaseType: d.attributes?.releaseType,
       created: d.attributes?.createdDate,
     })),
-    listing: listingFrom(versions),
+    listing,
     builds: section(builds, (d) => ({
       version: d.attributes?.version,
       state: d.attributes?.processingState,
@@ -246,6 +273,25 @@ export async function overview(credentials, bundleId) {
       limit: d.attributes?.publicLinkLimit,
     })),
   };
+}
+
+/**
+ * Turns an ImageAsset into a URL you can put in an `img` tag.
+ *
+ * Apple hands back a template rather than a link — `.../{w}x{h}bb.{f}` — and
+ * expects the caller to fill in the size it wants, so one asset serves a
+ * thumbnail and a full-size view without a second request. `bb` in that path
+ * means letterboxed: the image keeps its aspect ratio inside the box rather
+ * than being stretched to fill it, which matters because screenshots are not
+ * all the same shape.
+ */
+export function assetUrl(asset, width, height, format = 'png') {
+  const template = asset?.templateUrl;
+  if (!template) return null;
+  return template
+    .replace('{w}', String(Math.round(width)))
+    .replace('{h}', String(Math.round(height)))
+    .replace('{f}', format);
 }
 
 /**
@@ -282,6 +328,7 @@ function listingFrom(result) {
   const a = preferred.attributes ?? {};
   return {
     ok: true,
+    id: preferred.id ?? null,
     locales: all.length,
     locale: a.locale ?? null,
     keywords: a.keywords ?? null,
@@ -291,6 +338,79 @@ function listingFrom(result) {
     marketingUrl: a.marketingUrl ?? null,
     supportUrl: a.supportUrl ?? null,
   };
+}
+
+/** The app icon, taken from the newest build — there is nowhere else to get it. */
+function iconFrom(result) {
+  if (result.status !== 'fulfilled') {
+    return { ok: false, error: result.reason?.message ?? 'Unavailable' };
+  }
+  if (!result.value) return { ok: true, url: null };
+
+  const asset = result.value?.data?.[0]?.attributes?.iconAsset;
+  return { ok: true, url: assetUrl(asset, 180, 180) };
+}
+
+/**
+ * Screenshots for the preferred locale, newest version.
+ *
+ * Grouped by display type — Apple keeps a separate set per device size, and a
+ * flat list would interleave a 6.7" iPhone with an iPad and read as a mess.
+ * Only sets that actually have images are returned: an empty set is a slot in
+ * App Store Connect that nobody has filled, not something to draw a heading for.
+ */
+function screenshotsFrom(result) {
+  if (result.status !== 'fulfilled') {
+    return { ok: false, error: result.reason?.message ?? 'Unavailable' };
+  }
+  if (!result.value) return { ok: true, sets: [] };
+
+  const shots = new Map(
+    (result.value?.included ?? [])
+      .filter((i) => i.type === 'appScreenshots')
+      .map((i) => [i.id, i]),
+  );
+
+  const sets = (result.value?.data ?? [])
+    .map((set) => {
+      const ids = (set.relationships?.appScreenshots?.data ?? []).map((d) => d.id);
+      const images = ids
+        .map((sid) => shots.get(sid))
+        .filter(Boolean)
+        .map((shot) => {
+          const asset = shot.attributes?.imageAsset;
+          if (!asset?.width || !asset?.height) return null;
+          // Fixed height, width from the real aspect ratio: portrait phones and
+          // landscape iPads sit in the same row without either being squashed.
+          const height = 240;
+          const width = (asset.width / asset.height) * height;
+          return {
+            name: shot.attributes?.fileName ?? null,
+            thumb: assetUrl(asset, width, height, 'jpg'),
+            full: assetUrl(asset, asset.width, asset.height, 'jpg'),
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        device: prettyDisplayType(set.attributes?.screenshotDisplayType),
+        images,
+      };
+    })
+    .filter((set) => set.images.length);
+
+  return { ok: true, sets };
+}
+
+/** APP_IPHONE_67 is not a device anyone calls it. */
+function prettyDisplayType(type) {
+  if (!type) return 'Screenshots';
+  return String(type)
+    .replace(/^APP_/, '')
+    .replace(/_/g, ' ')
+    .replace(/IPHONE/, 'iPhone')
+    .replace(/IPAD/, 'iPad')
+    .replace(/(\d)(\d)$/, '$1.$2"');
 }
 
 /** A settled section: the rows, or why they are missing. */
