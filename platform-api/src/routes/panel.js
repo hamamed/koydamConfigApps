@@ -116,6 +116,7 @@ const ICONS = [
   'user-plus', 'scroll-text', 'history', 'save', 'trash-2', 'refresh-cw',
   'circle-check', 'circle-alert', 'log-in', 'log-out', 'menu', 'chart-column',
   'plus', 'settings', 'shield', 'calendar-clock', 'bell', 'database', 'cpu',
+  'download', 'tag',
 ];
 
 let spriteCache = null;

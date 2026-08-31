@@ -183,8 +183,15 @@ export async function overview(credentials, bundleId) {
 
   const id = app.id;
   const [versions, builds, reviews, groups] = await Promise.allSettled([
+    // `include` rather than a follow-up call: the store listing belongs to a
+    // version, and asking for it separately would mean fetching versions,
+    // reading an id out, and going back — two round trips for one answer.
     request(credentials, `/apps/${id}/appStoreVersions`, {
       'fields[appStoreVersions]': 'versionString,appStoreState,platform,createdDate,releaseType',
+      include: 'appStoreVersionLocalizations',
+      'fields[appStoreVersionLocalizations]':
+        'locale,keywords,description,promotionalText,whatsNew,marketingUrl,supportUrl',
+      'limit[appStoreVersionLocalizations]': 20,
       limit: 5,
     }),
     request(credentials, `/apps/${id}/builds`, {
@@ -217,6 +224,7 @@ export async function overview(credentials, bundleId) {
       releaseType: d.attributes?.releaseType,
       created: d.attributes?.createdDate,
     })),
+    listing: listingFrom(versions),
     builds: section(builds, (d) => ({
       version: d.attributes?.version,
       state: d.attributes?.processingState,
@@ -240,6 +248,51 @@ export async function overview(credentials, bundleId) {
   };
 }
 
+/**
+ * The store listing as it is written today: keywords, subtitle copy, what's new.
+ *
+ * These arrive in the `included` array rather than under `data`, because they
+ * are a relationship of the version rather than a field of it. One entry per
+ * locale, so the primary one is not necessarily first — English is preferred
+ * when present, and otherwise whichever came back first, because showing a
+ * Japanese description to someone checking their keywords is worse than
+ * showing nothing.
+ *
+ * Worth being clear about what this is: the keyword field *you* wrote, the
+ * hundred characters Apple indexes. It is not a ranking, a search volume or a
+ * competitor list — Apple's API publishes none of those, and anything claiming
+ * to know them is estimating from outside.
+ */
+function listingFrom(result) {
+  if (result.status !== 'fulfilled') {
+    return { ok: false, error: result.reason?.message ?? 'Unavailable' };
+  }
+
+  const all = (result.value?.included ?? []).filter(
+    (i) => i.type === 'appStoreVersionLocalizations',
+  );
+  if (!all.length) return { ok: true, locales: 0 };
+
+  const preferred =
+    all.find((i) => i.attributes?.locale === 'en-GB') ??
+    all.find((i) => i.attributes?.locale === 'en-US') ??
+    all.find((i) => String(i.attributes?.locale ?? '').startsWith('en')) ??
+    all[0];
+
+  const a = preferred.attributes ?? {};
+  return {
+    ok: true,
+    locales: all.length,
+    locale: a.locale ?? null,
+    keywords: a.keywords ?? null,
+    promotionalText: a.promotionalText ?? null,
+    whatsNew: a.whatsNew ?? null,
+    description: a.description ? String(a.description).slice(0, 400) : null,
+    marketingUrl: a.marketingUrl ?? null,
+    supportUrl: a.supportUrl ?? null,
+  };
+}
+
 /** A settled section: the rows, or why they are missing. */
 function section(result, shape) {
   if (result.status === 'fulfilled') {
@@ -247,4 +300,110 @@ function section(result, shape) {
   }
   log.warn(`App Store Connect section unavailable: ${result.reason?.message}`);
   return { ok: false, items: [], error: result.reason?.message ?? 'Unavailable' };
+}
+
+/**
+ * Downloads for the whole estate, by day.
+ *
+ * Sales reports are issued per *vendor*, not per app: one request returns every
+ * app you publish for that day. So a week costs seven requests in total rather
+ * than seven per app, and the result is keyed by SKU for the caller to match up.
+ *
+ * `Units` on a free app is a download. Apple splits first installs from updates
+ * and re-downloads across its Product Type Identifiers, and the exact set of
+ * codes varies by platform and has changed over the years — so rather than
+ * assert a mapping that would quietly mislabel things, the breakdown is carried
+ * through by code and only the families that are unambiguous get a name.
+ */
+export async function downloads(credentials, { days = 7 } = {}) {
+  if (!credentials.vendorNumber) {
+    return { ok: false, error: 'No vendor number set, so sales reports cannot be requested.' };
+  }
+
+  // Apple publishes a day's report the following day, and sometimes later than
+  // that, so today and yesterday are usually absent rather than empty.
+  const dates = Array.from({ length: days }, (_, i) =>
+    new Date(Date.now() - (i + 2) * 86_400_000).toISOString().slice(0, 10),
+  );
+
+  const reports = await Promise.all(
+    dates.map(async (date) => {
+      try {
+        const raw = await request(
+          credentials,
+          '/salesReports',
+          {
+            'filter[frequency]': 'DAILY',
+            'filter[reportType]': 'SALES',
+            'filter[reportSubType]': 'SUMMARY',
+            'filter[vendorNumber]': credentials.vendorNumber,
+            'filter[reportDate]': date,
+          },
+          { binary: true },
+        );
+        return { date, rows: parseReport(raw) };
+      } catch (err) {
+        // 404 is "nothing published for that day", which is the normal answer
+        // for a day with no sales or a day Apple has not produced yet.
+        if (err.status === 404) return { date, rows: [] };
+        return { date, rows: [], error: err.message };
+      }
+    }),
+  );
+
+  const refused = reports.find((r) => r.error);
+  if (refused && reports.every((r) => !r.rows.length)) {
+    return { ok: false, error: refused.error };
+  }
+
+  const bySku = new Map();
+  const byDay = new Map();
+  const byCountry = new Map();
+  let total = 0;
+
+  for (const report of reports) {
+    let dayTotal = 0;
+    for (const row of report.rows) {
+      // In-app purchases are not downloads of the app.
+      if (String(row.productType).startsWith('IA')) continue;
+
+      total += row.units;
+      dayTotal += row.units;
+      bySku.set(row.sku, (bySku.get(row.sku) ?? 0) + row.units);
+      if (row.country) byCountry.set(row.country, (byCountry.get(row.country) ?? 0) + row.units);
+    }
+    byDay.set(report.date, dayTotal);
+  }
+
+  return {
+    ok: true,
+    days,
+    total,
+    bySku: Object.fromEntries(bySku),
+    byDay: [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+    topCountries: [...byCountry.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5),
+  };
+}
+
+/** One tab-separated report, already un-gzipped by `request`. */
+function parseReport(raw) {
+  const lines = String(raw ?? '').split('\n').filter((l) => l.trim());
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split('\t').map((h) => h.trim());
+  const at = (name) => headers.indexOf(name);
+  const sku = at('SKU');
+  const units = at('Units');
+  const type = at('Product Type Identifier');
+  const country = at('Country Code');
+
+  return lines.slice(1).map((line) => {
+    const cells = line.split('\t');
+    return {
+      sku: sku >= 0 ? cells[sku] : null,
+      units: units >= 0 ? Number(cells[units]) || 0 : 0,
+      productType: type >= 0 ? cells[type] : '',
+      country: country >= 0 ? cells[country] : null,
+    };
+  });
 }

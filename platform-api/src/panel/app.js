@@ -385,6 +385,53 @@ function appstoreCard(slug) {
       (r) => ['★'.repeat(r.rating ?? 0) || '—', r.title ?? '—', r.territory ?? '—',
               r.at ? ago(r.at) : '—']);
 
+    listing(data.listing);
+
+    /**
+     * The store listing as written. Keywords first, because it is the field
+     * people actually want to check and the only place it is visible outside
+     * App Store Connect itself.
+     */
+    function listing(block) {
+      if (!block) return;
+      body.append(el('div', 'fw-semibold small mt-3 mb-1', 'Store listing'));
+
+      if (!block.ok) {
+        body.append(el('div', 'kd-faint small', block.error ?? 'Unavailable for this key.'));
+        return;
+      }
+      if (!block.locales) {
+        body.append(el('div', 'kd-faint small', 'No listing written yet.'));
+        return;
+      }
+
+      const rows = [];
+      if (block.keywords) {
+        const tags = el('div', 'd-flex flex-wrap gap-1');
+        for (const word of block.keywords.split(',').map((w) => w.trim()).filter(Boolean)) {
+          tags.append(el('span', 'badge text-bg-light', word));
+        }
+        rows.push(['Keywords', tags]);
+        rows.push([
+          'Keyword length',
+          { text: block.keywords.length + ' / 100 characters',
+            className: block.keywords.length > 100 ? 'text-danger' : 'kd-faint' },
+        ]);
+      } else {
+        rows.push(['Keywords', { text: 'none set', className: 'kd-faint' }]);
+      }
+      if (block.promotionalText) rows.push(['Promotional text', { text: block.promotionalText }]);
+      if (block.whatsNew) rows.push(["What's new", { text: block.whatsNew }]);
+      if (block.description) rows.push(['Description', { text: block.description }]);
+      rows.push([
+        'Locale',
+        { text: (block.locale ?? '—') + (block.locales > 1 ? ' (of ' + block.locales + ')' : ''),
+          className: 'kd-faint' },
+      ]);
+
+      body.append(table(['', ''], rows));
+    }
+
     function section(title, block, headers, shape) {
       body.append(el('div', 'fw-semibold small mt-3 mb-1', title));
 
@@ -496,15 +543,18 @@ async function viewAppstore() {
     ? (rated.reduce((n, r) => n + r.rating, 0) / rated.length).toFixed(1)
     : '—';
 
+  const units = data.downloads ?? { ok: false };
+
   const kpis = el('div', 'row g-3 mb-1');
   const tiles = [
+    ['Downloads · 7d', units.ok ? fmt(units.total) : '—', 'download'],
     ['Live on the App Store', String(live), 'circle-check'],
     ['In review', String(inReview), 'history'],
     ['Needs you', String(actionable), actionable ? 'circle-alert' : 'circle-check'],
     ['Average rating', average, 'chart-column'],
   ];
   for (const [label, value, ic] of tiles) {
-    const col = el('div', 'col-6 col-xl-3');
+    const col = el('div', 'col-6 col-xl');
     const c = el('div', 'ad-card ad-kpi');
     const top = el('div', 'd-flex align-items-center gap-2 mb-2');
     top.append(icon(ic, 17), el('span', 'ad-kpi-label', label));
@@ -514,19 +564,28 @@ async function viewAppstore() {
   }
   holder.append(kpis);
 
+  const notes = el('div', 'mb-3');
   if (processing) {
-    holder.append(el('div', 'kd-faint small mb-3',
+    notes.append(el('div', 'kd-faint small',
       processing + (processing === 1 ? ' build is' : ' builds are') + ' still processing at Apple.'));
-  } else {
-    holder.append(el('div', 'mb-3'));
   }
+  if (units.ok && units.topCountries?.length) {
+    notes.append(el('div', 'kd-faint small',
+      'Top countries: ' + units.topCountries.map(([c, n]) => c + ' ' + fmt(n)).join(' · ')));
+  }
+  if (!units.ok && units.error) {
+    // Almost always the missing vendor number, which is a setting rather than
+    // a fault — so it reads as a prompt, not an error.
+    notes.append(el('div', 'kd-faint small', 'Downloads: ' + units.error));
+  }
+  holder.append(notes);
 
   // ── One row per app ───────────────────────────────────────────────────────
   const appsCard = card('Apps', 'apple');
   appsCard.body.classList.add('p-0');
   appsCard.body.append(
     table(
-      ['App', 'Status', 'Version', 'Latest build', 'TestFlight', ''],
+      ['App', 'Status', 'Version', 'Downloads · 7d', 'Latest build', 'TestFlight', ''],
       apps.map((a) => {
         const link = el('a', 'fw-semibold', a.name);
         link.href = '#/app/' + a.slug;
@@ -538,7 +597,7 @@ async function viewAppstore() {
           }[a.state] ?? (a.error ?? 'Unavailable');
           return [link, el('span', 'badge text-bg-light', why),
                   { text: '—', className: 'kd-faint' }, { text: '—', className: 'kd-faint' },
-                  { text: '—', className: 'kd-faint' }, ''];
+                  { text: '—', className: 'kd-faint' }, { text: '—', className: 'kd-faint' }, ''];
         }
 
         const version = versionsOf(a)[0];
@@ -552,6 +611,9 @@ async function viewAppstore() {
           link,
           version ? stateBadge(version.state) : { text: '—', className: 'kd-faint' },
           { text: version?.version ?? '—' },
+          typeof a.downloads === 'number'
+            ? { text: fmt(a.downloads) }
+            : { text: '—', className: 'kd-faint' },
           build
             ? { text: build.version + ' · ' + prettyState(build.state) }
             : { text: '—', className: 'kd-faint' },

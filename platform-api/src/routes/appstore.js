@@ -11,7 +11,7 @@ import {
 import { decryptSecret, encryptSecret, isEncryptionConfigured } from '../secrets.js';
 import { appDetail, listApps } from '../db/repo.js';
 import { query } from '../db/pool.js';
-import { forgetTokens, overview, request, signToken } from '../appstore.js';
+import { downloads, forgetTokens, overview, request, signToken } from '../appstore.js';
 import { log } from '../log.js';
 
 export const appstoreRouter = Router();
@@ -188,13 +188,36 @@ appstoreRouter.get('/api/appstore/dashboard', async (req, res) => {
       }),
     );
 
-    cached = { at: Date.now(), results };
+    // One request per day for the whole estate, not per app — so this costs
+    // seven round trips total however many apps there are.
+    const units = await downloads(credentials, { days: 7 });
+
+    cached = { at: Date.now(), results, downloads: units };
   }
 
   // Filtered per request, not per cache entry: the expensive part is Apple, and
   // two people with different grants should not each pay for it.
   const allowed = cached.results.filter((r) => canViewApp(req.user, r.slug));
-  res.json({ apps: allowed, fetchedAt: new Date(cached.at).toISOString() });
+
+  // Downloads arrive keyed by SKU, which is the only handle the sales report
+  // carries. Attach each app's own figure and total only what this person can
+  // see, so a scoped user is not shown an estate-wide number.
+  const units = cached.downloads ?? { ok: false };
+  let visibleTotal = 0;
+  for (const app of allowed) {
+    const sku = app.app?.sku;
+    app.downloads = units.ok && sku ? (units.bySku?.[sku] ?? 0) : null;
+    if (typeof app.downloads === 'number') visibleTotal += app.downloads;
+  }
+
+  res.json({
+    apps: allowed,
+    downloads: units.ok
+      ? { ok: true, days: units.days, total: visibleTotal, byDay: units.byDay,
+          topCountries: units.topCountries }
+      : units,
+    fetchedAt: new Date(cached.at).toISOString(),
+  });
 });
 
 // ── The data ────────────────────────────────────────────────────────────────
