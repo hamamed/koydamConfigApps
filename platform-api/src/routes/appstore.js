@@ -9,7 +9,7 @@ import {
   requireCsrf,
 } from '../auth.js';
 import { decryptSecret, encryptSecret, isEncryptionConfigured } from '../secrets.js';
-import { appDetail } from '../db/repo.js';
+import { appDetail, listApps } from '../db/repo.js';
 import { query } from '../db/pool.js';
 import { forgetTokens, overview, request, signToken } from '../appstore.js';
 import { log } from '../log.js';
@@ -126,6 +126,7 @@ appstoreRouter.put('/api/appstore/account', requireAdminRole, async (req, res) =
   );
 
   forgetTokens();
+  forgetDashboard();
   await audit(req, 'appstore.account.save', {}, `key ${keyId}`);
   res.json({ ok: true });
 });
@@ -133,8 +134,67 @@ appstoreRouter.put('/api/appstore/account', requireAdminRole, async (req, res) =
 appstoreRouter.delete('/api/appstore/account', requireAdminRole, async (req, res) => {
   await query('DELETE FROM appstore_account WHERE id');
   forgetTokens();
+  forgetDashboard();
   await audit(req, 'appstore.account.delete', {});
   res.json({ ok: true });
+});
+
+// ── Everything, across every app ────────────────────────────────────────────
+
+/**
+ * Apple's rate limit is per hour and generous, but a dashboard is the page
+ * people leave open and come back to. Sixty seconds is long enough that
+ * navigating away and back is free, and short enough that a build finishing
+ * processing shows up while you are still watching for it.
+ */
+const CACHE_MS = 60_000;
+let cached = null;
+
+export function forgetDashboard() {
+  cached = null;
+}
+
+appstoreRouter.get('/api/appstore/dashboard', async (req, res) => {
+  let credentials;
+  try {
+    credentials = await account();
+  } catch (err) {
+    return res.status(err.status ?? 500).json({ error: 'key_unreadable', message: err.message });
+  }
+  if (!credentials) return res.status(404).json({ error: 'not_configured' });
+
+  if (!cached || cached.at + CACHE_MS < Date.now()) {
+    const apps = (await listApps()).map((a) => ({
+      slug: a.slug,
+      name: a.name,
+      bundleId: (a.platforms ?? []).find((p) => p.platform === 'ios')?.bundleId ?? null,
+    }));
+
+    // In parallel, and settled: one app whose record Apple cannot find must not
+    // blank the others. An app with no iOS bundle id is not an error at all —
+    // it is an Android-only app, and it says so rather than reporting a fault.
+    const results = await Promise.all(
+      apps.map(async (app) => {
+        if (!app.bundleId) return { ...app, state: 'no_ios' };
+        try {
+          return { ...app, state: 'ok', ...(await overview(credentials, app.bundleId)) };
+        } catch (err) {
+          return {
+            ...app,
+            state: err.status === 404 ? 'no_record' : 'error',
+            error: err.message,
+          };
+        }
+      }),
+    );
+
+    cached = { at: Date.now(), results };
+  }
+
+  // Filtered per request, not per cache entry: the expensive part is Apple, and
+  // two people with different grants should not each pay for it.
+  const allowed = cached.results.filter((r) => canViewApp(req.user, r.slug));
+  res.json({ apps: allowed, fetchedAt: new Date(cached.at).toISOString() });
 });
 
 // ── The data ────────────────────────────────────────────────────────────────

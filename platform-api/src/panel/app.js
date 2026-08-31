@@ -423,20 +423,198 @@ function prettyState(state) {
  * keys would have meant pasting the same secret once per app and giving every
  * new app a setup step before it could show anything.
  */
-async function viewAppstore() {
-  const status = await api('/api/appstore/account');
-  const root = el('div');
-  const c = card('App Store Connect key', 'apple');
+/** State strings Apple returns, in the words a person would use. */
+const STORE_STATE = {
+  READY_FOR_SALE: ['Live', 'text-bg-success'],
+  PREPARE_FOR_SUBMISSION: ['Not submitted', 'text-bg-light'],
+  WAITING_FOR_REVIEW: ['Waiting for review', 'text-bg-warning'],
+  IN_REVIEW: ['In review', 'text-bg-warning'],
+  PENDING_DEVELOPER_RELEASE: ['Approved — release it', 'text-bg-primary'],
+  PENDING_APPLE_RELEASE: ['Approved', 'text-bg-primary'],
+  REJECTED: ['Rejected', 'text-bg-danger'],
+  METADATA_REJECTED: ['Metadata rejected', 'text-bg-danger'],
+  DEVELOPER_REJECTED: ['Withdrawn', 'text-bg-secondary'],
+  INVALID_BINARY: ['Invalid binary', 'text-bg-danger'],
+  PROCESSING_FOR_APP_STORE: ['Processing', 'text-bg-info'],
+};
 
-  c.body.append(el('p', 'kd-faint small',
-    'One key for every app, now and later. It is issued against your Apple team, so any app '
-    + 'with an iOS bundle id is covered the moment it is added — there is nothing to set per app.'));
+function stateBadge(state) {
+  const [label, cls] = STORE_STATE[state] ?? [prettyState(state), 'text-bg-light'];
+  return el('span', 'badge ' + cls, label);
+}
+
+/**
+ * Every app's App Store standing on one page.
+ *
+ * The per-app card answers "how is this app doing"; this answers "is anything
+ * waiting on me", which is the question you actually open a dashboard to ask.
+ * So the top of the page is counts of things that need action — in review,
+ * approved and waiting for a release, rejected — rather than a total of apps.
+ */
+async function viewAppstore() {
+  const root = el('div');
+  const status = await api('/api/appstore/account');
+
+  if (!status.configured) {
+    root.append(appstoreKeyCard(status, { intro: true }));
+    return root;
+  }
+
+  const holder = el('div');
+  holder.append(el('div', 'kd-faint small', 'Asking Apple…'));
+  root.append(holder, appstoreKeyCard(status, { intro: false }));
+
+  let data;
+  try {
+    data = await api('/api/appstore/dashboard');
+  } catch (err) {
+    holder.replaceChildren(el('div', 'alert alert-warning py-2 small', err.message));
+    return root;
+  }
+
+  holder.replaceChildren();
+  const apps = data.apps ?? [];
+  const connected = apps.filter((a) => a.state === 'ok');
+
+  // ── Counts worth acting on ────────────────────────────────────────────────
+  const versionsOf = (a) => (a.versions?.ok ? a.versions.items : []);
+  const stateOf = (a) => versionsOf(a)[0]?.state ?? null;
+
+  const live = connected.filter((a) => stateOf(a) === 'READY_FOR_SALE').length;
+  const inReview = connected.filter((a) =>
+    ['WAITING_FOR_REVIEW', 'IN_REVIEW'].includes(stateOf(a))).length;
+  const actionable = connected.filter((a) =>
+    ['PENDING_DEVELOPER_RELEASE', 'REJECTED', 'METADATA_REJECTED', 'INVALID_BINARY']
+      .includes(stateOf(a))).length;
+  const processing = connected.reduce((n, a) =>
+    n + (a.builds?.ok ? a.builds.items.filter((b) => b.state === 'PROCESSING').length : 0), 0);
+
+  const allReviews = connected.flatMap((a) =>
+    (a.reviews?.ok ? a.reviews.items : []).map((r) => ({ ...r, app: a.name, slug: a.slug })));
+  const rated = allReviews.filter((r) => typeof r.rating === 'number');
+  const average = rated.length
+    ? (rated.reduce((n, r) => n + r.rating, 0) / rated.length).toFixed(1)
+    : '—';
+
+  const kpis = el('div', 'row g-3 mb-1');
+  const tiles = [
+    ['Live on the App Store', String(live), 'circle-check'],
+    ['In review', String(inReview), 'history'],
+    ['Needs you', String(actionable), actionable ? 'circle-alert' : 'circle-check'],
+    ['Average rating', average, 'chart-column'],
+  ];
+  for (const [label, value, ic] of tiles) {
+    const col = el('div', 'col-6 col-xl-3');
+    const c = el('div', 'ad-card ad-kpi');
+    const top = el('div', 'd-flex align-items-center gap-2 mb-2');
+    top.append(icon(ic, 17), el('span', 'ad-kpi-label', label));
+    c.append(top, el('div', 'ad-kpi-value', value));
+    col.append(c);
+    kpis.append(col);
+  }
+  holder.append(kpis);
+
+  if (processing) {
+    holder.append(el('div', 'kd-faint small mb-3',
+      processing + (processing === 1 ? ' build is' : ' builds are') + ' still processing at Apple.'));
+  } else {
+    holder.append(el('div', 'mb-3'));
+  }
+
+  // ── One row per app ───────────────────────────────────────────────────────
+  const appsCard = card('Apps', 'apple');
+  appsCard.body.classList.add('p-0');
+  appsCard.body.append(
+    table(
+      ['App', 'Status', 'Version', 'Latest build', 'TestFlight', ''],
+      apps.map((a) => {
+        const link = el('a', 'fw-semibold', a.name);
+        link.href = '#/app/' + a.slug;
+
+        if (a.state !== 'ok') {
+          const why = {
+            no_ios: 'No iOS bundle id',
+            no_record: 'Not in App Store Connect',
+          }[a.state] ?? (a.error ?? 'Unavailable');
+          return [link, el('span', 'badge text-bg-light', why),
+                  { text: '—', className: 'kd-faint' }, { text: '—', className: 'kd-faint' },
+                  { text: '—', className: 'kd-faint' }, ''];
+        }
+
+        const version = versionsOf(a)[0];
+        const build = a.builds?.ok ? a.builds.items[0] : null;
+        const groups = a.testflight?.ok ? a.testflight.items.length : null;
+
+        const open = el('a', 'btn btn-sm btn-kd-outline', 'Open');
+        open.href = '#/app/' + a.slug;
+
+        return [
+          link,
+          version ? stateBadge(version.state) : { text: '—', className: 'kd-faint' },
+          { text: version?.version ?? '—' },
+          build
+            ? { text: build.version + ' · ' + prettyState(build.state) }
+            : { text: '—', className: 'kd-faint' },
+          groups === null
+            ? { text: 'no access', className: 'kd-faint' }
+            : { text: groups ? String(groups) + ' group' + (groups === 1 ? '' : 's') : 'none',
+                className: groups ? '' : 'kd-faint' },
+          open,
+        ];
+      }),
+    ),
+  );
+  holder.append(appsCard.card);
+
+  // ── Reviews, newest first, across everything ──────────────────────────────
+  const reviewsCard = card('Latest reviews', 'users');
+  if (!allReviews.length) {
+    reviewsCard.body.append(el('div', 'kd-faint small',
+      connected.length
+        ? 'No reviews yet. They appear once an app is live and someone writes one.'
+        : 'No apps connected yet.'));
+  } else {
+    reviewsCard.body.classList.add('p-0');
+    allReviews.sort((a, b) => String(b.at ?? '').localeCompare(String(a.at ?? '')));
+    reviewsCard.body.append(
+      table(
+        ['App', 'Rating', 'Review', 'Where', 'When'],
+        allReviews.slice(0, 15).map((r) => [
+          { text: r.app },
+          { text: '★'.repeat(r.rating ?? 0).padEnd(5, '☆') },
+          { text: r.title || r.body || '—' },
+          { text: r.territory ?? '—' },
+          { text: r.at ? ago(r.at) : '—', className: 'kd-faint' },
+        ]),
+      ),
+    );
+  }
+  holder.append(reviewsCard.card);
+
+  if (data.fetchedAt) {
+    holder.append(el('div', 'kd-faint small mb-3', 'From Apple ' + ago(data.fetchedAt) + '.'));
+  }
+
+  return root;
+}
+
+/**
+ * The key itself. Below the data once there is data — it is set once and then
+ * never touched, so it should not be the first thing on the page forever.
+ */
+function appstoreKeyCard(status, { intro }) {
+  const c = card('App Store Connect key', 'settings');
+
+  if (intro) {
+    c.body.append(el('p', 'kd-faint small',
+      'One key for every app, now and later. It is issued against your Apple team, so any app '
+      + 'with an iOS bundle id is covered the moment it is added — there is nothing to set per app.'));
+  }
 
   if (!status.encryptionReady) {
     c.body.append(el('div', 'alert alert-warning py-2 small mb-0',
       'SETTINGS_KEY is not set, so the private key cannot be stored safely. Set it and restart.'));
-    root.append(c.card);
-    return root;
+    return c.card;
   }
 
   if (status.configured) {
@@ -453,19 +631,23 @@ async function viewAppstore() {
   if (!status.canEdit) {
     c.body.append(el('div', 'kd-faint small',
       status.configured ? 'Only an owner or admin can replace it.' : 'Only an owner or admin can set it.'));
-    root.append(c.card);
-    return root;
+    return c.card;
   }
 
-  c.body.append(el('p', 'kd-faint small',
-    'From App Store Connect → Users and Access → Integrations → App Store Connect API. '
+  const details = el('details');
+  if (!status.configured) details.open = true;
+  details.append(el('summary', 'small fw-semibold',
+    status.configured ? 'Replace the key' : 'Add a key'));
+
+  const inner = el('div', 'pt-3');
+  inner.append(el('p', 'kd-faint small',
+    'App Store Connect → Users and Access → Integrations → App Store Connect API. '
     + 'App Manager role for TestFlight; Developer is enough for read-only. Apple lets you '
     + 'download the .p8 once, so keep your copy.'));
 
   const issuer = labelledInput('Issuer ID', status.issuerId ?? '', '69a6de7e-…', false);
   const keyId = labelledInput('Key ID', status.keyId ?? '', 'ABCD123456', false);
-  const vendor = labelledInput('Vendor number (sales only)', status.vendorNumber ?? '', '80123456', false);
-  c.body.append(issuer.wrap, keyId.wrap);
+  inner.append(issuer.wrap, keyId.wrap);
 
   const keyLabel = el('label', 'form-label small fw-semibold mt-2', 'Private key (.p8 contents)');
   const key = el('textarea', 'form-control font-monospace');
@@ -473,7 +655,14 @@ async function viewAppstore() {
   key.placeholder = status.configured
     ? 'Paste a new .p8 to replace the stored one'
     : '-----BEGIN PRIVATE KEY-----';
-  c.body.append(keyLabel, key, vendor.wrap);
+  inner.append(keyLabel, key);
+
+  const vendor = labelledInput('Vendor number (sales only)', status.vendorNumber ?? '', '80123456', false);
+  inner.append(vendor.wrap);
+  inner.append(el('div', 'kd-faint small',
+    'App Store Connect → Payments and Financial Reports. The vendor number is shown at the '
+    + 'top left of that page — eight digits, starting with 8. You need Account Holder, Admin '
+    + 'or Finance access to see it. Leave blank unless you want sales figures.'));
 
   const row = el('div', 'd-flex gap-2 mt-3');
   const save = el('button', 'btn btn-sm btn-primary', status.configured ? 'Replace key' : 'Save key');
@@ -489,7 +678,7 @@ async function viewAppstore() {
           vendorNumber: vendor.input.value.trim(),
         }),
       });
-      toast('App Store Connect key saved — every app is covered');
+      toast('Key saved — every app is covered');
       route();
     } catch (err) {
       toast(err.message, 'bad');
@@ -513,9 +702,10 @@ async function viewAppstore() {
     row.append(remove);
   }
 
-  c.body.append(row);
-  root.append(c.card);
-  return root;
+  inner.append(row);
+  details.append(inner);
+  c.body.append(details);
+  return c.card;
 }
 
 // ── Announcements ───────────────────────────────────────────────────────────
