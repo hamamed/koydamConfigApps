@@ -24,6 +24,9 @@ export const config = {
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3200').replace(/\/+$/, ''),
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),
 
+  /** Where uploaded wallpapers live. Preserved across deploys — see root.js. */
+  wallpapersDir: path.resolve(root, process.env.WALLPAPERS_DIR || './wallpapers'),
+
   sessionSecret: process.env.SESSION_SECRET || 'insecure-development-secret',
 
   upstream: {

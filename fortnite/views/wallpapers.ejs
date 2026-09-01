@@ -1,0 +1,93 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Wallpapers',
+          subheading: items.length + ' image' + (items.length === 1 ? '' : 's')
+            + (categories.length ? ' in ' + categories.length + ' categor' + (categories.length === 1 ? 'y' : 'ies') : '')
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="upload" width="16" height="16"></i>
+          <span class="fw-semibold">Add a wallpaper</span>
+        </div>
+        <div class="ad-card-body">
+          <form method="post" action="/admin/wallpapers" enctype="multipart/form-data"
+                class="row g-2 align-items-end">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="col-md-5">
+              <label class="form-label small fw-semibold" for="file">Image</label>
+              <input class="form-control" type="file" id="file" name="file"
+                     accept=".png,.jpg,.jpeg,.webp" required>
+              <div class="form-text">PNG, JPEG or WebP, up to 12 MB.</div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold" for="category">Category</label>
+              <input class="form-control" id="category" name="category" list="known"
+                     placeholder="Season 5, Chapter art…">
+              <datalist id="known">
+                <% categories.forEach((c) => { %><option value="<%= c %>"></option><% }) %>
+              </datalist>
+              <div class="form-text">A folder. Blank puts it in the gallery root.</div>
+            </div>
+
+            <div class="col-md-3">
+              <button class="btn btn-kd w-100" type="submit">Upload</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <% if (!items.length) { %>
+        <div class="ad-empty">
+          <i data-lucide="image" width="28" height="28"></i>
+          <p class="mb-0">Nothing yet. Uploads appear in the app straight away.</p>
+        </div>
+      <% } else { %>
+        <% const groups = {};
+           items.forEach((i) => { (groups[i.category || 'Uncategorised'] ||= []).push(i); }); %>
+
+        <% Object.keys(groups).sort().forEach((name) => { %>
+          <div class="ad-card mb-3">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="folder" width="16" height="16"></i>
+              <span class="fw-semibold"><%= name %></span>
+              <span class="kd-faint small ms-auto"><%= groups[name].length %></span>
+            </div>
+            <div class="ad-card-body">
+              <div class="d-flex flex-wrap gap-3">
+                <% groups[name].forEach((item) => { %>
+                  <div style="width:150px">
+                    <a href="/wallpapers/<%= item.id.split('/').map(encodeURIComponent).join('/') %>"
+                       target="_blank" rel="noopener">
+                      <img src="/wallpapers/<%= item.id.split('/').map(encodeURIComponent).join('/') %>"
+                           alt="<%= item.title %>" loading="lazy"
+                           style="width:150px;height:200px;object-fit:cover;border-radius:10px;display:block">
+                    </a>
+                    <div class="small fw-semibold text-truncate mt-1" title="<%= item.title %>">
+                      <%= item.title %>
+                    </div>
+                    <div class="kd-faint small"><%= Math.round(item.bytes / 1024) %> KB</div>
+                    <form method="post" action="/admin/wallpapers/delete" class="mt-1"
+                          onsubmit="return confirm('Delete this wallpaper?')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="id" value="<%= item.id %>">
+                      <button class="btn btn-sm btn-kd-ghost text-danger p-0" type="submit">Delete</button>
+                    </form>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

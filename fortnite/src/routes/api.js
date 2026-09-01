@@ -193,15 +193,6 @@ apiRouter.get('/leaks', (_req, res) => {
   })));
 });
 
-apiRouter.get('/wallpapers', (_req, res) => {
-  const rows = db
-    .prepare('SELECT * FROM wallpapers WHERE is_published = 1 ORDER BY sort_order, id DESC')
-    .all();
-  ok(res, rows.map((r) => ({
-    id: r.id, title: r.title, image: r.image_url, thumb: r.thumb_url ?? r.image_url,
-  })));
-});
-
 apiRouter.get('/creative-maps', (_req, res) => {
   const rows = db
     .prepare('SELECT * FROM creative_maps WHERE is_published = 1 ORDER BY sort_order, id DESC')

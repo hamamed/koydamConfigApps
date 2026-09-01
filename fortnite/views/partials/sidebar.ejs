@@ -16,6 +16,11 @@
     </a>
 
     <div class="ad-nav-label">Your content</div>
+    <a class="ad-nav-link <%= currentPath.startsWith('/wallpapers') ? 'is-active' : '' %>"
+       href="/admin/wallpapers">
+      <i data-lucide="image" width="17" height="17"></i>
+      <span>Wallpapers</span>
+    </a>
     <% Object.entries(collections).forEach(([slug, spec]) => { %>
       <a class="ad-nav-link <%= currentPath.startsWith('/c/' + slug) ? 'is-active' : '' %>"
          href="/admin/c/<%= slug %>">

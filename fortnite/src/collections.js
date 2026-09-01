@@ -39,20 +39,6 @@ export const COLLECTIONS = {
     ],
   },
 
-  wallpapers: {
-    table: 'wallpapers',
-    label: 'Wallpapers',
-    singular: 'wallpaper',
-    icon: 'image',
-    order: 'sort_order, id DESC',
-    fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true },
-      { name: 'image_url', label: 'Full-size URL', type: 'url', required: true },
-      { name: 'thumb_url', label: 'Thumbnail URL', type: 'url', help: 'Optional. The full image is used when blank.' },
-      { name: 'sort_order', label: 'Sort order', type: 'int', blank: 0 },
-    ],
-  },
-
   'creative-maps': {
     table: 'creative_maps',
     label: 'Creative maps',

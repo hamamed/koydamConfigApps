@@ -15,6 +15,8 @@ import { errorHandler, notFound } from './middleware/errors.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { apiRouter } from './routes/api.js';
+import { wallpapersRouter } from './routes/wallpapers.js';
+import { WALLPAPER_ROOT } from './wallpapers/root.js';
 import { startSyncLoop } from './sync.js';
 
 migrate();
@@ -44,7 +46,17 @@ app.use(
   }),
 );
 
+// Ahead of apiRouter, which still answers everything else under /api/v1.
+app.use('/api/v1', wallpapersRouter);
 app.use('/api/v1', apiRouter);
+
+// The images themselves. Long max-age: a wallpaper at a given path never
+// changes — a replacement is an upload under a different name.
+app.use('/wallpapers', express.static(WALLPAPER_ROOT, {
+  maxAge: '30d',
+  fallthrough: true,
+  index: false,
+}));
 
 // ── Panel ───────────────────────────────────────────────────────────────────
 

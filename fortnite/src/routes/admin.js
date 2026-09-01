@@ -8,6 +8,9 @@ import {
   readForm, togglePublished, updateRow,
 } from '../collections.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
+import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
+import { forgetGallery, gallery } from './wallpapers.js';
+import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
 
 export const adminRouter = express.Router();
@@ -20,7 +23,13 @@ const loginLimiter = rateLimit({
 });
 
 adminRouter.use(csrfToken);
-adminRouter.use(csrfProtect);
+
+// Every mutating request except the multipart one, which cannot be checked
+// until multer has parsed the body — that route chains csrfProtect itself.
+adminRouter.use((req, res, next) => {
+  if (req.is('multipart/*')) return next();
+  return csrfProtect(req, res, next);
+});
 
 // Every template needs these, and forgetting one is a 500 rather than a
 // missing corner of a page — so they are set once here rather than per render.
@@ -251,4 +260,50 @@ adminRouter.get('/cosmetics', (req, res) => {
       .prepare('SELECT rarity, COUNT(*) AS count FROM cosmetics WHERE rarity IS NOT NULL GROUP BY rarity ORDER BY count DESC')
       .all(),
   });
+});
+
+// ── Wallpapers ──────────────────────────────────────────────────────────────
+//
+// Files on disk rather than rows of URLs. A folder is a category, which means
+// organising the gallery is moving files rather than editing records.
+
+adminRouter.get('/wallpapers', async (req, res) => {
+  const data = await gallery();
+  res.render('wallpapers', {
+    title: 'Wallpapers',
+    items: data.items,
+    categories: data.categories,
+  });
+});
+
+adminRouter.post('/wallpapers', uploadWallpaper, handleUploadErrors, csrfProtect, async (req, res) => {
+  if (!req.file) {
+    req.flash('danger', 'Choose an image to upload.');
+    return res.redirect('/admin/wallpapers');
+  }
+
+  const result = await storeWallpaper({
+    buffer: req.file.buffer,
+    filename: req.file.originalname,
+    category: String(req.body?.category ?? '').trim(),
+  });
+
+  if (!result.ok) {
+    req.flash('danger', result.reason);
+  } else {
+    forgetGallery();
+    req.flash('success', `Uploaded ${result.id}.`);
+  }
+  res.redirect('/admin/wallpapers');
+});
+
+adminRouter.post('/wallpapers/delete', async (req, res) => {
+  const result = await deleteWallpaper(String(req.body?.id ?? ''));
+  if (!result.ok) {
+    req.flash('danger', result.reason ?? 'That file could not be removed.');
+  } else {
+    forgetGallery();
+    req.flash('success', 'Deleted.');
+  }
+  res.redirect('/admin/wallpapers');
 });
