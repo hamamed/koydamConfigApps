@@ -81,18 +81,39 @@ fi
 say "Preparing $APP_DIR"
 mkdir -p "$APP_DIR"/{data,storage/templates,storage/previews}
 
+# Install the code, if it is not there yet.
+#
+# This used to tell you to upload it first with deploy/push.sh — a script that
+# does not exist in this repository and never has. The install path is a git
+# checkout, and this script is inside it, so the source is one directory up
+# from here and can simply be copied.
+#
+# The exclusions matter: .git beside a live .env means one careless `git clean`
+# takes the secrets, node_modules is rebuilt by npm ci below, and data/ and
+# storage/ hold the database and uploads — copying over them on a re-run would
+# destroy the install this script promises not to touch.
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 if [[ ! -f "$APP_DIR/package.json" ]]; then
-  cat >&2 <<'MSG'
+  if [[ -f "$SRC/package.json" ]]; then
+    say "Installing from $SRC"
+    rsync -a --delete \
+      --exclude '.git' --exclude 'node_modules' --exclude '.env' \
+      --exclude 'data' --exclude 'storage' \
+      "$SRC"/ "$APP_DIR"/
+  else
+    cat >&2 <<'MSG'
 
-  No application found at that path.
+  No application found, and this script is not inside a checkout either.
 
-  Upload it first, from your Mac:
-      bash deploy/push.sh root@YOUR_SERVER_IP
-
-  then re-run this script.
+  Clone the repository on the server and run this from within it:
+      git clone https://github.com/hamamed/koydamConfigApps.git /opt/src/koydamConfigApps
+      cd /opt/src/koydamConfigApps/minebox
+      sudo DOMAIN=... EMAIL=... bash deploy/setup.sh
 
 MSG
-  exit 1
+    exit 1
+  fi
 fi
 
 # ── Configuration ────────────────────────────────────────────────────────────
