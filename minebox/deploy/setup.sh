@@ -46,15 +46,43 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+SERVICE="minebox"
+RESTART_AFTER=0
+
 say() { printf '\n\033[1;35m==>\033[0m %s\n' "$1"; }
 
 # A port collision shows up as a service that starts, crashes on EADDRINUSE and flaps forever,
 # while nginx returns 502. Catching it here costs one command.
+#
+# Unless the listener is this service, which on any re-run it will be — the
+# script is meant to be idempotent, and refusing to run because the thing it
+# installed last time is running is the opposite of that. It is only a
+# collision when something *else* holds the port.
 if ss -ltn 2>/dev/null | grep -q ":${PORT} "; then
-  echo "Port ${PORT} is already in use on this server." >&2
-  echo "Something else is listening there — pick another, e.g.  sudo PORT=3001 ... bash $0" >&2
-  exit 1
+  if systemctl is-active --quiet "$SERVICE" 2>/dev/null; then
+    say "Stopping $SERVICE to reconfigure it"
+    systemctl stop "$SERVICE"
+    RESTART_AFTER=1
+  else
+    echo "Port ${PORT} is already in use on this server." >&2
+    echo "Something else is listening there — pick another, e.g.  sudo PORT=3001 ... bash $0" >&2
+    exit 1
+  fi
 fi
+
+# If we stopped it, it comes back — including when a later step fails.
+#
+# Without this, a re-run that stops the service and then dies on something
+# unrelated (a broken nginx config elsewhere on the box, say) leaves a service
+# that was working before the script ran stopped afterwards. The installer must
+# not be able to make things worse than it found them.
+restore_service() {
+  if [[ "${RESTART_AFTER:-0}" -eq 1 ]] && ! systemctl is-active --quiet "$SERVICE"; then
+    echo "    restarting $SERVICE" >&2
+    systemctl start "$SERVICE" || true
+  fi
+}
+trap restore_service EXIT
 
 say "Updating packages"
 export DEBIAN_FRONTEND=noninteractive
