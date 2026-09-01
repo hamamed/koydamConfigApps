@@ -1,0 +1,93 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Import weapons', subheading: 'Paste a table, check it, then save' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3" style="max-width:900px">
+        <div class="ad-card-body">
+          <p class="kd-faint small">
+            Select the weapons table in your browser, copy it, and paste it below. Columns are
+            read from a header row when there is one, and worked out from the values when there
+            is not — which is why nothing is saved until you have seen the preview.
+          </p>
+          <form method="post" action="/admin/weapons/import">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <textarea class="form-control font-monospace" name="pasted" rows="10"
+                      placeholder="Name&#9;Rarity&#9;DPS&#9;Damage&#9;Fire Rate&#9;Magazine&#9;Reload"><%= pasted %></textarea>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="replace" name="replace" <%= replace ? 'checked' : '' %>>
+              <label class="form-check-label small" for="replace">
+                Replace every existing weapon, rather than adding to them
+              </label>
+            </div>
+            <button class="btn btn-kd mt-3" type="submit">Read it</button>
+          </form>
+        </div>
+      </div>
+
+      <% if (parsed) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <i data-lucide="eye" width="16" height="16"></i>
+            <span class="fw-semibold">Preview</span>
+            <span class="kd-faint small ms-auto">
+              <%= parsed.rows.length %> row<%= parsed.rows.length === 1 ? '' : 's' %>
+              <%= parsed.hadHeader ? '· header used' : '· columns inferred' %>
+            </span>
+          </div>
+          <div class="ad-card-body p-0">
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr><th>Name</th><th>Rarity</th><th>Category</th><th>DMG</th><th>DPS</th>
+                      <th>Rate</th><th>Mag</th><th>Reload</th></tr>
+                </thead>
+                <tbody>
+                  <% parsed.rows.forEach((w) => { %>
+                    <tr>
+                      <td class="fw-semibold"><%= w.name %></td>
+                      <td><span class="kd-tag" data-rarity="<%= w.rarity %>"><%= w.rarity %></span></td>
+                      <td class="kd-faint"><%= w.category || '—' %></td>
+                      <td><%= w.damage ?? '—' %></td>
+                      <td><%= w.dps ?? '—' %></td>
+                      <td><%= w.fire_rate ?? '—' %></td>
+                      <td><%= w.magazine ?? '—' %></td>
+                      <td><%= w.reload_time ?? '—' %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <% if (parsed.skipped.length) { %>
+          <div class="alert alert-warning">
+            <div class="fw-semibold mb-1"><%= parsed.skipped.length %> line<%= parsed.skipped.length === 1 ? '' : 's' %> skipped</div>
+            <ul class="mb-0 ps-3 small">
+              <% parsed.skipped.slice(0, 8).forEach((s) => { %>
+                <li>Line <%= s.line %> (<%= s.why %>): <code><%= s.text.slice(0, 90) %></code></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+
+        <% if (parsed.rows.length) { %>
+          <form method="post" action="/admin/weapons/import/confirm" class="mb-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="pasted" value="<%= pasted %>">
+            <% if (replace) { %><input type="hidden" name="replace" value="on"><% } %>
+            <button class="btn btn-kd" type="submit">
+              <%= replace ? 'Replace all with these ' + parsed.rows.length : 'Import these ' + parsed.rows.length %>
+            </button>
+            <a class="btn btn-kd-ghost" href="/admin/c/weapons">Cancel</a>
+          </form>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -12,6 +12,7 @@ import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
 import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
+import { parseWeapons } from '../weapons-import.js';
 
 export const adminRouter = express.Router();
 
@@ -306,4 +307,79 @@ adminRouter.post('/wallpapers/delete', async (req, res) => {
     req.flash('success', 'Deleted.');
   }
   res.redirect('/admin/wallpapers');
+});
+
+// ── Bulk weapon import ──────────────────────────────────────────────────────
+//
+// Two steps on purpose. The parser guesses at columns when a paste has no
+// header, and a bulk import that guesses silently is how forty rows of
+// nonsense get into a panel at once. Nothing is written until the preview has
+// been seen and confirmed.
+
+adminRouter.get('/weapons/import', (req, res) => {
+  res.render('weapons-import', {
+    title: 'Import weapons',
+    parsed: null,
+    pasted: '',
+    replace: false,
+  });
+});
+
+adminRouter.post('/weapons/import', (req, res) => {
+  const pasted = String(req.body?.pasted ?? '');
+  const replace = req.body?.replace === 'on';
+  const parsed = parseWeapons(pasted);
+
+  if (!parsed.rows.length) {
+    req.flash('danger', 'Nothing in that paste looked like a weapon row.');
+  }
+
+  res.render('weapons-import', {
+    title: 'Import weapons',
+    parsed,
+    pasted,
+    replace,
+  });
+});
+
+adminRouter.post('/weapons/import/confirm', (req, res) => {
+  const parsed = parseWeapons(String(req.body?.pasted ?? ''));
+  if (!parsed.rows.length) {
+    req.flash('danger', 'Nothing to import.');
+    return res.redirect('/admin/weapons/import');
+  }
+
+  const replace = req.body?.replace === 'on';
+
+  // One transaction: a half-finished import is worse than none, because there
+  // is no way to tell which half went in.
+  const insert = db.prepare(
+    `INSERT INTO weapons (name, rarity, category, dps, damage, fire_rate, magazine,
+                          reload_time, sort_order, is_published)
+     VALUES (@name, @rarity, @category, @dps, @damage, @fire_rate, @magazine,
+             @reload_time, @sort_order, 1)`,
+  );
+
+  const run = db.transaction((rows) => {
+    if (replace) db.prepare('DELETE FROM weapons').run();
+    rows.forEach((row, index) => {
+      insert.run({
+        name: row.name,
+        rarity: row.rarity ?? 'common',
+        category: row.category ?? null,
+        dps: row.dps ?? null,
+        damage: row.damage ?? null,
+        fire_rate: row.fire_rate ?? null,
+        magazine: row.magazine ?? null,
+        reload_time: row.reload_time ?? null,
+        sort_order: index,
+      });
+    });
+  });
+
+  run(parsed.rows);
+  req.flash('success',
+    `Imported ${parsed.rows.length} weapon${parsed.rows.length === 1 ? '' : 's'}` +
+    (replace ? ', replacing what was there.' : '.'));
+  res.redirect('/admin/c/weapons');
 });
