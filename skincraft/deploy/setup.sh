@@ -136,19 +136,36 @@ npm ci --omit=dev --no-audit --no-fund
 # or architecture — or npm declines to run install scripts — the package installs "successfully"
 # and then throws "Could not locate the bindings file" at boot. Systemd flaps, the log is cryptic,
 # and nothing points at the real cause. Catch it here, where the fix is obvious.
+#
+# Which modules to check is read from package.json rather than listed here. The
+# list used to be hardcoded, and a service without sharp failed this check for
+# a module it had never depended on — reporting a native-module fault, advising
+# a Node version that was already correct, and aborting before the unit was
+# installed, while better-sqlite3 was in fact working perfectly.
 say "Verifying native modules"
-if ! node -e 'require("better-sqlite3"); require("sharp")' >/dev/null 2>&1; then
-  echo "    prebuilt binaries unavailable — building from source"
-  apt-get install -y -qq build-essential python3
-  npm rebuild better-sqlite3 sharp
+NATIVE="$(node -e 'const d = require("./package.json").dependencies || {};
+  console.log(["better-sqlite3", "sharp"].filter((m) => m in d).join(" "))')"
 
-  if ! node -e 'require("better-sqlite3"); require("sharp")' >/dev/null 2>&1; then
-    echo "    native modules still won't load. Check the node version:" >&2
-    echo "      node -v   (expected ${NODE_MAJOR}.x)" >&2
-    exit 1
+if [[ -n "$NATIVE" ]]; then
+  # shellcheck disable=SC2086
+  CHECK="$(printf 'require("%s");' $NATIVE)"
+
+  if ! node -e "$CHECK" >/dev/null 2>&1; then
+    echo "    prebuilt binaries unavailable — building from source"
+    apt-get install -y -qq build-essential python3
+    # shellcheck disable=SC2086
+    npm rebuild $NATIVE
+
+    if ! node -e "$CHECK" >/dev/null 2>&1; then
+      echo "    native modules still won't load. Check the node version:" >&2
+      echo "      node -v   (expected ${NODE_MAJOR}.x)" >&2
+      exit 1
+    fi
   fi
+  echo "    $NATIVE load"
+else
+  echo "    none to check"
 fi
-echo "    better-sqlite3 and sharp load"
 
 say "Running migrations"
 node src/db/migrate.js
