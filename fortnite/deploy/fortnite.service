@@ -1,0 +1,25 @@
+[Unit]
+Description=Fortnite companion API and admin panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/fortnite
+EnvironmentFile=/opt/fortnite/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+
+# The service writes only to its own data directory. Everything else on the
+# box is read-only to it, so a bug here cannot reach another service's files.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/fortnite/data
+
+[Install]
+WantedBy=multi-user.target

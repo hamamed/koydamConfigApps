@@ -88,6 +88,16 @@ const KNOWN_SERVICES = [
     notes: 'Minecraft skins, addons, texture packs, worlds and seeds. SQLite.',
     sortOrder: 40,
   },
+  {
+    slug: 'fortnite',
+    name: 'Fortnite',
+    domain: 'fortnite.hamaprojects.com',
+    healthUrl: 'https://fortnite.hamaprojects.com/api/v1/health',
+    systemdUnit: 'fortnite',
+    appSlug: 'fortnite',
+    notes: 'Cosmetics, item shop and news mirrored from fortnite-api.com, plus authored leaks, wallpapers, maps and weapons. SQLite.',
+    sortOrder: 50,
+  },
 ];
 
 export async function seedServices() {

@@ -217,7 +217,7 @@ add() {
 }
 
 # Secrets first: these are unrecoverable, and were lost once already.
-for svc in brawl-vps platform-api skincraft minebox; do
+for svc in brawl-vps platform-api skincraft minebox fortnite; do
   add "env/$svc.env" "/opt/$svc/.env"
 done
 
@@ -234,7 +234,9 @@ add "nginx"              /etc/nginx/sites-available
 add "systemd"            /etc/systemd/system/brawl-api.service
 add "systemd-platform"   /etc/systemd/system/platform-api.service
 add "systemd-skincraft"  /etc/systemd/system/skincraft.service
+add "fortnite/data"      /opt/fortnite/data
 add "systemd-minebox"    /etc/systemd/system/minebox.service
+add "systemd-fortnite"   /etc/systemd/system/fortnite.service
 
 # Certificates: reissuing is possible but rate-limited, and an expired site
 # during a restore is an outage you did not need.

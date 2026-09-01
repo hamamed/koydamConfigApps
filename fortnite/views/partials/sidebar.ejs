@@ -1,0 +1,41 @@
+<aside class="ad-sidebar" id="mbSidebar">
+  <a class="ad-brand" href="/admin">
+    <img class="kd-brand-mark" src="/assets/logo/logo.png" alt="" width="23" height="26">
+    <span class="ad-brand-name">Fortnite<small>Companion catalogue</small></span>
+  </a>
+
+  <nav class="ad-nav">
+    <div class="ad-nav-label">Overview</div>
+    <a class="ad-nav-link <%= currentPath === '/' ? 'is-active' : '' %>" href="/admin">
+      <i data-lucide="layout-dashboard" width="17" height="17"></i>
+      <span>Dashboard</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/cosmetics') ? 'is-active' : '' %>" href="/admin/cosmetics">
+      <i data-lucide="shirt" width="17" height="17"></i>
+      <span>Catalogue</span>
+    </a>
+
+    <div class="ad-nav-label">Your content</div>
+    <% Object.entries(collections).forEach(([slug, spec]) => { %>
+      <a class="ad-nav-link <%= currentPath.startsWith('/c/' + slug) ? 'is-active' : '' %>"
+         href="/admin/c/<%= slug %>">
+        <i data-lucide="<%= spec.icon %>" width="17" height="17"></i>
+        <span><%= spec.label %></span>
+      </a>
+    <% }) %>
+  </nav>
+
+  <div class="ad-sidebar-foot">
+    <a class="ad-nav-link" href="/api/v1/cosmetics" target="_blank" rel="noopener">
+      <i data-lucide="external-link" width="17" height="17"></i>
+      <span>View the API</span>
+    </a>
+    <form method="post" action="/admin/logout" class="m-0">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="ad-nav-link w-100 border-0 bg-transparent text-start" type="submit">
+        <i data-lucide="log-out" width="17" height="17"></i>
+        <span>Sign out</span>
+      </button>
+    </form>
+  </div>
+</aside>

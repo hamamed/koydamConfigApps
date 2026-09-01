@@ -1,0 +1,76 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: spec.label,
+          subheading: rows.length + ' ' + (rows.length === 1 ? spec.singular : spec.singular + 's'),
+          actions: '<a class="btn btn-sm btn-kd" href="/admin/c/' + slug + '/new">Add a ' + spec.singular + '</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (!rows.length) { %>
+        <div class="ad-empty">
+          <i data-lucide="<%= spec.icon %>" width="28" height="28"></i>
+          <p class="mb-3">Nothing here yet. The app shows this section only once something is published.</p>
+          <a class="btn btn-kd" href="/admin/c/<%= slug %>/new">Add the first <%= spec.singular %></a>
+        </div>
+      <% } else { %>
+        <div class="ad-card">
+          <div class="ad-card-body p-0">
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <% spec.fields.slice(0, 3).forEach((f) => { %><th><%= f.label %></th><% }) %>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% rows.forEach((row) => { %>
+                    <tr>
+                      <td style="width:52px">
+                        <% if (row.image_url) { %>
+                          <img src="<%= row.image_url %>" alt="" width="40" height="40"
+                               style="object-fit:cover;border-radius:8px" loading="lazy">
+                        <% } %>
+                      </td>
+                      <% spec.fields.slice(0, 3).forEach((f) => { %>
+                        <td class="<%= f.name === spec.fields[0].name ? 'fw-semibold' : 'kd-faint' %>">
+                          <%= row[f.name] == null || row[f.name] === '' ? '—' : String(row[f.name]).slice(0, 70) %>
+                        </td>
+                      <% }) %>
+                      <td>
+                        <span class="badge <%= row.is_published ? 'text-bg-success' : 'text-bg-light' %>">
+                          <%= row.is_published ? 'live' : 'hidden' %>
+                        </span>
+                      </td>
+                      <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-kd-ghost" href="/admin/c/<%= slug %>/<%= row.id %>/edit">Edit</a>
+                        <form method="post" action="/admin/c/<%= slug %>/<%= row.id %>/publish" class="d-inline m-0">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button class="btn btn-sm btn-kd-ghost" type="submit">
+                            <%= row.is_published ? 'Hide' : 'Publish' %>
+                          </button>
+                        </form>
+                        <form method="post" action="/admin/c/<%= slug %>/<%= row.id %>/delete" class="d-inline m-0"
+                              onsubmit="return confirm('Delete this <%= spec.singular %>?')">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button class="btn btn-sm btn-kd-ghost text-danger" type="submit">Delete</button>
+                        </form>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

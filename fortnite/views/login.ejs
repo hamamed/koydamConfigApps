@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<div class="kd-auth">
+  <div class="kd-auth-card">
+    <img class="kd-brand-lockup mb-3" src="/assets/logo/logoText.png" alt="Koydam" height="28">
+    <h1 class="kd-h4 mb-1">Fortnite admin</h1>
+    <p class="kd-muted small mb-4">Catalogue, leaks, wallpapers and maps.</p>
+
+    <%- include('partials/flash') %>
+
+    <% if (platformUrl) { %>
+      <a class="btn btn-kd w-100 mb-3" href="<%= platformUrl %>/sso/fortnite">
+        <i data-lucide="log-in" width="16" height="16" class="me-1"></i>
+        Sign in with Koydam
+      </a>
+      <div class="kd-divider my-3"><span>or</span></div>
+    <% } %>
+
+    <form method="post" action="/admin/login">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="mb-2">
+        <label class="form-label small fw-semibold" for="username">Username</label>
+        <input class="form-control" id="username" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold" for="password">Password</label>
+        <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn-kd-outline w-100" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+<%- include('partials/foot') %>

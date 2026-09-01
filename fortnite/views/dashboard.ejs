@@ -1,0 +1,115 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Dashboard', subheading: 'What the app is being served right now' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <% const tiles = [
+             ['Cosmetics', catalogue.cosmetics, 'shirt'],
+             ['Shop offers', catalogue.shop, 'shopping-bag'],
+             ['News items', catalogue.news, 'newspaper'],
+           ]; %>
+        <% tiles.forEach(([label, value, glyph]) => { %>
+          <div class="col-6 col-xl-4">
+            <div class="ad-card ad-kpi">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <span class="ad-kpi-label"><%= label %></span>
+              </div>
+              <div class="ad-kpi-value"><%= Number(value || 0).toLocaleString() %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="refresh-cw" width="16" height="16"></i>
+          <span class="fw-semibold">Upstream feeds</span>
+        </div>
+        <div class="ad-card-body p-0">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead>
+                <tr><th>Feed</th><th>Records</th><th>Last success</th><th>Last problem</th><th></th></tr>
+              </thead>
+              <tbody>
+                <% ['cosmetics', 'shop', 'news'].forEach((name) => {
+                     const feed = feeds.find((f) => f.feed === name); %>
+                  <tr>
+                    <td class="fw-semibold"><%= name %></td>
+                    <td><%= feed ? Number(feed.item_count).toLocaleString() : '—' %></td>
+                    <td class="kd-faint"><%= feed && feed.last_ok_at ? feed.last_ok_at : 'never' %></td>
+                    <td>
+                      <% if (feed && feed.last_error) { %>
+                        <span class="text-danger small"><%= feed.last_error %></span>
+                      <% } else { %>
+                        <span class="kd-faint">—</span>
+                      <% } %>
+                    </td>
+                    <td class="text-end">
+                      <form method="post" action="/admin/sync/<%= name %>" class="m-0">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-sm btn-kd-outline" type="submit">Refresh now</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="pencil" width="16" height="16"></i>
+              <span class="fw-semibold">Your content</span>
+            </div>
+            <div class="ad-card-body p-0">
+              <div class="ad-table-wrap">
+                <table class="ad-table">
+                  <tbody>
+                    <% Object.entries(collections).forEach(([slug, spec]) => { %>
+                      <tr>
+                        <td><a class="fw-semibold" href="/admin/c/<%= slug %>"><%= spec.label %></a></td>
+                        <td class="text-end">
+                          <%= counts[slug].published || 0 %> live
+                          <span class="kd-faint">of <%= counts[slug].total || 0 %></span>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="palette" width="16" height="16"></i>
+              <span class="fw-semibold">Rarity spread</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="d-flex flex-wrap gap-1">
+                <% rarities.forEach((r) => { %>
+                  <span class="kd-tag" data-rarity="<%= r.rarity %>">
+                    <%= r.rarity %> · <%= Number(r.count).toLocaleString() %>
+                  </span>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

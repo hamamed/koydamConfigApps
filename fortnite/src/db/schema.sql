@@ -148,10 +148,26 @@ CREATE TABLE IF NOT EXISTS weapons (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Panel accounts. `password_hash` is null for anyone who only ever signs in
+-- through the platform: there is no local password to check, and storing a
+-- placeholder would be a credential that looks real.
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   username      TEXT NOT NULL UNIQUE,
   password_hash TEXT,
+  role          TEXT NOT NULL DEFAULT 'admin',
   platform_id   INTEGER,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  last_login_at TEXT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_platform
+  ON users(platform_id) WHERE platform_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS sessions (
+  sid        TEXT PRIMARY KEY,
+  data       TEXT NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);

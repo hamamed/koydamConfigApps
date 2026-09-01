@@ -47,6 +47,10 @@ export const config = {
 
   /** Page-size ceiling for the public API. Without a cap, `?limit=100000`
    *  returns all sixteen thousand cosmetics and their images in one response. */
+  /** Cache-buster for the panel's own CSS and JS. Bumped by a deploy, so a
+   *  stylesheet change is not invisible behind a week-old cached copy. */
+  assetVersion: process.env.ASSET_VERSION || String(Date.now()),
+
   maxPageSize: 100,
   defaultPageSize: 40,
 };

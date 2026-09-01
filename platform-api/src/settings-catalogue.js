@@ -175,6 +175,36 @@ export const CATALOGUE = {
       },
     ],
   },
+  fortnite: {
+    name: 'Fortnite',
+    groups: [
+      {
+        title: 'Upstream catalogue',
+        settings: [
+          { key: 'FORTNITE_API_KEY', label: 'fortnite-api.com key', type: 'secret', restart: true,
+            help: 'Optional. The catalogue endpoints are public; a key only raises the rate '
+              + 'limit. Leave blank unless you have one.' },
+          { key: 'SHOP_REFRESH_MINUTES', label: 'Shop refresh (minutes)', type: 'number',
+            min: 1, max: 1440, restart: true,
+            help: 'The shop rotates once a day at midnight UTC, so this is about noticing the '
+              + 'turnover promptly rather than about the data changing underneath you.' },
+          { key: 'NEWS_REFRESH_MINUTES', label: 'News refresh (minutes)', type: 'number',
+            min: 1, max: 1440, restart: true },
+          { key: 'COSMETICS_REFRESH_MINUTES', label: 'Cosmetics refresh (minutes)', type: 'number',
+            min: 15, max: 4320, restart: true,
+            help: 'The full catalogue is 16 MB and only changes when a patch ships. Twice a '
+              + 'day is generous.' },
+        ],
+      },
+      {
+        title: 'API',
+        settings: [
+          { key: 'CORS_ORIGINS', label: 'Allowed origins', type: 'text', restart: false,
+            help: 'Comma separated. Blank allows any origin, which is what the iOS app needs.' },
+        ],
+      },
+    ],
+  },
 
   platform: {
     name: 'Platform config',

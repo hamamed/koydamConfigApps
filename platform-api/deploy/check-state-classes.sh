@@ -26,6 +26,7 @@ SOURCES=(
   skincraft/public/js
   minebox/views
   minebox/public/js
+  fortnite/views
 )
 
 [[ -f "$CSS" ]] || { echo "  no stylesheet at $CSS"; exit 1; }

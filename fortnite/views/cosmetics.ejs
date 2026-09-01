@@ -1,0 +1,66 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Catalogue',
+          subheading: Number(total).toLocaleString() + ' matching · mirrored from upstream, read-only'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form class="d-flex flex-wrap gap-2 mb-3" method="get" action="/admin/cosmetics">
+        <input class="form-control" name="search" value="<%= search %>" placeholder="Search by name or set"
+               style="max-width:280px">
+        <select class="form-select" name="rarity" style="max-width:200px">
+          <option value="">Every rarity</option>
+          <% rarities.forEach((r) => { %>
+            <option value="<%= r.rarity %>" <%= rarity === r.rarity ? 'selected' : '' %>>
+              <%= r.rarity %> (<%= r.count %>)
+            </option>
+          <% }) %>
+        </select>
+        <button class="btn btn-kd-outline" type="submit">Filter</button>
+        <% if (search || rarity) { %>
+          <a class="btn btn-kd-ghost" href="/admin/cosmetics">Clear</a>
+        <% } %>
+      </form>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead>
+                <tr><th></th><th>Name</th><th>Type</th><th>Rarity</th><th>Series</th><th>Season</th></tr>
+              </thead>
+              <tbody>
+                <% rows.forEach((row) => { %>
+                  <tr>
+                    <td style="width:52px">
+                      <% if (row.icon_url) { %>
+                        <img src="<%= row.icon_url %>" alt="" width="36" height="36"
+                             style="object-fit:contain" loading="lazy">
+                      <% } %>
+                    </td>
+                    <td class="fw-semibold"><%= row.name %></td>
+                    <td class="kd-faint"><%= row.type_name || '—' %></td>
+                    <td><span class="kd-tag" data-rarity="<%= row.rarity %>"><%= row.rarity || '—' %></span></td>
+                    <td class="kd-faint"><%= row.series || '—' %></td>
+                    <td class="kd-faint"><%= row.season || '—' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <% if (total > rows.length) { %>
+        <p class="kd-faint small mt-3">
+          Showing the newest <%= rows.length %> of <%= Number(total).toLocaleString() %>. Narrow with search or a rarity.
+        </p>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

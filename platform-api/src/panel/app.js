@@ -2209,7 +2209,7 @@ async function viewAccount() {
 }
 
 /** The services whose settings the panel can edit. */
-const SERVICES = ['brawl', 'skincraft', 'minebox', 'platform'];
+const SERVICES = ['brawl', 'skincraft', 'minebox', 'fortnite', 'platform'];
 
 // ── Service settings ────────────────────────────────────────────────────────
 

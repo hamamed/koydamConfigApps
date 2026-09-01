@@ -1,0 +1,58 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: title, subheading: spec.label }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (errors.length) { %>
+        <div class="alert alert-danger">
+          <ul class="mb-0 ps-3">
+            <% errors.forEach((e) => { %><li><%= e %></li><% }) %>
+          </ul>
+        </div>
+      <% } %>
+
+      <div class="ad-card" style="max-width:720px">
+        <div class="ad-card-body">
+          <form method="post" action="/admin/c/<%= slug %><%= row && row.id ? '/' + row.id + '/edit' : '/new' %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <% spec.fields.forEach((f) => {
+                 const value = row && row[f.name] != null ? row[f.name] : ''; %>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold" for="f_<%= f.name %>">
+                  <%= f.label %><% if (f.required) { %> <span class="text-danger">*</span><% } %>
+                </label>
+
+                <% if (f.type === 'textarea') { %>
+                  <textarea class="form-control" id="f_<%= f.name %>" name="<%= f.name %>" rows="4"><%= value %></textarea>
+                <% } else if (f.type === 'select') { %>
+                  <select class="form-select" id="f_<%= f.name %>" name="<%= f.name %>">
+                    <% f.options.forEach((opt) => { %>
+                      <option value="<%= opt %>" <%= String(value) === opt ? 'selected' : '' %>><%= opt %></option>
+                    <% }) %>
+                  </select>
+                <% } else { %>
+                  <input class="form-control" id="f_<%= f.name %>" name="<%= f.name %>"
+                         type="<%= f.type === 'url' ? 'url' : (f.type === 'number' || f.type === 'int') ? 'number' : 'text' %>"
+                         <%= f.type === 'number' ? 'step="any"' : '' %>
+                         value="<%= value %>" <%= f.required ? 'required' : '' %>>
+                <% } %>
+
+                <% if (f.help) { %><div class="form-text"><%= f.help %></div><% } %>
+              </div>
+            <% }) %>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-kd" type="submit">Save</button>
+              <a class="btn btn-kd-ghost" href="/admin/c/<%= slug %>">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
