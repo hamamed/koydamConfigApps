@@ -107,7 +107,7 @@ if ! id -u "$APP_USER" >/dev/null 2>&1; then
 fi
 
 say "Preparing $APP_DIR"
-mkdir -p "$APP_DIR"/data
+mkdir -p "$APP_DIR"/{data,wallpapers}
 
 # Install the code, if it is not there yet.
 #

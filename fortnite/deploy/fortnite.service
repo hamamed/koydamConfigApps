@@ -13,13 +13,15 @@ ExecStart=/usr/bin/node src/server.js
 Restart=always
 RestartSec=3
 
-# The service writes only to its own data directory. Everything else on the
-# box is read-only to it, so a bug here cannot reach another service's files.
+# The service writes to its database and its wallpaper gallery, and nothing
+# else on the box. ProtectSystem=strict makes the whole filesystem read-only
+# except what is named here — so a path left out of this list is not a
+# permissions problem to debug later, it is an EROFS at the moment of writing.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/fortnite/data
+ReadWritePaths=/opt/fortnite/data /opt/fortnite/wallpapers
 
 [Install]
 WantedBy=multi-user.target
