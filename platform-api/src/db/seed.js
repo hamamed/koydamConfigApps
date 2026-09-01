@@ -20,6 +20,7 @@
 import { getPool, isDbEnabled } from './pool.js';
 import { runMigrations } from './migrate.js';
 import {
+  appDetail,
   upsertAdUnit,
   upsertApp,
   upsertFlag,
@@ -108,6 +109,30 @@ const APPS = [
       reporting: true,
     },
   },
+  {
+    slug: 'fortnite',
+    name: 'Fortnite Companion',
+    notes: 'Cosmetics, item shop, news and curated content. Backend: fortnite.hamaprojects.com',
+    platforms: {
+      // Placeholder until the app is built — this has to match Xcode exactly
+      // or remote config reaches nothing.
+      ios: { bundleId: 'koydam.fortnite.companion' },
+    },
+    // One per section the app shows, so any of them can be closed from the
+    // panel without a release. `map` earns its place: that tab is a WebView
+    // over someone else's site, and if it ever has to go, waiting on App
+    // Store review to remove it is not a plan.
+    flags: {
+      shop: true,
+      cosmetics: true,
+      map: true,
+      weapons: true,
+      wallpapers: true,
+      creativeMaps: true,
+      leaks: true,
+      news: true,
+    },
+  },
 ];
 
 async function seed() {
@@ -119,30 +144,50 @@ async function seed() {
   await runMigrations();
 
   for (const app of APPS) {
+    // What is already there, before anything is written. Seeding is for
+    // filling in what is missing — an app configured months ago must come out
+    // of this unchanged.
+    const existing = await appDetail(app.slug);
+
     await upsertApp({ slug: app.slug, name: app.name, notes: app.notes });
-    log.info('App', { slug: app.slug });
+    log.info('App', { slug: app.slug, seeded: Boolean(existing) ? 'existing' : 'new' });
 
     for (const [platform, fields] of Object.entries(app.platforms)) {
       const test = ADMOB_TEST[platform];
+      const configured = (existing?.platforms ?? []).find((p) => p.platform === platform);
 
-      await upsertPlatform(app.slug, platform, {
-        ...fields,
-        admobAppId: test.appId,
-        adsEnabled: true,
-        maintenance: false,
-      });
+      // Only write the platform row when it is absent. Rewriting it would put
+      // Google's test AdMob id over a real one and turn a live app's ads off,
+      // silently, from a command whose name suggests it only adds things.
+      if (!configured) {
+        await upsertPlatform(app.slug, platform, {
+          ...fields,
+          admobAppId: test.appId,
+          adsEnabled: true,
+          maintenance: false,
+        });
+      }
+
+      const units = new Set(
+        (existing?.adUnits ?? [])
+          .filter((u) => u.platform === platform)
+          .map((u) => u.placement),
+      );
 
       for (const placement of ['banner', 'interstitial', 'native', 'appOpen']) {
+        if (units.has(placement)) continue;
         await upsertAdUnit(app.slug, platform, placement, test[placement], true);
       }
 
-      await upsertPacing(app.slug, platform, PACING);
-      log.info('  platform', { platform, units: 4 });
+      if (!configured) await upsertPacing(app.slug, platform, PACING);
+      log.info('  platform', { platform, added: 4 - units.size });
     }
 
     // Null platform: applies to both. Overriding one platform later is a row
     // that wins over this one rather than an edit to it.
+    const known = new Set((existing?.flags ?? []).map((f) => f.key));
     for (const [key, value] of Object.entries(app.flags ?? {})) {
+      if (known.has(key)) continue;
       await upsertFlag(app.slug, null, key, value);
     }
   }
