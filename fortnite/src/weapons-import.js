@@ -100,7 +100,117 @@ function inferColumns(rows) {
   return map;
 }
 
-export function parseWeapons(text) {
+/**
+ * The same table, pasted as HTML rather than as text.
+ *
+ * Copying from a browser sometimes yields the markup instead of the rendered
+ * cells, and the markup is the better source anyway: it carries the image URLs
+ * and the section headings, which the rendered text loses.
+ *
+ * The shape this reads is a stats table where a weapon's name sits in a cell
+ * spanning its variants, and each following row is one rarity of it:
+ *
+ *     <h2>Assault Rifles</h2>              <- category
+ *     <tr><td rowspan="6">Hammer AR</td>   <- name, once
+ *     <tr><td><img ...></td><td>Common</td><td>156.6</td>…   <- a variant
+ *
+ * So the name and category are carried down from above rather than read from
+ * each row, and a row is a weapon variant only when it has an image and a
+ * rarity of its own.
+ */
+function parseHTML(html, { includeVaulted = false } = {}) {
+  const rows = [];
+  const skipped = [];
+
+  // Everything after a "Vaulted" heading is history rather than the current
+  // loot pool, and mixing the two would put a dozen retired variants of the
+  // same rifle beside the one that is actually in the game.
+  const vaultedAt = html.search(/<h1[^>]*>\s*Vaulted/i);
+  const live = vaultedAt >= 0 ? html.slice(0, vaultedAt) : html;
+  const vaulted = vaultedAt >= 0 ? html.slice(vaultedAt) : '';
+
+  const sections = includeVaulted
+    ? [{ html: live, vaulted: false }, { html: vaulted, vaulted: true }]
+    : [{ html: live, vaulted: false }];
+
+  const strip = (v) => v.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+  for (const section of sections) {
+    let category = null;
+    let name = null;
+
+    // Headings and rows, in document order, so context flows downward.
+    const tokens = section.html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>|<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+
+    for (const token of tokens) {
+      if (token[1] != null) { category = strip(token[1]) || null; continue; }
+
+      const row = token[2];
+
+      // The section heading lives inside a row of its own, so the row pattern
+      // matches it before the heading pattern ever sees it. Checking here is
+      // what makes categories work at all — without it every weapon imported
+      // with no category and nothing looked wrong enough to notice.
+      const heading = row.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+      if (heading) { category = strip(heading[1]) || category; continue; }
+
+      const cells = [...row.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((m) => m[1]);
+      if (!cells.length) continue;
+
+      // A lone cell that spans rows is the weapon's name.
+      if (cells.length === 1 && /rowspan/i.test(row)) {
+        name = strip(cells[0]) || name;
+        continue;
+      }
+
+      const image = row.match(/<img[^>]+src="([^"]+)"/i)?.[1] ?? null;
+      const values = cells.map(strip);
+      const rarity = values.map(rarityOf).find(Boolean);
+
+      // Header rows and section banners have no image and no rarity.
+      if (!image && !rarity) continue;
+      if (!name) {
+        skipped.push({ line: rows.length + 1, text: values.join(' | ').slice(0, 90), why: 'no weapon name above it' });
+        continue;
+      }
+
+      // Numbers, in the order this table prints them:
+      // DPS, damage, structure damage, fire rate, magazine, reload.
+      const numbers = values.map(num).filter((n) => n != null);
+      const [dps, damage, , fireRate, magazine, reload] = numbers;
+
+      rows.push({
+        name,
+        rarity: rarity ?? 'common',
+        category,
+        dps: dps ?? null,
+        damage: damage ?? null,
+        fire_rate: fireRate ?? null,
+        // A million rounds is how this table writes "unlimited". Printing that
+        // number in the app would be worse than printing nothing.
+        magazine: magazine != null && magazine < 100_000 ? magazine : null,
+        reload_time: reload ?? null,
+        image_url: image ? absolute(image) : null,
+        vaulted: section.vaulted,
+      });
+    }
+  }
+
+  return { rows, skipped, columns: {}, hadHeader: true, fromHTML: true };
+}
+
+/** Image paths in the markup are site-relative. */
+function absolute(src) {
+  if (/^https?:\/\//i.test(src)) return src;
+  return 'https://fortnite.gg' + (src.startsWith('/') ? src : '/' + src);
+}
+
+export function parseWeapons(text, options = {}) {
+  // Markup or plain cells? A table's worth of <tr> is unambiguous.
+  if (/<t[rd][\s>]/i.test(String(text ?? ''))) {
+    return parseHTML(String(text), options);
+  }
+
   const lines = String(text ?? '')
     .split(/\r?\n/)
     .map((l) => l.trim())

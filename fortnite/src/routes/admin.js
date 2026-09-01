@@ -322,13 +322,14 @@ adminRouter.get('/weapons/import', (req, res) => {
     parsed: null,
     pasted: '',
     replace: false,
+    vaulted: false,
   });
 });
 
 adminRouter.post('/weapons/import', (req, res) => {
   const pasted = String(req.body?.pasted ?? '');
   const replace = req.body?.replace === 'on';
-  const parsed = parseWeapons(pasted);
+  const parsed = parseWeapons(pasted, { includeVaulted: req.body?.vaulted === 'on' });
 
   if (!parsed.rows.length) {
     req.flash('danger', 'Nothing in that paste looked like a weapon row.');
@@ -339,11 +340,14 @@ adminRouter.post('/weapons/import', (req, res) => {
     parsed,
     pasted,
     replace,
+    vaulted: req.body?.vaulted === 'on',
   });
 });
 
 adminRouter.post('/weapons/import/confirm', (req, res) => {
-  const parsed = parseWeapons(String(req.body?.pasted ?? ''));
+  const parsed = parseWeapons(String(req.body?.pasted ?? ''), {
+    includeVaulted: req.body?.vaulted === 'on',
+  });
   if (!parsed.rows.length) {
     req.flash('danger', 'Nothing to import.');
     return res.redirect('/admin/weapons/import');
@@ -355,9 +359,9 @@ adminRouter.post('/weapons/import/confirm', (req, res) => {
   // is no way to tell which half went in.
   const insert = db.prepare(
     `INSERT INTO weapons (name, rarity, category, dps, damage, fire_rate, magazine,
-                          reload_time, sort_order, is_published)
+                          reload_time, image_url, sort_order, is_published)
      VALUES (@name, @rarity, @category, @dps, @damage, @fire_rate, @magazine,
-             @reload_time, @sort_order, 1)`,
+             @reload_time, @image_url, @sort_order, @is_published)`,
   );
 
   const run = db.transaction((rows) => {
@@ -372,7 +376,12 @@ adminRouter.post('/weapons/import/confirm', (req, res) => {
         fire_rate: row.fire_rate ?? null,
         magazine: row.magazine ?? null,
         reload_time: row.reload_time ?? null,
+        image_url: row.image_url ?? null,
         sort_order: index,
+        // Vaulted weapons come in hidden. They are history, and an app that
+        // lists a retired rifle beside a current one is telling players
+        // something untrue about what they can find in a match.
+        is_published: row.vaulted ? 0 : 1,
       });
     });
   });

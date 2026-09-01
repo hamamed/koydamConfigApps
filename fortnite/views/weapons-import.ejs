@@ -18,6 +18,12 @@
             <textarea class="form-control font-monospace" name="pasted" rows="10"
                       placeholder="Name&#9;Rarity&#9;DPS&#9;Damage&#9;Fire Rate&#9;Magazine&#9;Reload"><%= pasted %></textarea>
             <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="vaulted" name="vaulted" <%= vaulted ? 'checked' : '' %>>
+              <label class="form-check-label small" for="vaulted">
+                Include vaulted weapons — imported hidden, so they do not appear in the app
+              </label>
+            </div>
+            <div class="form-check mt-2">
               <input class="form-check-input" type="checkbox" id="replace" name="replace" <%= replace ? 'checked' : '' %>>
               <label class="form-check-label small" for="replace">
                 Replace every existing weapon, rather than adding to them
@@ -42,13 +48,21 @@
             <div class="ad-table-wrap">
               <table class="ad-table">
                 <thead>
-                  <tr><th>Name</th><th>Rarity</th><th>Category</th><th>DMG</th><th>DPS</th>
+                  <tr><th></th><th>Name</th><th>Rarity</th><th>Category</th><th>DMG</th><th>DPS</th>
                       <th>Rate</th><th>Mag</th><th>Reload</th></tr>
                 </thead>
                 <tbody>
                   <% parsed.rows.forEach((w) => { %>
-                    <tr>
-                      <td class="fw-semibold"><%= w.name %></td>
+                    <tr<%= w.vaulted ? ' style="opacity:.55"' : '' %>>
+                      <td style="width:46px">
+                        <% if (w.image_url) { %>
+                          <img src="<%= w.image_url %>" alt="" width="38" height="38"
+                               style="object-fit:contain" loading="lazy">
+                        <% } %>
+                      </td>
+                      <td class="fw-semibold">
+                        <%= w.name %><% if (w.vaulted) { %> <span class="kd-faint small">vaulted</span><% } %>
+                      </td>
                       <td><span class="kd-tag" data-rarity="<%= w.rarity %>"><%= w.rarity %></span></td>
                       <td class="kd-faint"><%= w.category || '—' %></td>
                       <td><%= w.damage ?? '—' %></td>
@@ -80,6 +94,7 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="pasted" value="<%= pasted %>">
             <% if (replace) { %><input type="hidden" name="replace" value="on"><% } %>
+            <% if (vaulted) { %><input type="hidden" name="vaulted" value="on"><% } %>
             <button class="btn btn-kd" type="submit">
               <%= replace ? 'Replace all with these ' + parsed.rows.length : 'Import these ' + parsed.rows.length %>
             </button>
