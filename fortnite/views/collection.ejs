@@ -5,7 +5,10 @@
     <%- include('partials/topbar', {
           heading: spec.label,
           subheading: rows.length + ' ' + (rows.length === 1 ? spec.singular : spec.singular + 's'),
-          actions: '<a class="btn btn-sm btn-kd" href="/admin/c/' + slug + '/new">Add a ' + spec.singular + '</a>'
+          actions: (slug === 'weapons'
+              ? '<a class="btn btn-sm btn-kd-outline me-2" href="/admin/weapons/import">Import</a>'
+              : '')
+            + '<a class="btn btn-sm btn-kd" href="/admin/c/' + slug + '/new">Add a ' + spec.singular + '</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
