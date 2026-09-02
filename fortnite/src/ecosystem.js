@@ -201,9 +201,19 @@ export async function syncIslandMetrics({ batch = 120 } = {}) {
       transaction(() => {
         for (const [day, values] of days) insert.run({ code, day, ...values });
         db.prepare('UPDATE islands SET metrics_misses = 0 WHERE code = ?').run(code);
-        // The newest day is what the list sorts on.
-        const newest = [...days.keys()].sort().pop();
-        touch.run({ code, ...days.get(newest) });
+
+        // The newest day that actually has numbers — not simply the newest.
+        //
+        // Epic returns today alongside yesterday, and today is usually still
+        // empty because the day has not finished. Copying it verbatim wiped
+        // yesterday's real figures off the island row, so the list could not
+        // see them: forty-two islands had metrics in history and read as
+        // unmeasured.
+        const withData = [...days.entries()]
+          .sort(([a], [b]) => b.localeCompare(a))
+          .find(([, values]) => Object.values(values).some((v) => v != null));
+
+        if (withData) touch.run({ code, ...withData[1] });
       })();
 
       updated += 1;
