@@ -33,7 +33,7 @@ export function startSyncLoop() {
     },
   ];
 
-  for (const feed of feeds) {
+  for (const [index, feed] of feeds.entries()) {
     const tick = async () => {
       try {
         const n = await feed.run();
@@ -45,7 +45,18 @@ export function startSyncLoop() {
 
     // On boot, only what is missing or stale. A restart should not re-download
     // 16 MB of cosmetics that were fetched a minute earlier.
-    if (isStale(feed.name, feed.minutes)) tick();
+    //
+    // Staggered, and in declaration order. Firing every feed at once put the
+    // island-metrics job in front of the catalogue it reads from: on a fresh
+    // install it ran six seconds before the first island was stored, found
+    // nothing to ask about, recorded a clean run and slept for ten minutes.
+    // The delay also stops five upstream requests leaving at the same instant
+    // every time the service restarts.
+    if (isStale(feed.name, feed.minutes)) {
+      const delay = index * 45_000;
+      const first = setTimeout(tick, delay);
+      first.unref?.();
+    }
 
     const timer = setInterval(tick, feed.minutes * 60_000);
     // Nothing should be kept alive by a refresh timer.
