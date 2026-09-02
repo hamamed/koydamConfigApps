@@ -135,11 +135,20 @@ export async function syncIslandMetrics({ batch = 120, exploreShare = 0.7, concu
     const exploreBudget = Math.max(1, Math.round(batch * exploreShare));
     const refreshBudget = Math.max(0, batch - exploreBudget);
 
+    // Islands somebody pasted go to the front of the queue.
+    //
+    // A picture only exists here because a person went and fetched a listing
+    // for that island, which is a far better signal of "worth measuring" than
+    // the arbitrary order Epic returns the catalogue in. Without this they sit
+    // at the back — they are inserted last, so they have the highest rowid —
+    // and stay unmeasured, which keeps them out of the app's ranked list
+    // entirely. Twenty-two of the best-known maps in the game were invisible
+    // for exactly that reason.
     const explore = db
       .prepare(
         `SELECT code FROM islands
           WHERE metrics_at IS NULL
-          ORDER BY rowid
+          ORDER BY image_url IS NULL, rowid
           LIMIT ?`,
       )
       .all(exploreBudget);
