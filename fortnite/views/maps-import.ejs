@@ -44,7 +44,7 @@
             <div class="ad-table-wrap">
               <table class="ad-table">
                 <thead>
-                  <tr><th></th><th>Title</th><th>Island code</th></tr>
+                  <tr><th></th><th>Title</th><th>Island code</th><th class="text-end">Players</th></tr>
                 </thead>
                 <tbody>
                   <% parsed.rows.forEach((m) => { %>
@@ -57,6 +57,7 @@
                       </td>
                       <td class="fw-semibold"><%= m.title %></td>
                       <td class="font-monospace"><%= m.code %></td>
+                      <td class="text-end"><%= m.players ? Number(m.players).toLocaleString() : '—' %></td>
                     </tr>
                   <% }) %>
                 </tbody>

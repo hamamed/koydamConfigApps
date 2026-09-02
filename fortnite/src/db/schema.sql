@@ -123,6 +123,10 @@ CREATE TABLE IF NOT EXISTS creative_maps (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   title       TEXT NOT NULL,
   code        TEXT NOT NULL,
+  -- Live player count at import time. A snapshot, not a live figure: it says
+  -- how popular a map was when the list was pasted, which is what makes it
+  -- worth featuring, and the app labels it as such.
+  players     INTEGER,
   category    TEXT,
   description TEXT,
   image_url   TEXT,

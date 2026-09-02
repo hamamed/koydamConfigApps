@@ -428,8 +428,8 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
   const replace = req.body?.replace === 'on';
 
   const insert = db.prepare(
-    `INSERT INTO creative_maps (title, code, category, description, image_url, sort_order, is_published)
-     VALUES (@title, @code, @category, @description, @image_url, @sort_order, 1)`,
+    `INSERT INTO creative_maps (title, code, category, description, image_url, players, sort_order, is_published)
+     VALUES (@title, @code, @category, @description, @image_url, @players, @sort_order, 1)`,
   );
 
   // An island code identifies a map, so re-importing a list that overlaps an
@@ -439,7 +439,10 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
     db.prepare('SELECT code FROM creative_maps').all().map((r) => r.code),
   );
   const update = db.prepare(
-    `UPDATE creative_maps SET title = @title, image_url = COALESCE(@image_url, image_url)
+    `UPDATE creative_maps
+        SET title = @title,
+            image_url = COALESCE(@image_url, image_url),
+            players = COALESCE(@players, players)
       WHERE code = @code`,
   );
 
@@ -458,6 +461,7 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
         category: row.category ?? null,
         description: row.description ?? null,
         image_url: row.image_url ?? null,
+        players: row.players ?? null,
         sort_order: index,
       };
       if (existing.has(row.code)) { update.run(values); updated += 1; }

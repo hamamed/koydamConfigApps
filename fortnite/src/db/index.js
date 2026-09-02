@@ -22,6 +22,19 @@ db.pragma('busy_timeout = 5000');
 /** Applies the schema. Every statement is `IF NOT EXISTS`, so it is safe on every boot. */
 export function migrate() {
   db.exec(fs.readFileSync(path.join(here, 'schema.sql'), 'utf8'));
+
+  // `CREATE TABLE IF NOT EXISTS` does nothing when the table already exists, so
+  // a column added to the schema after an install would never reach a deployed
+  // database. Adding it explicitly keeps a running instance and a fresh one on
+  // the same shape.
+  ensureColumn('creative_maps', 'players', 'INTEGER');
+}
+
+/** Adds a column when it is missing. Safe to run on every boot. */
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
 export const transaction = (fn) => db.transaction(fn);

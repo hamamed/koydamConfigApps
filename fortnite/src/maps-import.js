@@ -108,7 +108,81 @@ function around(text, index, isHTML, bounds = {}) {
   return { title, image: absolute(image) };
 }
 
+/**
+ * The island-card layout, as fortnite.gg actually serves it.
+ *
+ * Each entry is one anchor:
+ *
+ *   <a class="island" href="/island/7865-8305-9184">
+ *     <img src="…" alt="Star Wars Droid Tycoon">
+ *     <h3 class="island-title">Star Wars Droid Tycoon</h3>
+ *     <div class="ccu"><span>Players Now</span> 24,509</div>
+ *
+ * Parsed by anchor rather than by island code, because a third of the list has
+ * no code at all: Epic's own modes are slugs — `/island/experience_br`,
+ * `/island/campaign` — and a code-anchored reader skips them without a word.
+ * They are still reported, as skipped, so the count adds up.
+ */
+function parseIslandCards(html) {
+  const rows = [];
+  const skipped = [];
+  const seen = new Set();
+
+  const blocks = [...html.matchAll(/<a\b[^>]*class="[^"]*\bisland\b[^"]*"[^>]*>([\s\S]*?)<\/a>/gi)];
+
+  for (const block of blocks) {
+    const whole = block[0];
+    const inner = block[1];
+
+    const href = whole.match(/href="([^"]+)"/i)?.[1] ?? '';
+    const slug = href.split('/').filter(Boolean).pop() ?? '';
+
+    const title =
+      clean(inner.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i)?.[1] ?? '') ||
+      clean(inner.match(/alt="([^"]*)"/i)?.[1] ?? '');
+
+    // Epic's own playlists cannot be joined by code, so they are not creative
+    // maps in the sense this list is for.
+    if (!/^\d{4}-\d{4}-\d{4}$/.test(slug)) {
+      if (title) skipped.push({ line: rows.length + skipped.length + 1, text: title, why: "Epic's own mode — no island code" });
+      continue;
+    }
+
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+
+    if (!title) {
+      skipped.push({ line: rows.length + skipped.length + 1, text: slug, why: 'no title in the card' });
+      continue;
+    }
+
+    const image = inner.match(/<img[^>]+(?:data-)?src="([^"]+)"/i)?.[1] ?? null;
+
+    // "Players Now 24,509" — the live count, which is the one number that says
+    // whether a map is worth featuring.
+    const playersText = inner.match(/Players Now<\/span>\s*([\d,]+)/i)?.[1] ?? null;
+    const players = playersText ? Number(playersText.replace(/,/g, '')) : null;
+
+    rows.push({
+      title,
+      code: slug,
+      category: null,
+      description: null,
+      image_url: absolute(image),
+      players: Number.isFinite(players) ? players : null,
+    });
+  }
+
+  return { rows, skipped, fromHTML: true, fromCards: true };
+}
+
 export function parseMaps(text) {
+  // The card layout is unmistakable and carries more than a loose code scan
+  // can — titles, images and player counts — so it is tried first.
+  if (/<a\b[^>]*class="[^"]*\bisland\b/i.test(String(text ?? ''))) {
+    return parseIslandCards(String(text));
+  }
+
   const raw = String(text ?? '');
   const isHTML = /<[a-z][\s\S]*>/i.test(raw);
 
@@ -166,6 +240,7 @@ export function parseMaps(text) {
       category: null,
       description: null,
       image_url: found.image ?? null,
+      players: null,
     });
   }
 

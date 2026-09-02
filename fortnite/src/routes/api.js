@@ -199,7 +199,7 @@ apiRouter.get('/creative-maps', (_req, res) => {
     .all();
   ok(res, rows.map((r) => ({
     id: r.id, title: r.title, code: r.code, category: r.category,
-    description: r.description, image: r.image_url,
+    description: r.description, image: r.image_url, players: r.players,
   })));
 });
 
