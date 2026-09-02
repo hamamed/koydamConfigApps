@@ -13,6 +13,7 @@ import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
 import { parseWeapons } from '../weapons-import.js';
+import { parseMaps } from '../maps-import.js';
 
 export const adminRouter = express.Router();
 
@@ -391,4 +392,81 @@ adminRouter.post('/weapons/import/confirm', (req, res) => {
     `Imported ${parsed.rows.length} weapon${parsed.rows.length === 1 ? '' : 's'}` +
     (replace ? ', replacing what was there.' : '.'));
   res.redirect('/admin/c/weapons');
+});
+
+// ── Bulk creative-map import ────────────────────────────────────────────────
+//
+// Anchored on the island code rather than on a layout — see maps-import.js.
+// Same two steps as weapons: read, look, then save.
+
+adminRouter.get('/maps/import', (req, res) => {
+  res.render('maps-import', { title: 'Import maps', parsed: null, pasted: '', replace: false });
+});
+
+adminRouter.post('/maps/import', (req, res) => {
+  const pasted = String(req.body?.pasted ?? '');
+  const parsed = parseMaps(pasted);
+
+  if (!parsed.rows.length) {
+    req.flash('danger', 'No island codes found in that paste.');
+  }
+  res.render('maps-import', {
+    title: 'Import maps',
+    parsed,
+    pasted,
+    replace: req.body?.replace === 'on',
+  });
+});
+
+adminRouter.post('/maps/import/confirm', (req, res) => {
+  const parsed = parseMaps(String(req.body?.pasted ?? ''));
+  if (!parsed.rows.length) {
+    req.flash('danger', 'Nothing to import.');
+    return res.redirect('/admin/maps/import');
+  }
+
+  const replace = req.body?.replace === 'on';
+
+  const insert = db.prepare(
+    `INSERT INTO creative_maps (title, code, category, description, image_url, sort_order, is_published)
+     VALUES (@title, @code, @category, @description, @image_url, @sort_order, 1)`,
+  );
+
+  // An island code identifies a map, so re-importing a list that overlaps an
+  // earlier one should update rather than duplicate. Without this the obvious
+  // second import silently doubles the gallery.
+  const existing = new Set(
+    db.prepare('SELECT code FROM creative_maps').all().map((r) => r.code),
+  );
+  const update = db.prepare(
+    `UPDATE creative_maps SET title = @title, image_url = COALESCE(@image_url, image_url)
+      WHERE code = @code`,
+  );
+
+  let added = 0;
+  let updated = 0;
+
+  db.transaction((rows) => {
+    if (replace) {
+      db.prepare('DELETE FROM creative_maps').run();
+      existing.clear();
+    }
+    rows.forEach((row, index) => {
+      const values = {
+        title: row.title,
+        code: row.code,
+        category: row.category ?? null,
+        description: row.description ?? null,
+        image_url: row.image_url ?? null,
+        sort_order: index,
+      };
+      if (existing.has(row.code)) { update.run(values); updated += 1; }
+      else { insert.run(values); added += 1; }
+    });
+  })(parsed.rows);
+
+  req.flash('success',
+    `${added} map${added === 1 ? '' : 's'} added` +
+    (updated ? `, ${updated} updated` : '') + '.');
+  res.redirect('/admin/c/creative-maps');
 });

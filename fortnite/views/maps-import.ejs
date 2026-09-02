@@ -1,0 +1,94 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Import maps', subheading: 'Paste a table, check it, then save' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3" style="max-width:900px">
+        <div class="ad-card-body">
+          <p class="kd-faint small">
+            Select the maps in your browser, copy, and paste below. Each map is found by its
+            island code, so a table, a grid of cards or a plain list all work. Titles and images
+            are read from whatever sits nearest each code — which is why nothing is saved until
+            you have seen the preview.
+          </p>
+          <form method="post" action="/admin/maps/import">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <textarea class="form-control font-monospace" name="pasted" rows="10"
+                      placeholder="Zone Wars Deluxe&#9;1234-5678-9012&#10;Box Fight Arena&#9;9876-5432-1098"><%= pasted %></textarea>
+            <div class="form-check mt-2">
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="replace" name="replace" <%= replace ? 'checked' : '' %>>
+              <label class="form-check-label small" for="replace">
+                Replace every existing map, rather than adding to them and updating matches
+              </label>
+            </div>
+            <button class="btn btn-kd mt-3" type="submit">Read it</button>
+          </form>
+        </div>
+      </div>
+
+      <% if (parsed) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <i data-lucide="eye" width="16" height="16"></i>
+            <span class="fw-semibold">Preview</span>
+            <span class="kd-faint small ms-auto">
+              <%= parsed.rows.length %> row<%= parsed.rows.length === 1 ? '' : 's' %>
+              <%= parsed.fromHTML ? '· read from markup' : '· read as text' %>
+            </span>
+          </div>
+          <div class="ad-card-body p-0">
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead>
+                  <tr><th></th><th>Title</th><th>Island code</th></tr>
+                </thead>
+                <tbody>
+                  <% parsed.rows.forEach((m) => { %>
+                    <tr>
+                      <td style="width:70px">
+                        <% if (m.image_url) { %>
+                          <img src="<%= m.image_url %>" alt="" width="62" height="35"
+                               style="object-fit:cover;border-radius:6px" loading="lazy">
+                        <% } %>
+                      </td>
+                      <td class="fw-semibold"><%= m.title %></td>
+                      <td class="font-monospace"><%= m.code %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <% if (parsed.skipped.length) { %>
+          <div class="alert alert-warning">
+            <div class="fw-semibold mb-1"><%= parsed.skipped.length %> line<%= parsed.skipped.length === 1 ? '' : 's' %> skipped</div>
+            <ul class="mb-0 ps-3 small">
+              <% parsed.skipped.slice(0, 8).forEach((s) => { %>
+                <li>Line <%= s.line %> (<%= s.why %>): <code><%= s.text.slice(0, 90) %></code></li>
+              <% }) %>
+            </ul>
+          </div>
+        <% } %>
+
+        <% if (parsed.rows.length) { %>
+          <form method="post" action="/admin/maps/import/confirm" class="mb-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="pasted" value="<%= pasted %>">
+            <% if (replace) { %><input type="hidden" name="replace" value="on"><% } %>
+            <button class="btn btn-kd" type="submit">
+              <%= replace ? 'Replace all with these ' + parsed.rows.length : 'Import these ' + parsed.rows.length %>
+            </button>
+            <a class="btn btn-kd-ghost" href="/admin/c/weapons">Cancel</a>
+          </form>
+        <% } %>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
