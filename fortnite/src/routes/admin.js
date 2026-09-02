@@ -525,6 +525,13 @@ adminRouter.get('/islands', (req, res) => {
   }
   if (req.query.measured === '1') where.push('peak_ccu IS NOT NULL');
 
+  // Artwork is the scarce thing here — Epic ships none, so a picture only
+  // exists where a pasted listing supplied one. Being able to ask which
+  // islands have one is the difference between knowing the import worked and
+  // guessing at it.
+  if (req.query.art === '1') where.push('image_url IS NOT NULL');
+  if (req.query.art === '0') where.push('image_url IS NULL');
+
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const rows = db
@@ -532,7 +539,7 @@ adminRouter.get('/islands', (req, res) => {
       `SELECT code, title, creator_code, tags, image_url, peak_ccu, unique_players, plays,
               minutes_played, favorites, avg_minutes, metrics_at, metrics_misses
          FROM islands ${clause}
-        ORDER BY peak_ccu IS NULL, peak_ccu DESC, title COLLATE NOCASE
+        ORDER BY image_url IS NULL, peak_ccu IS NULL, peak_ccu DESC, title COLLATE NOCASE
         LIMIT 150`,
     )
     .all(params);
@@ -541,6 +548,7 @@ adminRouter.get('/islands', (req, res) => {
     .prepare(
       `SELECT COUNT(*) AS total,
               SUM(peak_ccu IS NOT NULL) AS measured,
+              SUM(image_url IS NOT NULL) AS withArt,
               SUM(metrics_at IS NULL) AS unseen
          FROM islands`,
     )
@@ -552,6 +560,7 @@ adminRouter.get('/islands', (req, res) => {
     totals,
     search,
     measured: req.query.measured === '1',
+    art: req.query.art ?? '',
     history: db.prepare('SELECT COUNT(*) AS n FROM island_metrics').get().n,
   });
 });

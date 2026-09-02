@@ -6,6 +6,7 @@
           heading: 'Islands',
           subheading: Number(totals.total).toLocaleString() + ' mirrored from Epic · '
             + Number(totals.measured || 0).toLocaleString() + ' with metrics · '
+            + Number(totals.withArt || 0).toLocaleString() + ' with artwork · '
             + Number(history).toLocaleString() + ' days of history kept'
         }) %>
     <div class="ad-content">
@@ -26,8 +27,13 @@
                      value="1" <%= measured ? 'checked' : '' %>>
               <label class="form-check-label small" for="measured">Only with metrics</label>
             </div>
+            <select class="form-select" name="art" style="max-width:170px">
+              <option value=""  <%= art === ''  ? 'selected' : '' %>>Any artwork</option>
+              <option value="1" <%= art === '1' ? 'selected' : '' %>>Has artwork</option>
+              <option value="0" <%= art === '0' ? 'selected' : '' %>>Missing artwork</option>
+            </select>
             <button class="btn btn-kd-outline" type="submit">Filter</button>
-            <% if (search || measured) { %><a class="btn btn-kd-ghost" href="/admin/islands">Clear</a><% } %>
+            <% if (search || measured || art) { %><a class="btn btn-kd-ghost" href="/admin/islands">Clear</a><% } %>
             <form method="post" action="/admin/sync/islands" class="ms-auto m-0 d-inline">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button class="btn btn-sm btn-kd-outline" type="submit">Pull more islands</button>
@@ -58,8 +64,10 @@
                           <img src="<%= r.image_url %>" alt="" width="64" height="36"
                                style="object-fit:cover;border-radius:6px;flex:none">
                         <% } else { %>
-                          <span style="width:64px;height:36px;border-radius:6px;flex:none;
-                                       background:rgba(255,255,255,.05)"></span>
+                          <span class="d-flex align-items-center justify-content-center kd-faint"
+                                style="width:64px;height:36px;border-radius:6px;flex:none;
+                                       background:rgba(255,255,255,.05);font-size:10px"
+                                title="No artwork">—</span>
                         <% } %>
                         <div>
                           <a class="fw-semibold text-decoration-none"
