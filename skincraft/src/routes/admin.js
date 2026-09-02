@@ -335,6 +335,102 @@ function parseDesignMeta(raw) {
 
 // MARK: - Detail
 
+// Registered above `/skins/:id`, which matches any two-segment path — so
+// `/skins/from-picture` would otherwise be read as a skin with that id and
+// run the wrong upload middleware. `/skins/new` and `/skins/design` sit here
+// for the same reason.
+// ── From a picture ──────────────────────────────────────────────────────────
+//
+// The designer with everything optional removed. One picture, one category,
+// and a draft comes out — no plan step, no style choice, no paragraph to write.
+// The full page is better when the idea is in your head; this is better when
+// the idea is already an image.
+
+adminRouter.get('/skins/from-picture', (req, res) => {
+  res.render('skins/from-picture', {
+    title: 'From a picture',
+    available: isAiAvailable(),
+    checklist: PUBLISH_CHECKLIST,
+  });
+});
+
+adminRouter.post(
+  '/skins/from-picture',
+  uploadReference,
+  handleUploadErrors,
+  csrfProtect,
+  async (req, res, next) => {
+    const category = CATEGORIES.includes(String(req.body?.category))
+      ? String(req.body.category)
+      : 'shirt';
+    const notes = String(req.body?.notes ?? '').trim();
+    const title = String(req.body?.title ?? '').trim() || 'From a picture';
+
+    if (!req.file?.buffer?.length) {
+      req.flash('error', 'Choose a picture first.');
+      return res.redirect('/admin/skins/from-picture');
+    }
+
+    // The reference carries the look; the words only say what to do with it.
+    // Left empty the provider guesses, and what it guesses is rarely a garment.
+    const description = notes
+      ? `Match the colours, patterns and mood of the reference image. ${notes}`
+      : 'Match the colours, patterns and mood of the reference image.';
+
+    try {
+      const result = await designSkin({
+        reference: req.file.buffer,
+        description,
+        category,
+        quality: 'standard',
+        style: 'pattern',
+      });
+
+      const id = generateSkinId();
+      const base = `${slugify(title, id)}-${id.slice(5)}`;
+
+      const stored = await storeTemplate(result.template, `${base}.png`);
+      const preview = await storePreview(result.preview, `${base}.webp`);
+
+      createSkin({
+        id,
+        title,
+        category,
+        description: notes
+          ? `Made from a picture — “${notes}”`
+          : 'Made from a picture.',
+        tags: ['ai', 'from-picture'],
+        isFeatured: false,
+        // A draft, like everything else the designer makes. Roblox moderates
+        // every upload and its decision is the one that counts, so a person
+        // looks at this before it is offered to anyone — and that matters more
+        // here, where the input came from outside.
+        isPublished: false,
+        color: await dominantColor(result.template, category),
+        templateFile: stored.filename,
+        previewFile: preview.filename,
+        templateW: stored.width,
+        templateH: stored.height,
+        fileBytes: stored.bytes + preview.bytes,
+        createdBy: req.user.id,
+      });
+
+      logAudit(req.user.id, 'skin.from-picture', id, notes || 'no notes');
+
+      req.flash('success', 'Made as a draft. Check it against the guidelines, then publish.');
+      return res.redirect(`/admin/skins/${id}`);
+    } catch (error) {
+      const isExpected =
+        error.code === 'prompt_rejected' ||
+        /provider|configured|rate limit|too long|reference/i.test(error.message);
+      if (!isExpected) return next(error);
+
+      req.flash('error', error.message);
+      return res.redirect('/admin/skins/from-picture');
+    }
+  },
+);
+
 adminRouter.get('/skins/:id', (req, res, next) => {
   const found = getSkin(req.params.id);
   if (!found) return next();

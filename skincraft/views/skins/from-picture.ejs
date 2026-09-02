@@ -1,0 +1,94 @@
+<%- include('../partials/head') %>
+<div class="ad-shell">
+  <%- include('../partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('../partials/topbar', { heading: 'From a picture',
+          subheading: 'One image in, a draft skin out' }) %>
+    <div class="ad-content">
+      <%- include('../partials/flash') %>
+
+      <% if (!available) { %>
+        <div class="alert alert-warning">
+          Image generation is not configured. Set <code>AI_IMAGE_API_KEY</code> to switch it on.
+        </div>
+      <% } %>
+
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div class="ad-card">
+            <div class="ad-card-body">
+              <p class="text-body-secondary small mb-3">
+                Draws a garment from the picture you give it — its colours, its patterns, its
+                mood. Use the full <a href="/admin/skins/ai">Design with AI</a> page when the idea
+                is in your head; use this one when the idea is already an image.
+              </p>
+
+              <form method="post" action="/admin/skins/from-picture"
+                    enctype="multipart/form-data">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                <div class="mb-3">
+                  <label class="form-label" for="reference">Picture</label>
+                  <input class="form-control" type="file" id="reference" name="reference"
+                         accept=".png,.jpg,.jpeg,.webp" required>
+                  <div class="form-text">
+                    PNG, JPEG or WebP. Sent to the image provider to draw from and not stored here.
+                  </div>
+                </div>
+
+                <div class="row g-3">
+                  <div class="col-sm-6">
+                    <label class="form-label" for="category">Category</label>
+                    <select class="form-select" id="category" name="category">
+                      <option value="shirt">Shirt</option>
+                      <option value="tshirt">T-shirt</option>
+                      <option value="pants">Pants</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="form-label" for="title">Name</label>
+                    <input class="form-control" id="title" name="title"
+                           placeholder="From a picture" maxlength="60">
+                  </div>
+                </div>
+
+                <div class="mt-3 mb-3">
+                  <label class="form-label" for="notes">
+                    Anything to add <span class="text-body-secondary">(optional)</span>
+                  </label>
+                  <input class="form-control" id="notes" name="notes" maxlength="200"
+                         placeholder="Keep it darker, drop the text, make the pattern larger…">
+                  <div class="form-text">
+                    The picture carries the look. This only says what to do differently.
+                  </div>
+                </div>
+
+                <button class="btn btn-primary" type="submit" <%= available ? '' : 'disabled' %>>
+                  Make a draft
+                </button>
+                <span class="text-body-secondary small ms-2">Takes a couple of minutes.</span>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="ad-card">
+            <div class="ad-card-body">
+              <h6 class="mb-2">Before you publish</h6>
+              <p class="text-body-secondary small mb-2">
+                Everything made here arrives unpublished. Roblox moderates every upload and its
+                decision is the one that counts, so look at the draft first — and look harder when
+                the picture came from somewhere else.
+              </p>
+              <ul class="small text-body-secondary mb-0 ps-3">
+                <% checklist.forEach((item) => { %><li><%= item %></li><% }) %>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('../partials/foot') %>

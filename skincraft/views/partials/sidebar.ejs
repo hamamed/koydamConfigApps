@@ -6,7 +6,8 @@
         active: currentPath === '/' },
       { href: '/admin/skins', icon: 'shirt',            label: 'Skins',
         active: currentPath.startsWith('/skins')
-                && currentPath !== '/skins/new' && currentPath !== '/skins/ai' },
+                && currentPath !== '/skins/new' && currentPath !== '/skins/ai'
+                && currentPath !== '/skins/from-picture' },
       { href: '/admin/tags',  icon: 'tags',             label: 'Tags',
         active: currentPath.startsWith('/tags') },
     ]},
@@ -51,6 +52,11 @@
     <a class="ad-nav-link <%= currentPath === '/skins/ai' ? 'is-active' : '' %>" href="/admin/skins/ai">
       <i data-lucide="sparkles" width="17" height="17"></i>
       <span>Design with AI</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath === '/skins/from-picture' ? 'is-active' : '' %>"
+       href="/admin/skins/from-picture">
+      <i data-lucide="image-plus" width="17" height="17"></i>
+      <span>From a picture</span>
     </a>
   </nav>
 
