@@ -1,7 +1,7 @@
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { syncCosmetics, syncNews, syncShop } from './upstream.js';
-import { syncIslandMetrics, syncIslands } from './ecosystem.js';
+import { pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
 
 /**
  * Keeps the mirror current.
@@ -28,7 +28,12 @@ export function startSyncLoop() {
     { name: 'islands', run: () => syncIslands({ pages: 40 }), minutes: config.refresh.islandsMinutes },
     {
       name: 'island-metrics',
-      run: () => syncIslandMetrics({ batch: config.refresh.metricsBatch }),
+      run: async () => {
+        const n = await syncIslandMetrics({ batch: config.refresh.metricsBatch });
+        const dropped = pruneMetrics({ days: config.refresh.retentionDays });
+        if (dropped) console.log(`pruned ${dropped} metric rows past retention`);
+        return n;
+      },
       minutes: config.refresh.metricsMinutes,
     },
   ];

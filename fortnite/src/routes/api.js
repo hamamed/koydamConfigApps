@@ -265,8 +265,9 @@ apiRouter.get('/islands', (req, res) => {
 
   const rows = db
     .prepare(
-      `SELECT code, title, creator_code, category, created_in, tags, peak_ccu, unique_players,
-              plays, minutes_played, favorites, recommendations, avg_minutes, retention, metrics_at
+      `SELECT code, title, creator_code, category, created_in, tags, image_url, first_seen,
+              peak_ccu, unique_players, plays, minutes_played, favorites, recommendations,
+              avg_minutes, retention, metrics_at
          FROM islands ${clause}
         ORDER BY ${ordering}
         LIMIT @limit OFFSET @offset`,
@@ -285,7 +286,7 @@ apiRouter.get('/islands/:code', (req, res) => {
     .prepare(
       `SELECT day, peak_ccu, unique_players, plays, minutes_played, avg_minutes,
               favorites, recommendations, retention
-         FROM island_metrics WHERE code = ? ORDER BY day DESC LIMIT 60`,
+         FROM island_metrics WHERE code = ? ORDER BY day DESC LIMIT 200`,
     )
     .all(row.code);
 
@@ -320,6 +321,23 @@ apiRouter.get('/island-tags', (_req, res) => {
     .slice(0, 40));
 });
 
+/**
+ * SQLite's `datetime('now')` to ISO 8601.
+ *
+ * It stores `2026-09-01 12:34:56` — a space, no zone — which is not ISO 8601
+ * and which a strict client decoder rejects outright. The values are UTC, so
+ * this says so explicitly rather than leaving the client to assume.
+ */
+function isoDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+  if (text.includes('T')) return text;
+  // A bare date has no time to mark as UTC; appending Z to one produces
+  // `2026-09-01Z`, which is not a valid instant and decodes nowhere.
+  if (!text.includes(' ')) return text;
+  return `${text.replace(' ', 'T')}Z`;
+}
+
 function toIslandShape(row) {
   let tags = [];
   try { tags = JSON.parse(row.tags ?? '[]'); } catch { tags = []; }
@@ -331,6 +349,10 @@ function toIslandShape(row) {
     category: row.category ?? null,
     createdIn: row.created_in ?? null,
     tags,
+    image: row.image_url ?? null,
+    // Not a publish date. Epic exposes neither created nor updated, so this is
+    // when this service first saw the island, and it is named to say so.
+    firstSeen: isoDate(row.first_seen),
     // Null where Epic publishes nothing, which is most of the catalogue — the
     // app draws those without numbers rather than showing zeroes.
     peakCCU: row.peak_ccu,
@@ -341,7 +363,7 @@ function toIslandShape(row) {
     recommendations: row.recommendations,
     averageMinutes: row.avg_minutes,
     retention: row.retention,
-    metricsAt: row.metrics_at ?? null,
+    metricsAt: isoDate(row.metrics_at),
   };
 }
 

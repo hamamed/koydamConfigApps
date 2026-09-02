@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 import { config } from '../config.js';
 import { db } from '../db/index.js';
+import { sparkline } from '../chart.js';
 import {
   COLLECTIONS, collection, counts, deleteRow, getRow, insertRow, listRows,
   readForm, togglePublished, updateRow,
@@ -473,6 +474,13 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
       };
       if (existing.has(row.code)) { update.run(values); updated += 1; }
       else { insert.run(values); added += 1; }
+
+      // The same picture on the mirrored island, where the app reads from.
+      // Epic gives no artwork at all, so a pasted listing is the only source
+      // and it would be wasted sitting in one table.
+      if (row.image_url) {
+        db.prepare('UPDATE islands SET image_url = ? WHERE code = ?').run(row.image_url, row.code);
+      }
     });
   })(parsed.rows);
 
@@ -499,7 +507,7 @@ adminRouter.get('/islands', (req, res) => {
 
   const rows = db
     .prepare(
-      `SELECT code, title, creator_code, tags, peak_ccu, unique_players, plays,
+      `SELECT code, title, creator_code, tags, image_url, peak_ccu, unique_players, plays,
               minutes_played, favorites, avg_minutes, metrics_at, metrics_misses
          FROM islands ${clause}
         ORDER BY peak_ccu IS NULL, peak_ccu DESC, title COLLATE NOCASE
@@ -523,5 +531,32 @@ adminRouter.get('/islands', (req, res) => {
     search,
     measured: req.query.measured === '1',
     history: db.prepare('SELECT COUNT(*) AS n FROM island_metrics').get().n,
+  });
+});
+
+adminRouter.get('/islands/:code', (req, res) => {
+  const code = String(req.params.code);
+  const island = db.prepare('SELECT * FROM islands WHERE code = ?').get(code);
+  if (!island) return res.status(404).send('No such island.');
+
+  // Oldest first: a chart reads left to right, and the table below reverses it.
+  const days = db
+    .prepare(
+      `SELECT day, peak_ccu, unique_players, plays, minutes_played, favorites, avg_minutes
+         FROM island_metrics WHERE code = ? ORDER BY day ASC`,
+    )
+    .all(code);
+
+  const metric = ['peak_ccu', 'unique_players', 'plays', 'minutes_played'].includes(req.query.metric)
+    ? req.query.metric
+    : 'peak_ccu';
+
+  return res.render('island', {
+    title: island.title || code,
+    island,
+    days,
+    metric,
+    chart: sparkline(days.map((d) => ({ day: d.day, value: d[metric] }))),
+    retentionDays: config.refresh.retentionDays,
   });
 });

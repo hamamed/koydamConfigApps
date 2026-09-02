@@ -1,0 +1,104 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: island.title || island.code,
+          subheading: island.code + (island.creator_code ? ' · by ' + island.creator_code : '')
+        }) %>
+    <div class="ad-content">
+      <a class="btn btn-kd-ghost btn-sm mb-3" href="/admin/islands">&larr; All islands</a>
+
+      <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+          <div class="ad-card h-100">
+            <% if (island.image_url) { %>
+              <img src="<%= island.image_url %>" alt="" class="w-100"
+                   style="aspect-ratio:16/9;object-fit:cover;border-radius:12px 12px 0 0">
+            <% } else { %>
+              <div class="d-flex align-items-center justify-content-center kd-faint small text-center p-3"
+                   style="aspect-ratio:16/9;background:rgba(255,255,255,.04);border-radius:12px 12px 0 0">
+                No artwork.<br>Epic's API carries none — paste a listing on
+                <a href="/admin/maps">Creative import</a> to attach one.
+              </div>
+            <% } %>
+            <div class="ad-card-body">
+              <dl class="row mb-0 small">
+                <dt class="col-5 kd-faint">Category</dt>
+                <dd class="col-7"><%= island.category || '—' %></dd>
+                <dt class="col-5 kd-faint">Made in</dt>
+                <dd class="col-7"><%= island.created_in || '—' %></dd>
+                <dt class="col-5 kd-faint">First seen here</dt>
+                <dd class="col-7"><%= (island.first_seen || '').slice(0, 10) || '—' %></dd>
+                <dt class="col-5 kd-faint">Last measured</dt>
+                <dd class="col-7"><%= (island.metrics_at || '').slice(0, 16).replace('T', ' ') || 'never' %></dd>
+              </dl>
+              <p class="kd-faint small mb-0 mt-3">
+                Epic publishes no publish or update date for an island, so “first seen here” is
+                the date this service first pulled it — not the day it went live.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div class="ad-card h-100">
+            <div class="ad-card-body">
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <% [['peak_ccu','Peak CCU'],['unique_players','Players'],['plays','Plays'],
+                    ['minutes_played','Minutes']].forEach(([key, label]) => { %>
+                  <a class="btn btn-sm <%= metric === key ? 'btn-kd' : 'btn-kd-outline' %>"
+                     href="/admin/islands/<%= island.code %>?metric=<%= key %>"><%= label %></a>
+                <% }) %>
+                <span class="kd-faint small ms-auto"><%= days.length %> days recorded</span>
+              </div>
+              <% if (chart) { %>
+                <%- chart %>
+              <% } else { %>
+                <div class="kd-faint small py-5 text-center">
+                  Not enough history to chart yet. Epic serves only the last two days, so a line
+                  appears once this service has been collecting for a few days.
+                </div>
+              <% } %>
+              <p class="kd-faint small mb-0 mt-2">
+                History is kept for <%= retentionDays %> days — about six months — then pruned.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <div class="ad-table-wrap" style="max-height:520px;overflow:auto">
+            <table class="ad-table">
+              <thead>
+                <tr><th>Day</th><th class="text-end">Peak CCU</th><th class="text-end">Players</th>
+                    <th class="text-end">Plays</th><th class="text-end">Minutes</th>
+                    <th class="text-end">Favorites</th><th class="text-end">Avg mins</th></tr>
+              </thead>
+              <tbody>
+                <% const n = (v) => v == null ? '—' : Number(v).toLocaleString(); %>
+                <% [...days].reverse().forEach((d) => { %>
+                  <tr>
+                    <td class="font-monospace"><%= d.day %></td>
+                    <td class="text-end"><%= n(d.peak_ccu) %></td>
+                    <td class="text-end"><%= n(d.unique_players) %></td>
+                    <td class="text-end"><%= n(d.plays) %></td>
+                    <td class="text-end"><%= n(d.minutes_played) %></td>
+                    <td class="text-end"><%= n(d.favorites) %></td>
+                    <td class="text-end"><%= d.avg_minutes != null ? Number(d.avg_minutes).toFixed(1) : '—' %></td>
+                  </tr>
+                <% }) %>
+                <% if (!days.length) { %>
+                  <tr><td colspan="7" class="kd-faint text-center py-4">No metrics recorded yet.</td></tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -211,7 +211,19 @@ CREATE TABLE IF NOT EXISTS islands (
   -- rotation spends nearly every request re-confirming the same silence.
   metrics_misses INTEGER NOT NULL DEFAULT 0,
 
+  -- Artwork, which Epic's API does not carry.
+  --
+  -- Its island records have six fields and none of them is an image, and the
+  -- links service that does have them refuses anything without an Epic
+  -- account. So a picture arrives from a pasted listing and is matched to the
+  -- island by code — which is why the paste importer is still worth having
+  -- alongside a full catalogue sync.
+  image_url     TEXT,
+
   search_blob   TEXT NOT NULL DEFAULT '',
+  -- When this service first saw the island, which is NOT its publish date.
+  -- Epic publishes neither a created nor an updated date, so this is the
+  -- honest thing available and the panel labels it as such.
   first_seen    TEXT NOT NULL DEFAULT (datetime('now')),
   synced_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );

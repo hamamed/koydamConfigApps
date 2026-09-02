@@ -45,6 +45,8 @@ export const config = {
     /** Metrics are one request per island, so this is deliberately modest. */
     metricsMinutes: num(process.env.METRICS_REFRESH_MINUTES, 10),
     metricsBatch: num(process.env.METRICS_BATCH, 120),
+    /** How long island history is kept. Six months plus a few days of slack. */
+    retentionDays: num(process.env.METRICS_RETENTION_DAYS, 185),
   },
 
   platformUrl: (process.env.PLATFORM_URL || '').replace(/\/+$/, ''),

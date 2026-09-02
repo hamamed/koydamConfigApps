@@ -274,3 +274,33 @@ function saveCursor(feed, cursor) {
      ON CONFLICT(feed) DO UPDATE SET last_try_at = datetime('now'), last_error = excluded.last_error`,
   ).run(`${feed}-cursor`, cursor);
 }
+
+/**
+ * Drops history past the retention window.
+ *
+ * Six months of daily rows for a few thousand measured islands is on the order
+ * of a million rows — comfortable for SQLite, and worth keeping because Epic
+ * serves two days and nothing more. Beyond that the value falls away faster
+ * than the cost does.
+ *
+ * Runs after a metrics pass rather than on its own timer: there is no point
+ * pruning a table nothing has just written to.
+ */
+export function pruneMetrics({ days = 185 } = {}) {
+  const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  const info = db.prepare('DELETE FROM island_metrics WHERE day < ?').run(cutoff);
+  return info.changes;
+}
+
+/** What the panel and the API report about stored history. */
+export function historySummary() {
+  return db
+    .prepare(
+      `SELECT COUNT(*) AS rows,
+              COUNT(DISTINCT code) AS islands,
+              MIN(day) AS since,
+              MAX(day) AS until
+         FROM island_metrics`,
+    )
+    .get();
+}
