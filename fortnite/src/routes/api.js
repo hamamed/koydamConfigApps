@@ -214,6 +214,137 @@ apiRouter.get('/weapons', (_req, res) => {
   })));
 });
 
+/**
+ * `GET /islands` — Epic's creative catalogue, searchable and sortable.
+ *
+ * Both of which the upstream cannot do: it accepts every such parameter and
+ * ignores all of them, which is the reason this mirror exists.
+ */
+apiRouter.get('/islands', (req, res) => {
+  const limit = clamp(req.query.limit, config.defaultPageSize, config.maxPageSize);
+  const page = clamp(req.query.page, 1, 10_000);
+
+  const where = [];
+  const params = {};
+
+  const search = String(req.query.search ?? '').trim().toLowerCase();
+  if (search) {
+    where.push('search_blob LIKE @search');
+    params.search = `%${search}%`;
+  }
+
+  if (req.query.tag) {
+    // Tags are stored as a JSON array; a LIKE on the quoted value matches a
+    // whole tag rather than a fragment of a longer one.
+    where.push('tags LIKE @tag');
+    params.tag = `%"${String(req.query.tag).toLowerCase()}"%`;
+  }
+
+  // Nulls last, never excluded.
+  //
+  // Epic publishes numbers for a small fraction of the catalogue, so filtering
+  // to "has metrics" made every search return nothing — the four islands with
+  // data almost never match what someone typed. Sorting them to the back gives
+  // the busy islands first when browsing and still finds everything else.
+  const sort = String(req.query.sort ?? 'players');
+  const ordering = {
+    players: 'peak_ccu IS NULL, peak_ccu DESC',
+    plays: 'plays IS NULL, plays DESC',
+    minutes: 'minutes_played IS NULL, minutes_played DESC',
+    favorites: 'favorites IS NULL, favorites DESC',
+    name: 'title COLLATE NOCASE ASC',
+    newest: 'first_seen DESC',
+  }[sort] ?? 'peak_ccu IS NULL, peak_ccu DESC';
+
+  // Browsing by popularity with nothing else asked for is the one case where
+  // pages of unmeasured islands are noise rather than results.
+  if (req.query.measured === '1') where.push('peak_ccu IS NOT NULL');
+
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM islands ${clause}`).get(params).n;
+
+  const rows = db
+    .prepare(
+      `SELECT code, title, creator_code, category, created_in, tags, peak_ccu, unique_players,
+              plays, minutes_played, favorites, recommendations, avg_minutes, retention, metrics_at
+         FROM islands ${clause}
+        ORDER BY ${ordering}
+        LIMIT @limit OFFSET @offset`,
+    )
+    .all({ ...params, limit, offset: (page - 1) * limit });
+
+  ok(res, rows.map(toIslandShape), { page, limit, total, hasMore: page * limit < total });
+});
+
+/** `GET /islands/:code` — one island, with whatever history has been kept. */
+apiRouter.get('/islands/:code', (req, res) => {
+  const row = db.prepare('SELECT * FROM islands WHERE code = ?').get(req.params.code);
+  if (!row) return res.status(404).json({ status: 'error', message: 'Island not found' });
+
+  const history = db
+    .prepare(
+      `SELECT day, peak_ccu, unique_players, plays, minutes_played, avg_minutes,
+              favorites, recommendations, retention
+         FROM island_metrics WHERE code = ? ORDER BY day DESC LIMIT 60`,
+    )
+    .all(row.code);
+
+  ok(res, {
+    ...toIslandShape(row),
+    history: history.map((h) => ({
+      day: h.day,
+      peakCCU: h.peak_ccu,
+      uniquePlayers: h.unique_players,
+      plays: h.plays,
+      minutesPlayed: h.minutes_played,
+      averageMinutes: h.avg_minutes,
+      favorites: h.favorites,
+      recommendations: h.recommendations,
+      retention: h.retention,
+    })),
+  });
+});
+
+/** The tags the catalogue actually uses, for the app's filter row. */
+apiRouter.get('/island-tags', (_req, res) => {
+  const counts = new Map();
+  for (const row of db.prepare('SELECT tags FROM islands').all()) {
+    let tags = [];
+    try { tags = JSON.parse(row.tags); } catch { tags = []; }
+    for (const tag of tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+
+  ok(res, [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 40));
+});
+
+function toIslandShape(row) {
+  let tags = [];
+  try { tags = JSON.parse(row.tags ?? '[]'); } catch { tags = []; }
+
+  return {
+    code: row.code,
+    title: row.title,
+    creator: row.creator_code ?? null,
+    category: row.category ?? null,
+    createdIn: row.created_in ?? null,
+    tags,
+    // Null where Epic publishes nothing, which is most of the catalogue — the
+    // app draws those without numbers rather than showing zeroes.
+    peakCCU: row.peak_ccu,
+    uniquePlayers: row.unique_players,
+    plays: row.plays,
+    minutesPlayed: row.minutes_played,
+    favorites: row.favorites,
+    recommendations: row.recommendations,
+    averageMinutes: row.avg_minutes,
+    retention: row.retention,
+    metricsAt: row.metrics_at ?? null,
+  };
+}
+
 /** One shape for a cosmetic, everywhere it appears. */
 function toApiShape(row) {
   return {

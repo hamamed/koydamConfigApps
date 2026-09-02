@@ -39,6 +39,12 @@ export const config = {
     shopMinutes: num(process.env.SHOP_REFRESH_MINUTES, 10),
     newsMinutes: num(process.env.NEWS_REFRESH_MINUTES, 30),
     cosmeticsMinutes: num(process.env.COSMETICS_REFRESH_MINUTES, 720),
+
+    /** A slice of Epic's island catalogue per run; the cursor resumes. */
+    islandsMinutes: num(process.env.ISLANDS_REFRESH_MINUTES, 30),
+    /** Metrics are one request per island, so this is deliberately modest. */
+    metricsMinutes: num(process.env.METRICS_REFRESH_MINUTES, 10),
+    metricsBatch: num(process.env.METRICS_BATCH, 120),
   },
 
   platformUrl: (process.env.PLATFORM_URL || '').replace(/\/+$/, ''),

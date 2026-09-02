@@ -1,6 +1,7 @@
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { syncCosmetics, syncNews, syncShop } from './upstream.js';
+import { syncIslandMetrics, syncIslands } from './ecosystem.js';
 
 /**
  * Keeps the mirror current.
@@ -20,6 +21,16 @@ export function startSyncLoop() {
     { name: 'cosmetics', run: syncCosmetics, minutes: config.refresh.cosmeticsMinutes },
     { name: 'shop', run: syncShop, minutes: config.refresh.shopMinutes },
     { name: 'news', run: syncNews, minutes: config.refresh.newsMinutes },
+
+    // Epic's catalogue is north of twenty thousand islands and its metrics
+    // endpoint answers one island at a time, so neither job tries to finish in
+    // one run — each takes a bounded slice and resumes where it left off.
+    { name: 'islands', run: () => syncIslands({ pages: 40 }), minutes: config.refresh.islandsMinutes },
+    {
+      name: 'island-metrics',
+      run: () => syncIslandMetrics({ batch: config.refresh.metricsBatch }),
+      minutes: config.refresh.metricsMinutes,
+    },
   ];
 
   for (const feed of feeds) {

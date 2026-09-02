@@ -175,3 +175,71 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
+
+-- ── Epic's island catalogue ─────────────────────────────────────────────────
+--
+-- From api.fortnite.com/ecosystem/v1 — Epic's own public API, no key required.
+-- Twenty thousand islands and counting, so this is a mirror rather than a
+-- pass-through: the app needs to search and sort it, and the upstream offers
+-- neither. Every query parameter it accepts is ignored.
+
+CREATE TABLE IF NOT EXISTS islands (
+  code          TEXT PRIMARY KEY,
+  title         TEXT NOT NULL,
+  creator_code  TEXT,
+  category      TEXT,
+  created_in    TEXT,
+  tags          TEXT NOT NULL DEFAULT '[]',
+
+  -- Denormalised from the newest metrics row.
+  --
+  -- Sorting by "most played" means ordering twenty thousand islands by a value
+  -- in another table, and doing that as a join on every request is the
+  -- difference between a list that opens instantly and one that does not.
+  peak_ccu      INTEGER,
+  unique_players INTEGER,
+  plays         INTEGER,
+  minutes_played INTEGER,
+  favorites     INTEGER,
+  recommendations INTEGER,
+  avg_minutes   REAL,
+  retention     REAL,
+  metrics_at    TEXT,
+  -- How many times this island has been asked for metrics and returned
+  -- nothing. Epic publishes numbers only for islands above some popularity
+  -- line, and most of the catalogue is below it — so without backing off, the
+  -- rotation spends nearly every request re-confirming the same silence.
+  metrics_misses INTEGER NOT NULL DEFAULT 0,
+
+  search_blob   TEXT NOT NULL DEFAULT '',
+  first_seen    TEXT NOT NULL DEFAULT (datetime('now')),
+  synced_at     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_islands_ccu     ON islands(peak_ccu DESC);
+CREATE INDEX IF NOT EXISTS idx_islands_players ON islands(unique_players DESC);
+CREATE INDEX IF NOT EXISTS idx_islands_search  ON islands(search_blob);
+CREATE INDEX IF NOT EXISTS idx_islands_metrics ON islands(metrics_at);
+
+-- One row per island per day.
+--
+-- The upstream only returns the last two days, so history exists only if it is
+-- kept. Poll daily and this becomes something the API itself cannot give you:
+-- a record going back as far as the service has been running.
+CREATE TABLE IF NOT EXISTS island_metrics (
+  code          TEXT NOT NULL,
+  day           TEXT NOT NULL,
+  peak_ccu      INTEGER,
+  unique_players INTEGER,
+  plays         INTEGER,
+  minutes_played INTEGER,
+  avg_minutes   REAL,
+  favorites     INTEGER,
+  recommendations INTEGER,
+  retention     REAL,
+  recorded_at   TEXT NOT NULL DEFAULT (datetime('now')),
+
+  PRIMARY KEY (code, day)
+);
+
+CREATE INDEX IF NOT EXISTS idx_island_metrics_day ON island_metrics(day DESC);

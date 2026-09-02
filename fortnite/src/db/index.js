@@ -28,6 +28,7 @@ export function migrate() {
   // database. Adding it explicitly keeps a running instance and a fresh one on
   // the same shape.
   ensureColumn('creative_maps', 'players', 'INTEGER');
+  ensureColumn('islands', 'metrics_misses', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 /** Adds a column when it is missing. Safe to run on every boot. */

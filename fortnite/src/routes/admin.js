@@ -12,6 +12,7 @@ import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
 import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
+import { syncIslandMetrics, syncIslands } from '../ecosystem.js';
 import { parseWeapons } from '../weapons-import.js';
 import { parseMaps } from '../maps-import.js';
 
@@ -103,7 +104,13 @@ adminRouter.get('/', (_req, res) => {
  * lands when waiting twelve hours for the cosmetics job is not acceptable.
  */
 adminRouter.post('/sync/:feed', async (req, res) => {
-  const jobs = { cosmetics: syncCosmetics, shop: syncShop, news: syncNews };
+  const jobs = {
+    cosmetics: syncCosmetics,
+    shop: syncShop,
+    news: syncNews,
+    islands: () => syncIslands({ pages: 40 }),
+    'island-metrics': () => syncIslandMetrics({ batch: 120 }),
+  };
   const job = jobs[req.params.feed];
   if (!job) {
     req.flash('danger', 'Unknown feed.');
@@ -473,4 +480,48 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
     `${added} map${added === 1 ? '' : 's'} added` +
     (updated ? `, ${updated} updated` : '') + '.');
   res.redirect('/admin/c/creative-maps');
+});
+
+// ── Epic's island catalogue ─────────────────────────────────────────────────
+
+adminRouter.get('/islands', (req, res) => {
+  const search = String(req.query.search ?? '').trim().toLowerCase();
+  const where = [];
+  const params = {};
+
+  if (search) {
+    where.push('search_blob LIKE @search');
+    params.search = `%${search}%`;
+  }
+  if (req.query.measured === '1') where.push('peak_ccu IS NOT NULL');
+
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+  const rows = db
+    .prepare(
+      `SELECT code, title, creator_code, tags, peak_ccu, unique_players, plays,
+              minutes_played, favorites, avg_minutes, metrics_at, metrics_misses
+         FROM islands ${clause}
+        ORDER BY peak_ccu IS NULL, peak_ccu DESC, title COLLATE NOCASE
+        LIMIT 150`,
+    )
+    .all(params);
+
+  const totals = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(peak_ccu IS NOT NULL) AS measured,
+              SUM(metrics_at IS NULL) AS unseen
+         FROM islands`,
+    )
+    .get();
+
+  res.render('islands', {
+    title: 'Islands',
+    rows,
+    totals,
+    search,
+    measured: req.query.measured === '1',
+    history: db.prepare('SELECT COUNT(*) AS n FROM island_metrics').get().n,
+  });
 });

@@ -1,0 +1,85 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Islands',
+          subheading: Number(totals.total).toLocaleString() + ' mirrored from Epic · '
+            + Number(totals.measured || 0).toLocaleString() + ' with metrics · '
+            + Number(history).toLocaleString() + ' days of history kept'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-body">
+          <p class="kd-faint small mb-2">
+            From Epic's own Ecosystem API. It publishes numbers only for islands above some
+            popularity line, so most of the catalogue has none — and it serves only the last two
+            days, which is why the history above exists only for as long as this has been running.
+          </p>
+          <form class="d-flex flex-wrap gap-2" method="get" action="/admin/islands">
+            <input class="form-control" name="search" value="<%= search %>"
+                   placeholder="Search titles, creators, tags" style="max-width:300px">
+            <div class="form-check d-flex align-items-center gap-2 ms-1">
+              <input class="form-check-input mt-0" type="checkbox" id="measured" name="measured"
+                     value="1" <%= measured ? 'checked' : '' %>>
+              <label class="form-check-label small" for="measured">Only with metrics</label>
+            </div>
+            <button class="btn btn-kd-outline" type="submit">Filter</button>
+            <% if (search || measured) { %><a class="btn btn-kd-ghost" href="/admin/islands">Clear</a><% } %>
+            <form method="post" action="/admin/sync/islands" class="ms-auto m-0 d-inline">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-kd-outline" type="submit">Pull more islands</button>
+            </form>
+            <form method="post" action="/admin/sync/island-metrics" class="m-0 d-inline">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-kd" type="submit">Fetch metrics</button>
+            </form>
+          </form>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead>
+                <tr><th>Island</th><th>Creator</th><th class="text-end">Peak CCU</th>
+                    <th class="text-end">Players</th><th class="text-end">Plays</th>
+                    <th class="text-end">Avg mins</th><th>Tags</th></tr>
+              </thead>
+              <tbody>
+                <% rows.forEach((r) => { %>
+                  <tr>
+                    <td>
+                      <div class="fw-semibold"><%= r.title %></div>
+                      <div class="kd-faint small font-monospace"><%= r.code %></div>
+                    </td>
+                    <td class="kd-faint"><%= r.creator_code || '—' %></td>
+                    <td class="text-end"><%= r.peak_ccu != null ? Number(r.peak_ccu).toLocaleString() : '—' %></td>
+                    <td class="text-end"><%= r.unique_players != null ? Number(r.unique_players).toLocaleString() : '—' %></td>
+                    <td class="text-end"><%= r.plays != null ? Number(r.plays).toLocaleString() : '—' %></td>
+                    <td class="text-end"><%= r.avg_minutes != null ? Number(r.avg_minutes).toFixed(1) : '—' %></td>
+                    <td class="kd-faint small">
+                      <% (JSON.parse(r.tags || '[]')).slice(0, 3).forEach((t) => { %>
+                        <span class="badge text-bg-light"><%= t %></span>
+                      <% }) %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <% if (totals.total > rows.length) { %>
+        <p class="kd-faint small mt-3">
+          Showing <%= rows.length %> of <%= Number(totals.total).toLocaleString() %>. Narrow with search.
+        </p>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
