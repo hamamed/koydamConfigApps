@@ -36,6 +36,29 @@ app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 // Public and read-only, so any origin may call it. The catalogue is a mirror of
 // data that is already public; there is nothing here to protect by origin.
 app.use('/api', cors({ origin: '*', methods: ['GET'] }));
+// Pictures are counted separately from everything else under /api.
+//
+// They used to come from CDNs; now they come from here, and one screen of the
+// shop is several hundred of them. Counted against the same 240 a minute as
+// the JSON endpoints, a person simply scrolling was cut off — the limit was
+// sized for API calls and then quietly handed an image host as well.
+//
+// Still bounded, because an unbounded file route is a bandwidth bill. But
+// bounded at something a person browsing cannot reach: these are served from
+// disk, already cached, and marked immutable so a second look costs nothing.
+const MEDIA_PREFIX = '/v1/media/';
+
+app.use(
+  '/api',
+  rateLimit({
+    windowMs: 60_000,
+    limit: 900,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    skip: (req) => !req.path.startsWith(MEDIA_PREFIX),
+  }),
+);
+
 app.use(
   '/api',
   rateLimit({
@@ -43,6 +66,7 @@ app.use(
     limit: 240,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    skip: (req) => req.path.startsWith(MEDIA_PREFIX),
   }),
 );
 
