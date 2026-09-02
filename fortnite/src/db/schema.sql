@@ -255,3 +255,19 @@ CREATE TABLE IF NOT EXISTS island_metrics (
 );
 
 CREATE INDEX IF NOT EXISTS idx_island_metrics_day ON island_metrics(day DESC);
+
+-- Pictures the app asks for, served from this host instead of a CDN.
+--
+-- A row is registered whenever a response mentions an upstream image; the
+-- bytes arrive only when somebody opens it. Which means this table is also the
+-- allowlist: the proxy will fetch an id it put here and nothing else.
+CREATE TABLE IF NOT EXISTS media (
+  id           TEXT PRIMARY KEY,
+  url          TEXT NOT NULL UNIQUE,
+  content_type TEXT,
+  bytes        INTEGER,
+  fetched_at   TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_fetched ON media(fetched_at);

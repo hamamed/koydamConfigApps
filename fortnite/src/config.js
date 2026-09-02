@@ -63,6 +63,14 @@ export const config = {
    */
   topIslands: num(process.env.TOP_ISLANDS, 1000),
 
+  /** The image cache that lets the app talk to this host and nowhere else. */
+  media: {
+    /** Largest single picture worth caching. */
+    maxBytes: num(process.env.MEDIA_MAX_BYTES, 8 * 1024 * 1024),
+    /** Total on disk before the least recently used are dropped. */
+    budgetBytes: num(process.env.MEDIA_BUDGET_BYTES, 4 * 1024 * 1024 * 1024),
+  },
+
   platformUrl: (process.env.PLATFORM_URL || '').replace(/\/+$/, ''),
   serviceToken: process.env.SERVICE_TOKEN || '',
   allowedRedirectHosts: (process.env.ALLOWED_REDIRECT_HOSTS || '')

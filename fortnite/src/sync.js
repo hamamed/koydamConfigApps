@@ -1,4 +1,5 @@
 import { config } from './config.js';
+import { pruneMedia } from './media.js';
 import { db } from './db/index.js';
 import { syncCosmetics, syncNews, syncShop } from './upstream.js';
 import { adoptPastedIslands, backfillIslandArt, pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
@@ -47,6 +48,8 @@ export function startSyncLoop() {
         });
         const dropped = pruneMetrics({ days: config.refresh.retentionDays });
         if (dropped) console.log(`pruned ${dropped} metric rows past retention`);
+        const evicted = pruneMedia();
+        if (evicted) console.log(`evicted ${evicted} cached images over budget`);
         return n;
       },
       minutes: config.refresh.metricsMinutes,

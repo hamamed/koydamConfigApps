@@ -2,11 +2,44 @@ import { Router } from 'express';
 
 import { config } from '../config.js';
 import { db } from '../db/index.js';
+import { fetchMedia, proxied } from '../media.js';
 import { syncStatus } from '../upstream.js';
 
 export const apiRouter = Router();
 
-const ok = (res, data, meta) => res.json({ status: 'success', data, ...(meta ? { meta } : {}) });
+/**
+ * Keys whose value is a picture.
+ *
+ * Rewriting by key rather than by "it looks like a URL": an article's `link`
+ * is also a URL, and sending that through an image proxy would turn a working
+ * link into a 404. Only these are pictures.
+ */
+const IMAGE_KEYS = new Set([
+  'image', 'images', 'icon', 'smallIcon', 'tile', 'featured',
+  'background', 'thumb', 'thumbnail', 'cover', 'render',
+]);
+
+/** Points every picture in a response at this host. */
+function throughThisHost(value, origin, key = null) {
+  if (Array.isArray(value)) return value.map((v) => throughThisHost(v, origin, key));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, throughThisHost(v, origin, k)]),
+    );
+  }
+  if (typeof value === 'string' && key && IMAGE_KEYS.has(key)) return proxied(value, origin);
+  return value;
+}
+
+const ok = (res, data, meta) =>
+  res.json({
+    status: 'success',
+    // The app should have exactly one host to trust, and one host to blame
+    // when a picture does not appear. Upstream CDNs are this service's
+    // business, not a shipped build's.
+    data: throughThisHost(data, `${res.req.protocol}://${res.req.get('host')}`),
+    ...(meta ? { meta } : {}),
+  });
 
 const clamp = (value, fallback, max) => {
   const n = Number(value);
@@ -316,6 +349,32 @@ apiRouter.get('/islands/:code', (req, res) => {
       retention: h.retention,
     })),
   });
+});
+
+/**
+ * `GET /media/:id` — a picture, from here rather than from a CDN.
+ *
+ * The id must already be in the media table, which this service fills in
+ * itself when it mentions an image. That is what keeps this from being an open
+ * proxy: there is no way to ask it for a URL it did not choose.
+ */
+apiRouter.get('/media/:id', async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[0-9a-f]{40}$/.test(id)) return res.status(400).end();
+
+  let media;
+  try {
+    media = await fetchMedia(id);
+  } catch {
+    return res.status(502).end();
+  }
+  if (!media) return res.status(404).end();
+
+  res.type(media.contentType);
+  // Long, because the id is the hash of the upstream URL: different bytes
+  // would arrive under a different id, so this can never go stale.
+  res.set('Cache-Control', 'public, max-age=604800, immutable');
+  return res.sendFile(media.file);
 });
 
 /** The tags the catalogue actually uses, for the app's filter row. */
