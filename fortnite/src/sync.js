@@ -1,7 +1,7 @@
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { syncCosmetics, syncNews, syncShop } from './upstream.js';
-import { pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
+import { backfillIslandArt, pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
 
 /**
  * Keeps the mirror current.
@@ -25,7 +25,16 @@ export function startSyncLoop() {
     // Epic's catalogue is north of twenty thousand islands and its metrics
     // endpoint answers one island at a time, so neither job tries to finish in
     // one run — each takes a bounded slice and resumes where it left off.
-    { name: 'islands', run: () => syncIslands({ pages: 40 }), minutes: config.refresh.islandsMinutes },
+    {
+      name: 'islands',
+      run: async () => {
+        const n = await syncIslands({ pages: 40 });
+        const art = backfillIslandArt();
+        if (art) console.log(`attached artwork to ${art} newly synced islands`);
+        return n;
+      },
+      minutes: config.refresh.islandsMinutes,
+    },
     {
       name: 'island-metrics',
       run: async () => {

@@ -286,6 +286,29 @@ function saveCursor(feed, cursor) {
  * Runs after a metrics pass rather than on its own timer: there is no point
  * pruning a table nothing has just written to.
  */
+/**
+ * Copies artwork from pasted listings onto matching islands.
+ *
+ * The paste importer attaches a picture to the island it can see, but the
+ * catalogue is synced in pages over time — so an island pasted today is often
+ * only synced next week, and by then nothing would go looking for the art
+ * again. Running this after every catalogue sync closes that gap in both
+ * directions.
+ */
+export function backfillIslandArt() {
+  const info = db
+    .prepare(
+      `UPDATE islands
+          SET image_url = (SELECT m.image_url FROM creative_maps m
+                            WHERE m.code = islands.code AND m.image_url IS NOT NULL)
+        WHERE image_url IS NULL
+          AND EXISTS (SELECT 1 FROM creative_maps m
+                       WHERE m.code = islands.code AND m.image_url IS NOT NULL)`,
+    )
+    .run();
+  return info.changes;
+}
+
 export function pruneMetrics({ days = 185 } = {}) {
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
   const info = db.prepare('DELETE FROM island_metrics WHERE day < ?').run(cutoff);

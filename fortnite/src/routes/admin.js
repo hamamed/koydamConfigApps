@@ -13,7 +13,7 @@ import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
 import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
-import { syncIslandMetrics, syncIslands } from '../ecosystem.js';
+import { backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
 import { parseWeapons } from '../weapons-import.js';
 import { parseMaps } from '../maps-import.js';
 
@@ -109,7 +109,11 @@ adminRouter.post('/sync/:feed', async (req, res) => {
     cosmetics: syncCosmetics,
     shop: syncShop,
     news: syncNews,
-    islands: () => syncIslands({ pages: 40 }),
+    islands: async () => {
+      const n = await syncIslands({ pages: 40 });
+      backfillIslandArt();
+      return n;
+    },
     'island-metrics': () => syncIslandMetrics({ batch: 120 }),
   };
   const job = jobs[req.params.feed];
