@@ -298,3 +298,69 @@ CREATE TABLE IF NOT EXISTS player_stats (
 );
 
 CREATE INDEX IF NOT EXISTS idx_player_stats_fetched ON player_stats(fetched_at);
+
+-- What people think of a cosmetic.
+--
+-- Keyed by a per-device fingerprint rather than an account: there are no
+-- accounts, and one reaction per person per item is the whole rule. The
+-- fingerprint is a hash of a device id the app keeps in its keychain, so it
+-- survives reinstalls of nothing and identifies nobody.
+CREATE TABLE IF NOT EXISTS reactions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id    TEXT NOT NULL,
+  client_key TEXT NOT NULL,
+  kind       TEXT NOT NULL CHECK (kind IN ('fire', 'love', 'cool', 'meh', 'trash')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (item_id, client_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_item ON reactions(item_id);
+
+-- Pictures people attach to a reaction.
+--
+-- Nothing here is visible to anyone else until it is approved in the panel.
+-- That is deliberate and not negotiable: an app that shows a stranger's upload
+-- the instant it arrives has published whatever they chose to send, and there
+-- is no taking it back. Pending is the only safe default.
+CREATE TABLE IF NOT EXISTS reaction_photos (
+  id          TEXT PRIMARY KEY,
+  item_id     TEXT NOT NULL,
+  client_key  TEXT NOT NULL,
+  caption     TEXT NOT NULL DEFAULT '',
+  content_type TEXT NOT NULL,
+  bytes       INTEGER NOT NULL,
+  width       INTEGER,
+  height      INTEGER,
+  status      TEXT NOT NULL DEFAULT 'pending'
+              CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  reviewed_at TEXT,
+  reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_photos_status ON reaction_photos(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_photos_item ON reaction_photos(item_id, status);
+
+-- Anyone can flag a photo that got through.
+--
+-- Approval is a person making a judgement, and people are wrong sometimes. A
+-- report is how the next reader says so, and Apple requires the mechanism for
+-- any app carrying what its users upload.
+CREATE TABLE IF NOT EXISTS reaction_reports (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  photo_id   TEXT NOT NULL REFERENCES reaction_photos(id) ON DELETE CASCADE,
+  client_key TEXT,
+  reason     TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reaction_reports(status, created_at);
+
+-- Devices that abuse the feature, so a block is possible without accounts.
+CREATE TABLE IF NOT EXISTS blocked_clients (
+  client_key TEXT PRIMARY KEY,
+  reason     TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

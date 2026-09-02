@@ -36,3 +36,16 @@ export function handleUploadErrors(err, req, res, next) {
   }
   return next(err);
 }
+
+
+/**
+ * A single photo attached to a reaction, held in memory.
+ *
+ * Same reasoning as wallpapers: the store decides what a file actually is from
+ * its first bytes, which cannot happen once multer has written an
+ * attacker-named file to disk.
+ */
+export const uploadReactionPhoto = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024, files: 1 },
+}).single('photo');

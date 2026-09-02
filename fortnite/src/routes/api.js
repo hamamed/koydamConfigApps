@@ -5,6 +5,11 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { fetchMedia, proxied } from '../media.js';
 import { playerStats } from '../stats.js';
+import {
+  KINDS, approvedPhotos, clientKey, isBlocked, photoFile, photosToday,
+  reactionsFor, reportPhoto, setReaction, storePhoto,
+} from '../reactions.js';
+import { uploadReactionPhoto } from '../middleware/upload.js';
 import { syncStatus } from '../upstream.js';
 
 export const apiRouter = Router();
@@ -409,6 +414,118 @@ apiRouter.get('/stats/:name', statsLimiter, async (req, res) => {
       .status(err.status ?? 500)
       .json({ status: 'error', message: err.message || 'Could not fetch those stats.' });
   }
+});
+
+// ── Reactions ───────────────────────────────────────────────────────────────
+//
+// The only part of this API that accepts writes. Everything here is keyed by a
+// device fingerprint rather than an account, and every write path checks the
+// block list first — without accounts, blocking a device is the only lever
+// there is against somebody determined to misuse it.
+
+const reactionLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Slow down a moment.' },
+});
+
+const photoLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 6,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Too many uploads. Try again in a minute.' },
+});
+
+/** `GET /items/:id/reactions` — counts, plus what this device chose. */
+apiRouter.get('/items/:id/reactions', (req, res) => {
+  const key = clientKey(req);
+  return ok(res, {
+    ...reactionsFor(String(req.params.id), key),
+    photos: approvedPhotos(String(req.params.id)).map((p) => ({
+      id: p.id,
+      caption: p.caption,
+      createdAt: p.created_at,
+      image: `${req.protocol}://${req.get('host')}/api/v1/reaction-photos/${p.id}`,
+    })),
+  });
+});
+
+/** `PUT /items/:id/reactions` — set or clear this device's reaction. */
+apiRouter.put('/items/:id/reactions', reactionLimiter, (req, res) => {
+  const key = clientKey(req);
+  if (isBlocked(key)) {
+    return res.status(403).json({ status: 'error', message: 'This device cannot react.' });
+  }
+
+  const raw = req.body?.kind;
+  // An explicit null clears; anything else must be one of the five.
+  const kind = raw === null || raw === '' ? null : String(raw);
+  if (kind !== null && !KINDS.includes(kind)) {
+    return res.status(400).json({ status: 'error', message: 'That is not a reaction.' });
+  }
+
+  setReaction(String(req.params.id), key, kind);
+  return ok(res, reactionsFor(String(req.params.id), key));
+});
+
+/**
+ * `POST /items/:id/photos` — attach a picture to a reaction.
+ *
+ * Stored as pending and shown to nobody until it is approved in the panel. An
+ * app that publishes a stranger's upload the moment it arrives has published
+ * whatever they chose to send, and there is no taking it back.
+ */
+apiRouter.post('/items/:id/photos', photoLimiter, uploadReactionPhoto, (req, res) => {
+  const key = clientKey(req);
+  if (isBlocked(key)) {
+    return res.status(403).json({ status: 'error', message: 'This device cannot upload.' });
+  }
+  if (!req.file) {
+    return res.status(400).json({ status: 'error', message: 'Choose a photo.' });
+  }
+  if (photosToday(key) >= config.reactions.photosPerDay) {
+    return res.status(429).json({
+      status: 'error',
+      message: `That is ${config.reactions.photosPerDay} photos today. Try again tomorrow.`,
+    });
+  }
+
+  const result = storePhoto({
+    itemId: String(req.params.id),
+    key,
+    buffer: req.file.buffer,
+    caption: req.body?.caption,
+  });
+  if (!result.ok) return res.status(400).json({ status: 'error', message: result.reason });
+
+  return ok(res, {
+    id: result.id,
+    status: result.status,
+    message: 'Sent for review. It appears once it is approved.',
+  });
+});
+
+/** `GET /reaction-photos/:id` — an approved photo. */
+apiRouter.get('/reaction-photos/:id', (req, res) => {
+  const found = photoFile(String(req.params.id));
+  // A pending or rejected photo is a 404, not a 403: confirming one exists
+  // tells an uploader their picture is sitting somewhere waiting.
+  if (!found || found.row.status !== 'approved') return res.status(404).end();
+
+  res.type(found.row.content_type);
+  res.set('Cache-Control', 'public, max-age=86400');
+  return res.sendFile(found.file);
+});
+
+/** `POST /reaction-photos/:id/report` — flag something that got through. */
+apiRouter.post('/reaction-photos/:id/report', reactionLimiter, (req, res) => {
+  const result = reportPhoto(
+    String(req.params.id), clientKey(req), req.body?.reason ?? 'unspecified');
+  if (!result.ok) return res.status(404).json({ status: 'error', message: result.reason });
+  return ok(res, { reported: true });
 });
 
 /** The tags the catalogue actually uses, for the app's filter row. */

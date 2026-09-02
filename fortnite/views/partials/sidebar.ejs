@@ -22,6 +22,10 @@
       <i data-lucide="bar-chart-3" width="17" height="17"></i>
       <span>Player stats</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/reactions') ? 'is-active' : '' %>" href="/admin/reactions">
+      <i data-lucide="heart" width="17" height="17"></i>
+      <span>Reactions</span>
+    </a>
 
     <div class="ad-nav-label">Your content</div>
     <a class="ad-nav-link <%= currentPath.startsWith('/wallpapers') ? 'is-active' : '' %>"

@@ -63,6 +63,13 @@ export const config = {
    */
   topIslands: num(process.env.TOP_ISLANDS, 1000),
 
+  /** Reactions and the photos people attach to them. */
+  reactions: {
+    maxPhotoBytes: num(process.env.REACTION_PHOTO_MAX_BYTES, 6 * 1024 * 1024),
+    /** Photos one device may send per day, before it is asked to slow down. */
+    photosPerDay: num(process.env.REACTION_PHOTOS_PER_DAY, 10),
+  },
+
   /** Player stats, which come from a keyed third-party API. */
   stats: {
     /** How long a player's numbers are reused before asking again. */
