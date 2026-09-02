@@ -1632,7 +1632,8 @@ async function viewBackups() {
 
   if (!inv.configured) {
     const c = card('Backups', 'database');
-    c.body.append(el('p', 'kd-muted', `Nothing has ever run. Expected archives in ${inv.dir}.`));
+    c.body.append(el('p', 'kd-muted mb-0',
+      inv.reason ?? `Nothing has ever run. Expected archives in ${inv.dir}.`));
     root.append(c.card);
     return root;
   }
@@ -1640,24 +1641,33 @@ async function viewBackups() {
   const newest = inv.archives[0] ?? null;
   const stale = !newest || newest.ageHours > inv.staleAfterHours;
 
-  // Age first: it is the number that matters, and the one that goes wrong
-  // silently.
-  const head = card('Backups', 'database');
-  head.body.append(
-    el('div', 'd-flex flex-wrap gap-4', [
-      backupStat('Archives', String(inv.archives.length)),
-      backupStat('Newest', newest ? relativeAge(newest.ageHours) : 'never',
-                 stale ? 'text-danger' : 'text-success'),
-      backupStat('Newest size', newest ? bytesLabel(newest.sizeBytes) : '—'),
-      backupStat('All archives', bytesLabel(inv.totalBytes)),
-      inv.disk ? backupStat('Disk free', bytesLabel(inv.disk.freeBytes)) : null,
-    ].filter(Boolean)),
-  );
-  if (stale) {
-    head.body.append(el('p', 'text-danger small mb-0 mt-3',
-      `Nothing newer than ${inv.staleAfterHours} hours. A backup that stopped running looks exactly like one that is working.`));
+  // The same KPI tiles the dashboard uses, so this page reads as part of the
+  // panel rather than something bolted on.
+  const kpis = el('div', 'row g-3 mb-3');
+  const tiles = [
+    ['Archives', String(inv.archives.length), 'database', null],
+    ['Newest', newest ? relativeAge(newest.ageHours) : 'never',
+     stale ? 'circle-alert' : 'circle-check', stale ? 'text-danger' : 'text-success'],
+    ['On disk', bytesLabel(inv.totalBytes), 'save', null],
+    ['Disk free', inv.disk ? bytesLabel(inv.disk.freeBytes) : '—', 'cpu', null],
+  ];
+  for (const [label, value, ic, tone] of tiles) {
+    const col = el('div', 'col-6 col-xl-3');
+    const c = el('div', 'ad-card ad-kpi');
+    const top = el('div', 'd-flex align-items-center gap-2 mb-2');
+    top.append(icon(ic, 17), el('span', 'ad-kpi-label', label));
+    c.append(top, el('div', `ad-kpi-value ${tone ?? ''}`.trim(), value));
+    col.append(c);
+    kpis.append(col);
   }
-  root.append(head.card);
+  root.append(kpis);
+
+  if (stale) {
+    const warn = card('Backups are stale', 'circle-alert');
+    warn.body.append(el('p', 'text-danger mb-0',
+      `Nothing newer than ${inv.staleAfterHours} hours. A backup that stopped running looks exactly like one that is working.`));
+    root.append(warn.card);
+  }
 
   const list = card('What is on disk', 'history');
   list.body.classList.add('p-0');
@@ -1683,20 +1693,12 @@ async function viewBackups() {
         { text: g.files.toLocaleString() },
       ]),
     ));
-    what.body.append(el('p', 'kd-faint small p-3 mb-0',
-      `${inv.contents.fileCount.toLocaleString()} files in total. Databases are dumped rather than copied, so they restore consistently.`));
+    what.body.append(el('p', 'kd-faint small px-3 pb-3 mb-0',
+      `${inv.contents.fileCount.toLocaleString()} entries in total. Databases are dumped rather than copied, so they restore consistently.`));
     root.append(what.card);
   }
 
   return root;
-}
-
-/** A labelled number for the summary row. */
-function backupStat(label, value, tone) {
-  return el('div', null, [
-    el('div', `fs-5 fw-semibold ${tone ?? ''}`, value),
-    el('div', 'kd-faint small', label),
-  ]);
 }
 
 function bytesLabel(n) {
