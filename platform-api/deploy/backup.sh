@@ -301,6 +301,47 @@ ARCHIVE="$BACKUP_DIR/hamaprojects-$STAMP.tar.gz"
 tar czf "$ARCHIVE" -C "$WORK" . || die "archive failed"
 chmod 600 "$ARCHIVE"
 
+# ── Manifest ────────────────────────────────────────────────────────────────
+#
+# A small JSON index beside the archives, world-readable, describing them.
+#
+# The panel needs to show what exists without being able to read any of it.
+# These archives hold every service's .env — every secret on the box — so
+# granting the web application read access would mean a compromise there hands
+# over everything. It reads this instead: the archives stay root-only, and
+# listing a 780 MB file to render a page stops being necessary at all.
+
+write_manifest() {
+  local out="$BACKUP_DIR/inventory.json" first=1 f
+  {
+    printf '{"generatedAt":"%s","archives":[' "$(date -Is)"
+    for f in $(ls -1t "$BACKUP_DIR"/*.tar.gz 2>/dev/null); do
+      [[ $first -eq 1 ]] || printf ','
+      first=0
+      printf '{"name":"%s","sizeBytes":%s,"at":"%s"}' \
+        "$(basename "$f")" "$(stat -c %s "$f")" "$(date -Is -r "$f")"
+    done
+    printf '],"contents":['
+    first=1
+    while IFS= read -r line; do
+      [[ $first -eq 1 ]] || printf ','
+      first=0
+      printf '{"name":"%s","files":%s}' "${line#* }" "${line%% *}"
+    done < <(
+      grep -oE '^\./(files/[^/]+|sqlite/[^/]+|[^/]+-postgres\.sql)' <<< "$ARCHIVE_LISTING" \
+        | sed -e 's|^\./||' -e 's|\.db$||' -e 's|^\(.*\)-postgres\.sql$|postgres/\1|' \
+        | sort | uniq -c | awk '{print $1" "$2}'
+    )
+    printf '],"fileCount":%s}' "$(wc -l <<< "$ARCHIVE_LISTING")"
+  } > "$out.tmp"
+  mv "$out.tmp" "$out"
+  chmod 644 "$out"
+  # Traversable but not listable: the panel can open the manifest by name, and
+  # nothing can enumerate or read the archives themselves.
+  chmod 711 "$BACKUP_DIR"
+  ok "manifest written"
+}
+
 step "Result"
 ok "$ARCHIVE"
 ok "$(human "$(stat -c %s "$ARCHIVE")")"
@@ -332,6 +373,10 @@ if [[ ${#old[@]} -gt 0 ]]; then
     info "removed old backup $(basename "$f")"
   done
 fi
+
+# Last, so it describes what is on disk now rather than the set that rotation
+# was about to prune.
+write_manifest
 
 df -h /var | awk 'NR==2 {printf "  disk: %s used of %s (%s free)\n", $3, $2, $4}'
 printf '\n'
