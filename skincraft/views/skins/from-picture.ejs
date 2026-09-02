@@ -24,7 +24,7 @@
               </p>
 
               <form method="post" action="/admin/skins/from-picture"
-                    enctype="multipart/form-data">
+                    enctype="multipart/form-data" data-picture-form>
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
                 <div class="mb-3">
@@ -63,7 +63,22 @@
                   </div>
                 </div>
 
-                <button class="btn btn-primary" type="submit" <%= available ? '' : 'disabled' %>>
+                <div class="ad-ai-status mb-3" data-picture-status hidden>
+                  <span class="ad-spin" aria-hidden="true">
+                    <i data-lucide="loader-circle"></i>
+                  </span>
+                  <div class="ad-ai-status-text">
+                    <strong data-picture-status-title>Making it…</strong>
+                    <span class="d-block small" data-picture-status-detail></span>
+                  </div>
+                </div>
+
+                <div class="alert alert-danger ad-ai-error" data-picture-error hidden>
+                  <i data-lucide="circle-alert" class="me-1"></i>
+                  <span data-picture-error-text></span>
+                </div>
+
+                <button class="btn btn-kd" type="submit" data-picture-submit <%= available ? '' : 'disabled' %>>
                   Make a draft
                 </button>
                 <span class="text-body-secondary small ms-2">Takes a couple of minutes.</span>

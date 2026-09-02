@@ -232,6 +232,152 @@
     });
   });
 
+  /**
+   * Reads a server-sent-event stream from a POST.
+   *
+   * `EventSource` cannot do this — it is GET-only, and these need a CSRF
+   * header and a body. Events are separated by a blank line and a chunk can
+   * split anywhere, so the tail is carried rather than parsed.
+    *
+ * At module scope because two forms generate now — the AI designer and the
+ * from-picture page — and a second copy of an SSE reader is a second place for
+ * a framing bug to live. The token is passed rather than closed over, which is
+ * what let it leave one form's scope.
+ */
+  async function stream(url, body, onEvent, token) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { Accept: 'text/event-stream', 'X-CSRF-Token': token },
+      body,
+    });
+
+    // A failure before the stream opened is still a normal response, and its
+    // body is likelier to explain itself than its status code is.
+    if (!response.ok || !response.body) {
+      throw new Error(`The server returned ${response.status} before the stream started.`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+      for (const frame of frames) {
+        const line = frame.split('\n').find((l) => l.startsWith('data:'));
+        if (!line) continue;
+
+        let payload;
+        try {
+          payload = JSON.parse(line.slice(5).trim());
+        } catch {
+          // One unreadable frame is one lost update, not a dead stream.
+          continue;
+        }
+
+        // A handler that says it is finished ends the read here, so the
+        // response is closed deliberately rather than abandoned half-read.
+        if (onEvent(payload) === 'stop') {
+          await reader.cancel().catch(() => {});
+          return;
+        }
+      }
+    }
+  }
+
+  // ── From a picture ────────────────────────────────────────────────────────
+  //
+  // The same wait as the AI designer and the same reason to show it: drawing
+  // takes minutes, and a page that sits there is indistinguishable from one
+  // that has hung. Submitting normally still works with JavaScript off — this
+  // only replaces the tab spinner with something that says which panel it is on.
+  const pictureForm = document.querySelector('form[data-picture-form]');
+
+  if (pictureForm) {
+    const pick = (name) => pictureForm.querySelector(`[data-picture-${name}]`);
+    const status = pick('status');
+    const statusTitle = pick('status-title');
+    const statusDetail = pick('status-detail');
+    const errorBox = pick('error');
+    const errorText = pick('error-text');
+    const submit = pick('submit');
+
+    const faceNames = {
+      front: 'the front', back: 'the back', pattern: 'the side pattern',
+      chest: 'the chest', sleeve: 'a sleeve', waist: 'the waist',
+      legFront: 'the front of a leg', legBack: 'the back of a leg', leg: 'a leg',
+    };
+
+    let ticker = null;
+
+    pictureForm.addEventListener('submit', async (event) => {
+      const file = pictureForm.querySelector('[name="reference"]')?.files?.[0];
+      // Without a picture there is nothing to stream. Left to the browser, so
+      // the required attribute gives its own message.
+      if (!file) return;
+
+      event.preventDefault();
+
+      errorBox.hidden = true;
+      status.hidden = false;
+      submit.disabled = true;
+
+      const started = Date.now();
+      let step = 'Starting…';
+      const tick = () => {
+        statusDetail.textContent = `${step} · ${Math.round((Date.now() - started) / 1000)}s elapsed`;
+      };
+      tick();
+      ticker = window.setInterval(tick, 1000);
+
+      const body = new FormData(pictureForm);
+      let location = null;
+
+      try {
+        await stream('/admin/skins/from-picture', body, (event_) => {
+          if (event_.type === 'progress') {
+            if (event_.stage === 'image') {
+              step = `Drawing ${faceNames[event_.face] ?? event_.face}`
+                + ` — ${event_.index + 1} of ${event_.total}`;
+            } else if (event_.stage === 'compose') {
+              step = 'Putting the pieces onto the template';
+            } else if (event_.stage === 'storing') {
+              step = 'Saving the draft';
+            }
+            tick();
+          } else if (event_.type === 'done') {
+            location = event_.location;
+            return 'stop';
+          } else if (event_.type === 'error') {
+            throw new Error(event_.message);
+          }
+          return undefined;
+        }, pictureForm.querySelector('[name="_csrf"]').value);
+
+        if (location) {
+          statusTitle.textContent = 'Done — opening the draft';
+          window.location.assign(location);
+          return;
+        }
+        throw new Error('The server finished without saying where the draft went.');
+      } catch (err) {
+        errorText.textContent = err.message;
+        errorBox.hidden = false;
+        status.hidden = true;
+        submit.disabled = false;
+      } finally {
+        if (ticker) window.clearInterval(ticker);
+        ticker = null;
+      }
+    });
+  }
+
+
   // ── AI: planning, then generating ───────────────────────────────────────
   //
   // Both are one long request, and both used to be silent. Generation showed
@@ -359,59 +505,6 @@
       iconsReady();
     };
 
-    /**
-     * Reads a server-sent-event stream from a POST.
-     *
-     * `EventSource` cannot do this — it is GET-only, and these need a CSRF
-     * header and a body. Events are separated by a blank line and a chunk can
-     * split anywhere, so the tail is carried rather than parsed.
-     */
-    async function stream(url, body, onEvent) {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { Accept: 'text/event-stream', 'X-CSRF-Token': csrf() },
-        body,
-      });
-
-      // A failure before the stream opened is still a normal response, and its
-      // body is likelier to explain itself than its status code is.
-      if (!response.ok || !response.body) {
-        throw new Error(`The server returned ${response.status} before the stream started.`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      for (;;) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() ?? '';
-        for (const frame of frames) {
-          const line = frame.split('\n').find((l) => l.startsWith('data:'));
-          if (!line) continue;
-
-          let payload;
-          try {
-            payload = JSON.parse(line.slice(5).trim());
-          } catch {
-            // One unreadable frame is one lost update, not a dead stream.
-            continue;
-          }
-
-          // A handler that says it is finished ends the read here, so the
-          // response is closed deliberately rather than abandoned half-read.
-          if (onEvent(payload) === 'stop') {
-            await reader.cancel().catch(() => {});
-            return;
-          }
-        }
-      }
-    }
-
     // ── Ideas ─────────────────────────────────────────────────────────────
     //
     // Fills the description rather than generating anything. Choosing an idea
@@ -537,7 +630,7 @@
           } else if (event.type === 'error') {
             throw new Error(event.message);
           }
-        });
+        }, csrf());
       } catch (error) {
         fail(error.message);
         panel.hidden = !full;
@@ -624,7 +717,7 @@
           } else if (event.type === 'error') {
             throw new Error(event.message);
           }
-        });
+        }, csrf());
 
         if (navigating && location) {
           // Deliberately does not navigate.

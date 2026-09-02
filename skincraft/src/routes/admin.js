@@ -366,7 +366,18 @@ adminRouter.post(
     const notes = String(req.body?.notes ?? '').trim();
     const title = String(req.body?.title ?? '').trim() || 'From a picture';
 
+    // Streamed when the page asks for it, redirected when it does not. The
+    // form still works with JavaScript off; this only changes how the wait is
+    // shown, and generation takes minutes — long enough that a spinning tab is
+    // indistinguishable from a hang.
+    const streaming = (req.get('accept') ?? '').includes('text/event-stream');
+
     if (!req.file?.buffer?.length) {
+      if (streaming) {
+        sseOpen(res);
+        sseSend(res, { type: 'error', message: 'Choose a picture first.' });
+        return res.end();
+      }
       req.flash('error', 'Choose a picture first.');
       return res.redirect('/admin/skins/from-picture');
     }
@@ -377,6 +388,18 @@ adminRouter.post(
       ? `Match the colours, patterns and mood of the reference image. ${notes}`
       : 'Match the colours, patterns and mood of the reference image.';
 
+    if (streaming) {
+      sseOpen(res);
+      // If the browser goes away mid-draw, keep going: the images are already
+      // paid for, and finishing means the draft is waiting rather than the
+      // money having bought nothing.
+      res.on('close', () => {
+        if (!res.writableEnded) {
+          console.warn('  From-picture generation continuing after the client left.');
+        }
+      });
+    }
+
     try {
       const result = await designSkin({
         reference: req.file.buffer,
@@ -384,7 +407,12 @@ adminRouter.post(
         category,
         quality: 'standard',
         style: 'pattern',
+        onProgress: streaming
+          ? (progress) => sseSend(res, { type: 'progress', ...progress })
+          : null,
       });
+
+      if (streaming) sseSend(res, { type: 'progress', stage: 'storing' });
 
       const id = generateSkinId();
       const base = `${slugify(title, id)}-${id.slice(5)}`;
@@ -417,12 +445,27 @@ adminRouter.post(
 
       logAudit(req.user.id, 'skin.from-picture', id, notes || 'no notes');
 
+      if (streaming) {
+        sseSend(res, { type: 'done', id, location: `/admin/skins/${id}` });
+        return res.end();
+      }
+
       req.flash('success', 'Made as a draft. Check it against the guidelines, then publish.');
       return res.redirect(`/admin/skins/${id}`);
     } catch (error) {
       const isExpected =
         error.code === 'prompt_rejected' ||
         /provider|configured|rate limit|too long|reference/i.test(error.message);
+
+      // Once the stream is open the 200 has already gone out, so a failure has
+      // to arrive as an event. A status code here would be read as the stream
+      // simply stopping.
+      if (streaming) {
+        sseFail(res, isExpected ? error : new Error('Something went wrong making that draft.'));
+        if (!isExpected) console.error(error);
+        return res.end();
+      }
+
       if (!isExpected) return next(error);
 
       req.flash('error', error.message);
