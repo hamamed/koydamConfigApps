@@ -63,6 +63,12 @@ export const config = {
    */
   topIslands: num(process.env.TOP_ISLANDS, 1000),
 
+  /** Player stats, which come from a keyed third-party API. */
+  stats: {
+    /** How long a player's numbers are reused before asking again. */
+    cacheMinutes: num(process.env.STATS_CACHE_MINUTES, 15),
+  },
+
   /** The image cache that lets the app talk to this host and nowhere else. */
   media: {
     /** Largest single picture worth caching. */

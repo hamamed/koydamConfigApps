@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { fetchMedia, proxied } from '../media.js';
+import { playerStats } from '../stats.js';
 import { syncStatus } from '../upstream.js';
 
 export const apiRouter = Router();
@@ -40,6 +42,20 @@ const ok = (res, data, meta) =>
     data: throughThisHost(data, `${res.req.protocol}://${res.req.get('host')}`),
     ...(meta ? { meta } : {}),
   });
+
+/**
+ * A miss costs a call against a metered key, so lookups are capped per address.
+ *
+ * Generous enough that a person typing a few names never notices, tight enough
+ * that a script cannot spend the month's quota in an afternoon.
+ */
+const statsLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { status: 'error', message: 'Too many lookups. Try again in a minute.' },
+});
 
 const clamp = (value, fallback, max) => {
   const n = Number(value);
@@ -375,6 +391,24 @@ apiRouter.get('/media/:id', async (req, res) => {
   // would arrive under a different id, so this can never go stale.
   res.set('Cache-Control', 'public, max-age=604800, immutable');
   return res.sendFile(media.file);
+});
+
+/**
+ * `GET /stats/:name` — one player's Battle Royale numbers.
+ *
+ * Upstream needs a key with a monthly quota, and the key stays here: the app
+ * asks this service, this service asks them. A key shipped inside an app is a
+ * key on every phone that installs it, and it cannot be rotated without a
+ * release.
+ */
+apiRouter.get('/stats/:name', statsLimiter, async (req, res) => {
+  try {
+    return ok(res, await playerStats(req.params.name));
+  } catch (err) {
+    return res
+      .status(err.status ?? 500)
+      .json({ status: 'error', message: err.message || 'Could not fetch those stats.' });
+  }
 });
 
 /** The tags the catalogue actually uses, for the app's filter row. */

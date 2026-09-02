@@ -271,3 +271,30 @@ CREATE TABLE IF NOT EXISTS media (
 );
 
 CREATE INDEX IF NOT EXISTS idx_media_fetched ON media(fetched_at);
+
+-- Secrets and switches the panel owns, rather than the .env file.
+--
+-- A key that has to be redeployed to change is a key nobody rotates. This is
+-- read at request time, so pasting a new one in the panel takes effect on the
+-- next lookup.
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Player stats, cached.
+--
+-- Every lookup costs a call against a key with a quota, and a player's
+-- lifetime numbers do not move between two people searching the same name a
+-- minute apart. The raw payload is kept whole so the shape of the card can
+-- change without re-fetching anyone.
+CREATE TABLE IF NOT EXISTS player_stats (
+  name         TEXT PRIMARY KEY,
+  display_name TEXT,
+  account_id   TEXT,
+  payload      TEXT NOT NULL,
+  fetched_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_stats_fetched ON player_stats(fetched_at);

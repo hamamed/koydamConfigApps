@@ -1,0 +1,90 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Player stats',
+          subheading: Number(summary.players || 0).toLocaleString() + ' players cached'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-body">
+          <h6 class="mb-2">Fortnite API key</h6>
+          <p class="kd-faint small mb-3">
+            Player stats are the one thing Epic's own API does not publish, so they come from
+            <a href="https://dashboard.fortnite-api.com" target="_blank" rel="noopener noreferrer">fortnite-api.com</a>,
+            which is free but needs a key. The key is stored here and never reaches the app —
+            the app asks this server, this server asks them. That also means you can replace it
+            without shipping a release.
+          </p>
+
+          <% if (masked) { %>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <code class="font-monospace"><%= masked %></code>
+              <span class="kd-faint small">set <%= (updatedAt || '').slice(0, 16).replace('T', ' ') %></span>
+              <form method="post" action="/admin/stats/key/delete" class="ms-auto m-0">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-sm btn-kd-ghost" type="submit">Remove</button>
+              </form>
+            </div>
+          <% } else { %>
+            <p class="kd-faint small mb-3"><strong>No key set.</strong> Stats lookups return an error until one is.</p>
+          <% } %>
+
+          <form method="post" action="/admin/stats/key" class="d-flex flex-wrap gap-2">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input class="form-control font-monospace" name="key" type="password"
+                   autocomplete="off" placeholder="<%= masked ? 'Paste a new key to replace it' : 'Paste your key' %>"
+                   style="max-width:420px">
+            <button class="btn btn-kd" type="submit">Save key</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-body">
+          <h6 class="mb-2">Try a lookup</h6>
+          <p class="kd-faint small mb-3">
+            Exactly what the app asks for. Results are cached, so a repeat of the same name
+            costs nothing against the key's quota.
+          </p>
+          <form class="d-flex flex-wrap gap-2 mb-3" method="get" action="/admin/stats">
+            <input class="form-control" name="name" value="<%= lookup %>"
+                   placeholder="Epic display name" style="max-width:280px">
+            <button class="btn btn-kd-outline" type="submit">Look up</button>
+          </form>
+
+          <% if (error) { %>
+            <div class="alert alert-danger mb-0"><%= error %></div>
+          <% } else if (result) { %>
+            <div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+              <span class="fw-semibold fs-5"><%= result.name %></span>
+              <% if (result.level) { %><span class="kd-faint">Level <%= result.level %></span><% } %>
+              <span class="badge bg-secondary"><%= result.cached ? 'from cache' : 'fresh' %></span>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <tbody>
+                  <% const n = (v) => v == null ? '—' : Number(v).toLocaleString(); %>
+                  <tr><td>Wins</td><td class="text-end"><%= n(result.wins) %></td>
+                      <td>Win rate</td><td class="text-end"><%= result.winRatePercent.toFixed(1) %>%</td></tr>
+                  <tr><td>Matches</td><td class="text-end"><%= n(result.matches) %></td>
+                      <td>K/D</td><td class="text-end"><%= result.kd.toFixed(2) %></td></tr>
+                  <tr><td>Kills</td><td class="text-end"><%= n(result.kills) %></td>
+                      <td>Kills / match</td><td class="text-end"><%= result.killsPerMatch.toFixed(2) %></td></tr>
+                  <tr><td>Play time</td>
+                      <td class="text-end"><%= Math.floor(result.minutesPlayed / 60) %>h <%= result.minutesPlayed % 60 %>m</td>
+                      <td>Avg match</td>
+                      <td class="text-end"><%= Math.floor(result.averageMatchSeconds / 60) %>m <%= result.averageMatchSeconds % 60 %>s</td></tr>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

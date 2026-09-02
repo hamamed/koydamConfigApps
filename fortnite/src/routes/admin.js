@@ -14,6 +14,8 @@ import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
 import { adoptPastedIslands, backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
+import { clearSetting, maskedSetting, setSetting, settingUpdatedAt } from '../settings.js';
+import { STATS_KEY, playerStats, statsSummary } from '../stats.js';
 import { parseWeapons } from '../weapons-import.js';
 import { parseMaps } from '../maps-import.js';
 
@@ -510,6 +512,49 @@ adminRouter.post('/maps/import/confirm', async (req, res) => {
     (updated ? `, ${updated} updated` : '') +
     (adopted ? `, artwork attached to ${adopted} island${adopted === 1 ? '' : 's'}` : '') + '.');
   res.redirect('/admin/c/creative-maps');
+});
+
+// ── Player stats ────────────────────────────────────────────────────────────
+
+adminRouter.get('/stats', async (req, res) => {
+  const lookup = String(req.query.name ?? '').trim();
+  let result = null;
+  let error = null;
+
+  if (lookup) {
+    try {
+      result = await playerStats(lookup);
+    } catch (err) {
+      error = err.message;
+    }
+  }
+
+  res.render('stats', {
+    title: 'Player stats',
+    masked: maskedSetting(STATS_KEY),
+    updatedAt: settingUpdatedAt(STATS_KEY),
+    summary: statsSummary(),
+    lookup,
+    result,
+    error,
+  });
+});
+
+adminRouter.post('/stats/key', (req, res) => {
+  const key = String(req.body?.key ?? '').trim();
+  if (!key) {
+    req.flash('danger', 'Paste a key, or use Remove to clear the one that is set.');
+    return res.redirect('/admin/stats');
+  }
+  setSetting(STATS_KEY, key);
+  req.flash('success', 'Key saved. Stats lookups work from the next request.');
+  return res.redirect('/admin/stats');
+});
+
+adminRouter.post('/stats/key/delete', (req, res) => {
+  clearSetting(STATS_KEY);
+  req.flash('success', 'Key removed. Stats lookups will stop until a new one is set.');
+  return res.redirect('/admin/stats');
 });
 
 // ── Epic's island catalogue ─────────────────────────────────────────────────
