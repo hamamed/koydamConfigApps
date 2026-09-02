@@ -150,7 +150,15 @@ cmd_verify() {
 
   # An archive missing the database is worse than no archive: it looks like
   # protection and is not.
-  if tar tzf "$f" | grep -q 'brawl-postgres.sql'; then
+  # Listed into a variable first, not piped into grep.
+  #
+  # `grep -q` exits on its first match, tar takes SIGPIPE, and `pipefail` turns
+  # that into a failed pipeline — so this check reported the database missing
+  # exactly when it was present. Every backup warned about the one thing it had
+  # done correctly.
+  local listing
+  listing=$(tar tzf "$f")
+  if grep -q 'brawl-postgres.sql' <<< "$listing"; then
     ok "Brawl database present"
   else
     warn "no Brawl database in this archive"
@@ -304,7 +312,8 @@ if ! gzip -t "$ARCHIVE"; then
 fi
 ok "verified readable"
 
-if ! tar tzf "$ARCHIVE" | grep -q 'brawl-postgres.sql'; then
+ARCHIVE_LISTING=$(tar tzf "$ARCHIVE")
+if ! grep -q 'brawl-postgres.sql' <<< "$ARCHIVE_LISTING"; then
   warn "no Brawl database in this archive - check pg_dump above"
 fi
 

@@ -1,0 +1,17 @@
+[Unit]
+Description=Daily backup of every hamaprojects service
+
+[Timer]
+# 02:30 local, half an hour after the services do their nightly refresh, so an
+# archive captures the day's synced data rather than catching it mid-write.
+OnCalendar=*-*-* 02:30:00
+# A box that was off at 02:30 still gets its backup, rather than skipping a day
+# in silence.
+Persistent=true
+# Spread the start so a backup and a refresh that share a minute do not fight
+# over the same disk.
+RandomizedDelaySec=300
+Unit=hamaprojects-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=Back up every hamaprojects service
+Documentation=file:/opt/backup.sh
+# Postgres has to be up: the script stops rather than writing an archive
+# without a database dump in it, which is the right call and also means
+# starting before Postgres would fail the unit every boot.
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/backup.sh
+# Backups are not urgent and the box has other jobs. Lowest CPU and IO
+# priority so a 780 MB archive does not slow the services it is protecting.
+Nice=15
+IOSchedulingClass=idle
+# Long enough for a slow disk, short enough that a hung run is noticed rather
+# than silently overlapping tomorrow's.
+TimeoutStartSec=2h
