@@ -44,10 +44,24 @@ export const config = {
     islandsMinutes: num(process.env.ISLANDS_REFRESH_MINUTES, 30),
     /** Metrics are one request per island, so this is deliberately modest. */
     metricsMinutes: num(process.env.METRICS_REFRESH_MINUTES, 10),
-    metricsBatch: num(process.env.METRICS_BATCH, 120),
+    metricsBatch: num(process.env.METRICS_BATCH, 800),
+    /** Share of each metrics run spent on islands never asked before. */
+    metricsExploreShare: Number(process.env.METRICS_EXPLORE_SHARE ?? 0.7),
+    /** How many metric requests are in flight at once. */
+    metricsConcurrency: num(process.env.METRICS_CONCURRENCY, 6),
     /** How long island history is kept. Six months plus a few days of slack. */
     retentionDays: num(process.env.METRICS_RETENTION_DAYS, 185),
   },
+
+  /**
+   * How many islands the app is offered — the most played, by peak players.
+   *
+   * The catalogue is eleven thousand islands and climbing, almost all of them
+   * empty. Handing that to a browsing screen buries the maps anyone would
+   * actually want behind thousands with no players and no artwork, so the app
+   * sees a ranked slice and the panel keeps the whole thing.
+   */
+  topIslands: num(process.env.TOP_ISLANDS, 1000),
 
   platformUrl: (process.env.PLATFORM_URL || '').replace(/\/+$/, ''),
   serviceToken: process.env.SERVICE_TOKEN || '',

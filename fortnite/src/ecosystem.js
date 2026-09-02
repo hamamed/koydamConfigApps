@@ -119,26 +119,46 @@ export async function syncIslands({ pages = 40 } = {}) {
  * indefinitely. Islands already known to be busy are refreshed first, because
  * those are the ones the app actually shows.
  */
-export async function syncIslandMetrics({ batch = 120 } = {}) {
+export async function syncIslandMetrics({ batch = 120, exploreShare = 0.7, concurrency = 6 } = {}) {
   try {
-    // Order of interest: islands that have real numbers, then ones never
-    // asked, then ones that came back empty — least often asked last. Epic
-    // reports nulls for most of the catalogue, so without the miss count the
-    // rotation spends itself re-confirming that a dead island is still dead.
-    const targets = db
+    // The budget is split, because a single priority order starves itself.
+    //
+    // Ranking islands that already have numbers ahead of everything else looks
+    // sensible until the number of them reaches the batch size — then every
+    // run re-measures exactly those and the rest of the catalogue is never
+    // asked at all. That is not hypothetical: it stuck at 120 measured out of
+    // 11,422 for two days, because the batch was also 120.
+    //
+    // So refreshing what is known and exploring what is not get separate
+    // shares. Exploration takes the larger one until the sweep is done, after
+    // which it finds nothing and the whole budget falls through to refresh.
+    const exploreBudget = Math.max(1, Math.round(batch * exploreShare));
+    const refreshBudget = Math.max(0, batch - exploreBudget);
+
+    const explore = db
       .prepare(
         `SELECT code FROM islands
-          ORDER BY CASE
-                     WHEN peak_ccu IS NOT NULL THEN 0
-                     WHEN metrics_at IS NULL    THEN 1
-                     ELSE 2
-                   END,
+          WHERE metrics_at IS NULL
+          ORDER BY rowid
+          LIMIT ?`,
+      )
+      .all(exploreBudget);
+
+    // Whatever exploration did not spend goes to refreshing, so a finished
+    // sweep does not leave most of the budget idle.
+    const refresh = db
+      .prepare(
+        `SELECT code FROM islands
+          WHERE metrics_at IS NOT NULL
+          ORDER BY CASE WHEN peak_ccu IS NOT NULL THEN 0 ELSE 1 END,
                    metrics_misses ASC,
                    peak_ccu DESC,
                    metrics_at ASC
           LIMIT ?`,
       )
-      .all(batch);
+      .all(refreshBudget + (exploreBudget - explore.length));
+
+    const targets = [...explore, ...refresh];
 
     if (!targets.length) { record('island-metrics', { count: 0 }); return 0; }
 
@@ -166,11 +186,31 @@ export async function syncIslandMetrics({ batch = 120 } = {}) {
 
     let updated = 0;
 
-    for (const { code } of targets) {
-      let metrics;
-      try {
-        metrics = await get(`/islands/${encodeURIComponent(code)}/metrics`, { timeout: 15_000 });
-      } catch {
+    // Fetched a few at a time rather than strictly one after another.
+    //
+    // One request at a time over eleven thousand islands is a sweep measured
+    // in days, and until a sweep finishes there is no way to know which maps
+    // are actually the most played — the ranking is only ever whichever ones
+    // were reached. A small pool makes it hours instead, and stays modest
+    // against a public API that asks nothing of callers.
+    //
+    // Only the fetches overlap. Every write stays on this loop, in order, so
+    // SQLite still sees a single writer.
+    for (const group of chunk(targets, concurrency)) {
+      const answers = await Promise.all(
+        group.map(async ({ code }) => {
+          try {
+            const metrics = await get(
+              `/islands/${encodeURIComponent(code)}/metrics`, { timeout: 15_000 });
+            return { code, metrics };
+          } catch {
+            return { code, metrics: null };
+          }
+        }),
+      );
+
+      for (const { code, metrics } of answers) {
+      if (metrics === null) {
         // A single island failing is not a failed run. Stamping it anyway stops
         // one permanently broken code from being retried ahead of everything
         // else forever.
@@ -217,6 +257,7 @@ export async function syncIslandMetrics({ batch = 120 } = {}) {
       })();
 
       updated += 1;
+      }
     }
 
     record('island-metrics', { count: updated });
@@ -233,6 +274,13 @@ export async function syncIslandMetrics({ batch = 120 } = {}) {
  * The response is eight independent arrays of `{value, timestamp}`, which is
  * the wrong shape for storage — a day is one fact about an island, not eight.
  */
+/** Splits a list into fixed-size groups. */
+function chunk(items, size) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
 function seriesByDay(metrics) {
   const fields = {
     peakCCU: 'peak_ccu',

@@ -115,7 +115,11 @@ adminRouter.post('/sync/:feed', async (req, res) => {
       backfillIslandArt();
       return n;
     },
-    'island-metrics': () => syncIslandMetrics({ batch: 120 }),
+    'island-metrics': () => syncIslandMetrics({
+      batch: config.refresh.metricsBatch,
+      exploreShare: config.refresh.metricsExploreShare,
+      concurrency: config.refresh.metricsConcurrency,
+    }),
   };
   const job = jobs[req.params.feed];
   if (!job) {

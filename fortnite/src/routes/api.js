@@ -256,9 +256,21 @@ apiRouter.get('/islands', (req, res) => {
     newest: 'first_seen DESC',
   }[sort] ?? 'peak_ccu IS NULL, peak_ccu DESC';
 
-  // Browsing by popularity with nothing else asked for is the one case where
-  // pages of unmeasured islands are noise rather than results.
-  if (req.query.measured === '1') where.push('peak_ccu IS NOT NULL');
+  // The app is offered the most played islands, not the whole catalogue.
+  //
+  // Eleven thousand islands, nearly all with no players and no artwork, is a
+  // worse browsing experience than a ranked thousand — the maps anyone would
+  // actually open are buried. Search runs inside this slice too, so a result
+  // is always something worth opening.
+  //
+  // Ranked rather than thresholded, so the size of the list does not swing
+  // with how busy Fortnite happens to be on the day.
+  where.push(
+    `code IN (SELECT code FROM islands
+               WHERE peak_ccu IS NOT NULL
+               ORDER BY peak_ccu DESC
+               LIMIT ${Number(config.topIslands)})`,
+  );
 
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = db.prepare(`SELECT COUNT(*) AS n FROM islands ${clause}`).get(params).n;

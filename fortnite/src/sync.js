@@ -40,7 +40,11 @@ export function startSyncLoop() {
     {
       name: 'island-metrics',
       run: async () => {
-        const n = await syncIslandMetrics({ batch: config.refresh.metricsBatch });
+        const n = await syncIslandMetrics({
+          batch: config.refresh.metricsBatch,
+          exploreShare: config.refresh.metricsExploreShare,
+          concurrency: config.refresh.metricsConcurrency,
+        });
         const dropped = pruneMetrics({ days: config.refresh.retentionDays });
         if (dropped) console.log(`pruned ${dropped} metric rows past retention`);
         return n;
