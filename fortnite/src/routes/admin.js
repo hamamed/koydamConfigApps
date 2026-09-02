@@ -13,7 +13,7 @@ import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
 import { forgetGallery, gallery } from './wallpapers.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
-import { backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
+import { adoptPastedIslands, backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
 import { parseWeapons } from '../weapons-import.js';
 import { parseMaps } from '../maps-import.js';
 
@@ -111,6 +111,7 @@ adminRouter.post('/sync/:feed', async (req, res) => {
     news: syncNews,
     islands: async () => {
       const n = await syncIslands({ pages: 40 });
+      await adoptPastedIslands();
       backfillIslandArt();
       return n;
     },
@@ -430,7 +431,7 @@ adminRouter.post('/maps/import', (req, res) => {
   });
 });
 
-adminRouter.post('/maps/import/confirm', (req, res) => {
+adminRouter.post('/maps/import/confirm', async (req, res) => {
   const parsed = parseMaps(String(req.body?.pasted ?? ''));
   if (!parsed.rows.length) {
     req.flash('danger', 'Nothing to import.');
@@ -488,9 +489,22 @@ adminRouter.post('/maps/import/confirm', (req, res) => {
     });
   })(parsed.rows);
 
+  // Pull the islands behind these codes in from Epic, so the artwork lands on
+  // the catalogue the app reads rather than waiting for the paged sync to
+  // happen past them — which, at six thousand of twenty, could be weeks.
+  let adopted = 0;
+  try {
+    ({ adopted } = await adoptPastedIslands());
+  } catch {
+    // Epic being unreachable must not lose an import that already succeeded;
+    // the scheduled sync retries this anyway.
+  }
+  adopted += backfillIslandArt();
+
   req.flash('success',
     `${added} map${added === 1 ? '' : 's'} added` +
-    (updated ? `, ${updated} updated` : '') + '.');
+    (updated ? `, ${updated} updated` : '') +
+    (adopted ? `, artwork attached to ${adopted} island${adopted === 1 ? '' : 's'}` : '') + '.');
   res.redirect('/admin/c/creative-maps');
 });
 

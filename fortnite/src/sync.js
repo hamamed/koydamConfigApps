@@ -1,7 +1,7 @@
 import { config } from './config.js';
 import { db } from './db/index.js';
 import { syncCosmetics, syncNews, syncShop } from './upstream.js';
-import { backfillIslandArt, pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
+import { adoptPastedIslands, backfillIslandArt, pruneMetrics, syncIslandMetrics, syncIslands } from './ecosystem.js';
 
 /**
  * Keeps the mirror current.
@@ -29,6 +29,8 @@ export function startSyncLoop() {
       name: 'islands',
       run: async () => {
         const n = await syncIslands({ pages: 40 });
+        const { adopted } = await adoptPastedIslands();
+        if (adopted) console.log(`pulled ${adopted} pasted islands in by code`);
         const art = backfillIslandArt();
         if (art) console.log(`attached artwork to ${art} newly synced islands`);
         return n;

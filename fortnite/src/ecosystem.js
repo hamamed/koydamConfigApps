@@ -309,6 +309,82 @@ export function backfillIslandArt() {
   return info.changes;
 }
 
+/**
+ * Pulls the islands behind pasted listings straight from Epic, by code.
+ *
+ * The catalogue sync walks pages in whatever order Epic returns them, and it
+ * has reached six thousand of twenty thousand — so an island someone took the
+ * trouble to paste is, on the odds, not in there, and its picture sits in
+ * `creative_maps` attached to nothing. Waiting for the paged walk to arrive
+ * could take weeks.
+ *
+ * Epic will answer for one island by code, so this asks for exactly the codes
+ * that have artwork and are missing. It is a handful of requests, not a crawl.
+ */
+export async function adoptPastedIslands({ limit = 200 } = {}) {
+  const missing = db
+    .prepare(
+      `SELECT m.code, m.title, m.image_url
+         FROM creative_maps m
+        WHERE m.image_url IS NOT NULL
+          AND m.adopt_misses < 3
+          AND NOT EXISTS (SELECT 1 FROM islands i WHERE i.code = m.code)
+        LIMIT ?`,
+    )
+    .all(limit);
+
+  if (!missing.length) return { adopted: 0, missing: 0 };
+
+  const upsert = db.prepare(
+    `INSERT INTO islands (code, title, creator_code, category, created_in, tags,
+                          image_url, search_blob, synced_at)
+     VALUES (@code, @title, @creator_code, @category, @created_in, @tags,
+             @image_url, @search_blob, datetime('now'))
+     ON CONFLICT(code) DO UPDATE SET
+       image_url = COALESCE(islands.image_url, excluded.image_url)`,
+  );
+
+  // A code that Epic will never answer for — mistyped, or an island since
+  // taken down — would otherwise be re-requested on every sync forever.
+  const miss = db.prepare(
+    'UPDATE creative_maps SET adopt_misses = adopt_misses + 1 WHERE code = ?',
+  );
+
+  let adopted = 0;
+
+  for (const row of missing) {
+    let island;
+    try {
+      island = await get(`/islands/${encodeURIComponent(row.code)}`);
+    } catch {
+      miss.run(row.code);
+      continue;
+    }
+    if (!island?.code) {
+      miss.run(row.code);
+      continue;
+    }
+
+    const title = island.title ?? row.title ?? island.code;
+    const tags = Array.isArray(island.tags) ? island.tags : [];
+
+    upsert.run({
+      code: island.code,
+      title,
+      creator_code: island.creatorCode ?? null,
+      category: island.category ?? null,
+      created_in: island.createdIn ?? null,
+      tags: JSON.stringify(tags),
+      image_url: row.image_url,
+      search_blob: [title, island.creatorCode, island.category, ...tags]
+        .filter(Boolean).join(' ').toLowerCase(),
+    });
+    adopted += 1;
+  }
+
+  return { adopted, missing: missing.length };
+}
+
 export function pruneMetrics({ days = 185 } = {}) {
   const cutoff = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
   const info = db.prepare('DELETE FROM island_metrics WHERE day < ?').run(cutoff);

@@ -30,6 +30,7 @@ export function migrate() {
   ensureColumn('creative_maps', 'players', 'INTEGER');
   ensureColumn('islands', 'metrics_misses', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('islands', 'image_url', 'TEXT');
+  ensureColumn('creative_maps', 'adopt_misses', 'INTEGER NOT NULL DEFAULT 0');
 }
 
 /** Adds a column when it is missing. Safe to run on every boot. */
