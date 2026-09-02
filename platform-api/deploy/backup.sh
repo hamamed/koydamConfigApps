@@ -205,16 +205,58 @@ else
   warn "pg_dump not found - no Postgres in this backup"
 fi
 
+# ── SQLite ──────────────────────────────────────────────────────────────────
+#
+# The same argument as pg_dump, for the same reason. Copying a .db file while
+# the service is writing gives a file that may be missing whatever is still in
+# the write-ahead log, or worse, half of it — fortnite's WAL alone runs to ten
+# megabytes. `.backup` takes a consistent snapshot of a live database, which
+# `cp` cannot.
+
+sqlite_dump() {
+  local label="$1" src="$2"
+  [[ -f "$src" ]] || { info "$label: nothing at $src"; return 0; }
+
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    warn "sqlite3 not found - falling back to a file copy of $label, which may be inconsistent"
+    mkdir -p "$WORK/files/$(dirname "$label")"
+    cp -a "$src" "$WORK/files/$label"
+    return 0
+  fi
+
+  local dest="$WORK/sqlite/$label.db"
+  mkdir -p "$(dirname "$dest")"
+  if sqlite3 "$src" ".backup '$dest'" 2>/dev/null; then
+    ok "sqlite/$label  $(human "$(stat -c %s "$dest")")"
+  else
+    alert "Backup FAILED on hamaprojects: sqlite backup of '$label' returned an error. No archive was written."
+    die "sqlite backup of '$label' failed - stopping rather than writing a backup without it"
+  fi
+}
+
 # ── Files ───────────────────────────────────────────────────────────────────
 
+# A second argument names a subdirectory to leave out. Used for caches: bytes
+# that can be fetched again do not belong in an archive that has to be small
+# enough to keep several of.
 add() {
-  local label="$1" path="$2"
+  local label="$1" path="$2" skip="${3:-}"
   [[ -e "$path" ]] || { info "$label: nothing at $path"; return 0; }
   local dest="$WORK/files/${label}"
   mkdir -p "$(dirname "$dest")"
-  cp -a "$path" "$dest"
+  if [[ -n "$skip" && -d "$path" ]]; then
+    mkdir -p "$dest"
+    tar -C "$path" --exclude="$skip" -cf - . | tar -C "$dest" -xf -
+  else
+    cp -a "$path" "$dest"
+  fi
   ok "$label  $(du -sh "$dest" | cut -f1)"
 }
+
+# The databases, snapshotted rather than copied.
+sqlite_dump "skincraft"  /opt/skincraft/data/skincraft.db
+sqlite_dump "minebox"    /opt/minebox/data/minebox.db
+sqlite_dump "fortnite"   /opt/fortnite/data/fortnite.db
 
 # Secrets first: these are unrecoverable, and were lost once already.
 for svc in brawl-vps platform-api skincraft minebox fortnite; do
@@ -224,17 +266,20 @@ done
 add "brawl/wallpapers"   /opt/brawl-vps/wallpapers
 add "brawl/data"         /opt/brawl-vps/data
 add "skincraft/storage"  /opt/skincraft/storage
-add "skincraft/data"     /opt/skincraft/data
 # MineBox keeps the uploaded .mcaddon/.mcworld files under storage/files and the rendered
 # previews under storage/previews. The files are the only copy there is — nothing regenerates
 # an addon somebody uploaded — while previews can be rebuilt with `npm run regenerate-previews`.
 add "minebox/storage"    /opt/minebox/storage
-add "minebox/data"       /opt/minebox/data
 add "nginx"              /etc/nginx/sites-available
 add "systemd"            /etc/systemd/system/brawl-api.service
 add "systemd-platform"   /etc/systemd/system/platform-api.service
 add "systemd-skincraft"  /etc/systemd/system/skincraft.service
-add "fortnite/data"      /opt/fortnite/data
+# Everything under data/ except the image cache, which is thirty megabytes of
+# pictures this service will re-fetch from their CDNs on demand.
+add "fortnite/data"      /opt/fortnite/data          media
+# The uploads. These have no other copy anywhere, and a deploy misconfiguration
+# already destroyed them once.
+add "fortnite/wallpapers" /opt/fortnite/wallpapers
 add "systemd-minebox"    /etc/systemd/system/minebox.service
 add "systemd-fortnite"   /etc/systemd/system/fortnite.service
 
