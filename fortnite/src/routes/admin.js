@@ -298,23 +298,45 @@ adminRouter.get('/wallpapers', async (req, res) => {
 });
 
 adminRouter.post('/wallpapers', uploadWallpaper, handleUploadErrors, csrfProtect, async (req, res) => {
-  if (!req.file) {
-    req.flash('danger', 'Choose an image to upload.');
+  const files = req.files ?? [];
+  if (!files.length) {
+    req.flash('danger', 'Choose at least one image to upload.');
     return res.redirect('/admin/wallpapers');
   }
 
-  const result = await storeWallpaper({
-    buffer: req.file.buffer,
-    filename: req.file.originalname,
-    category: String(req.body?.category ?? '').trim(),
-  });
+  const category = String(req.body?.category ?? '').trim();
 
-  if (!result.ok) {
-    req.flash('danger', result.reason);
-  } else {
-    forgetGallery();
-    req.flash('success', `Uploaded ${result.id}.`);
+  // One at a time, and one file's failure does not sink the rest.
+  //
+  // A batch that rolls back because the ninth image was a renamed PDF loses
+  // eight good uploads and tells you nothing about which one was wrong. Each
+  // is stored on its own and the failures are named.
+  const stored = [];
+  const failed = [];
+
+  for (const file of files) {
+    const result = await storeWallpaper({
+      buffer: file.buffer,
+      filename: file.originalname,
+      category,
+    });
+    if (result.ok) stored.push(result.id);
+    else failed.push(`${file.originalname}: ${result.reason}`);
   }
+
+  if (stored.length) forgetGallery();
+
+  // One message, not two. A flash holds a single entry, so flashing a success
+  // and then a failure silently threw the success away — a batch where two of
+  // three landed reported only the one that did not.
+  const saved = stored.length === 1 ? `Uploaded ${stored[0]}.`
+                                    : `Uploaded ${stored.length} wallpapers.`;
+  const rejected = `${failed.length} could not be saved — ${failed.join('; ')}`;
+
+  if (failed.length && stored.length) req.flash('warning', `${saved} ${rejected}`);
+  else if (failed.length) req.flash('danger', rejected);
+  else req.flash('success', saved);
+
   res.redirect('/admin/wallpapers');
 });
 

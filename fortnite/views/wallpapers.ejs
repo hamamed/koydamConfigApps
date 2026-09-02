@@ -21,10 +21,13 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
             <div class="col-md-5">
-              <label class="form-label small fw-semibold" for="file">Image</label>
+              <label class="form-label small fw-semibold" for="file">Images</label>
               <input class="form-control" type="file" id="file" name="file"
-                     accept=".png,.jpg,.jpeg,.webp" required>
-              <div class="form-text">PNG, JPEG or WebP, up to 12 MB.</div>
+                     accept=".png,.jpg,.jpeg,.webp" multiple required>
+              <div class="form-text">
+                PNG, JPEG or WebP, up to 12 MB each. Pick several at once — up to 20 per
+                batch, all filed under the same category.
+              </div>
             </div>
 
             <div class="col-md-4">
