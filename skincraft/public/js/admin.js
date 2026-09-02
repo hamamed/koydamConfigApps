@@ -501,12 +501,20 @@
       planSend.setAttribute('disabled', 'disabled');
       iconsReady();
 
-      const body = new URLSearchParams({
-        description: instruction || description,
-        category: field('category').value,
-        style: currentStyle(),
-        history: JSON.stringify(history),
-      });
+      // FormData rather than URLSearchParams, because a reference picture is
+      // a file. Sent multipart whether or not one was chosen, so there is one
+      // request shape to reason about instead of two.
+      const body = new FormData();
+      body.append('description', field('description').value.trim());
+      body.append('category', field('category').value);
+      body.append('quality', field('quality').value);
+      body.append('style', currentStyle());
+      body.append('title', field('title').value);
+      body.append('directions', JSON.stringify(directions));
+      body.append('plan', planText.textContent || '');
+
+      const referenceFile = field('reference')?.files?.[0];
+      if (referenceFile) body.append('reference', referenceFile);
 
       let full = '';
       try {

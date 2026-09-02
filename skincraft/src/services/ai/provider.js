@@ -227,3 +227,100 @@ export async function generateImage(prompt, { size = '1024x1024' } = {}) {
     clearTimeout(timer);
   }
 }
+
+/**
+ * Draws from a reference picture rather than from words alone.
+ *
+ * A different endpoint from `generateImage`: `/images/edits` takes multipart
+ * with the picture attached, where `/images/generations` is JSON and text-only.
+ * Same model and key, so a working setup needs nothing extra switched on.
+ *
+ * The prompt still matters — it says what to do with the reference. Without one
+ * the provider guesses, and what it guesses is rarely a garment template.
+ */
+export async function generateImageFromReference(prompt, reference, { size = '1024x1024' } = {}) {
+  if (!isConfigured()) {
+    throw new Error(
+      'Image generation is not configured. Set AI_IMAGE_API_KEY to switch it on.',
+    );
+  }
+  if (!Buffer.isBuffer(reference) || reference.length === 0) {
+    throw new Error('No reference image was given.');
+  }
+
+  if (refusedSizes.has(size)) size = '1024x1024';
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const form = new FormData();
+    form.append('model', config.ai.model);
+    form.append('prompt', prompt);
+    form.append('n', '1');
+    form.append('size', size);
+    // PNG regardless of what came in: storeTemplate re-encodes uploads with
+    // sharp before they reach here, so the bytes are a PNG whatever the person
+    // originally picked.
+    form.append('image', new Blob([reference], { type: 'image/png' }), 'reference.png');
+
+    const res = await fetch(`${config.ai.baseUrl}/images/edits`, {
+      method: 'POST',
+      signal: controller.signal,
+      // No Content-Type header: fetch sets it, with the multipart boundary that
+      // a hand-written one would omit.
+      headers: { Authorization: `Bearer ${config.ai.apiKey}` },
+      body: form,
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+
+      if (res.status === 400 && /size|dimension/i.test(detail) && size !== '1024x1024') {
+        refusedSizes.add(size);
+        clearTimeout(timer);
+        return generateImageFromReference(prompt, reference, { size: '1024x1024' });
+      }
+
+      // Worth its own message: a reference of a real person or a recognisable
+      // character is the common way this endpoint refuses, and "try describing
+      // it differently" is unhelpful when the problem is the picture.
+      if (res.status === 400 && /safety|policy|content|moderation/i.test(detail)) {
+        throw new Error(
+          'The image provider refused this reference on content grounds. Try a different picture.',
+        );
+      }
+
+      if (res.status === 404) {
+        throw new Error(
+          'This provider has no /images/edits endpoint, so it cannot draw from a reference.',
+        );
+      }
+
+      if (res.status === 429) {
+        throw new Error('The image provider is rate limiting. Wait a moment and try again.');
+      }
+
+      throw new Error(`Image provider returned ${res.status}. ${detail.slice(0, 200)}`);
+    }
+
+    const body = await res.json();
+    const first = body?.data?.[0];
+
+    if (first?.b64_json) return Buffer.from(first.b64_json, 'base64');
+    if (first?.url) {
+      const img = await fetch(first.url, { signal: controller.signal });
+      if (!img.ok) throw new Error(`Could not download the generated image (${img.status}).`);
+      return Buffer.from(await img.arrayBuffer());
+    }
+
+    throw new Error('The image provider returned no image.');
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('The image provider took too long. Try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}

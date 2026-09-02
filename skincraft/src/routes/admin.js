@@ -3,7 +3,7 @@ import path from 'node:path';
 import rateLimit from 'express-rate-limit';
 import { config } from '../config.js';
 import { requireAuth, verifyCredentials, csrfToken, csrfProtect } from '../middleware/auth.js';
-import { uploadSkinFiles, handleUploadErrors } from '../middleware/upload.js';
+import { handleUploadErrors, uploadReference, uploadSkinFiles } from '../middleware/upload.js';
 import {
   listSkins, getSkin, toAdminShape, createSkin, updateSkin,
   toggleFeatured, togglePublished, deleteSkin, allTags, logAudit,
@@ -613,7 +613,7 @@ adminRouter.get('/skins/ai', (req, res) => {
  * anyone - and the draft is the shape that makes that the default rather than
  * a step someone has to remember.
  */
-adminRouter.post('/skins/ai', async (req, res, next) => {
+adminRouter.post('/skins/ai', uploadReference, handleUploadErrors, async (req, res, next) => {
   const description = String(req.body?.description ?? '').trim();
   const category = String(req.body?.category ?? 'shirt');
   const quality = String(req.body?.quality ?? 'standard');
@@ -628,7 +628,11 @@ adminRouter.post('/skins/ai', async (req, res, next) => {
   }
 
   try {
-    const result = await designSkin({ description, category, quality, style: readStyle(req) });
+    const result = await designSkin({
+      // Bytes straight through to the provider; nothing is written to storage.
+      reference: req.file?.buffer ?? null,
+      description, category, quality, style: readStyle(req),
+    });
 
     const id = generateSkinId();
     const base = `${slugify(title, id)}-${id.slice(5)}`;
@@ -870,7 +874,7 @@ adminRouter.post('/skins/ai/plan', async (req, res) => {
  * is what was read and agreed to — re-planning here would mean the words on
  * screen described a design nobody generated.
  */
-adminRouter.post('/skins/ai/generate', async (req, res) => {
+adminRouter.post('/skins/ai/generate', uploadReference, handleUploadErrors, async (req, res) => {
   const description = String(req.body?.description ?? '').trim();
   const category = CATEGORIES.includes(String(req.body?.category))
     ? String(req.body.category)
@@ -901,6 +905,8 @@ adminRouter.post('/skins/ai/generate', async (req, res) => {
 
   try {
     const result = await designSkin({
+      // Bytes straight through to the provider; nothing is written to storage.
+      reference: req.file?.buffer ?? null,
       description,
       category,
       quality,

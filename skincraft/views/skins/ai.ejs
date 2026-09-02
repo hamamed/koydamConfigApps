@@ -35,7 +35,7 @@
         <div class="ad-card ad-card-pad">
           <h2 class="h6 mb-3">Describe the design</h2>
 
-          <form method="post" action="/admin/skins/ai" data-ai-form
+          <form method="post" action="/admin/skins/ai" enctype="multipart/form-data" data-ai-form
                 data-ai-costs='<%- JSON.stringify(costs) %>'>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
@@ -87,6 +87,16 @@
                 </span>
               </label>
             </fieldset>
+
+            <div class="mb-3">
+              <label class="form-label" for="reference">Reference picture <span class="text-body-secondary">(optional)</span></label>
+              <input class="form-control" type="file" id="reference" name="reference"
+                     accept=".png,.jpg,.jpeg,.webp">
+              <div class="form-text">
+                Draws from this picture instead of from the description alone. The description still
+                says what to do with it. The file is sent to the image provider and is not stored here.
+              </div>
+            </div>
 
             <div class="mb-3">
               <label class="form-label" for="description" data-ai-description-label>What should it look like?</label>

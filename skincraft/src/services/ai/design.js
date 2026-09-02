@@ -11,7 +11,9 @@ import {
   regionsFor,
   sizeForRegion,
 } from './guidelines.js';
-import { generateImage, isConfigured, isTextConfigured, streamPlan } from './provider.js';
+import {
+  generateImage, generateImageFromReference, isConfigured, isTextConfigured, streamPlan,
+} from './provider.js';
 
 /**
  * Designing a skin from a description.
@@ -176,6 +178,10 @@ export async function designSkin({
   /** Called before and after each image, so a caller can say which of the
    *  three minutes it is currently in. */
   onProgress = null,
+  /** A picture to draw from. Every piece is drawn against the same one, so a
+   *  garment's panels come out of a single reference rather than drifting
+   *  apart across six independent readings of it. */
+  reference = null,
 } = {}) {
   const gate = checkPrompt(description);
   if (!gate.ok) {
@@ -215,9 +221,10 @@ export async function designSkin({
     // Garment panels are drawn at the proportion they will occupy. A sleeve is
     // half as wide as it is tall, and asking for a square meant a quarter of
     // every sleeve was drawn and then cropped off.
-    const drawn = await generateImage(prompts[piece], {
-      size: garment ? sizeForRegion(piece) : '1024x1024',
-    });
+    const size = garment ? sizeForRegion(piece) : '1024x1024';
+    const drawn = reference
+      ? await generateImageFromReference(prompts[piece], reference, { size })
+      : await generateImage(prompts[piece], { size });
 
     // Once per panel, not once per face: the same sleeve is composed onto six
     // of them, and a border removed six times is five wasted decodes.

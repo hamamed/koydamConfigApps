@@ -43,3 +43,23 @@ export function handleUploadErrors(error, req, res, next) {
   }
   return next(error);
 }
+
+/**
+ * The single reference picture the AI designer draws from.
+ *
+ * Its own middleware rather than a third field on `uploadSkinFiles`: that one
+ * runs on the save routes where a stray file would be written to storage, and
+ * this one runs on a route that only forwards bytes to a provider.
+ */
+export const uploadReference = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.maxUploadBytes, files: 1, fields: 20 },
+  fileFilter(req, file, callback) {
+    if (!ALLOWED_MIME.has(file.mimetype)) {
+      return callback(
+        Object.assign(new Error('The reference must be a PNG, JPEG or WebP image.'), { status: 400 })
+      );
+    }
+    return callback(null, true);
+  },
+}).single('reference');
