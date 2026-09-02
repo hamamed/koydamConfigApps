@@ -85,6 +85,73 @@ export function startSyncLoop() {
     // Nothing should be kept alive by a refresh timer.
     timer.unref?.();
   }
+
+  scheduleNightlyRefresh(feeds);
+}
+
+/**
+ * One pass over every feed at 01:00 in Paris, whatever the interval timers did.
+ *
+ * The per-feed timers keep things current through the day but they drift: a
+ * service restarted at 09:14 pulls the shop at 09:24, 09:34 and so on for as
+ * long as it runs, so the hour any feed refreshes depends on when the box last
+ * rebooted. A fixed nightly pass gives one moment each day when everything is
+ * known to be current — after Fortnite's own daily rotation, and before the
+ * backup at 02:30 takes its archive.
+ *
+ * A feed refreshed within the last few hours is skipped. The point is to
+ * guarantee freshness, not to spend an upstream request re-proving that
+ * something fetched twenty minutes ago is still what it was.
+ */
+function scheduleNightlyRefresh(feeds) {
+  const run = async () => {
+    for (const feed of feeds) {
+      if (!isStale(feed.name, config.refresh.nightlyStaleMinutes)) {
+        console.log(`nightly ${feed.name}: already fresh, skipped`);
+        continue;
+      }
+      try {
+        console.log(`nightly ${feed.name}: ${await feed.run()}`);
+      } catch (err) {
+        console.warn(`nightly ${feed.name} failed: ${err.message}`);
+      }
+    }
+    // Re-armed from the end of the run rather than on a fixed interval, so a
+    // pass that takes twenty minutes does not walk the schedule earlier each
+    // night until it drifts out of the small hours entirely.
+    schedule();
+  };
+
+  const schedule = () => {
+    const wait = millisecondsUntilNightly();
+    const timer = setTimeout(run, wait);
+    timer.unref?.();
+    console.log(`nightly refresh in ${Math.round(wait / 60_000)} minutes`);
+  };
+
+  schedule();
+}
+
+/**
+ * How long until the next 01:00 Europe/Paris.
+ *
+ * Computed against the named zone rather than a fixed UTC hour so it stays at
+ * 01:00 for a reader in Paris across the daylight-saving change, when the
+ * offset moves from +1 to +2. Hardcoding `00:00 UTC` would quietly become
+ * midnight for half the year.
+ */
+function millisecondsUntilNightly() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: config.refresh.nightlyZone, hour12: false,
+    hour: 'numeric', minute: 'numeric', second: 'numeric',
+  }).formatToParts(new Date());
+  const get = (type) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+
+  const secondsNow = (get('hour') % 24) * 3600 + get('minute') * 60 + get('second');
+  const ahead = config.refresh.nightlyHour * 3600 - secondsNow;
+
+  // Past today's hour already, so aim at tomorrow's.
+  return (ahead > 0 ? ahead : ahead + 86_400) * 1000;
 }
 
 function isStale(feed, minutes) {

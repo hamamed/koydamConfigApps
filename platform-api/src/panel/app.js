@@ -1619,6 +1619,102 @@ function versionsCard(detail) {
   return c.card;
 }
 
+/**
+ * Every archive on disk: how big, how old, and what the newest one holds.
+ *
+ * The dashboard badge answers "is there a recent backup". This answers the
+ * question you ask on the day you actually need one — which archive to restore
+ * from, and whether the thing you lost is inside it.
+ */
+async function viewBackups() {
+  const inv = await api('/api/backups/inventory');
+  const root = el('div');
+
+  if (!inv.configured) {
+    const c = card('Backups', 'database');
+    c.body.append(el('p', 'kd-muted', `Nothing has ever run. Expected archives in ${inv.dir}.`));
+    root.append(c.card);
+    return root;
+  }
+
+  const newest = inv.archives[0] ?? null;
+  const stale = !newest || newest.ageHours > inv.staleAfterHours;
+
+  // Age first: it is the number that matters, and the one that goes wrong
+  // silently.
+  const head = card('Backups', 'database');
+  head.body.append(
+    el('div', 'd-flex flex-wrap gap-4', [
+      backupStat('Archives', String(inv.archives.length)),
+      backupStat('Newest', newest ? relativeAge(newest.ageHours) : 'never',
+                 stale ? 'text-danger' : 'text-success'),
+      backupStat('Newest size', newest ? bytesLabel(newest.sizeBytes) : '—'),
+      backupStat('All archives', bytesLabel(inv.totalBytes)),
+      inv.disk ? backupStat('Disk free', bytesLabel(inv.disk.freeBytes)) : null,
+    ].filter(Boolean)),
+  );
+  if (stale) {
+    head.body.append(el('p', 'text-danger small mb-0 mt-3',
+      `Nothing newer than ${inv.staleAfterHours} hours. A backup that stopped running looks exactly like one that is working.`));
+  }
+  root.append(head.card);
+
+  const list = card('What is on disk', 'history');
+  list.body.classList.add('p-0');
+  list.body.append(table(
+    ['Archive', 'Taken', 'Age', 'Size'],
+    inv.archives.map((a) => [
+      { text: a.name, className: 'font-monospace small' },
+      { text: a.at.slice(0, 16).replace('T', ' '), className: 'kd-muted small' },
+      { text: relativeAge(a.ageHours),
+        className: a.ageHours > inv.staleAfterHours ? 'small text-warning' : 'small' },
+      { text: bytesLabel(a.sizeBytes) },
+    ]),
+  ));
+  root.append(list.card);
+
+  if (inv.contents) {
+    const what = card('Inside the newest archive', 'layout-grid');
+    what.body.classList.add('p-0');
+    what.body.append(table(
+      ['Contents', 'Files'],
+      inv.contents.groups.map((g) => [
+        { text: g.name, className: 'font-monospace small' },
+        { text: g.files.toLocaleString() },
+      ]),
+    ));
+    what.body.append(el('p', 'kd-faint small p-3 mb-0',
+      `${inv.contents.fileCount.toLocaleString()} files in total. Databases are dumped rather than copied, so they restore consistently.`));
+    root.append(what.card);
+  }
+
+  return root;
+}
+
+/** A labelled number for the summary row. */
+function backupStat(label, value, tone) {
+  return el('div', null, [
+    el('div', `fs-5 fw-semibold ${tone ?? ''}`, value),
+    el('div', 'kd-faint small', label),
+  ]);
+}
+
+function bytesLabel(n) {
+  if (n == null) return '—';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let v = n;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i += 1; }
+  return `${v.toFixed(v < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+function relativeAge(hours) {
+  if (hours == null) return '—';
+  if (hours < 1) return `${Math.round(hours * 60)} min ago`;
+  if (hours < 48) return `${Math.round(hours)} h ago`;
+  return `${Math.round(hours / 24)} days ago`;
+}
+
 async function viewServices() {
   const { services } = await api('/api/services');
   const c = card('Services', 'server');
@@ -2544,6 +2640,7 @@ async function viewResources() {
 
 const TITLES = {
   home: 'Dashboard',
+  backups: 'Backups',
   services: 'Services',
   audit: 'Audit log',
   users: 'Team',
@@ -2600,6 +2697,9 @@ async function route() {
     } else if (hash === '/account') {
       $('pageTitle').textContent = TITLES.account;
       view.replaceChildren(await viewAccount());
+    } else if (hash === '/backups') {
+      $('pageTitle').textContent = TITLES.backups;
+      view.replaceChildren(await viewBackups());
     } else if (hash === '/services') {
       $('pageTitle').textContent = TITLES.services;
       view.replaceChildren(await viewServices());

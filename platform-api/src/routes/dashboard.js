@@ -26,7 +26,7 @@ import {
 } from '../settings.js';
 import { CATALOGUE, findSetting, serviceNames } from '../settings-catalogue.js';
 import { log } from '../log.js';
-import { backupStatus } from '../backups.js';
+import { backupInventory, backupStatus } from '../backups.js';
 import { notify } from '../alerts.js';
 import { query } from '../db/pool.js';
 import {
@@ -686,6 +686,17 @@ dashboardRouter.post('/api/me/password', async (req, res) => {
 
 dashboardRouter.get('/api/backups', requireAdminRole, async (_req, res) => {
   res.json(await backupStatus());
+});
+
+/**
+ * The full archive list, for the Backups page.
+ *
+ * Separate from `/api/backups`, which the dashboard badge polls: this one
+ * decompresses the newest archive to say what is in it, and that is not
+ * something to do on every dashboard load.
+ */
+dashboardRouter.get('/api/backups/inventory', requireAdminRole, async (_req, res) => {
+  res.json(await backupInventory());
 });
 
 // ── Announcements ───────────────────────────────────────────────────────────

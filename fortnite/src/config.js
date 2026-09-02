@@ -49,6 +49,13 @@ export const config = {
     metricsExploreShare: Number(process.env.METRICS_EXPLORE_SHARE ?? 0.7),
     /** How many metric requests are in flight at once. */
     metricsConcurrency: num(process.env.METRICS_CONCURRENCY, 6),
+    /** The hour, in `nightlyZone`, when every feed is refreshed. */
+    nightlyHour: num(process.env.NIGHTLY_REFRESH_HOUR, 1),
+    /** Named rather than an offset, so it survives daylight saving. */
+    nightlyZone: process.env.NIGHTLY_REFRESH_ZONE || 'Europe/Paris',
+    /** A feed refreshed more recently than this is left alone at night. */
+    nightlyStaleMinutes: num(process.env.NIGHTLY_STALE_MINUTES, 180),
+
     /** How long island history is kept. Six months plus a few days of slack. */
     retentionDays: num(process.env.METRICS_RETENTION_DAYS, 185),
   },
