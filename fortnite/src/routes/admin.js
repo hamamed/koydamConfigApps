@@ -16,9 +16,7 @@ import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
 import { adoptPastedIslands, backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
 import { clearSetting, maskedSetting, setSetting, settingUpdatedAt } from '../settings.js';
 import { STATS_KEY, playerStats, statsSummary } from '../stats.js';
-import {
-  blockClient, deletePhoto, moderationSummary, photoFile, reviewPhoto, unblockClient,
-} from '../reactions.js';
+import { blockClient, moderationSummary, unblockClient } from '../reactions.js';
 import { parseWeapons } from '../weapons-import.js';
 import { parseMaps } from '../maps-import.js';
 
@@ -539,85 +537,49 @@ adminRouter.post('/maps/import/confirm', async (req, res) => {
   res.redirect('/admin/c/creative-maps');
 });
 
-// ── Reaction moderation ─────────────────────────────────────────────────────
-//
-// Nothing a user uploads is visible in the app until it is approved here.
+// ── Reactions ───────────────────────────────────────────────────────────────
 
 adminRouter.get('/reactions', (req, res) => {
-  const status = ['pending', 'approved', 'rejected'].includes(req.query.status)
-    ? req.query.status
-    : 'pending';
-
-  const photos = db
+  const rows = db
     .prepare(
-      `SELECT p.*, (SELECT COUNT(*) FROM reaction_reports r
-                     WHERE r.photo_id = p.id AND r.status = 'open') AS reports,
-              (SELECT 1 FROM blocked_clients b WHERE b.client_key = p.client_key) AS blocked
-         FROM reaction_photos p
-        WHERE p.status = ?
-        ORDER BY reports DESC, p.created_at DESC
-        LIMIT 120`,
-    )
-    .all(status);
-
-  const topReacted = db
-    .prepare(
-      `SELECT r.item_id, COUNT(*) AS total,
-              COALESCE(c.name, r.item_id) AS name
+      `SELECT r.item_id,
+              COUNT(*) AS total,
+              COALESCE(c.name, r.item_id) AS name,
+              c.rarity,
+              MAX(r.updated_at) AS latest
          FROM reactions r
          LEFT JOIN cosmetics c ON c.id = r.item_id
         GROUP BY r.item_id
-        ORDER BY total DESC
-        LIMIT 15`,
+        ORDER BY total DESC, latest DESC
+        LIMIT 100`,
     )
+    .all();
+
+  const byKind = db
+    .prepare('SELECT kind, COUNT(*) AS n FROM reactions GROUP BY kind ORDER BY n DESC')
     .all();
 
   res.render('reactions', {
     title: 'Reactions',
-    status,
-    photos,
-    topReacted,
+    rows,
+    byKind,
     summary: moderationSummary(),
   });
 });
 
-/** Serves any photo, at any status — the panel is the place that reviews them. */
-adminRouter.get('/reactions/photo/:id', (req, res) => {
-  const found = photoFile(String(req.params.id));
-  if (!found) return res.status(404).end();
-  res.type(found.row.content_type);
-  res.set('Cache-Control', 'private, no-store');
-  return res.sendFile(found.file);
-});
-
-adminRouter.post('/reactions/review', (req, res) => {
-  const id = String(req.body?.id ?? '');
+adminRouter.post('/reactions/block', (req, res) => {
+  const key = String(req.body?.key ?? '').trim();
   const action = String(req.body?.action ?? '');
-
-  if (action === 'approve' || action === 'reject') {
-    reviewPhoto(id, action === 'approve' ? 'approved' : 'rejected', req.user?.id);
-    db.prepare("UPDATE reaction_reports SET status = 'resolved' WHERE photo_id = ?").run(id);
-    req.flash('success', action === 'approve' ? 'Approved — it is live in the app.' : 'Rejected.');
-  } else if (action === 'delete') {
-    deletePhoto(id);
-    req.flash('success', 'Deleted, file and all.');
-  } else if (action === 'block') {
-    const row = db.prepare('SELECT client_key FROM reaction_photos WHERE id = ?').get(id);
-    if (row) {
-      blockClient(row.client_key, `blocked over photo ${id}`);
-      // Blocking without clearing what they already sent leaves the reason for
-      // the block sitting in the queue.
-      reviewPhoto(id, 'rejected', req.user?.id);
-      req.flash('success', 'Device blocked and the photo rejected.');
-    }
+  if (!key) {
+    req.flash('danger', 'No device given.');
   } else if (action === 'unblock') {
-    unblockClient(String(req.body?.key ?? ''));
+    unblockClient(key);
     req.flash('success', 'Device unblocked.');
   } else {
-    req.flash('danger', 'Unknown action.');
+    blockClient(key, 'blocked from the panel');
+    req.flash('success', 'Device blocked — it can no longer react.');
   }
-
-  return res.redirect(`/admin/reactions?status=${encodeURIComponent(req.body?.status ?? 'pending')}`);
+  return res.redirect('/admin/reactions');
 });
 
 // ── Player stats ────────────────────────────────────────────────────────────

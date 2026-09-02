@@ -4,90 +4,27 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'Reactions',
-          subheading: Number(summary.reactions).toLocaleString() + ' reactions · '
-            + summary.pending + ' photos waiting · ' + summary.reports + ' reported'
+          subheading: Number(summary.reactions).toLocaleString() + ' reactions from '
+            + Number(summary.devices).toLocaleString() + ' devices across '
+            + Number(summary.items).toLocaleString() + ' items'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
-      <div class="ad-card mb-3">
-        <div class="ad-card-body">
-          <p class="kd-faint small mb-3">
-            Photos people attach to a reaction are held here and shown to nobody until you
-            approve one. That is the safe default — an app that publishes a stranger's upload the
-            moment it arrives has published whatever they chose to send, and Apple requires a
-            review path for any app carrying what its users upload.
-          </p>
-          <div class="d-flex flex-wrap gap-2">
-            <% ['pending','approved','rejected'].forEach((s) => { %>
-              <a class="btn btn-sm <%= status === s ? 'btn-kd' : 'btn-kd-outline' %>"
-                 href="/admin/reactions?status=<%= s %>">
-                <%= s[0].toUpperCase() + s.slice(1) %>
-                <span class="ms-1 opacity-75"><%= summary[s] %></span>
-              </a>
-            <% }) %>
-            <% if (summary.blocked) { %>
-              <span class="btn btn-sm btn-kd-ghost disabled"><%= summary.blocked %> device<%= summary.blocked === 1 ? '' : 's' %> blocked</span>
-            <% } %>
-          </div>
-        </div>
-      </div>
-
-      <% if (!photos.length) { %>
-        <div class="ad-card mb-3"><div class="ad-card-body kd-faint text-center py-5">
-          Nothing <%= status %>.
-        </div></div>
-      <% } else { %>
-        <div class="row g-3 mb-3">
-          <% photos.forEach((p) => { %>
-            <div class="col-md-6 col-xl-4">
-              <div class="ad-card h-100">
-                <img src="/admin/reactions/photo/<%= p.id %>" alt=""
-                     class="w-100" loading="lazy"
-                     style="aspect-ratio:1/1;object-fit:contain;background:#000;border-radius:12px 12px 0 0">
-                <div class="ad-card-body">
-                  <% if (p.reports) { %>
-                    <div class="alert alert-danger py-2 px-3 small mb-2">
-                      Reported <%= p.reports %> time<%= p.reports === 1 ? '' : 's' %>
-                    </div>
-                  <% } %>
-                  <% if (p.caption) { %>
-                    <p class="mb-2"><%= p.caption %></p>
-                  <% } else { %>
-                    <p class="kd-faint small mb-2">No caption.</p>
-                  <% } %>
-                  <p class="kd-faint small font-monospace mb-3">
-                    item <%= p.item_id %><br>
-                    device <%= p.client_key.slice(0, 12) %>…
-                    <%= p.blocked ? ' · BLOCKED' : '' %><br>
-                    <%= (p.created_at || '').slice(0, 16).replace('T', ' ') %>
-                    · <%= Math.round(p.bytes / 1024) %> KB
-                  </p>
-
-                  <form method="post" action="/admin/reactions/review" class="d-flex flex-wrap gap-2">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="id" value="<%= p.id %>">
-                    <input type="hidden" name="status" value="<%= status %>">
-                    <% if (status !== 'approved') { %>
-                      <button class="btn btn-sm btn-kd" name="action" value="approve">Approve</button>
-                    <% } %>
-                    <% if (status !== 'rejected') { %>
-                      <button class="btn btn-sm btn-kd-outline" name="action" value="reject">Reject</button>
-                    <% } %>
-                    <button class="btn btn-sm btn-kd-ghost" name="action" value="delete">Delete</button>
-                    <% if (!p.blocked) { %>
-                      <button class="btn btn-sm btn-kd-ghost text-danger ms-auto"
-                              name="action" value="block">Block device</button>
-                    <% } else { %>
-                      <button class="btn btn-sm btn-kd-ghost ms-auto" name="action" value="unblock"
-                              formaction="/admin/reactions/review">Unblock</button>
-                      <input type="hidden" name="key" value="<%= p.client_key %>">
-                    <% } %>
-                  </form>
+      <% if (byKind.length) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-body">
+            <div class="d-flex flex-wrap gap-4">
+              <% const emoji = { fire: '🔥', love: '😍', cool: '😎', meh: '😐', trash: '🗑️' }; %>
+              <% byKind.forEach((k) => { %>
+                <div class="text-center">
+                  <div style="font-size:26px"><%= emoji[k.kind] || '•' %></div>
+                  <div class="fw-semibold fs-5"><%= Number(k.n).toLocaleString() %></div>
+                  <div class="kd-faint small text-capitalize"><%= k.kind %></div>
                 </div>
-              </div>
+              <% }) %>
             </div>
-          <% }) %>
+          </div>
         </div>
       <% } %>
 
@@ -95,23 +32,32 @@
         <div class="ad-card-body p-0">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Most reacted to</th><th class="text-end">Reactions</th></tr></thead>
+              <thead><tr><th>Item</th><th class="text-end">Reactions</th><th>Last one</th></tr></thead>
               <tbody>
-                <% topReacted.forEach((r) => { %>
+                <% rows.forEach((r) => { %>
                   <tr>
                     <td><%= r.name %>
                       <div class="kd-faint small font-monospace"><%= r.item_id %></div></td>
                     <td class="text-end"><%= Number(r.total).toLocaleString() %></td>
+                    <td class="kd-faint small"><%= (r.latest || '').slice(0, 16).replace('T', ' ') %></td>
                   </tr>
                 <% }) %>
-                <% if (!topReacted.length) { %>
-                  <tr><td colspan="2" class="kd-faint text-center py-4">No reactions yet.</td></tr>
+                <% if (!rows.length) { %>
+                  <tr><td colspan="3" class="kd-faint text-center py-5">
+                    No reactions yet. They appear here as people tap them in the app.
+                  </td></tr>
                 <% } %>
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      <% if (summary.blocked) { %>
+        <p class="kd-faint small mt-3">
+          <%= summary.blocked %> device<%= summary.blocked === 1 ? '' : 's' %> blocked from reacting.
+        </p>
+      <% } %>
     </div>
   </main>
 </div>

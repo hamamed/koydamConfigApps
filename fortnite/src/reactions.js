@@ -209,11 +209,9 @@ export function reportPhoto(photoId, key, reason) {
 /** The moderation queue, and what the panel shows beside it. */
 export function moderationSummary() {
   return {
-    pending: sql("SELECT COUNT(*) AS n FROM reaction_photos WHERE status = 'pending'").get().n,
-    approved: sql("SELECT COUNT(*) AS n FROM reaction_photos WHERE status = 'approved'").get().n,
-    rejected: sql("SELECT COUNT(*) AS n FROM reaction_photos WHERE status = 'rejected'").get().n,
-    reports: sql("SELECT COUNT(*) AS n FROM reaction_reports WHERE status = 'open'").get().n,
     reactions: sql('SELECT COUNT(*) AS n FROM reactions').get().n,
+    items: sql('SELECT COUNT(DISTINCT item_id) AS n FROM reactions').get().n,
+    devices: sql('SELECT COUNT(DISTINCT client_key) AS n FROM reactions').get().n,
     blocked: sql('SELECT COUNT(*) AS n FROM blocked_clients').get().n,
   };
 }
