@@ -368,3 +368,28 @@ test('an incremental crawl asks the portal for what is new, not for page one', a
   assert.equal(since, expected.toISOString().slice(0, 10))
   assert.ok(query.get('search_consultation_entreprise[pageSize]'), 'and always a page size')
 })
+
+test('every status the app can produce has a label in every language', async () => {
+  // The awards table rendered "status.attribue" as literal text: the award
+  // vocabulary (attribue, infructueux, annule, publie) is not the consultation
+  // lifecycle vocabulary (open, closed, awarded, annule), and only the second
+  // had been translated.
+  const AWARD_STATUSES = ['attribue', 'infructueux', 'annule', 'publie']
+  const CONSULTATION_STATUSES = ['open', 'closed', 'awarded', 'annule']
+
+  for (const locale of ['fr', 'en', 'ar']) {
+    const { default: strings } = await import(`../src/i18n/${locale}.js`)
+    for (const status of [...AWARD_STATUSES, ...CONSULTATION_STATUSES]) {
+      const value = strings[`status.${status}`]
+      assert.ok(value, `${locale} has no label for status.${status}`)
+      assert.doesNotMatch(value, /^status\./, `${locale}: status.${status} falls back to the key`)
+    }
+  }
+
+  // And the parser cannot invent a status outside that set.
+  const { normalizeResultStatus } = await import('../src/scraper/parsers/resultParser.js')
+  for (const text of ['Attribué', 'Avis infructueux', 'Annulé', 'quelque chose', '']) {
+    const status = normalizeResultStatus(text)
+    assert.ok(status === null || AWARD_STATUSES.includes(status), `unexpected status ${status}`)
+  }
+})

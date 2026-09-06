@@ -194,4 +194,6 @@ export default {
   'status.awarded': 'Attribuée',
   'status.annule': 'Annulée',
   'status.infructueux': 'Infructueux',
+  'status.attribue': 'Attribué',
+  'status.publie': 'Publié',
 }

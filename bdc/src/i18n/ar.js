@@ -194,4 +194,6 @@ export default {
   'status.awarded': 'تم الإسناد',
   'status.annule': 'ملغى',
   'status.infructueux': 'غير مثمر',
+  'status.attribue': 'تم الإسناد',
+  'status.publie': 'منشور',
 }
