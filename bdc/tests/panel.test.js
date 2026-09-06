@@ -889,6 +889,10 @@ test('the translate buttons are shown disabled, not hidden, when unconfigured', 
   assert.ok(enabled.every((button) => !button.includes('disabled')))
   for (const language of ['Français', 'English', 'العربية']) assert.ok(on.html.includes(language))
 
+  // An enabled button whose handler did not render is indistinguishable from a
+  // broken one: it just does nothing. The script ships with the buttons.
+  assert.match(on.html, new RegExp(`fetch\\('/api/consultations/${on.id}/translate'`))
+
   // Hiding the control entirely reads as a missing feature rather than one
   // waiting on a key, so it stays on the page and says why it cannot run.
   const off = await build(false)
