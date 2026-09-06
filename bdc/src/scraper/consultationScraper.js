@@ -2,6 +2,7 @@ import { config } from '../config/index.js'
 import { buildSearchQuery } from './selectors.js'
 import { parseConsultationList, parseConsultationDetail } from './parsers/consultationParser.js'
 import { mapWithConcurrency } from '../utils/concurrency.js'
+import { nowIso } from '../utils/dates.js'
 import { logger } from '../utils/logger.js'
 
 const log = logger.child('[scraper:consultations]')
@@ -88,10 +89,10 @@ export function createConsultationScraper({ http, consultations, articles }) {
         const { html, url } = await http.getHtml(row.detail_url)
         const detail = parseConsultationDetail(html, url, row.reference)
         if (detail.consultation) {
-          await consultations.upsert({ ...detail.consultation, reference: row.reference }, { fromDetail: true })
+          await consultations.upsert({ ...detail.consultation, source_id: row.source_id }, { fromDetail: true })
         }
         if (detail.articles.length > 0) {
-          const stored = await articles.replaceForConsultation(row.id, row.reference, detail.articles)
+          const stored = await articles.replaceForConsultation(row.id, detail.articles)
           return stored.length
         }
         return 0
@@ -116,13 +117,60 @@ export function createConsultationScraper({ http, consultations, articles }) {
     const { html, url } = await http.getHtml(consultation.detail_url)
     const detail = parseConsultationDetail(html, url, consultation.reference)
     if (detail.consultation) {
-      await consultations.upsert({ ...detail.consultation, reference: consultation.reference }, { fromDetail: true })
+      await consultations.upsert({ ...detail.consultation, source_id: consultation.source_id }, { fromDetail: true })
     }
     const stored = detail.articles.length
-      ? await articles.replaceForConsultation(consultation.id, consultation.reference, detail.articles)
+      ? await articles.replaceForConsultation(consultation.id, detail.articles)
       : []
     return { articles: stored }
   }
 
-  return { scrape, scrapeDetail }
+  /**
+   * Reads the detail page of every consultation that has never had one read.
+   *
+   * A crawl only follows the detail page of rows it just created or changed, so
+   * anything seen before this feature existed — or skipped because a page 404'd
+   * that day — keeps its listing-only half-record: no category, no nature of
+   * service, no articles. This walks the backlog until it is empty.
+   *
+   * @param {{limit?: number, batchSize?: number, onProgress?: Function}} options
+   *   `limit` caps the total pages fetched in one run, so a backfill of tens of
+   *   thousands of rows can be done in sittings instead of one very long crawl.
+   */
+  async function backfillDetails(options = {}) {
+    const { limit = Infinity, batchSize = 100, onProgress = () => {} } = options
+    const stats = { consultationsProcessed: 0, articlesSaved: 0, pagesScraped: 0, errors: [] }
+
+    while (stats.consultationsProcessed < limit) {
+      const remaining = limit - stats.consultationsProcessed
+      const pending = await consultations.listPendingDetails(Math.min(batchSize, remaining))
+      if (pending.length === 0) break
+
+      const outcomes = await mapWithConcurrency(
+        pending,
+        async (row) => (await scrapeDetail(row)).articles.length,
+        config.scraper.detailConcurrency,
+      )
+
+      for (const outcome of outcomes) {
+        stats.consultationsProcessed += 1
+        stats.pagesScraped += 1
+        if (outcome.error) {
+          log.warn('backfill failed', { reference: outcome.item.reference, message: outcome.error.message })
+          stats.errors.push({ reference: outcome.item.reference, message: outcome.error.message })
+          // Stamp it so a permanently broken page cannot stall the queue forever.
+          await consultations.update(outcome.item.id, { detail_scraped_at: nowIso() })
+          continue
+        }
+        stats.articlesSaved += outcome.value
+      }
+
+      onProgress({ processed: stats.consultationsProcessed, remaining: await consultations.countPendingDetails() })
+      log.info('backfill batch', { processed: stats.consultationsProcessed, articles: stats.articlesSaved })
+    }
+
+    return stats
+  }
+
+  return { scrape, scrapeDetail, backfillDetails }
 }

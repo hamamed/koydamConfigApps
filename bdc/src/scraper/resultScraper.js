@@ -80,10 +80,10 @@ export function createResultScraper({ http, results }) {
         const { html, url } = await http.getHtml(row.detail_url)
         const detail = parseResultDetail(html, url, row.reference)
         if (detail.result) {
-          await results.upsert({ ...detail.result, reference: row.reference })
+          await results.upsert({ ...detail.result, result_key: row.result_key })
         }
         if (detail.lots.length === 0) return 0
-        const stored = await results.replaceLots(row.id, row.reference, detail.lots)
+        const stored = await results.replaceLots(row.id, detail.lots)
         return stored.length
       },
       config.scraper.detailConcurrency,

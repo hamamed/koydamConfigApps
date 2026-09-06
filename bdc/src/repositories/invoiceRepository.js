@@ -15,9 +15,18 @@ export function createInvoiceRepository(db = getDb()) {
   const findItems = (invoiceId) =>
     db.all(`SELECT * FROM ${ITEMS_TABLE} WHERE invoice_id = ? ORDER BY position, id`, [invoiceId])
 
-  /** Loads an invoice together with its line items. */
+  /**
+   * Loads an invoice with its line items, and the reference of the consultation
+   * it settles. The reference is not stored on the invoice — it is not an
+   * identity — so it is resolved through the foreign key at read time.
+   */
   async function findWithItems(id) {
-    const invoice = await findById(id)
+    const invoice = await db.get(
+      `SELECT i.*, c.reference AS consultation_reference, c.objet AS consultation_objet
+       FROM ${TABLE} i LEFT JOIN consultations c ON c.id = i.consultation_id
+       WHERE i.id = ?`,
+      [id],
+    )
     if (!invoice) return null
     return { ...invoice, items: await findItems(id) }
   }
@@ -52,7 +61,7 @@ export function createInvoiceRepository(db = getDb()) {
   async function list(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere([
       filters.userId && ['user_id = ?', filters.userId],
-      filters.reference && ['consultation_reference = ?', filters.reference],
+      filters.consultationId && ['consultation_id = ?', filters.consultationId],
       filters.status && ['status = ?', filters.status],
     ])
     const order = buildOrderBy(sort, SORTABLE.invoices, 'issue_date')

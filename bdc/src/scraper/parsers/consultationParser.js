@@ -8,7 +8,7 @@ import {
   loadHtml,
 } from './listParser.js'
 import { parseArticles } from './articleParser.js'
-import { clean, cleanOrNull, extractReference, normalize, normalizeReference } from '../../utils/text.js'
+import { clean, cleanOrNull, matchKey, normalize, normalizeReference } from '../../utils/text.js'
 import { parseDate, parseTime, nowIso } from '../../utils/dates.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 
@@ -62,8 +62,7 @@ export function parseConsultationDetail(html, pageUrl, knownReference = null) {
     sourceUrl: pageUrl,
     statusLabel: extractStatusBadge($, $('body')),
   })
-  const reference = consultation?.reference ?? normalizeReference(knownReference ?? '')
-  const articles = reference ? parseArticles($, reference) : []
+  const articles = parseArticles($)
 
   if (consultation && articles.length > 0 && !consultation.lots_count) {
     consultation.lots_count = articles.length
@@ -76,15 +75,21 @@ export function parseConsultationDetail(html, pageUrl, knownReference = null) {
  * Normalises raw scraped fields into a `consultations` row.
  * @returns {object|null} null when the row carries no usable reference.
  */
-export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = null, statusLabel = null } = {}) {
+export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = null, statusLabel = null, sourceId = null } = {}) {
   const referenceRaw = cleanOrNull(fields.reference)
-  const reference = referenceRaw ? normalizeReference(referenceRaw) : extractReference(fields.objet ?? '')
-  if (!reference) return null
+  const reference = referenceRaw ? normalizeReference(referenceRaw) : null
+  // The portal's own id is the identity. A card without one cannot be told
+  // apart from another buyer's avis carrying the same reference, so it is
+  // dropped rather than merged into an unrelated row.
+  const identity = sourceId ?? extractSourceId(detailUrl)
+  if (!reference || !identity) return null
 
   const timestamp = nowIso()
   const record = {
+    source_id: identity,
     reference,
     reference_raw: referenceRaw,
+    match_key: matchKey(reference, fields.acheteur),
     objet: cleanOrNull(fields.objet),
     acheteur: cleanOrNull(fields.acheteur),
     acheteur_service: cleanOrNull(fields.acheteurService),
@@ -111,7 +116,6 @@ export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = nul
     is_cancelled: /annul/i.test(statusLabel ?? '') || fields.dateAnnulation ? 1 : 0,
     detail_url: detailUrl,
     source_url: sourceUrl,
-    source_id: detailUrl ? (detailUrl.match(/\/show\/(\d+)/)?.[1] ?? detailUrl.match(/(\d{4,})/)?.[1] ?? null) : null,
     raw_json: JSON.stringify(fields),
     first_seen_at: timestamp,
     last_seen_at: timestamp,
@@ -121,6 +125,11 @@ export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = nul
 
   record.search_text = buildSearchText(record)
   return record
+}
+
+/** The numeric id the portal puts in a consultation's detail URL. */
+export function extractSourceId(url) {
+  return clean(url).match(/\/show\/(\d+)/)?.[1] ?? null
 }
 
 /** Accent-free haystack backing the free-text `q` filter. */

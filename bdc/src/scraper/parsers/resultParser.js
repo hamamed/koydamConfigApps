@@ -9,7 +9,8 @@ import {
   loadHtml,
 } from './listParser.js'
 import { buildSearchText } from './consultationParser.js'
-import { clean, cleanOrNull, extractReference, normalizeReference } from '../../utils/text.js'
+import crypto from 'node:crypto'
+import { clean, cleanOrNull, matchKey, normalizeReference } from '../../utils/text.js'
 import { parseDate, nowIso } from '../../utils/dates.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 import { config } from '../../config/index.js'
@@ -73,13 +74,11 @@ export function parseResultDetail(html, pageUrl, knownReference = null) {
     sourceUrl: pageUrl,
     statusLabel: extractStatusBadge($, $('body')),
   })
-  const reference = result?.reference ?? normalizeReference(knownReference ?? '')
-  const lots = reference ? parseResultLots($, reference) : []
-  return { result, lots }
+  return { result, lots: parseResultLots($) }
 }
 
 /** Extracts the per-lot award rows of a result detail page. */
-export function parseResultLots($, reference) {
+export function parseResultLots($) {
   const lots = []
 
   $('.accordion-item').each((index, element) => {
@@ -89,7 +88,6 @@ export function parseResultLots($, reference) {
 
     const timestamp = nowIso()
     lots.push({
-      consultation_reference: normalizeReference(reference),
       lot_number: cleanOrNull(fields.lotNumber) ?? String(index + 1),
       designation: cleanOrNull(fields.designation ?? fields.objet),
       attributaire: cleanOrNull(fields.attributaire),
@@ -115,13 +113,25 @@ export function parseResultLots($, reference) {
  */
 export function toResultRecord(fields, { detailUrl = null, sourceUrl = null, statusLabel = null } = {}) {
   const referenceRaw = cleanOrNull(fields.reference)
-  const reference = referenceRaw ? normalizeReference(referenceRaw) : extractReference(fields.objet ?? '')
+  const reference = referenceRaw ? normalizeReference(referenceRaw) : null
   if (!reference) return null
+
+  // Awards carry no portal id and no detail page — the card is all there is —
+  // so their identity is derived from what does identify them: which avis they
+  // settle, and when they were published.
+  const key = matchKey(reference, fields.acheteur)
+  const publishedAt = parseDate(fields.datePublicationResultat ?? fields.datePublication)
+  const resultKey = crypto
+    .createHash('sha1')
+    .update(`${key ?? reference}|${publishedAt ?? ''}`)
+    .digest('hex')
 
   const timestamp = nowIso()
   const record = {
+    result_key: resultKey,
     reference,
     reference_raw: referenceRaw,
+    match_key: key,
     consultation_id: null,
     objet: cleanOrNull(fields.objet),
     acheteur: cleanOrNull(fields.acheteur),
@@ -129,7 +139,7 @@ export function toResultRecord(fields, { detailUrl = null, sourceUrl = null, sta
     nature_prestation: cleanOrNull(fields.naturePrestation),
     lieu_execution: cleanOrNull(fields.lieuExecution),
     procedure_type: cleanOrNull(fields.procedureType),
-    date_publication_resultat: parseDate(fields.datePublicationResultat ?? fields.datePublication),
+    date_publication_resultat: publishedAt,
     date_attribution: parseDate(fields.dateAttribution),
     attributaire: cleanOrNull(fields.attributaire),
     attributaire_ice: cleanOrNull(fields.attributaireIce),

@@ -9,7 +9,7 @@ import { serializeInvoice } from '../../services/serializers.js'
  *
  * POST /api/invoices
  * {
- *   "consultationReference": "AOO/12/2026",
+ *   "consultationId": 1234,
  *   "client": { "name": "...", "ice": "...", "address": "..." },
  *   "items": [
  *     { "articleId": 42, "quantity": 10, "unitPrice": 1250.5 },
@@ -29,7 +29,7 @@ export function invoiceRoutes({ services }) {
       const pagination = parsePagination(req.query)
       const filters = {
         userId: req.user.role === 'admin' && req.query.all === 'true' ? undefined : req.user.id,
-        reference: req.query.reference,
+        consultationId: req.query.consultationId,
         status: req.query.status,
       }
       const { data, total } = await services.invoices.list(filters, { ...pagination, sort: req.query.sort })

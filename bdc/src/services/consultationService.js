@@ -1,6 +1,5 @@
 import { serializeConsultation, serializeRow, serializeRows } from './serializers.js'
 import { NotFoundError } from '../utils/errors.js'
-import { normalizeReference } from '../utils/text.js'
 
 /**
  * Read model for the public listing screens. Every consultation is returned
@@ -15,7 +14,7 @@ export function createConsultationService({ consultations, articles, results, fa
    */
   async function search(filters, pagination, userId = null) {
     const { rows, total } = await consultations.search(filters, pagination)
-    const favoriteRefs = userId ? await favorites.referencesForUser(userId) : null
+    const favoriteIds = userId ? await favorites.idsForUser(userId) : null
 
     const data = rows.map((row) => {
       const payload = serializeRow(row)
@@ -27,23 +26,25 @@ export function createConsultationService({ consultations, articles, results, fa
             result_status: row.result_status,
           }
         : null
-      if (favoriteRefs) payload.isFavorite = favoriteRefs.has(row.reference)
+      if (favoriteIds) payload.isFavorite = favoriteIds.has(row.id)
       return payload
     })
 
     return { data, total }
   }
 
-  /** Full detail: header, article/lot breakdown and matched award. */
-  async function getByReference(rawReference, userId = null) {
-    const reference = normalizeReference(rawReference)
-    const consultation = await consultations.findByReference(reference)
-    if (!consultation) throw new NotFoundError(`Consultation ${rawReference}`)
+  /**
+   * Full detail: header, article breakdown and the matched award.
+   * Addressed by id — a reference is not unique across buyers.
+   */
+  async function getById(id, userId = null) {
+    const consultation = await consultations.findById(id)
+    if (!consultation) throw new NotFoundError(`Consultation ${id}`)
 
     const [rows, result, favorite] = await Promise.all([
       articles.findByConsultationId(consultation.id),
-      matcher.findResultFor(reference),
-      userId ? favorites.find(userId, reference) : Promise.resolve(null),
+      matcher.findResultFor(consultation.id),
+      userId ? favorites.find(userId, consultation.id) : Promise.resolve(null),
     ])
 
     return serializeConsultation(consultation, {
@@ -53,11 +54,18 @@ export function createConsultationService({ consultations, articles, results, fa
     })
   }
 
-  /** Article/lot rows of a consultation — the input to the invoice generator. */
-  async function listArticles(rawReference) {
-    const reference = normalizeReference(rawReference)
-    const consultation = await consultations.findByReference(reference)
-    if (!consultation) throw new NotFoundError(`Consultation ${rawReference}`)
+  /**
+   * Every consultation published under a reference. References repeat across
+   * buyers, so this is a search, not a lookup.
+   */
+  async function findByReference(reference) {
+    return serializeRows(await consultations.findByReference(reference))
+  }
+
+  /** Article rows of a consultation — the input to the invoice generator. */
+  async function listArticles(id) {
+    const consultation = await consultations.findById(id)
+    if (!consultation) throw new NotFoundError(`Consultation ${id}`)
     return serializeRows(await articles.findByConsultationId(consultation.id))
   }
 
@@ -66,12 +74,25 @@ export function createConsultationService({ consultations, articles, results, fa
     return { data: serializeRows(rows), total }
   }
 
-  async function getResultByReference(rawReference) {
-    const reference = normalizeReference(rawReference)
-    const result = await matcher.findResultFor(reference)
-    if (!result) throw new NotFoundError(`Result for ${rawReference}`)
+  async function getResultForConsultation(consultationId) {
+    const result = await matcher.findResultFor(consultationId)
+    if (!result) throw new NotFoundError(`Result for consultation ${consultationId}`)
     return { ...serializeRow(result), lots: serializeRows(result.lots) }
   }
 
-  return { search, getByReference, listArticles, searchResults, getResultByReference }
+  async function getResultById(id) {
+    const result = await results.findById(id)
+    if (!result) throw new NotFoundError(`Result ${id}`)
+    return { ...serializeRow(result), lots: serializeRows(await results.findLots(id)) }
+  }
+
+  return {
+    search,
+    getById,
+    findByReference,
+    listArticles,
+    searchResults,
+    getResultForConsultation,
+    getResultById,
+  }
 }

@@ -4,7 +4,7 @@ import {
   ARTICLE_SPEC_SELECTORS,
 } from '../selectors.js'
 import { extractLabelledFields, firstMatch } from './listParser.js'
-import { clean, cleanOrNull, normalizeReference } from '../../utils/text.js'
+import { clean, cleanOrNull } from '../../utils/text.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 import { nowIso } from '../../utils/dates.js'
 
@@ -27,7 +27,7 @@ const parseNumber = (value) => {
  * proposes the price, which is exactly what the invoice generator supplies.
  * @returns {object[]} records ready for `consultation_articles`.
  */
-export function parseArticles($, reference) {
+export function parseArticles($) {
   const items = firstMatch($, ARTICLE_ITEM_SELECTORS)
   if (!items) return []
 
@@ -48,7 +48,7 @@ export function parseArticles($, reference) {
     const fields = extractLabelledFields($, item)
     const description = specificationText($, item) ?? cleanOrNull(fields.description)
 
-    articles.push(toArticleRecord({ ...fields, designation, articleNumber, description }, reference))
+    articles.push(toArticleRecord({ ...fields, designation, articleNumber, description }))
   })
 
   return articles.filter(Boolean)
@@ -67,13 +67,12 @@ function specificationText($, item) {
  * Normalises raw article fields into a `consultation_articles` row.
  * @returns {object|null} null when the row carries no usable designation.
  */
-export function toArticleRecord(fields, reference) {
+export function toArticleRecord(fields) {
   const designation = cleanOrNull(fields.designation)
   if (!designation) return null
 
   const timestamp = nowIso()
   return {
-    consultation_reference: normalizeReference(reference),
     lot_number: cleanOrNull(fields.lotNumber),
     article_number: cleanOrNull(fields.articleNumber),
     designation,

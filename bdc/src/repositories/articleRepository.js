@@ -10,9 +10,6 @@ export function createArticleRepository(db = getDb()) {
   const findByConsultationId = (consultationId) =>
     db.all(`SELECT * FROM ${TABLE} WHERE consultation_id = ? ORDER BY lot_number, article_number, id`, [consultationId])
 
-  const findByReference = (reference) =>
-    db.all(`SELECT * FROM ${TABLE} WHERE consultation_reference = ? ORDER BY lot_number, article_number, id`, [reference])
-
   /** Loads a specific set of articles, used when building an invoice. */
   async function findByIds(ids) {
     const clause = buildIn('id', ids)
@@ -26,17 +23,12 @@ export function createArticleRepository(db = getDb()) {
    * Articles are re-scraped wholesale, so a diff would add complexity without
    * buying anything; the unique key still makes the write idempotent.
    */
-  async function replaceForConsultation(consultationId, reference, articles) {
+  async function replaceForConsultation(consultationId, articles) {
     return db.transaction(async (tx) => {
       await tx.run(`DELETE FROM ${TABLE} WHERE consultation_id = ?`, [consultationId])
       const inserted = []
       for (const article of articles) {
-        const record = {
-          ...article,
-          consultation_id: consultationId,
-          consultation_reference: reference,
-          updated_at: nowIso(),
-        }
+        const record = { ...article, consultation_id: consultationId, updated_at: nowIso() }
         const { sql, params } = buildUpsert(TABLE, record, [
           'consultation_id',
           'lot_number',
@@ -57,5 +49,5 @@ export function createArticleRepository(db = getDb()) {
 
   const countAll = async () => Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}`)).total)
 
-  return { findById, findByIds, findByConsultationId, findByReference, replaceForConsultation, countAll }
+  return { findById, findByIds, findByConsultationId, replaceForConsultation, countAll }
 }

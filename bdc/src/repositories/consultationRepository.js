@@ -15,7 +15,7 @@ const TABLE = 'consultations'
  * crawl.
  */
 const MUTABLE_COLUMNS = [
-  'reference_raw', 'objet', 'acheteur', 'acheteur_service', 'categorie', 'nature_prestation',
+  'reference', 'reference_raw', 'match_key', 'objet', 'acheteur', 'acheteur_service', 'categorie', 'nature_prestation',
   'lieu_execution', 'procedure_type', 'mode_passation', 'date_publication', 'date_limite',
   'heure_limite', 'date_ouverture_plis', 'estimation_cents', 'caution_provisoire_cents',
   'qualification', 'agrement', 'is_cancelled', 'date_annulation', 'motif_annulation',
@@ -24,8 +24,15 @@ const MUTABLE_COLUMNS = [
 ]
 
 export function createConsultationRepository(db = getDb()) {
+  /** Identity lookup: the portal's own id, which is what makes a row unique. */
+  const findBySourceId = (sourceId) => db.get(`SELECT * FROM ${TABLE} WHERE source_id = ?`, [sourceId])
+
+  /**
+   * References are not unique — each buyer numbers its own avis — so this can
+   * return several rows and callers must be able to cope with that.
+   */
   const findByReference = (reference) =>
-    db.get(`SELECT * FROM ${TABLE} WHERE reference = ?`, [reference])
+    db.all(`SELECT * FROM ${TABLE} WHERE reference = ? ORDER BY date_publication DESC, id DESC`, [reference])
 
   const findById = (id) => db.get(`SELECT * FROM ${TABLE} WHERE id = ?`, [id])
 
@@ -43,7 +50,7 @@ export function createConsultationRepository(db = getDb()) {
    * @returns {Promise<{row: object, outcome: 'created'|'updated'|'unchanged'}>}
    */
   async function upsert(record, { fromDetail = false } = {}) {
-    const existing = await findByReference(record.reference)
+    const existing = await findBySourceId(record.source_id)
     const timestamp = nowIso()
     const incoming = fromDetail ? { ...record, detail_scraped_at: timestamp } : record
 
@@ -77,22 +84,13 @@ export function createConsultationRepository(db = getDb()) {
     const rows = await db.all(
       `SELECT c.*, r.attributaire, r.montant_attribue_cents, r.date_attribution, r.result_status
        FROM ${TABLE} c
-       LEFT JOIN consultation_results r ON r.reference = c.reference
+       LEFT JOIN consultation_results r ON r.consultation_id = c.id
        ${where.sql}${order} LIMIT ? OFFSET ?`,
       [...where.params, limit, offset],
     )
     const { total } = await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} c${where.sql}`, where.params)
     return { rows, total: Number(total) }
   }
-
-  /** Marks a consultation as having a published award, used by the matcher. */
-  const markHasResult = (reference, hasResult = true) =>
-    db.run(`UPDATE ${TABLE} SET has_result = ?, status = ?, updated_at = ? WHERE reference = ?`, [
-      hasResult ? 1 : 0,
-      hasResult ? 'awarded' : 'open',
-      nowIso(),
-      reference,
-    ])
 
   /**
    * Recomputes the lifecycle status of every consultation from the facts on
@@ -124,11 +122,36 @@ export function createConsultationRepository(db = getDb()) {
 
   const countAll = async () => Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}`)).total)
 
-  const listPendingDetails = (limit = 50) =>
+  /**
+   * Consultations whose detail page has never been read, newest first.
+   * The listing card carries no category, nature or article breakdown, so a row
+   * is only half a record until its detail page has been fetched.
+   */
+  const listPendingDetails = (limit = 100) =>
     db.all(
-      `SELECT * FROM ${TABLE} WHERE detail_url IS NOT NULL AND lots_count = 0 ORDER BY last_seen_at DESC LIMIT ?`,
+      `SELECT * FROM ${TABLE}
+       WHERE detail_url IS NOT NULL AND detail_scraped_at IS NULL
+       ORDER BY date_publication DESC, id DESC LIMIT ?`,
       [limit],
     )
 
-  return { findById, findByReference, upsert, search, update, remove, deriveStatus, countAll, listPendingDetails }
+  const countPendingDetails = async () =>
+    Number(
+      (await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE detail_url IS NOT NULL AND detail_scraped_at IS NULL`))
+        .total,
+    )
+
+  return {
+    findById,
+    findBySourceId,
+    findByReference,
+    upsert,
+    search,
+    update,
+    remove,
+    deriveStatus,
+    countAll,
+    listPendingDetails,
+    countPendingDetails,
+  }
 }

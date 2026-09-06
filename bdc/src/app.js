@@ -8,6 +8,7 @@ import { createContainer } from './container.js'
 import { registerRoutes } from './http/routes/index.js'
 import { errorHandler, notFoundHandler } from './http/middleware/errorHandler.js'
 import { createApiLimiter } from './http/middleware/rateLimit.js'
+import { localeMiddleware } from './http/middleware/locale.js'
 
 const JSON_BODY_LIMIT = '1mb'
 
@@ -39,6 +40,7 @@ export function createApp(container = createContainer()) {
   app.use(express.json({ limit: JSON_BODY_LIMIT }))
   app.use(express.urlencoded({ extended: true }))
   app.use(cookieParser())
+  app.use(localeMiddleware())
   if (!config.isTest) app.use(morgan(config.isProduction ? 'combined' : 'dev'))
 
   app.use('/api', createApiLimiter())

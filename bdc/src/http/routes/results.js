@@ -21,9 +21,9 @@ export function resultRoutes({ services }) {
   )
 
   router.get(
-    '/:reference',
+    '/:id',
     asyncHandler(async (req, res) => {
-      res.json(ok(await services.consultations.getResultByReference(req.params.reference)))
+      res.json(ok(await services.consultations.getResultById(Number(req.params.id))))
     }),
   )
 

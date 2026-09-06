@@ -59,3 +59,18 @@ export function splitLabelled(value) {
   }
   return [null, cleaned]
 }
+
+/**
+ * The key that identifies the same avis across the two listings.
+ *
+ * A reference alone is not an identity: "07/2026" appears three times on five
+ * pages of the portal, once per commune, because each buyer numbers its own
+ * avis. Consultations are therefore keyed on the portal's own id, and the pair
+ * (reference, buyer) is what links an award back to its consultation — the only
+ * signal the results listing gives, since it carries no id and no detail link.
+ */
+export function matchKey(reference, acheteur) {
+  const ref = normalizeReference(reference)
+  const buyer = normalize(acheteur).replace(/[^a-z0-9]+/g, '')
+  return ref && buyer ? `${ref}|${buyer}` : null
+}

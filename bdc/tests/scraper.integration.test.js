@@ -26,10 +26,10 @@ test('scrapes both sources and matches them by reference', async () => {
   assert.equal(detail.results.itemsCreated, 10)
 
   // 53/2026 is published on both listings, so it is the pair the matcher links.
-  const consultation = await repositories.consultations.findByReference('53/2026')
-  const award = await repositories.results.findByReference('53/2026')
+  const consultation = await repositories.consultations.findBySourceId('375169')
+  const [award] = await repositories.results.findByReference('53/2026')
   assert.ok(consultation && award)
-  assert.equal(award.consultation_id, consultation.id)
+  assert.equal(award.consultation_id, consultation.id, 'the link is a foreign key, not a string match')
   assert.ok(award.matched_at)
   assert.equal(consultation.has_result, 1, 'the award is linked to its consultation')
 
@@ -42,7 +42,7 @@ test('scrapes both sources and matches them by reference', async () => {
   // The other nine awards refer to consultations this instance never saw. They
   // stay unmatched rather than being guessed at.
   assert.equal(detail.matching.unmatchedResults, 9)
-  const orphan = await repositories.results.findByReference('31/2026')
+  const [orphan] = await repositories.results.findByReference('31/2026')
   assert.equal(orphan.consultation_id, null)
 })
 
@@ -50,14 +50,14 @@ test('the detail pass adds the article breakdown the listing does not carry', as
   const { runner, repositories } = await setup()
   await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
 
-  const before = await repositories.consultations.findByReference('53/2026')
+  const before = await repositories.consultations.findBySourceId('375169')
   assert.equal(before.categorie, null, 'the listing card has no category')
   assert.equal(before.lots_count, 0)
 
   const { articles } = await runner.consultationScraper.scrapeDetail(before)
 
   assert.equal(articles.length, 19)
-  const after = await repositories.consultations.findByReference('53/2026')
+  const after = await repositories.consultations.findBySourceId('375169')
   assert.equal(after.categorie, 'Fournitures')
   assert.equal(after.date_publication, '2026-08-31')
   assert.equal(after.lots_count, 19)
@@ -68,7 +68,7 @@ test('re-scraping is idempotent and does not duplicate rows', async () => {
   const { runner, repositories } = await setup()
 
   await runner.run({ source: 'consultations', maxPages: 2, fetchDetails: false })
-  const consultation = await repositories.consultations.findByReference('53/2026')
+  const consultation = await repositories.consultations.findBySourceId('375169')
   await runner.consultationScraper.scrapeDetail(consultation)
 
   const second = await runner.run({ source: 'consultations', maxPages: 2, fetchDetails: false })
@@ -79,7 +79,7 @@ test('re-scraping is idempotent and does not duplicate rows', async () => {
   assert.equal(await repositories.articles.countAll(), 19)
 
   // A listing pass must not erase what the detail pass captured.
-  const after = await repositories.consultations.findByReference('53/2026')
+  const after = await repositories.consultations.findBySourceId('375169')
   assert.equal(after.categorie, 'Fournitures')
   assert.equal(after.lots_count, 19)
 
@@ -132,26 +132,65 @@ test('the matcher derives status from the facts on record', async () => {
   const { runner, repositories } = await setup()
   await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
 
-  const open = await repositories.consultations.findByReference('03/2026')
+  const [open] = await repositories.consultations.findByReference('03/2026')
   assert.equal(open.is_cancelled, 0)
   assert.equal(open.status, 'open', 'its deadline of 2026-09-16 has not passed')
 
-  const cancelled = await repositories.consultations.findByReference('6/2026')
+  const [cancelled] = await repositories.consultations.findByReference('6/2026')
   assert.equal(cancelled.status, 'annule')
 
   // An explicit date rather than "now", so the assertion does not change meaning
   // as the fixture's deadlines age past today.
   await repositories.consultations.deriveStatus('2027-01-01')
-  assert.equal((await repositories.consultations.findByReference('03/2026')).status, 'closed')
+  assert.equal((await repositories.consultations.findByReference('03/2026'))[0].status, 'closed')
   assert.equal(
-    (await repositories.consultations.findByReference('6/2026')).status,
+    (await repositories.consultations.findByReference('6/2026'))[0].status,
     'annule',
     'a cancelled avis does not become merely closed',
   )
 
   // A listing pass must never reset a status the matcher derived.
   await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
-  assert.equal((await repositories.consultations.findByReference('6/2026')).status, 'annule')
+  assert.equal((await repositories.consultations.findByReference('6/2026'))[0].status, 'annule')
+})
+
+test('an ambiguous key is left unlinked rather than guessed', async () => {
+  const fetchImpl = createFetchStub([
+    [/consultation\/show\//, fixture('live-consultation-detail.html')],
+    [/consultation\/resultat/, fixture('live-results-matching.html')],
+    [/page=2/, fixture('live-consultations-empty.html')],
+    [/consultation\//, fixture('live-consultations-ambiguous.html')],
+  ])
+  const { runner, repositories } = await createTestContainer({
+    http: createHttpClient({ fetchImpl, delayMs: 0 }),
+  })
+
+  const { detail } = await runner.run({ source: 'all', maxPages: 1, fetchDetails: false })
+
+  // Two consultations share (reference, buyer) under different portal ids, so
+  // the award for 53/2026 cannot be attributed to either. Attaching it to the
+  // wrong one would corrupt every invoice built from that consultation.
+  const [award] = await repositories.results.findByReference('53/2026')
+  assert.equal(award.consultation_id, null)
+  assert.equal(detail.matching.ambiguousResults, 1)
+  assert.equal(detail.matching.matchesLinked, 0)
+})
+
+test('the detail backlog is worked through until it is empty', async () => {
+  const { runner, repositories } = await setup()
+  await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+
+  assert.equal(await repositories.consultations.countPendingDetails(), 10)
+
+  const stats = await runner.consultationScraper.backfillDetails({ batchSize: 4 })
+
+  assert.equal(stats.consultationsProcessed, 10, 'every consultation gets its detail page read')
+  assert.equal(await repositories.consultations.countPendingDetails(), 0)
+  assert.ok(stats.articlesSaved > 0)
+
+  // Re-running is a no-op: the backlog is empty.
+  const again = await runner.consultationScraper.backfillDetails()
+  assert.equal(again.consultationsProcessed, 0)
 })
 
 test('the matcher links awards scraped before their consultation', async () => {

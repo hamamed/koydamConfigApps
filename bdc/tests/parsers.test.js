@@ -43,7 +43,10 @@ test('parses the open consultations listing', () => {
   assert.equal(totalPages, 76)
 
   const [first] = items
+  // Identity is the portal's own id, not the reference.
+  assert.equal(first.source_id, '316430')
   assert.equal(first.reference, '6/2026')
+  assert.equal(first.match_key, '6/2026|communeizemmouren')
   assert.equal(first.objet, "TRAVAUX D'INSTALLATION D'UN ABRIS A LA STATION DU TAXIS")
   assert.equal(first.acheteur, 'Commune IZEMMOUREN')
   assert.equal(first.lieu_execution, 'AL HOCEIMA')
@@ -52,7 +55,6 @@ test('parses the open consultations listing', () => {
   assert.equal(first.is_cancelled, 1, 'the card carries an "Annulé" badge')
   assert.equal(first.status, undefined, 'the lifecycle status is derived, not scraped')
   assert.match(first.detail_url, /\/consultation\/show\/316430$/)
-  assert.equal(first.source_id, '316430')
 
   // Category, nature and publication date are not on the card — only on the
   // detail page. The listing pass must leave them null rather than invent them.
@@ -60,7 +62,8 @@ test('parses the open consultations listing', () => {
   assert.equal(first.nature_prestation, null)
   assert.equal(first.date_publication, null)
 
-  assert.ok(items.every((item) => item.reference && item.objet && item.acheteur))
+  assert.ok(items.every((item) => item.source_id && item.reference && item.objet && item.acheteur))
+  assert.equal(new Set(items.map((item) => item.source_id)).size, 10, 'ids are unique')
 })
 
 test('parses a consultation detail page and its articles', () => {
@@ -69,8 +72,10 @@ test('parses a consultation detail page and its articles', () => {
     `${BASE}show/375169`,
   )
 
-  // The reference lives only in the document title on this page.
+  // The reference lives only in the document title on this page; the id comes
+  // from the URL the page was fetched from.
   assert.equal(consultation.reference, '53/2026')
+  assert.equal(consultation.source_id, '375169')
   assert.equal(consultation.acheteur, 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA')
   assert.equal(consultation.categorie, 'Fournitures')
   assert.equal(consultation.nature_prestation, 'Achat de pièces de rechange pour matériel technique et informatique')
@@ -94,7 +99,7 @@ test('parses a consultation detail page and its articles', () => {
   assert.equal(article.unit, 'unité')
   assert.equal(article.tva_rate, 20)
   assert.match(article.description, /moniteur multiparam/)
-  assert.equal(article.consultation_reference, '53/2026')
+  assert.equal(article.consultation_id, undefined, 'the parser does not know the row id')
 
   // These are calls for quotes: the supplier proposes the price, so the portal
   // publishes no unit price. The invoice generator is where one is supplied.
@@ -114,6 +119,9 @@ test('parses the results listing, which is complete without a detail page', () =
   assert.equal(first.date_publication_resultat, '2026-09-05')
   assert.equal(first.result_status, 'attribue')
 
+  assert.ok(first.result_key, 'awards get a derived identity — the portal gives them none')
+  assert.equal(first.match_key, '32/2026|communemaghraoua')
+
   assert.equal(items[1].reference, '34/2026/BG')
   assert.equal(items[1].montant_attribue_cents, 3_919_200)
   assert.ok(items.every((item) => item.reference))
@@ -127,14 +135,24 @@ test('parses the results listing, which is complete without a detail page', () =
   assert.equal(unsuccessful.nombre_offres, 25)
 })
 
-test('both parsers normalise a reference to the same join key', () => {
-  const consultations = parseConsultationList(fixture('live-consultations.html'), BASE).items
-  const results = parseResultList(fixture('live-results-matching.html'), `${BASE}resultat`).items
+test('a reference is not an identity — it repeats across buyers', () => {
+  const items = parseConsultationList(fixture('live-consultations-ambiguous.html'), BASE).items
+  const sameReference = items.filter((item) => item.reference === '53/2026')
 
-  const consultation = consultations.find((item) => item.reference === '53/2026')
-  const award = results.find((item) => item.reference === '53/2026')
-  assert.ok(consultation && award, 'the shared reference is what links the two datasets')
-  assert.equal(consultation.reference, award.reference)
+  assert.equal(sameReference.length, 2, 'two buyers, one reference')
+  assert.notEqual(sameReference[0].source_id, sameReference[1].source_id, 'but two distinct portal ids')
+})
+
+test('the match key pairs an award with the consultation it settles', () => {
+  const consultations = parseConsultationList(fixture('live-consultations.html'), BASE).items
+  const awards = parseResultList(fixture('live-results-matching.html'), `${BASE}resultat`).items
+
+  const consultation = consultations.find((item) => item.source_id === '375169')
+  const award = awards.find((item) => item.reference === '53/2026')
+
+  // Reference *and* buyer. Either alone is ambiguous on this portal.
+  assert.equal(consultation.match_key, award.match_key)
+  assert.equal(award.match_key, '53/2026|centrehospitalierprovincialdekhenifra')
 })
 
 test('an exhausted listing yields no rows', () => {

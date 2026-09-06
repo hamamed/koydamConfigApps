@@ -1,6 +1,5 @@
 import { serializeRow } from './serializers.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
-import { normalizeReference } from '../utils/text.js'
 
 const MAX_NOTE_LENGTH = 1000
 
@@ -11,25 +10,24 @@ const MAX_NOTE_LENGTH = 1000
  * re-created by a later scrape.
  */
 export function createFavoriteService({ favorites, consultations }) {
-  async function add(userId, rawReference, { note = null, tags = null } = {}) {
-    const reference = normalizeReference(rawReference)
-    if (!reference) throw new ValidationError('A consultation reference is required')
+  async function add(userId, consultationId, { note = null, tags = null } = {}) {
+    const id = Number(consultationId)
+    if (!Number.isInteger(id) || id <= 0) throw new ValidationError('A consultation id is required')
     if (note && note.length > MAX_NOTE_LENGTH) {
       throw new ValidationError(`note must be ${MAX_NOTE_LENGTH} characters or fewer`)
     }
 
-    const consultation = await consultations.findByReference(reference)
-    if (!consultation) throw new NotFoundError(`Consultation ${rawReference}`)
+    const consultation = await consultations.findById(id)
+    if (!consultation) throw new NotFoundError(`Consultation ${consultationId}`)
 
     const normalizedTags = Array.isArray(tags) ? tags.join(',') : tags
-    return serializeRow(await favorites.add(userId, reference, { note, tags: normalizedTags }))
+    return serializeRow(await favorites.add(userId, id, { note, tags: normalizedTags }))
   }
 
-  async function remove(userId, rawReference) {
-    const reference = normalizeReference(rawReference)
-    const removed = await favorites.remove(userId, reference)
-    if (removed === 0) throw new NotFoundError(`Favorite ${rawReference}`)
-    return { reference, removed: true }
+  async function remove(userId, consultationId) {
+    const removed = await favorites.remove(userId, Number(consultationId))
+    if (removed === 0) throw new NotFoundError(`Favorite ${consultationId}`)
+    return { consultationId: Number(consultationId), removed: true }
   }
 
   /**
@@ -41,7 +39,12 @@ export function createFavoriteService({ favorites, consultations }) {
 
     const data = rows.map((row) => {
       const payload = serializeRow(row)
-      payload.favorite = { id: row.favorite_id, note: row.note, tags: row.tags?.split(',') ?? [], favorited_at: row.favorited_at }
+      payload.favorite = {
+        id: row.favorite_id,
+        note: row.note,
+        tags: row.tags ? row.tags.split(',') : [],
+        favorited_at: row.favorited_at,
+      }
       payload.result = row.attributaire || row.result_status
         ? {
             attributaire: row.attributaire,

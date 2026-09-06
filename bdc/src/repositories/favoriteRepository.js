@@ -7,30 +7,30 @@ import { nowIso } from '../utils/dates.js'
 const TABLE = 'favorites'
 
 export function createFavoriteRepository(db = getDb()) {
-  const find = (userId, reference) =>
-    db.get(`SELECT * FROM ${TABLE} WHERE user_id = ? AND consultation_reference = ?`, [userId, reference])
+  const find = (userId, consultationId) =>
+    db.get(`SELECT * FROM ${TABLE} WHERE user_id = ? AND consultation_id = ?`, [userId, consultationId])
 
   /** Idempotent: re-favouriting an entry just refreshes its note/tags. */
-  async function add(userId, reference, { note = null, tags = null } = {}) {
+  async function add(userId, consultationId, { note = null, tags = null } = {}) {
     const timestamp = nowIso()
     const { sql, params } = buildUpsert(
       TABLE,
       {
         user_id: userId,
-        consultation_reference: reference,
+        consultation_id: consultationId,
         note,
         tags,
         created_at: timestamp,
         updated_at: timestamp,
       },
-      ['user_id', 'consultation_reference'],
+      ['user_id', 'consultation_id'],
       ['note', 'tags', 'updated_at'],
     )
     return db.get(sql, params)
   }
 
-  const remove = async (userId, reference) =>
-    (await db.run(`DELETE FROM ${TABLE} WHERE user_id = ? AND consultation_reference = ?`, [userId, reference])).changes
+  const remove = async (userId, consultationId) =>
+    (await db.run(`DELETE FROM ${TABLE} WHERE user_id = ? AND consultation_id = ?`, [userId, consultationId])).changes
 
   /**
    * The Favorites tab payload: saved references joined to their consultation
@@ -48,27 +48,27 @@ export function createFavoriteRepository(db = getDb()) {
       `SELECT f.id AS favorite_id, f.note, f.tags, f.created_at AS favorited_at,
               c.*, r.attributaire, r.montant_attribue_cents, r.date_attribution, r.result_status
        FROM ${TABLE} f
-       LEFT JOIN consultations c ON c.reference = f.consultation_reference
-       LEFT JOIN consultation_results r ON r.reference = f.consultation_reference
+       JOIN consultations c ON c.id = f.consultation_id
+       LEFT JOIN consultation_results r ON r.consultation_id = c.id
        ${where.sql}${order} LIMIT ? OFFSET ?`,
       [...where.params, limit, offset],
     )
 
     const { total } = await db.get(
-      `SELECT COUNT(*) AS total FROM ${TABLE} f LEFT JOIN consultations c ON c.reference = f.consultation_reference${where.sql}`,
+      `SELECT COUNT(*) AS total FROM ${TABLE} f JOIN consultations c ON c.id = f.consultation_id${where.sql}`,
       where.params,
     )
     return { rows, total: Number(total) }
   }
 
-  /** References favourited by a user, used to decorate listing responses. */
-  async function referencesForUser(userId) {
-    const rows = await db.all(`SELECT consultation_reference FROM ${TABLE} WHERE user_id = ?`, [userId])
-    return new Set(rows.map((row) => row.consultation_reference))
+  /** Consultation ids favourited by a user, to decorate listing responses. */
+  async function idsForUser(userId) {
+    const rows = await db.all(`SELECT consultation_id FROM ${TABLE} WHERE user_id = ?`, [userId])
+    return new Set(rows.map((row) => row.consultation_id))
   }
 
   const countForUser = async (userId) =>
     Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE user_id = ?`, [userId])).total)
 
-  return { find, add, remove, listForUser, referencesForUser, countForUser }
+  return { find, add, remove, listForUser, idsForUser, countForUser }
 }

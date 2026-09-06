@@ -10,7 +10,7 @@ import { ok, paginated, parsePagination } from '../../utils/pagination.js'
  * `GET /api/favorites` returns saved consultations already joined to their
  * awards, so the tab renders from a single request. It accepts the same filter
  * parameters as the main listing, which lets the UI reuse its filter component
- * inside the sub-tab.
+ * inside the sub-tab. A favourite points at a consultation id.
  */
 export function favoriteRoutes({ services }) {
   const router = Router()
@@ -39,7 +39,7 @@ export function favoriteRoutes({ services }) {
   router.post(
     '/',
     asyncHandler(async (req, res) => {
-      const favorite = await services.favorites.add(req.user.id, req.body.reference ?? req.body.consultationReference, {
+      const favorite = await services.favorites.add(req.user.id, req.body.consultationId ?? req.body.id, {
         note: req.body.note,
         tags: req.body.tags,
       })
@@ -48,9 +48,9 @@ export function favoriteRoutes({ services }) {
   )
 
   router.delete(
-    '/:reference',
+    '/:consultationId',
     asyncHandler(async (req, res) => {
-      res.json(ok(await services.favorites.remove(req.user.id, req.params.reference)))
+      res.json(ok(await services.favorites.remove(req.user.id, req.params.consultationId)))
     }),
   )
 

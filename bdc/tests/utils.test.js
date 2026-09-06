@@ -42,6 +42,15 @@ test('parses portal date and time formats into ISO strings', () => {
   assert.equal(isIsoDate('02/06/2026'), false)
 })
 
+test('the match key pairs a reference with its buyer', async () => {
+  const { matchKey } = await import('../src/utils/text.js')
+  assert.equal(matchKey('07/2026', 'Commune IZEMMOUREN'), '07/2026|communeizemmouren')
+  // Same reference, different buyer — a different avis entirely.
+  assert.notEqual(matchKey('07/2026', 'Commune A'), matchKey('07/2026', 'Commune B'))
+  assert.equal(matchKey('07/2026', ''), null, 'a reference alone is not a key')
+  assert.equal(matchKey('', 'Commune'), null)
+})
+
 test('normalises references so both datasets join on the same key', () => {
   assert.equal(normalizeReference('AOO 12/2026'), 'AOO12/2026')
   assert.equal(normalizeReference(' aoo  12 / 2026 '), 'AOO12/2026')
@@ -89,7 +98,9 @@ test('an additive column migration reaches a database created by an earlier vers
   // after the deploy reported success.
   await db.exec(`CREATE TABLE consultations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reference TEXT NOT NULL UNIQUE,
+    source_id TEXT NOT NULL UNIQUE,
+    reference TEXT NOT NULL,
+    match_key TEXT,
     objet TEXT, acheteur TEXT, categorie TEXT, nature_prestation TEXT,
     lieu_execution TEXT, date_publication TEXT, date_limite TEXT,
     status TEXT NOT NULL DEFAULT 'open',

@@ -99,6 +99,18 @@ export function adminRoutes({ services }) {
 
   api.post('/rematch', asyncHandler(async (_req, res) => res.json(ok(await services.admin.rematch()))))
 
+  /** Reads the detail page of every consultation that has never had one read. */
+  api.post(
+    '/backfill-details',
+    asyncHandler(async (req, res) => {
+      const result = await services.admin.backfillDetails(
+        { limit: req.body.limit, wait: req.body.wait === true },
+        req.user.email,
+      )
+      res.status(req.body.wait === true ? 200 : 202).json(ok(result))
+    }),
+  )
+
   api.get(
     '/consultations',
     asyncHandler(async (req, res) => {

@@ -7,23 +7,22 @@
  *    ordering, so range filters behave identically on SQLite and PostgreSQL.
  *  - Booleans are INTEGER 0/1.
  *  - Money is INTEGER centimes (see utils/money.js).
- *  - `reference` is the business key linking consultations to their results.
- *    It is stored normalised (see utils/text.js#normalizeReference) so that the
- *    join survives the formatting noise present in the source HTML.
+ *  - Identity is the portal's own id, never the reference. Each buyer numbers
+ *    its own avis, so "07/2026" appears once per commune — three times in five
+ *    pages of the live listing. `reference` is indexed but not unique.
+ *  - Awards carry no id and no detail page, so they are keyed on a hash of
+ *    (reference, buyer, result date) and linked to a consultation through
+ *    `match_key`. See utils/text.js#matchKey.
  */
-
 const idColumn = (dialect) =>
   dialect === 'postgres' ? 'id SERIAL PRIMARY KEY' : 'id INTEGER PRIMARY KEY AUTOINCREMENT'
-
 export function tableStatements(dialect) {
   const id = idColumn(dialect)
-
   return [
     `CREATE TABLE IF NOT EXISTS schema_migrations (
       version TEXT PRIMARY KEY,
       applied_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS users (
       ${id},
       email TEXT NOT NULL UNIQUE,
@@ -35,11 +34,12 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS consultations (
       ${id},
-      reference TEXT NOT NULL UNIQUE,
+      source_id TEXT NOT NULL UNIQUE,
+      reference TEXT NOT NULL,
       reference_raw TEXT,
+      match_key TEXT,
       objet TEXT,
       acheteur TEXT,
       acheteur_service TEXT,
@@ -63,7 +63,6 @@ export function tableStatements(dialect) {
       detail_url TEXT,
       detail_scraped_at TEXT,
       source_url TEXT,
-      source_id TEXT,
       search_text TEXT,
       status TEXT NOT NULL DEFAULT 'open',
       has_result INTEGER NOT NULL DEFAULT 0,
@@ -74,11 +73,9 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS consultation_articles (
       ${id},
       consultation_id INTEGER NOT NULL REFERENCES consultations(id) ON DELETE CASCADE,
-      consultation_reference TEXT NOT NULL,
       lot_number TEXT,
       article_number TEXT,
       designation TEXT NOT NULL,
@@ -98,11 +95,12 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (consultation_id, lot_number, article_number, designation)
     )`,
-
     `CREATE TABLE IF NOT EXISTS consultation_results (
       ${id},
-      reference TEXT NOT NULL UNIQUE,
+      result_key TEXT NOT NULL UNIQUE,
+      reference TEXT NOT NULL,
       reference_raw TEXT,
+      match_key TEXT,
       consultation_id INTEGER REFERENCES consultations(id) ON DELETE SET NULL,
       objet TEXT,
       acheteur TEXT,
@@ -129,11 +127,9 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS result_lots (
       ${id},
       result_id INTEGER NOT NULL REFERENCES consultation_results(id) ON DELETE CASCADE,
-      consultation_reference TEXT NOT NULL,
       lot_number TEXT,
       designation TEXT,
       attributaire TEXT,
@@ -146,23 +142,20 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (result_id, lot_number)
     )`,
-
     `CREATE TABLE IF NOT EXISTS favorites (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      consultation_reference TEXT NOT NULL,
+      consultation_id INTEGER NOT NULL REFERENCES consultations(id) ON DELETE CASCADE,
       note TEXT,
       tags TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      UNIQUE (user_id, consultation_reference)
+      UNIQUE (user_id, consultation_id)
     )`,
-
     `CREATE TABLE IF NOT EXISTS invoices (
       ${id},
       invoice_number TEXT NOT NULL UNIQUE,
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      consultation_reference TEXT,
       consultation_id INTEGER REFERENCES consultations(id) ON DELETE SET NULL,
       client_name TEXT NOT NULL,
       client_ice TEXT,
@@ -181,7 +174,6 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS invoice_items (
       ${id},
       invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
@@ -196,7 +188,6 @@ export function tableStatements(dialect) {
       line_total_cents INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     )`,
-
     `CREATE TABLE IF NOT EXISTS scrape_jobs (
       ${id},
       source TEXT NOT NULL,
@@ -215,9 +206,10 @@ export function tableStatements(dialect) {
     )`,
   ]
 }
-
 export function indexStatements() {
   return [
+    'CREATE INDEX IF NOT EXISTS idx_consultations_reference ON consultations (reference)',
+    'CREATE INDEX IF NOT EXISTS idx_consultations_match_key ON consultations (match_key)',
     'CREATE INDEX IF NOT EXISTS idx_consultations_acheteur ON consultations (acheteur)',
     'CREATE INDEX IF NOT EXISTS idx_consultations_categorie ON consultations (categorie)',
     'CREATE INDEX IF NOT EXISTS idx_consultations_nature ON consultations (nature_prestation)',
@@ -226,22 +218,21 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_consultations_limite ON consultations (date_limite)',
     'CREATE INDEX IF NOT EXISTS idx_consultations_status ON consultations (status)',
     'CREATE INDEX IF NOT EXISTS idx_articles_consultation ON consultation_articles (consultation_id)',
-    'CREATE INDEX IF NOT EXISTS idx_articles_reference ON consultation_articles (consultation_reference)',
+    'CREATE INDEX IF NOT EXISTS idx_results_reference ON consultation_results (reference)',
+    'CREATE INDEX IF NOT EXISTS idx_results_match_key ON consultation_results (match_key)',
     'CREATE INDEX IF NOT EXISTS idx_results_consultation ON consultation_results (consultation_id)',
     'CREATE INDEX IF NOT EXISTS idx_results_acheteur ON consultation_results (acheteur)',
     'CREATE INDEX IF NOT EXISTS idx_results_categorie ON consultation_results (categorie)',
     'CREATE INDEX IF NOT EXISTS idx_results_publication ON consultation_results (date_publication_resultat)',
     'CREATE INDEX IF NOT EXISTS idx_result_lots_result ON result_lots (result_id)',
-    'CREATE INDEX IF NOT EXISTS idx_result_lots_reference ON result_lots (consultation_reference)',
     'CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites (user_id)',
-    'CREATE INDEX IF NOT EXISTS idx_favorites_reference ON favorites (consultation_reference)',
-    'CREATE INDEX IF NOT EXISTS idx_invoices_reference ON invoices (consultation_reference)',
+    'CREATE INDEX IF NOT EXISTS idx_favorites_consultation ON favorites (consultation_id)',
+    'CREATE INDEX IF NOT EXISTS idx_invoices_consultation ON invoices (consultation_id)',
     'CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices (user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items (invoice_id)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
 }
-
 /**
  * Columns added after a table's first release.
  *
@@ -266,5 +257,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-
-export const SCHEMA_VERSION = '2026-09-06.004'
+export const SCHEMA_VERSION = '2026-09-06.005'

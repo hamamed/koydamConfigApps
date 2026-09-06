@@ -1,10 +1,13 @@
 <header class="top">
-  <strong>Marchés Publics</strong>
-  <a href="/admin" class="<%= active === 'dashboard' ? 'active' : '' %>">Tableau de bord</a>
-  <a href="/admin/consultations" class="<%= active === 'consultations' ? 'active' : '' %>">Consultations</a>
+  <strong><%= t('app.name') %></strong>
+  <a href="/admin" class="<%= active === 'dashboard' ? 'active' : '' %>"><%= t('nav.dashboard') %></a>
+  <a href="/admin/consultations" class="<%= active === 'consultations' ? 'active' : '' %>"><%= t('nav.consultations') %></a>
   <span class="spacer"></span>
+  <span class="lang" aria-label="<%= t('nav.language') %>">
+    <% locales.forEach(function (l) { %><a href="<%= langUrl(l.code) %>" class="<%= l.code === locale ? 'on' : '' %>" hreflang="<%= l.code %>"><%= l.label %></a><% }) %>
+  </span>
   <span class="muted" style="color:#dbe7f5"><%= user.email %></span>
   <form method="post" action="/admin/logout" style="display:inline">
-    <button class="secondary" type="submit">Déconnexion</button>
+    <button class="secondary" type="submit"><%= t('nav.logout') %></button>
   </form>
 </header>

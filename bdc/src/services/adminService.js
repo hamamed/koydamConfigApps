@@ -12,7 +12,7 @@ const log = logger.child('[admin]')
 export function createAdminService({ consultations, articles, results, invoices, users, jobs, runner }) {
   /** Counters and recent activity for the dashboard. */
   async function dashboard() {
-    const [consultationCount, articleCount, resultCount, invoiceCount, userCount, unmatched, recentJobs] =
+    const [consultationCount, articleCount, resultCount, invoiceCount, userCount, unmatched, ambiguous, pendingDetails, recentJobs] =
       await Promise.all([
         consultations.countAll(),
         articles.countAll(),
@@ -20,6 +20,8 @@ export function createAdminService({ consultations, articles, results, invoices,
         invoices.countAll(),
         users.countAll(),
         results.countUnmatched(),
+        results.countAmbiguous(),
+        consultations.countPendingDetails(),
         jobs.listRecent(10),
       ])
 
@@ -31,6 +33,8 @@ export function createAdminService({ consultations, articles, results, invoices,
         invoices: invoiceCount,
         users: userCount,
         unmatchedResults: unmatched,
+        ambiguousResults: ambiguous,
+        pendingDetails: pendingDetails,
       },
       matchRate: resultCount > 0 ? Number((((resultCount - unmatched) / resultCount) * 100).toFixed(1)) : null,
       recentJobs: serializeRows(recentJobs),
@@ -93,12 +97,30 @@ export function createAdminService({ consultations, articles, results, invoices,
     return { id, deleted: true }
   }
 
-  /** Re-crawls a single consultation's detail page to refresh its lots. */
+  /** Re-crawls a single consultation's detail page to refresh its articles. */
   async function refreshConsultationDetail(id) {
     const consultation = await consultations.findById(id)
     if (!consultation) throw new NotFoundError(`Consultation ${id}`)
     const { articles: stored } = await runner.consultationScraper.scrapeDetail(consultation)
-    return { reference: consultation.reference, articles: serializeRows(stored) }
+    return { id: consultation.id, reference: consultation.reference, articles: serializeRows(stored) }
+  }
+
+  /**
+   * Reads the detail page of every consultation that has never had one read.
+   *
+   * The listing card carries no category, no nature of service and no articles,
+   * so a row is only half a record until this has run. Long crawls are started
+   * in the background and tracked in `scrape_jobs`.
+   */
+  async function backfillDetails(options = {}, triggeredBy = 'admin') {
+    const task = runner.backfillDetails({ ...options, triggeredBy })
+    if (options.wait) return task
+    task.catch((error) => log.error('background backfill failed', { message: error.message }))
+    return {
+      accepted: true,
+      pending: await consultations.countPendingDetails(),
+      message: 'Backfill started; poll /admin/api/jobs for progress.',
+    }
   }
 
   const pick = (source, keys) =>
@@ -107,6 +129,7 @@ export function createAdminService({ consultations, articles, results, invoices,
   return {
     dashboard,
     triggerScrape,
+    backfillDetails,
     rematch,
     listJobs,
     updateConsultation,

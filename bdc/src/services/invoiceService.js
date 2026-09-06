@@ -5,7 +5,7 @@ import { serializeInvoice } from './serializers.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
 import { applyRate, lineTotalCentimes, toCentimes } from '../utils/money.js'
 import { nowIso, isIsoDate } from '../utils/dates.js'
-import { clean, normalizeReference } from '../utils/text.js'
+import { clean } from '../utils/text.js'
 import { renderInvoicePdf } from '../pdf/invoiceDocument.js'
 
 const SEQUENCE_PADDING = 4
@@ -25,9 +25,9 @@ export function createInvoiceService({ invoices, articles, consultations }) {
    * @returns {Promise<object>} serialized invoice with its line items.
    */
   async function create(userId, payload = {}) {
-    const reference = payload.consultationReference ? normalizeReference(payload.consultationReference) : null
-    const consultation = reference ? await consultations.findByReference(reference) : null
-    if (reference && !consultation) throw new NotFoundError(`Consultation ${payload.consultationReference}`)
+    const consultationId = payload.consultationId ? Number(payload.consultationId) : null
+    const consultation = consultationId ? await consultations.findById(consultationId) : null
+    if (consultationId && !consultation) throw new NotFoundError(`Consultation ${payload.consultationId}`)
 
     const clientName = clean(payload.client?.name)
     if (!clientName) throw new ValidationError('client.name is required')
@@ -56,7 +56,6 @@ export function createInvoiceService({ invoices, articles, consultations }) {
       {
         invoice_number: invoiceNumber,
         user_id: userId,
-        consultation_reference: reference,
         consultation_id: consultation?.id ?? null,
         client_name: clientName,
         client_ice: clean(payload.client?.ice) || null,
@@ -107,7 +106,7 @@ export function createInvoiceService({ invoices, articles, consultations }) {
       const foreign = found.filter((article) => article.consultation_id !== consultation.id)
       if (foreign.length > 0) {
         throw new ValidationError(
-          `Articles ${foreign.map((article) => article.id).join(', ')} do not belong to consultation ${consultation.reference}`,
+          `Articles ${foreign.map((article) => article.id).join(', ')} do not belong to consultation ${consultation.id}`,
         )
       }
     }

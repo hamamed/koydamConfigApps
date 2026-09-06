@@ -6,19 +6,23 @@ const log = logger.child('[scraper:matcher]')
 /**
  * Cross-references the two datasets.
  *
- * `reference` is the business key shared by both listings, normalised
- * identically on each side (see utils/text.js#normalizeReference), which is what
- * makes an exact join reliable despite the formatting noise in the source HTML.
+ * A consultation is identified by the portal's own id, taken from its detail
+ * URL. A reference is not an identity — each buyer numbers its own avis, so
+ * "07/2026" appears three times on five pages of the live listing, once per
+ * commune. Keying on it silently merged unrelated projects.
+ *
+ * Awards have no id at all: the results listing is a terminal card with no
+ * detail page and no link. So they are linked through `match_key`, the pair
+ * (reference, buyer), and the link itself is the foreign key
+ * `consultation_results.consultation_id` — every join downstream is on that id.
  *
  * The matcher runs in two passes:
- *  1. Exact reference join — fills `consultation_results.consultation_id` and
- *     flips `consultations.has_result` / `status` to `awarded`.
- *  2. Housekeeping — recomputes every consultation's lifecycle status from the
- *     facts on record (cancelled, awarded, past its deadline, or still open).
+ *  1. Link on `match_key`, but only where exactly one consultation matches.
+ *  2. Recompute each consultation's lifecycle status from the facts on record.
  *
- * A deliberate non-goal: fuzzy matching on `objet`. Awarding the wrong result to
- * a consultation would corrupt downstream invoices, so unmatched results simply
- * stay unmatched and are reported in the admin dashboard.
+ * Two deliberate non-goals: no fuzzy matching on `objet`, and no guessing when a
+ * key is ambiguous. Attaching the wrong award to a consultation would corrupt
+ * every invoice built from it, so those stay unlinked and are counted.
  */
 export function createMatcher({ db, consultations, results }) {
   async function run() {
@@ -27,34 +31,37 @@ export function createMatcher({ db, consultations, results }) {
     const flagged = await db.run(
       `UPDATE consultations SET has_result = 1, updated_at = ?
        WHERE has_result = 0
-         AND EXISTS (SELECT 1 FROM consultation_results r WHERE r.reference = consultations.reference)`,
+         AND EXISTS (SELECT 1 FROM consultation_results r WHERE r.consultation_id = consultations.id)`,
       [nowIso()],
     )
 
     const restated = await consultations.deriveStatus()
-    const unmatched = await results.countUnmatched()
+    const [unmatched, ambiguous] = await Promise.all([results.countUnmatched(), results.countAmbiguous()])
 
     const stats = {
       matchesLinked: linked,
       consultationsFlagged: flagged.changes,
       statusesChanged: restated,
       unmatchedResults: unmatched,
+      ambiguousResults: ambiguous,
     }
     log.info('matching pass complete', stats)
     return stats
   }
 
-  /** Award data for one reference, used by the consultation detail endpoint. */
-  async function findResultFor(reference) {
-    const result = await results.findByReference(reference)
+  /** Award data for one consultation, used by the detail endpoint. */
+  async function findResultFor(consultationId) {
+    const result = await results.findForConsultation(consultationId)
     if (!result) return null
     return { ...result, lots: await results.findLots(result.id) }
   }
 
-  /** Results that reference a consultation this instance has never scraped. */
+  /** Awards whose consultation this instance has never scraped. */
   const listUnmatched = (limit = 50) =>
     db.all(
-      'SELECT reference, objet, acheteur, date_publication_resultat FROM consultation_results WHERE consultation_id IS NULL ORDER BY date_publication_resultat DESC LIMIT ?',
+      `SELECT reference, objet, acheteur, date_publication_resultat
+       FROM consultation_results WHERE consultation_id IS NULL
+       ORDER BY date_publication_resultat DESC LIMIT ?`,
       [limit],
     )
 

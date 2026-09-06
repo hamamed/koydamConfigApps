@@ -12,6 +12,10 @@ import { ok, paginated, parsePagination } from '../../utils/pagination.js'
  *   GET /api/consultations?search_consultation_resultats[acheteur]=ANCFCC
  *                         &search_consultation_resultats[categorie]=Travaux
  *                         &datePublicationStart=2026-01-01
+ *
+ * A consultation is addressed by its numeric id. Its reference is not unique —
+ * every buyer numbers its own avis — so `/by-reference/:reference` returns a
+ * list rather than one row.
  */
 export function consultationRoutes({ services }) {
   const router = Router()
@@ -32,28 +36,39 @@ export function consultationRoutes({ services }) {
     }),
   )
 
+  /**
+   * Every consultation published under a reference. References repeat across
+   * buyers ("07/2026" belongs to three communes on one page of the portal), so
+   * this is a search that returns a list, not a lookup.
+   */
   router.get(
-    '/:reference',
+    '/by-reference/:reference',
+    asyncHandler(async (req, res) => {
+      res.json(ok(await services.consultations.findByReference(req.params.reference)))
+    }),
+  )
+
+  router.get(
+    '/:id',
     withUser,
     asyncHandler(async (req, res) => {
-      const consultation = await services.consultations.getByReference(req.params.reference, req.user?.id ?? null)
-      res.json(ok(consultation))
+      res.json(ok(await services.consultations.getById(Number(req.params.id), req.user?.id ?? null)))
     }),
   )
 
-  /** Article/lot breakdown — the selectable input of the invoice generator. */
+  /** Article breakdown — the selectable input of the invoice generator. */
   router.get(
-    '/:reference/articles',
+    '/:id/articles',
     asyncHandler(async (req, res) => {
-      res.json(ok(await services.consultations.listArticles(req.params.reference)))
+      res.json(ok(await services.consultations.listArticles(Number(req.params.id))))
     }),
   )
 
-  /** The award matched to this consultation by reference, if published. */
+  /** The award linked to this consultation, if one has been published. */
   router.get(
-    '/:reference/result',
+    '/:id/result',
     asyncHandler(async (req, res) => {
-      res.json(ok(await services.consultations.getResultByReference(req.params.reference)))
+      res.json(ok(await services.consultations.getResultForConsultation(Number(req.params.id))))
     }),
   )
 

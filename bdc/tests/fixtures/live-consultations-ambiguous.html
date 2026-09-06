@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>  Liste des avis d&#039;achat
+</title>
+    <script src="/bdc/js/jquery-3.6.0.min.js"></script>
+              <link rel="stylesheet" href="/bdc/css/flatpickr.min.css">
+  <style>
+      th > a > span.float-end {
+          margin-left: 15px;
+      }
+      .flatpickr-calendar.animate.open {
+          top: 390px !important;
+      }
+      .dateTime__icons {
+          position: absolute;
+          right: 0.3rem !important;
+          top: 0.5rem !important;
+      }
+  </style>
+        <link rel="stylesheet" href="/bdc/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/bdc/css/datepicker.min.css">
+        <link rel="stylesheet" href="/bdc/css/fontawesome.min.css">
+        <link rel="stylesheet" href="/bdc/css/layout.css">
+        <link rel="stylesheet" href="/bdc/css/root.css">
+        <link rel="stylesheet" href="/bdc/css/style.css">
+        <link rel="stylesheet" href="/bdc/css/responsiveTablette.css">
+        <link rel="stylesheet" href="/bdc/css/responsiveMobile.css">
+        <link rel="stylesheet" href="/bdc/css/responsiveDesktop.css">
+        <link rel="stylesheet" href="/bdc/css/flashMessagesColors.css">
+    </head>
+<body>
+    <!-- SideBar Section -->
+<header id="header">
+        <img src="/bdc/images/headerDesktop.png" alt="LOGO" class="headerLogo" />
+</header>
+<div id="mySidebar" class="sidebar"  style="width: 280px;">
+    <a href="http://www.marchespublics.gov.ma/index.php?page=entreprise.EntrepriseHome" class="px-3 fs-5">Accueil</a>
+    <div class="sidebar__links text-nowrap">
+        <div class="px-3 pt-3 rounded-2 sidebar__achat"> Liste des avis d&#039;achat </div>
+        <div class="my-2 navbar-nav ps-2">
+            <div>
+                <a class="nav-link active" href="/bdc/entreprise/consultation/">Consultations</a>
+            </div>
+                        <div>
+                <a class="nav-link" href="/bdc/entreprise/consultation/resultat">Résultats des avis d’achat</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<aside id="sidebar" class="d-xl-none">
+    <div class="sidebar__infos">
+        <h5>Accueil</h5>
+        <button class="closeButton btn-close" id="closeButton" ></button>
+        <button class="sidebar__achat w-100 gap-3" type="button">
+            Liste des avis d&#039;achat <i class="fa-sharp fa-solid fa-chevron-down"></i>
+        </button>
+
+        <div class="sidebar__menu">
+            <ul class="radio-form">
+                <li>
+                    <a class="nav-link active" href="/bdc/entreprise/consultation/">Consultations</a>
+                </li>
+            </ul>
+                        <ul class="radio-form">
+                <li>
+                    <a class="nav-link" href="/bdc/entreprise/consultation/resultat">Résultats des avis d’achat</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</aside>
+<!-- SideBar Section -->
+<!-- content Section -->
+<section class="w-100 d-flex flex-column">
+            <!-- Debut Header -->
+<div class="w-100 d-flex justify-content-between align-items-center content__head px-4">
+    <button id="openSideBar" onclick="toggleNav()" class="btn align-items-center gap-2 px-3">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    <button id="backButton" class="d-none btn align-items-center gap-2 px-3 backButton">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+            <button
+                class="btn content__profile"
+                type="button"
+                id="dropdownMenuButton1"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+        >
+            <i class="fa-solid fa-user"></i>
+            &nbsp;Invité
+        </button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <a class="dropdown-item" href="http://www.marchespublics.gov.ma/index.php?page=entreprise.EntrepriseHome">Se connecter</a>
+        </div>
+    
+</div>
+<!-- Fin Header -->                   <div class="p-4 h-100 content__box">
+    <h4>Liste des avis d&#039;achat</h4>
+    <div class="mt-4 py-3 content__subBox">
+      <form name="search_consultation_entreprise" method="get" class="flex flex-col">
+      <div class="d-flex w-100 align-items-center gap-3 mb-2">
+        <label class="text-nowrap searchLabel" for="search_consultation_entreprise_keyword">Recherche par mot clé</label>
+        <input type="text" id="search_consultation_entreprise_keyword" name="search_consultation_entreprise[keyword]" placeholder="Recherche par mot clé" class="form-control" />
+        <button class="btn px-4 border" type="submit">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+        <button type="button" class="btn px-3 border content-icon__settings" data-bs-toggle="collapse"
+                data-bs-target="#searchFiltersDiv" aria-expanded="false" aria-controls="searchFiltersDiv">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+
+
+      <div class="border border-1 rounded-2 p-3 collapse short-transition" id="searchFiltersDiv">
+        <div class="row mb-2">
+          <div class="col">
+            <label class="form-label" for="search_consultation_entreprise_reference">Référence</label>
+            <input type="text" id="search_consultation_entreprise_reference" name="search_consultation_entreprise[reference]" placeholder="Référence" class="form-control" />
+          </div>
+          <div class="col">
+            <label class="form-label" for="search_consultation_entreprise_objet">Objet</label>
+            <input type="text" id="search_consultation_entreprise_objet" name="search_consultation_entreprise[objet]" placeholder="Objet" class="form-control" />
+          </div>
+        </div>
+        <div class="row mb-2">
+          <label class="" for="search_consultation_entreprise_dateLimiteStart">Date et heure limite de remise des devis</label>
+          <div class="d-flex flex-row align-items-center justify-content-between">
+            <div class="dateTime flex-grow-1">
+              <input type="text" id="search_consultation_entreprise_dateLimiteStart" name="search_consultation_entreprise[dateLimiteStart]" placeholder="Début" class="form-control fp-date" />
+              <div class="dateTime__icons">
+                <i class="fa-regular fa-calendar-days opencalendar"></i>
+                <i class="fa-solid fa-xmark resetcalendar"></i>
+              </div>
+            </div>
+            <span class="d-block mx-2">à</span>
+            <div class="dateTime flex-grow-1">
+              <input type="text" id="search_consultation_entreprise_dateLimiteEnd" name="search_consultation_entreprise[dateLimiteEnd]" placeholder="Fin" class="form-control fp-date" />
+              <div class="dateTime__icons">
+                <i class="fa-regular fa-calendar-days opencalendar"></i>
+                <i class="fa-solid fa-xmark resetcalendar"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <label class="" for="search_consultation_entreprise_dateMiseEnLigneStart">Date de mise en ligne</label>
+          <div class="d-flex flex-row align-items-center justify-content-between">
+            <div class="dateTime flex-grow-1">
+              <input type="text" id="search_consultation_entreprise_dateMiseEnLigneStart" name="search_consultation_entreprise[dateMiseEnLigneStart]" placeholder="Début" class="form-control fp-date" />
+              <div class="dateTime__icons">
+                <i class="fa-regular fa-calendar-days opencalendar"></i>
+                <i class="fa-solid fa-xmark resetcalendar"></i>
+              </div>
+            </div>
+            <span class="d-block mx-2">à</span>
+            <div class="dateTime flex-grow-1">
+              <input type="text" id="search_consultation_entreprise_dateMiseEnLigneEnd" name="search_consultation_entreprise[dateMiseEnLigneEnd]" placeholder="Fin" class="form-control fp-date" />
+              <div class="dateTime__icons">
+                <i class="fa-regular fa-calendar-days opencalendar"></i>
+                <i class="fa-solid fa-xmark resetcalendar"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-xl-6">
+            <label class="text-nowrap" for="search_consultation_entreprise_categorie">Catégorie principale</label>
+            <select id="search_consultation_entreprise_categorie" name="search_consultation_entreprise[categorie]" class="form-select"><option value="">Sélectionnez ...</option><option value="1">Travaux</option><option value="2">Fournitures</option><option value="3">Services</option></select>
+          </div>
+
+          <div class="col-xl-6">
+            <label class="" for="search_consultation_entreprise_naturePrestation">Nature de prestation</label>
+            <select id="search_consultation_entreprise_naturePrestation" name="search_consultation_entreprise[naturePrestation]" class="form-select"><option value="">Sélectionnez ...</option><option value="1">Travaux d’aménagement des espaces verts avec ou sans fourniture de graines et plantes</option><option value="2">Travaux d’aménagement et d’entretien des installations militaires</option><option value="3">Travaux d’aménagement, d’entretien et de réparation des bâtiments administratifs</option><option value="4">Travaux d’aménagement, d’entretien et de réparation des logements militaires</option><option value="5">Travaux d’aménagement, d’entretien et de réparation des ouvrages, voies et réseaux</option><option value="6">Travaux d’équipement et de renforcement des postes MT/BT du réseau d’électricité</option><option value="7">Travaux d’installation de matériels divers</option><option value="8">Travaux de branchement et d’extension du réseau d’eau potable et d’électricité</option><option value="9">Travaux de raccordement au réseau d’assainissement et de curage</option><option value="10">Achat d’affiches et d’articles publicitaires</option><option value="11">Achat d’animaux</option><option value="12">Achat d’articles de correction de la vue et articles pour personnes à besoins spécifiques</option><option value="13">Achat d’articles de droguerie, de quincaillerie, d’électricité, de menuiserie et de plomberie sanitaire</option><option value="14">Achat d’habillement</option><option value="15">Achat de badges, de médailles, d’effigies, de fanions, de drapeaux et de portraits</option><option value="16">Achat de carburants et de lubrifiants</option><option value="17">Achat de cartables, de livres, de manuels, et de fournitures scolaires et de matériel d’enseignement</option><option value="18">Achat de cartes géographiques, topographiques, géologiques et de photographies aériennes</option><option value="19">Achat de fournitures de bureau et de documentation</option><option value="20">Achat de matériaux de construction</option><option value="21">Achat de matériel audiovisuel, sonore et de mise en lumière</option><option value="22">Achat de matériel d’éclairage public</option><option value="23">Achat de matériel de diagnostic, de recherche, de détection, de signalisation de défaut et de matériel de mesure</option><option value="24">Achat de matériel de navigation et de transmission</option><option value="25">Achat de matériel de sécurité et de lutte contre l’incendie</option><option value="26">Achat de matériel de transport, de citernes et d’engins</option><option value="27">Achat de matériel électrique, de groupes électrogènes, d’électropompes et de motopompes de chantier</option><option value="28">Achat de matériel et d’équipement de plongée sous-marine</option><option value="29">Achat de matériel et de mobilier de bureau</option><option value="30">Achat de matériel technique, de logiciels et de matériel informatique</option><option value="31">Achat de matériel, de câbles, coffrets de distribution, de poteaux et autres accessoires de branchements moyenne tension et basse tension</option><option value="32">Achat de matériels et articles de sport, de literie, de linge, de couchage, de cuisine et de buanderie</option><option value="33">Achat de matières premières pour laboratoire et enseignement</option><option value="34">Achat de matières premières pour le textile, le cuir, la reliure des documents et autres</option><option value="35">Achat de médicaments</option><option value="36">Achat de mobilier, d’enseignement, de laboratoire et d’exposition</option><option value="37">Achat de papeteries et d’imprimés</option><option value="38">Achat de pièces de rechange et pneumatiques pour véhicules et engins</option><option value="39">Achat de pièces de rechange pour les équipements médicotechniques</option><option value="40">Achat de pièces de rechange pour matériel technique et informatique</option><option value="41">Achat de produits alimentaires pour usage animal</option><option value="42">Achat de produits alimentaires pour usage humain</option><option value="43">Achat de produits chimiques et de laboratoire, pesticides et insecticides</option><option value="44">Achat de produits d’impression, de reproduction et de photographie</option><option value="45">Achat de produits pharmaceutiques non-médicamenteux, de gaz médicaux et de réactifs de laboratoires</option><option value="46">Achat de produits pour traitement d’eau potable</option><option value="47">Achat de produits vétérinaires et de produits d’élevage aquacole</option><option value="48">Fourniture d’alevins, de naissains, de boutures d’algues, d’animaux marins et poissons</option><option value="49">Fourniture d’engrais, de graines, de plantes, de plants et de portoirs</option><option value="50">Fourniture d’équipements médico-techniques et de pièces de rechange y afférentes</option><option value="51">Fourniture de combustibles et de produits de chauffage</option><option value="52">Fourniture de films et de produits radiologiques</option><option value="53">Fourniture de fongibles médicaux et de fils chirurgicaux</option><option value="54">Fourniture de l’instrumentation médicotechnique</option><option value="55">Fourniture de prothèses et orthèses</option><option value="56">Fourniture de sacs et produits d’emballage</option><option value="57">Fourniture de verrerie, petit matériel et outillage de laboratoire</option><option value="58">Fourniture des consommables dentaires</option><option value="59">Fournitures et pièces de rechange pour matériel technique et informatique</option><option value="60">Fournitures et produits d’entretien et de nettoyage</option><option value="61">Fournitures pour inauguration et pose de premières pierres</option><option value="62">Fournitures pour le traitement et la conservation préventive des archives</option><option value="63">Achat de piges</option><option value="64">Achat, développement, production ou coproduction de programmes ou de films destinés à la diffusion par des organismes de radiodiffusion et de télévision et dans les sites électroniques et du temps de diffusion</option><option value="65">Collecte des produits biologiques et sanguins</option><option value="66">Contrôle et expertise techniques</option><option value="67">Direction, animation et participation des artistes, intellectuels, conférenciers et techniciens aux manifestations et activités culturelles</option><option value="68">Entretien et maintenance de logiciels et de progiciels</option><option value="69">Entretien et maintenance des équipements informatique</option><option value="70">Entretien et réparation de matériel technique, de mobilier et des installations techniques</option><option value="71">Entretien, dépoussiérage et traitement chimique des archives et des livres</option><option value="72">Études, conseil et formation</option><option value="73">Location d’engins et de moyens de transport de matériels et matériaux et d’engins</option><option value="74">Location de camions citernes</option><option value="75">Location de matériel et de mobilier</option><option value="76">Location de moyens de transport des personnes (voitures et autocars)</option><option value="77">Location de salles, de stands et de mobilier d’exposition</option><option value="78">Montage et démontage du matériel hydraulique et électromécanique</option><option value="79">Organisation de manifestations culturelles, scientifiques et sportives</option><option value="80">Prestation de jardinage, de gardiennage et de nettoyage</option><option value="81">Prestations d’assistance et de conseil technique, juridique et comptable</option><option value="82">Prestations d’entretien des véhicules et engins</option><option value="83">Prestations d’entretien, de rééquilibrage, d’étalonnage et de réparation des équipements de laboratoires</option><option value="84">Prestations d’impression, de tirage, de reproduction et de photographie</option><option value="85">Prestations de centres d’appels, de télémarketing et de télé-service</option><option value="86">Prestations de collecte et de traitement de déchets hospitaliers</option><option value="87">Prestations de collecte, de traitement et de blanchissage du linge</option><option value="88">Prestations de contrôle des points de comptage</option><option value="89">Prestations de contrôle et d’analyse des échantillons prélevés sur les produits, matériel et matériaux soumis à des normes obligatoires</option><option value="90">Prestations de déménagement</option><option value="91">Prestations de désinsectisation, de dératisation et prestations de lutte contre les animaux errants</option><option value="92">Prestations de mise en place des outils de gestion technique et de détection de fuites</option><option value="93">Prestations de publicité, de sensibilisation et supports multimédia</option><option value="94">Prestations de remise en état et de recharge des extincteurs</option><option value="95">Prestations d’hôtellerie, d’hébergement, de réception et de restauration</option><option value="96">Prestations géotechniques et de laboratoire</option><option value="97">Prestations médicales, hospitalières, radiologiques, d’analyse médicale et de brancardage</option><option value="98">Prestations topographiques et océanographiques</option><option value="99">Traduction simultanée et traduction des documents et des œuvres littéraires, scientifiques, culturelles ou juridiques</option><option value="100">Transport, acconage, magasinage et transit</option><option value="101">Travaux d’aménagement, d’entretien et de réparation des bâtiments administratifs (ONDA)</option><option value="102">Travaux d’aménagement, d’entretien et de réparation des bâtiments techniques (ONDA)</option><option value="103">Travaux d’aménagement, d’entretien et de réparation des bâtiments à caractère social (logements d’estivage, centres sportifs, cantines, buvettes et autres) (ONDA)</option><option value="104">Travaux d’aménagement, d’entretien et de réparation des ouvrages, voies et réseaux (ONDA)</option><option value="105">Travaux d’entretien et de maintenance des réseaux et des espaces verts (ONDA)</option><option value="106">Travaux d’aménagement des espaces verts avec ou sans fourniture de graines et plantes (ONDA)</option><option value="107">Travaux d’installation de matériels divers (ONDA)</option><option value="108">Travaux de dégommage des pistes d’envol (ONDA)</option><option value="109">Travaux d’entretien des infrastructures aéroportuaires, de leurs équipements et de leurs dépendances (ONDA)</option><option value="110">Travaux de signalétique et de signalisation (ONDA)</option><option value="111">Travaux d’assainissement, de raccordement au réseau d’assainissement et de curage (ONDA)</option><option value="112">Travaux d’équipement et de renforcement des postes MT/BT du réseau d’électricité (ONDA)</option><option value="113">Travaux de branchement et d’extension du réseau d’eau potable et d’électricité (ONDA)</option><option value="114">Achat d’articles pour relations publiques (ONDA)</option><option value="115">Acquisition de licences de conception des procédures (ONDA)</option><option value="116">Animaux (ONDA)</option><option value="117">Articles de cuisine (ONDA)</option><option value="118">Articles de literie, de lingerie, de couchage et de buanderie (ONDA)</option><option value="119">Articles d’habillement du personnel (ONDA)</option><option value="120">Articles de plomberie sanitaire (ONDA)</option><option value="121">Batteries (ONDA)</option><option value="122">Carburants et lubrifiants (ONDA)</option><option value="123">Cartes géographiques, topographiques et géologiques, photographies aériennes (ONDA)</option><option value="124">Fournitures et produits de nettoyage (ONDA)</option><option value="125">Documentation (ONDA)</option><option value="126">Equipements de protection individuelle (EPI) (ONDA)</option><option value="127">Fourniture d’engrais, de graines, plantes, fleurs, plants, portoirs (ONDA)</option><option value="128">Fourniture d’équipements médicotechniques (ONDA)</option><option value="129">Fourniture de badge, articles similaires et accessoires (ONDA)</option><option value="130">Fourniture pour matériel informatique et bureautique (ONDA)</option><option value="131">Fournitures de bureau et imprimés (ONDA)</option><option value="132">Fournitures de clôtures grillagées et barbelés pour sécurité des sites (ONDA)</option><option value="133">Fournitures de composants électriques (chargeurs, onduleurs, régulateurs, batteries) destinés aux installations de la navigation aérienne (ONDA)</option><option value="134">Fournitures de sacs et produits d’emballage (ONDA)</option><option value="135">Fournitures du matériel pour le système de téléaffichage et le système de traitement de passagers (ONDA)</option><option value="136">Fournitures électriques (ONDA)</option><option value="137">Fournitures pour matériel technique et informatique (ONDA)</option><option value="138">Achat de cartables, de livres, de manuels, et de fournitures scolaires et de matériel d’enseignement (ONDA)</option><option value="139">Matériaux de construction (ONDA)</option><option value="140">Matériel de sonorisation de téléphonie et de télécommunication (ONDA)</option><option value="141">Matériel de transport (ONDA)</option><option value="142">Matériel et articles de sport (ONDA)</option><option value="143">Matériel informatique et pièces de rechange (ONDA)</option><option value="144">Matériel médical pour unité médicale d’urgence (ONDA)</option><option value="145">Matériel technique et d’assainissement (ONDA)</option><option value="146">Matériels de lutte contre l’incendie (ONDA)</option><option value="147">Badges, médailles, effigies, drapeaux, fanions et portraits (ONDA)</option><option value="148">Médicaments (ONDA)</option><option value="149">Mobilier d’aérogare (ONDA)</option><option value="150">Mobilier de bureau (ONDA)</option><option value="151">Matériel de bureau (ONDA)</option><option value="152">Autres mobiliers (ONDA)</option><option value="153">Autres matériels (ONDA)</option><option value="154">Droguerie, outillage et quincaillerie (ONDA)</option><option value="155">Fourniture de peinture et ses produits accessoires (ONDA)</option><option value="156">Pièces de rechange et fournitures électriques pour l’éclairage des grandes surfaces et aérogares (ONDA)</option><option value="157">Pièces de rechange et fournitures pour climatisation et matériel de climatisation (ONDA)</option><option value="158">Pièces de rechange et fournitures pour installations communication, navigation et surveillances (ONDA)</option><option value="159">Pièces de rechange et fournitures pour installations de navigation aérienne (ONDA)</option><option value="160">Pièces de rechange et fournitures pour matériel et de balisage (ONDA)</option><option value="161">Pièces de rechange pour les équipements médicotechniques (ONDA)</option><option value="162">Pièces de rechange pour matériel technique (ONDA)</option><option value="163">Pièces de rechange, fournitures et pneumatiques pour véhicules et engins (ONDA)</option><option value="164">Produits alimentaires pour usage humain et animal (ONDA)</option><option value="165">Produits chimiques et de laboratoire, pesticides et insecticides (ONDA)</option><option value="166">Produits d’impression, de reproduction et de photographie (ONDA)</option><option value="167">Fourniture de combustibles et de produits de chauffage (ONDA)</option><option value="168">Produits de lutte contre l’incendie (ONDA)</option><option value="169">Produits pharmaceutiques non médicamenteux, articles de correction de vue et articles pour handicapés (ONDA)</option><option value="170">Systèmes vidéo surveillance (ONDA)</option><option value="171">Mobilier d’exposition (ONDA)</option><option value="172">Signalétique et signalisation (ONDA)</option><option value="173">Articles d’électroménager (ONDA)</option><option value="174">Fourniture pour ateliers mécaniques, de menuiserie et de tôlerie (ONDA)</option><option value="175">Gaz et Oxygène (ONDA)</option><option value="176">Mobiliers pour bâtiments à caractère social (ONDA)</option><option value="177">Matériels et équipements pour bâtiments à caractère social (ONDA)</option><option value="178">Achat de logiciels (ONDA)</option><option value="179">Articles d’habillement des élèves de l’AIAC (ONDA)</option><option value="180">Articles d’habillement pour actions sociales (ONDA)</option><option value="181">Matériel et article de sport pour les élèves de l’AIAC (ONDA)</option><option value="182">Literies pour les élèves de l’AIAC (ONDA)</option><option value="183">Matériel de manutention, citernes et engins (ONDA)</option><option value="184">Matériel et installations logistiques (ONDA)</option><option value="185">Achat d’affiches et d’articles publicitaires (ONDA)</option><option value="186">Matériel audiovisuel, sonore et de mise en lumière (ONDA)</option><option value="187">Matériel électrique, de groupes électrogènes, d’électropompes et de motopompes (ONDA)</option><option value="188">Matériel, de câbles, coffrets de distribution, de poteaux et autres accessoires de branchements moyenne tension et basse tension (ONDA)</option><option value="189">Animation colonie de vacances (ONDA)</option><option value="190">Capture des animaux (ONDA)</option><option value="191">Contrôle réglementaire et veille légale et réglementaire (ONDA)</option><option value="192">Dégraissage et nettoyage (ONDA)</option><option value="193">Elaboration du plan de dégagement de servitude radioélectrique pour installations communication, navigation et surveillances (ONDA)</option><option value="194">Entretien et réparation de matériel et de mobilier (ONDA)</option><option value="195">Entretien et réparation des équipements et installation technique (ONDA)</option><option value="196">Entretien et réparation des groupes électrogène et onduleurs (ONDA)</option><option value="197">Entretien et réparation des véhicules et engins (ONDA)</option><option value="198">Etalonnage et calibrage des appareils de mesure (ONDA)</option><option value="199">Etudes et conseil (ONDA)</option><option value="200">Location d’engins et de moyens de transport de matériels et matériaux et d’engins (ONDA)</option><option value="201">Location de camion citernes (ONDA)</option><option value="202">Location de matériel et de mobilier (ONDA)</option><option value="203">Location de moyens de transport des personnes (voitures et cars) (ONDA)</option><option value="204">Location de tentes, chapiteaux et toilettes mobiles (ONDA)</option><option value="205">Montage et démontage du matériel hydraulique et électromécanique (ONDA)</option><option value="206">Organisation de manifestations culturelles, scientifiques et sportives (ONDA)</option><option value="207">Prestation de formation et coaching (ONDA)</option><option value="208">Prestation de montage, démontage et pointage antenne (VHF, FH et VSAT) (ONDA)</option><option value="209">Prestation de réfection et peinture des pylônes des antennes avancées (ONDA)</option><option value="210">Prestation médicale, hospitalières et de brancardage (ONDA)</option><option value="211">Prestations d’assistance et de conseil (ONDA)</option><option value="212">Prestations d’assistance au recrutement (ONDA)</option><option value="213">Prestations d’enquête cadastrale et parcellaire (ONDA)</option><option value="214">Prestations d’impression, de reproduction, de photographie et de tournage (ONDA)</option><option value="215">Prestations de jardinage des aérogares et bâtiments (ONDA)</option><option value="216">Prestations de nettoyage (ONDA)</option><option value="217">Prestations de collecte de déchets (ONDA)</option><option value="218">Prestations d’intérim (ONDA)</option><option value="219">Prestations de mesure, d’analyse et de contrôle (mesure de la qualité d’air, rejets liquides, contrôle qualité de l’eau, mesure du niveau du bruit) et prestations traitement des déchets (ONDA)</option><option value="220">Prestations de publicité (ONDA)</option><option value="221">Prestations topographiques (ONDA)</option><option value="222">Réparation et maintenance des équipements techniques, informatiques, logiciels et progiciels (ONDA)</option><option value="223">Traduction des documents et correspondances (ONDA)</option><option value="224">Transport, acconage, magasinage et transit (ONDA)</option><option value="225">Visite technique des véhicules et engins (ONDA)</option><option value="226">Prestations de gardiennage et de surveillance (ONDA)</option><option value="227">Gestion multiservices des bâtiments (ONDA)</option><option value="228">Audits (ONDA)</option><option value="229">Prestations d’accréditation et de certification (ONDA)</option><option value="230">Prestations de centres d’appels (ONDA)</option><option value="231">Veille et gestion de la marque ONDA sur les réseaux sociaux (ONDA)</option><option value="232">Prestations liées à l’obtention d’un certificat et signature électronique (ONDA)</option><option value="233">Assistance administrative, technique et logistique pour la réforme des immobilisations (ONDA)</option><option value="234">Prestations de remise en état et de recharge des extincteurs (ONDA)</option><option value="235">Travaux d’aménagement des espaces verts avec ou sans fourniture de graines et plantes (ANCFCC)</option><option value="236">Travaux d’aménagement, d’entretien et de réparation des bâtiments administratifs (ANCFCC)</option><option value="237">Travaux d’aménagement, d’entretien et de réparation des ouvrages, voies et réseaux (ANCFCC)</option><option value="238">Travaux d’équipement et de renforcement des postes MT/BT du réseau d’électricité (ANCFCC)</option><option value="239">Travaux d’installation de matériels divers (ANCFCC)</option><option value="240">Travaux de branchement et d’extension du réseau d’eau potable et d’électricité (ANCFCC)</option><option value="241">Travaux de raccordement au réseau d’assainissement et de curage (ANCFCC)</option><option value="242">Travaux d’aménagement, d’entretien et de réparation des bâtiments administratifs et techniques (ANCFCC)</option><option value="243">Achat d’affiches et d’articles publicitaires (ANCFCC)</option><option value="244">Achat d’animaux (ANCFCC)</option><option value="245">Achat d’articles de correction de la vue et articles pour personnes à besoins spécifiques (ANCFCC)</option><option value="246">Achat d’articles de droguerie, de quincaillerie, d’électricité, de menuiserie et de plomberie sanitaire (ANCFCC)</option><option value="247">Achat d’habillement (ANCFCC)</option><option value="248">Achat de badges, de médailles, d’effigies, de fanions, de drapeaux et de portraits (ANCFCC)</option><option value="249">Achat de carburants et de lubrifiants (ANCFCC)</option><option value="250">Achat de cartables, de livres, de manuels, et de fournitures scolaires et de matériel d’enseignement (ANCFCC)</option><option value="251">Achat de cartes géographiques, topographiques, géologiques et de photographies aériennes (ANCFCC)</option><option value="252">Achat de fournitures de bureau et de documentation (ANCFCC)</option><option value="253">Achat de matériaux de construction (ANCFCC)</option><option value="254">Achat de matériel audiovisuel, sonore et de mise en lumière (ANCFCC)</option><option value="255">Achat de matériel d’éclairage public (ANCFCC)</option><option value="256">Achat de matériel de diagnostic, de recherche, de détection, de signalisation de défaut et de matériel de mesure (ANCFCC)</option><option value="257">Achat de matériel de navigation et de transmission (ANCFCC)</option><option value="258">Achat de matériel de sécurité et produits de lutte contre l’incendie (ANCFCC)</option><option value="259">Achat de matériel électrique, de groupes électrogènes, d’électropompes et de motopompes de chantier (ANCFCC)</option><option value="260">Achat de matériel et de mobilier de bureau (ANCFCC)</option><option value="261">Achat de matériel technique, de logiciels et de matériel informatique (ANCFCC)</option><option value="262">Achat de matériel, de câbles, coffrets de distribution, de poteaux et autres accessoires de branchements moyenne tension et basse tension (ANCFCC)</option><option value="263">Achat de matériels et articles de sport, de literie, de linge, de couchage, de cuisine et de buanderie (ANCFCC)</option><option value="264">Achat de matières premières pour laboratoire et enseignement (ANCFCC)</option><option value="265">Achat de matières premières pour le textile, le cuir, la reliure des documents et autres (ANCFCC)</option><option value="266">Achat de médicaments (ANCFCC)</option><option value="267">Achat de mobilier, d’enseignement, de laboratoire et d’exposition (ANCFCC)</option><option value="268">Achat de papeteries et d’imprimés (ANCFCC)</option><option value="269">Achat de pièces de rechange et pneumatiques pour véhicules et engins (ANCFCC)</option><option value="270">Achat de pièces de rechange pour les équipements médicotechniques (ANCFCC)</option><option value="271">Achat de pièces de rechange pour matériel technique et informatique (ANCFCC)</option><option value="272">Achat de produits alimentaires pour usage animal (ANCFCC)</option><option value="273">Achat de produits alimentaires pour usage humain (ANCFCC)</option><option value="274">Achat de produits chimiques et de laboratoire, pesticides et insecticides (ANCFCC)</option><option value="275">Achat de produits d’impression, de reproduction et de photographie (ANCFCC)</option><option value="276">Achat de produits pharmaceutiques non-médicamenteux, de gaz médicaux et de réactifs de laboratoires (ANCFCC)</option><option value="277">Achat de produits pour traitement d’eau potable (ANCFCC)</option><option value="278">Cartes géographiques, topographiques et géologiques, photographies aériennes et images satellitaires (ANCFCC)</option><option value="279">Détergents et produits de nettoyage (ANCFCC)</option><option value="280">Fourniture d’engrais, de graines, de plantes, de plants et de portoirs (ANCFCC)</option><option value="281">Fourniture d’équipements médicotechniques et de pièces de rechange y afférentes (ANCFCC)</option><option value="282">Fourniture de combustibles et de produits de chauffage (ANCFCC)</option><option value="283">Fourniture de films et de produits radiologiques (ANCFCC)</option><option value="284">Fourniture de sacs et produits d’emballage (ANCFCC)</option><option value="285">Fourniture de verrerie, petit matériel et outillage de laboratoire (ANCFCC)</option><option value="286">Fournitures et pièces de rechange pour matériel technique et informatique (ANCFCC)</option><option value="287">Fournitures et produits d’entretien et de nettoyage (ANCFCC)</option><option value="288">Fournitures pour inauguration et pose de premières pierres (ANCFCC)</option><option value="289">Fournitures pour le traitement et la conservation préventive des archives (ANCFCC)</option><option value="290">Fournitures de reliure, de reprographie, de reproduction, de photomécanique (ANCFCC)</option><option value="291">Fournitures électriques (ANCFCC)</option><option value="292">Fournitures pour matériel informatique et technique (ANCFCC)</option><option value="293">Fourniture de pièces de rechange pour matériel d’imprimerie (ANCFCC)</option><option value="294">Fourniture de pièces de rechange pour matériel cartographique (ANCFCC)</option><option value="295">Fourniture de pièces de rechange pour matériel géodésique (ANCFCC)</option><option value="296">Habillement (ANCFCC)</option><option value="297">Manuels et fournitures scolaires et d’enseignement (ANCFCC)</option><option value="298">Matériel d’imprimerie (ANCFCC)</option><option value="299">Matériel géodésique et accessoires (ANCFCC)</option><option value="300">Matériel cartographique et accessoires (ANCFCC)</option><option value="301">Outillage et quincaillerie (ANCFCC)</option><option value="302">Abonnement aux prestations liées aux avions (ANCFCC)</option><option value="303">Actions de communication et relations publiques (ANCFCC)</option><option value="304">Achat de piges (ANCFCC)</option><option value="305">Contrôle et expertise techniques (ANCFCC)</option><option value="306">Direction, animation et participation des artistes, intellectuels, conférenciers et techniciens aux manifestations et activités culturelles (ANCFCC)</option><option value="307">Entretien et maintenance des équipements cartographiques, système de flashage et équipements géodésiques (ANCFCC)</option><option value="308">Entretien et maintenance de logiciels et de progiciels (ANCFCC)</option><option value="309">Entretien et maintenance des équipements informatiques (ANCFCC)</option><option value="310">Entretien et réparation de matériel technique, de mobilier et des installations techniques (ANCFCC)</option><option value="311">Entretien, dépoussiérage et traitement chimique des archives et des livres (ANCFCC)</option><option value="312">Etudes, conseil et formation (ANCFCC)</option><option value="313">Location d’engins et de moyens de transport de matériels et matériaux et d’engins (ANCFCC)</option><option value="314">Location de camions citernes (ANCFCC)</option><option value="315">Location de matériel et de mobilier (ANCFCC)</option><option value="316">Location de moyens de transport des personnes (voitures et autocars) (ANCFCC)</option><option value="317">Montage et démontage du matériel hydraulique et électromécanique (ANCFCC)</option><option value="318">Organisation de manifestations culturelles, scientifiques et sportives (ANCFCC)</option><option value="319">Prestation de jardinage, de gardiennage, de nettoyage et d’intérim (ANCFCC)</option><option value="320">Prestations d’assistance et de conseil technique, juridique et comptable (ANCFCC)</option><option value="321">Prestations d’entretien des véhicules et engins (ANCFCC)</option><option value="322">Prestations d’impression, de tirage, de reproduction et de photographie (ANCFCC)</option><option value="323">Prestations de centres d’appels, de télémarketing et de télé-service (ANCFCC)</option><option value="324">Prestations de contrôle et d’analyse des échantillons prélevés sur les produits, matériel et matériaux soumis à des normes obligatoires (ANCFCC)</option><option value="325">Prestations de déménagement (ANCFCC)</option><option value="326">Prestations de désinsectisation, de dératisation et prestations de lutte contre les animaux errants (ANCFCC)</option><option value="327">Prestations de mise en place des outils de gestion technique et de détection de fuites (ANCFCC)</option><option value="328">Prestations de publicité, de sensibilisation et supports multimédia (ANCFCC)</option><option value="329">Prestations de remise en état et de recharge des extincteurs (ANCFCC)</option><option value="330">Prestations géotechniques et de laboratoire (ANCFCC)</option><option value="331">Prestations médicales, hospitalières, radiologiques, d’analyse médicale et de brancardage (ANCFCC)</option><option value="332">Prestations topographiques et océanographiques (ANCFCC)</option><option value="333">Transport, acconage, magasinage et transit. (ANCFCC)</option><option value="334">Prestations d’installation et de mise en service des liens wan (ANCFCC)</option><option value="335">Prestations d’audit et de contrôle de gestion (ANCFCC)</option><option value="336">Prestations cartographiques et photogrammétriques (ANCFCC)</option><option value="337">Prestations géodésiques (ANCFCC)</option><option value="338">Prestations topographiques (ANCFCC)</option><option value="339">Prestations de flashage et d’impression cartographique (ANCFCC)</option></select>
+          </div>
+        </div>
+        <div class="row my-2">
+          <div class="col" id="acheteur-select">
+            <label class="" for="search_consultation_entreprise_acheteur">Acheteur</label>
+            <div class="position-relative">
+              <input type="text" id="search_consultation_entreprise_acheteur" name="search_consultation_entreprise[acheteur]" placeholder="Acheteur" class="form-control" autocomplete="off" />
+              <div class="dateTime__icons" style="z-index: 1;">
+                <i class="fa-solid fa-xmark resetacheteur"></i>
+              </div>
+            </div>
+            <div class="d-none" id="autocomplete-dropdown"></div>
+            <input type="text" id="search_consultation_entreprise_service" name="search_consultation_entreprise[service]" placeholder="Service" class="form-control d-none" />
+          </div>
+          <div class="col">
+            <label class="" for="search_consultation_entreprise_lieuExecution">Lieu d&#039;exécution</label>
+            <input type="text" id="search_consultation_entreprise_lieuExecution" name="search_consultation_entreprise[lieuExecution]" placeholder="Lieu d&#039;exécution" class="form-control" />
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center my-3 block__filter">
+          <button type="button" class="btn bg-white text-danger border-danger" onclick="resetFormInputs()">
+            <i class="fa fa-multiply"></i>
+            Effacer tous les filtres
+          </button>
+          <button type="submit" class="btn content__button sendform">
+            Lancer la recherche
+            <i class="fa fa-search"></i>
+          </button>
+        </div>
+      </div>
+      <div class="content__table d-flex justify-content-between mt-3">
+        <div>
+          <select id="search_consultation_entreprise_pageSize" name="search_consultation_entreprise[pageSize]" class="form-select page-size"><option value="10" selected="selected">10</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select>
+        </div>
+        <div class="content__resultat">Nombre de résultats : 758</div>
+      </div>
+      </form>
+                        <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/316430"
+                   class="font-bold table__links">Référence : 53/2026</a>
+                                  <span class="badge bg-danger">Annulé</span>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/316430" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> TRAVAUX D&#039;INSTALLATION D&#039;UN ABRIS A LA STATION DU TAXIS
+              </a>
+              <a href="/bdc/entreprise/consultation/show/316430" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/316430" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  16/03/2027</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 14:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="AL HOCEIMA" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      AL HOCEIMA
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/351070"
+                   class="font-bold table__links">Référence : 7/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/351070" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> DÉCISION D&#039;ANNULATION
+ DE L’AVIS D’ACHAT SUR BON DE COMMANDE  N° : 1/2026
+
+          le Président de la commune Bni Lent décide d&#039;annulation de l’avis d’achat sur bon de commande  n° : 1/2026 du 07/01/2026 relatif à la  Fourniture de tout venant pour l’aménagement  des pistes  de  la Commune  de Bni  lent -  Province de Taza . attribué à la ste  LES JARDINS DE TREFLE AIT MELLOUL AGADIR
+Suite  aux motifs suivants :
+
+Désistement de la société à  cause des problèmes financiers et matériels .
+              </a>
+              <a href="/bdc/entreprise/consultation/show/351070" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> COMMUNE BNI LENT
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/351070" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  31/12/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 12:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="TAZA" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      TAZA
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/378148"
+                   class="font-bold table__links">Référence : 01/BG/2026</a>
+                                  <span class="badge bg-danger">Annulé</span>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/378148" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> ACHAT DE MATÉRIEL INFORMATIQUE AU PROFIT DU SIÈGE DE LA PROVINCE ET DES POSTES DE COMMANDEMENTS RELEVANT DE LA PROVINCE DE FQUIH BEN SALAH
+              </a>
+              <a href="/bdc/entreprise/consultation/show/378148" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> GOUVERNEUR DE LA PROVINCE DE FQUIH BEN SALAH
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/378148" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  07/10/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 10:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="FQUIH BEN SALAH" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      FQUIH BEN SALAH
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/375169"
+                   class="font-bold table__links">Référence : 53/2026</a>
+                                  <span class="badge bg-danger">Annulé</span>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/375169" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> Achat des pièces de rechanges pour le centre hospitalier provincial de khénifra
+              </a>
+              <a href="/bdc/entreprise/consultation/show/375169" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/375169" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  02/10/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 15:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="MAROC, KHENIFRA" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      MAROC, KHENIFRA
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/376192"
+                   class="font-bold table__links">Référence : 03/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/376192" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> Achat de matériel d&#039;entretien d&#039;éclairage public.
+              </a>
+              <a href="/bdc/entreprise/consultation/show/376192" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> Commune rurale de LAATATRA
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/376192" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  16/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 11:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="SIDI BENNOUR" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      SIDI BENNOUR
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/378526"
+                   class="font-bold table__links">Référence : BC21/2026/CMR</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/378526" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> Etude et suivi des travaux de mise à niveau du système de canalisation du siège de la Caisse Marocaine des retraites.
+              </a>
+              <a href="/bdc/entreprise/consultation/show/378526" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> LA CAISSE MAROCAINE DES RETRAITES
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/378526" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  15/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 16:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="RABAT" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      RABAT
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/377892"
+                   class="font-bold table__links">Référence : 07/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/377892" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> L’Étude technique par un BET Agrées (Domaines : D14 , D15 et  D16) pour l’aménagement et la mise a niveau des bâtiments administratifs de la commune Chbika, province de TanTan.
+              </a>
+              <a href="/bdc/entreprise/consultation/show/377892" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> Commune rurale de CHBIKA
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/377892" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  14/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 15:30</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="TAN-TAN" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      TAN-TAN
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/377394"
+                   class="font-bold table__links">Référence : 019/ACHAT/ONDA/DKH/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/377394" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> Fourniture de carburant (gasoil) destiné à l’alimentation du groupe électrogène de l’aéroport de Dakhla.
+              </a>
+              <a href="/bdc/entreprise/consultation/show/377394" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> ONDA - AEROPORT DAKHLA
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/377394" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  14/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 14:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="OUED ED DAHAB, AOUSSERD, DAKHLA" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      OUED ED DAHAB, AOUSSERD, DAKHLA
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/377651"
+                   class="font-bold table__links">Référence : 35/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/377651" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> ACHAT DE PRODUIT D’ENTRETIEN ET DE LINGERIE
+              </a>
+              <a href="/bdc/entreprise/consultation/show/377651" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> INSTITUT DE TECHNOLOGIE DES PECHES MARITIMES SAFI
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/377651" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  14/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 14:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="SAFI" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      SAFI
+                                  </span>
+              </div>
+            </a>
+          </div>
+                  <div class="d-flex align-items-center border mt-5 col-12 gap-5 entreprise__card justify-content-between">
+            <div class="d-flex flex-column entreprise__leftSubCard">
+              <div class="entreprise__leftSubCard--icon">
+                <i class="fa-solid fa-envelope-open-text"></i>
+              </div>
+              <span class="entreprise__leftSubCard--text font-bold">BDC</span>
+            </div>
+            <div class="col-8 d-flex flex-column entreprise__middleSubCard row-gap-2 text-decoration-none text-black">
+              <div class="d-flex align-items-center gap-2">
+                <a href="/bdc/entreprise/consultation/show/378383"
+                   class="font-bold table__links">Référence : 134/SA/2026</a>
+                              </div>
+              <a href="/bdc/entreprise/consultation/show/378383" class="truncate_fullWidth table__links">
+                <span class="font-bold text-small table__links">Objet : </span> Etude technique d&#039;aménagement de l&#039;entité Biobank
+              </a>
+              <a href="/bdc/entreprise/consultation/show/378383" class="table__links">
+                <span class="font-bold text-small">Acheteur :</span> INSTITUT PASTEUR DU MAROC
+              </a>
+            </div>
+            <a href="/bdc/entreprise/consultation/show/378383" class="d-flex flex-column entreprise__rightSubCard">
+              <div class="d-flex flex-column justify-content-center align-items-center entreprise__rightSubCard--top">
+                <span class="text-center">Date limite de remise des devis</span>
+                <span class="font-bold"><i class="fa-regular fa-calendar"></i>  14/09/2026</span>
+                <span class="font-bold"><i class="fa-regular fa-clock"></i> 14:00</span>
+                <span>Lieu d&#039;exécution</span>
+                <span class="font-bold text-center truncate-two-lines px-1" data-bs-toggle="tooltip" data-bs-html="true" data-bs-custom-class="custom-lieu-tooltip" data-bs-title="CASABLANCA" data-bs-placement="top">
+                  <i class="fa-solid fa-location-dot me-1"></i>
+                                      CASABLANCA
+                                  </span>
+              </div>
+            </a>
+          </div>
+                <div class="navigation mt-4">
+              <nav>
+                        <ul class="pagination">
+
+                            <li class="page-item disabled">
+                    <span class="page-link">&laquo;&nbsp;Précédent</span>
+                </li>
+            
+            
+                                                <li class="page-item active">
+                        <span class="page-link">1</span>
+                    </li>
+                
+                                                <li class="page-item">
+                        <a class="page-link" href="/bdc/entreprise/consultation/?page=2">2</a>
+                    </li>
+                
+                                                <li class="page-item">
+                        <a class="page-link" href="/bdc/entreprise/consultation/?page=3">3</a>
+                    </li>
+                
+                                                <li class="page-item">
+                        <a class="page-link" href="/bdc/entreprise/consultation/?page=4">4</a>
+                    </li>
+                
+                                                <li class="page-item">
+                        <a class="page-link" href="/bdc/entreprise/consultation/?page=5">5</a>
+                    </li>
+                
+            
+                                                                        <li class="page-item disabled">
+                            <span class="page-link">&hellip;</span>
+                        </li>
+                                                    <li class="page-item">
+                    <a class="page-link" href="/bdc/entreprise/consultation/?page=76">76</a>
+                </li>
+            
+                            <li class="page-item">
+                    <a class="page-link" rel="next" href="/bdc/entreprise/consultation/?page=2">Suivant&nbsp;&raquo;</a>
+                </li>
+                    </ul>
+    </nav>
+
+        </div>
+          </div>
+  </div>
+
+</section>
+
+    <!-- Footer -->
+<footer class="footer" id="footer">Copyright</footer>
+
+<script>
+    const copyrightNotice = "<p>Copyright © 2023 <span class='font-bold'>Tr\u00E9sorerie\u0020G\u00E9n\u00E9rale\u0020du\u0020Royaume</span>. All rights reserved.</p>";
+    document.getElementById('footer').innerHTML = copyrightNotice;
+
+    // MPE Lieu D'exécution window
+    const lieuButton = document.getElementById("button__execution");
+    if (lieuButton) {
+        let openedWindow;
+
+        const lieuWindow = () => {
+            openedWindow = window.open("https\u003A\/\/www.marchespublics.gov.ma/?page=commun.LieuxExecution&calledFrom=entreprise", "lieuData", "width=1200px,height=500");
+        };
+
+        lieuButton.addEventListener('click', lieuWindow);
+    }
+</script>
+
+<script src="/bdc/js/bootstrap.bundle.min.js"></script>
+<script src="/bdc/js/datepicker-full.min.js"></script>
+<script src="/bdc/js/main.js"></script>
+  <script src="/bdc/js/flatPickerJSDelivr.min.js"></script>
+  <script src="/bdc/js/npm_flatpickr.js"></script>
+  <script src="/bdc/js/moment.js"></script>
+  <script>
+      function resetFormInputs() {
+          $('form[name="search_consultation_entreprise"] input:not(#search_consultation_entreprise__token)').each(function () {
+              $(this).val(null);
+          });
+          $('form[name="search_consultation_entreprise"] select:not(.page-size)').each(function () {
+              let option = $(this).find('option').eq(0);
+              option.prop('selected', true);
+              $(this).trigger('change');
+          });
+      }
+
+      function handleItemClick(selectedItem) {
+          $('#search_consultation_entreprise_acheteur').val(selectedItem.libelle);
+          $('#search_consultation_entreprise_service').val(selectedItem.id + '-' + selectedItem.organisme);
+          $('#autocomplete-dropdown').addClass('d-none');
+      }
+
+      $(function () {
+          $('.page-size').on('change', function () {
+              $('button.sendform[type="submit"]').trigger('click');
+          });
+
+          $('#search_consultation_entreprise_acheteur').on('input', function () {
+              let autocompleteDropdown = $('#autocomplete-dropdown');
+              if ($(this).val().length > 2) {
+                  let userInput = $(this).val();
+                  // Make an AJAX request to the server
+                  $.ajax({
+                      url: "/bdc/entreprise/consultation/services", // Replace with the actual URL of your PHP route
+                      method: 'GET',
+                      data: {query: userInput},
+                      dataType: 'json',
+                      success: function (response) {
+                          // Update the autocomplete dropdown with the results
+                          autocompleteDropdown.empty();
+                          autocompleteDropdown.removeClass('d-none');
+                          if (response.length > 0) {
+                              response.forEach(function (item) {
+                                  var itemDiv = $('<div class="autocomplete-item"></div>');
+                                  itemDiv.text(item.libelle);
+                                  itemDiv.data('item-id', item.id);
+                                  itemDiv.click(function () {
+                                      handleItemClick(item);
+                                  });
+                                  autocompleteDropdown.append(itemDiv);
+                              });
+                              autocompleteDropdown.removeClass('d-none');
+                          } else {
+                              autocompleteDropdown.addClass('d-none');
+                          }
+                      },
+                      error: function () {
+                          console.log('Error while retrieving autocomplete data.');
+                      }
+                  });
+              } else {
+                  $('#search_consultation_entreprise_service').val(null);
+                  autocompleteDropdown.addClass('d-none');
+              }
+          });
+
+          $(".fp-date").flatpickr({
+              locale: "fr",
+              enableTime: false,
+              altInput: true,
+              altFormat: "d/m/Y",
+              dateFormat: "Y-m-d",
+              disableMobile: true
+          });
+
+          $('.resetacheteur').on('click', function () {
+              $('#search_consultation_entreprise_acheteur').val(null);
+              $('#search_consultation_entreprise_service').val(null);
+              $('#autocomplete-dropdown').addClass('d-none');
+          });
+
+          $('.opencalendar').on('click', function () {
+              const fp = $(this).parent().parent().find('input.flatpickr-input')[0]._flatpickr;
+              fp.toggle();
+          });
+
+          $('.resetcalendar').on('click', function () {
+              const fp = $(this).parent().parent().find('input.flatpickr-input')[0]._flatpickr;
+              fp.clear();
+          });
+      });
+  </script>
+</body>
+</html>

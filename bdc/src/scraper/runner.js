@@ -25,11 +25,22 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
    * @param {object} [options.filters] portal search filters.
    * @param {number} [options.maxPages]
    * @param {boolean} [options.fetchDetails]
+   * @param {boolean} [options.backfillDetails] after crawling, read the detail
+   *   page of every consultation that has never had one read.
+   * @param {number} [options.backfillLimit] cap on pages fetched by that pass.
    * @param {string} [options.triggeredBy] audit trail for the admin panel.
    * @throws {ConflictError} when a job for the same source is already running.
    */
   async function run(options = {}) {
-    const { source = 'all', filters = {}, maxPages, fetchDetails, triggeredBy = 'system' } = options
+    const {
+      source = 'all',
+      filters = {},
+      maxPages,
+      fetchDetails,
+      backfillDetails = false,
+      backfillLimit,
+      triggeredBy = 'system',
+    } = options
 
     const running = await jobs.findRunning(source)
     if (running) throw new ConflictError(`A "${source}" scrape job is already running (job #${running.id})`)
@@ -48,6 +59,11 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
       if (source === 'results' || source === 'all') {
         detail.results = await resultScraper.scrape({ filters, maxPages, fetchDetails })
         accumulate(totals, detail.results)
+      }
+
+      if (backfillDetails) {
+        detail.backfill = await consultationScraper.backfillDetails({ limit: backfillLimit })
+        totals.pagesScraped += detail.backfill.pagesScraped
       }
 
       detail.matching = await matcher.run()
@@ -70,5 +86,26 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
     totals.itemsUpdated += stats.itemsUpdated ?? 0
   }
 
-  return { run, matcher, consultationScraper, resultScraper, http }
+  /** Runs only the detail backlog, recorded as its own job. */
+  async function backfillDetailsJob(options = {}) {
+    const { triggeredBy = 'system', limit } = options
+    const running = await jobs.findRunning('backfill')
+    if (running) throw new ConflictError(`A backfill is already running (job #${running.id})`)
+
+    const job = await jobs.start({ source: 'backfill', triggeredBy, params: { limit } })
+    try {
+      const stats = await consultationScraper.backfillDetails({ limit })
+      const finished = await jobs.finish(job.id, {
+        status: 'success',
+        stats: { pagesScraped: stats.pagesScraped, itemsUpdated: stats.consultationsProcessed },
+      })
+      log.info('backfill finished', stats)
+      return { job: finished, stats }
+    } catch (error) {
+      await jobs.finish(job.id, { status: 'failed', error: error.message })
+      throw error
+    }
+  }
+
+  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, http }
 }

@@ -5,6 +5,8 @@
  *   npm run scrape -- --source=consultations --max-pages=3
  *   npm run scrape -- --source=results --filter.acheteur=ANCFCC
  *   npm run scrape -- --no-details
+ *   npm run scrape -- --backfill              only the detail backlog
+ *   npm run scrape -- --backfill --limit=500  a bounded sitting of it
  */
 import { initDatabase } from '../src/db/init.js'
 import { closeDb, getDb } from '../src/db/index.js'
@@ -24,6 +26,10 @@ function parseArgs(argv) {
       options.maxPages = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'no-details') {
       options.fetchDetails = false
+    } else if (rawKey === 'backfill') {
+      options.backfill = rawValue !== 'false'
+    } else if (rawKey === 'limit') {
+      options.limit = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'details') {
       options.fetchDetails = rawValue !== 'false'
     }
@@ -42,8 +48,10 @@ const db = await initDatabase(getDb())
 const { runner } = createContainer(db)
 
 try {
-  const { stats, detail } = await runner.run({ ...options, triggeredBy: 'cli' })
-  console.log(JSON.stringify({ stats, detail }, null, 2))
+  const result = options.backfill
+    ? await runner.backfillDetails({ limit: options.limit, triggeredBy: 'cli' })
+    : await runner.run({ ...options, triggeredBy: 'cli' })
+  console.log(JSON.stringify({ stats: result.stats, detail: result.detail }, null, 2))
 } catch (error) {
   console.error(`Scrape failed: ${error.message}`)
   process.exitCode = 1

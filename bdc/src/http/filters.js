@@ -99,6 +99,6 @@ export function parseFilters(query = {}) {
 export const SORTABLE = Object.freeze({
   consultations: ['date_publication', 'date_limite', 'acheteur', 'reference', 'estimation_cents', 'updated_at'],
   results: ['date_publication_resultat', 'date_attribution', 'montant_attribue_cents', 'acheteur', 'reference'],
-  favorites: ['created_at', 'consultation_reference'],
+  favorites: ['created_at', 'consultation_id'],
   invoices: ['issue_date', 'total_cents', 'invoice_number', 'created_at'],
 })
