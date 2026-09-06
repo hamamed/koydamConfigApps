@@ -66,8 +66,11 @@ export function createScraperRunner({ db, consultations, articles, documents, re
     // new, whatever order it returns things in.
     const filters = { ...(options.filters ?? {}), ...(sinceDays ? { datePublicationStart: daysAgo(sinceDays) } : {}) }
 
-    const running = await jobs.findRunning(source)
-    if (running) throw new ConflictError(`A "${source}" scrape job is already running (job #${running.id})`)
+    await jobs.expireStale()
+    const running = await jobs.findRunning()
+    if (running) {
+      throw new ConflictError(`A "${running.source}" crawl is already running (job #${running.id})`)
+    }
 
     const job = await jobs.start({ source, triggeredBy, params: { filters, maxPages, fetchDetails, sinceDays } })
     log.info('job started', { jobId: job.id, source })
@@ -135,8 +138,11 @@ export function createScraperRunner({ db, consultations, articles, documents, re
   /** Runs only the detail backlog, recorded as its own job. */
   async function backfillDetailsJob(options = {}) {
     const { triggeredBy = 'system', limit, refreshAll = false } = options
-    const running = await jobs.findRunning('backfill')
-    if (running) throw new ConflictError(`A backfill is already running (job #${running.id})`)
+    await jobs.expireStale()
+    const running = await jobs.findRunning()
+    if (running) {
+      throw new ConflictError(`A "${running.source}" crawl is already running (job #${running.id})`)
+    }
 
     const job = await jobs.start({ source: 'backfill', triggeredBy, params: { limit, refreshAll } })
     try {

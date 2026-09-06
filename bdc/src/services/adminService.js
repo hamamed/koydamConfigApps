@@ -61,7 +61,7 @@ export function createAdminService({ consultations, articles, documents, results
       schedule: { runAt, sinceDays, nextRunAt: nextRunAfter(runAt) },
       matchRate: resultCount > 0 ? Number((((resultCount - unmatched) / resultCount) * 100).toFixed(1)) : null,
       recentJobs: serializeRows(recentJobs),
-      runningJob: (await jobs.findRunning('all')) ?? (await jobs.findRunning('consultations')) ?? null,
+      runningJob: (await jobs.findRunning()) ?? null,
     }
   }
 

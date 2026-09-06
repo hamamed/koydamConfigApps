@@ -95,7 +95,7 @@ test('re-scraping is idempotent and does not duplicate rows', async () => {
   assert.equal(third.detail.consultations.itemsUnchanged, 10)
 })
 
-test('records every run in scrape_jobs and refuses concurrent runs of one source', async () => {
+test('records every run, and lets only one crawl touch the portal at a time', async () => {
   const { runner, repositories } = await setup()
 
   await runner.run({ source: 'results', maxPages: 1, triggeredBy: 'test', fetchDetails: false })
@@ -106,9 +106,30 @@ test('records every run in scrape_jobs and refuses concurrent runs of one source
   assert.equal(job.triggered_by, 'test')
   assert.ok(job.finished_at)
   assert.ok(job.duration_ms >= 0)
+  assert.ok(JSON.parse(job.detail_json).results, 'the per-source counts are kept')
 
-  await repositories.jobs.start({ source: 'results', triggeredBy: 'test' })
+  // Politeness is about the portal, not about our sources: the daily timer and
+  // a hand-started full load are separate units and would otherwise overlap,
+  // doubling the request rate at a public service. Any running crawl blocks.
+  await repositories.jobs.start({ source: 'consultations', triggeredBy: 'test' })
   await assert.rejects(() => runner.run({ source: 'results' }), /already running/)
+  await assert.rejects(() => runner.backfillDetails({}), /already running/)
+})
+
+test('a crawl abandoned by a killed process does not wedge the schedule', async () => {
+  const { runner, repositories, db } = await setup()
+
+  // A process killed mid-crawl leaves its row on 'running' forever.
+  const stranded = await repositories.jobs.start({ source: 'all', triggeredBy: 'test' })
+  const longAgo = new Date(Date.now() - 30 * 3600 * 1000).toISOString()
+  await db.run('UPDATE scrape_jobs SET started_at = ? WHERE id = ?', [longAgo, stranded.id])
+
+  // The next run closes it out and proceeds rather than refusing forever.
+  await runner.run({ source: 'results', maxPages: 1, fetchDetails: false, triggeredBy: 'test' })
+
+  const abandoned = await repositories.jobs.findById(stranded.id)
+  assert.equal(abandoned.status, 'failed')
+  assert.match(abandoned.error_message, /abandoned/)
 })
 
 test('a failing page marks the job failed and surfaces the error', async () => {

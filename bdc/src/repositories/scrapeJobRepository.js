@@ -48,8 +48,35 @@ export function createScrapeJobRepository(db = getDb()) {
       source ? [source] : [],
     )
 
-  const findRunning = (source) =>
-    db.get(`SELECT * FROM ${TABLE} WHERE source = ? AND status = 'running' ORDER BY started_at DESC`, [source])
+  /**
+   * Any crawl still marked running, of any source.
+   *
+   * Politeness is about the portal, not about our sources: two of our jobs
+   * running at once doubles the request rate at a public government service.
+   * The daily timer and a hand-started full load are separate systemd units and
+   * would otherwise happily overlap.
+   *
+   * A job older than `staleAfterHours` is ignored — a process killed mid-crawl
+   * leaves its row on 'running' forever, and that must not wedge the schedule.
+   */
+  function findRunning({ staleAfterHours = 12 } = {}) {
+    const cutoff = new Date(Date.now() - staleAfterHours * 3600 * 1000).toISOString()
+    return db.get(
+      `SELECT * FROM ${TABLE} WHERE status = 'running' AND started_at > ? ORDER BY started_at DESC`,
+      [cutoff],
+    )
+  }
 
-  return { start, finish, findById, listRecent, lastFinished, findRunning }
+  /** Closes out jobs left behind by a killed process, so they stop blocking. */
+  const expireStale = async (staleAfterHours = 12) => {
+    const cutoff = new Date(Date.now() - staleAfterHours * 3600 * 1000).toISOString()
+    const result = await db.run(
+      `UPDATE ${TABLE} SET status = 'failed', error_message = 'abandoned — process ended before finishing',
+              finished_at = ? WHERE status = 'running' AND started_at <= ?`,
+      [nowIso(), cutoff],
+    )
+    return result.changes
+  }
+
+  return { start, finish, findById, listRecent, lastFinished, findRunning, expireStale }
 }
