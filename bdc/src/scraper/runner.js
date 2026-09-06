@@ -9,6 +9,13 @@ const log = logger.child('[scraper:runner]')
 
 export const SOURCES = Object.freeze(['consultations', 'results', 'all'])
 
+/** An ISO date N days back, the format the portal's date filters require. */
+function daysAgo(days) {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() - Math.max(0, Number(days) || 0))
+  return date.toISOString().slice(0, 10)
+}
+
 /**
  * Orchestrates a full scrape: open consultations, then results, then the
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
@@ -35,24 +42,34 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
    * @param {boolean} [options.backfillDetails] after crawling, read the detail
    *   page of every consultation that has never had one read.
    * @param {number} [options.backfillLimit] cap on pages fetched by that pass.
+   * @param {number} [options.sinceDays] only fetch items published in the last
+   *   N days. This is how the daily run stays small and still catches
+   *   everything new.
    * @param {string} [options.triggeredBy] audit trail for the admin panel.
    * @throws {ConflictError} when a job for the same source is already running.
    */
   async function run(options = {}) {
     const {
       source = 'all',
-      filters = {},
       maxPages,
       fetchDetails,
       backfillDetails = false,
       backfillLimit,
+      sinceDays,
+      pageSize,
       triggeredBy = 'system',
     } = options
+
+    // The listings are ordered by deadline, not by publication date, so a new
+    // avis does not appear on page 1 — crawling "the first N pages" would miss
+    // most of them. A publication-date floor asks the portal for exactly what is
+    // new, whatever order it returns things in.
+    const filters = { ...(options.filters ?? {}), ...(sinceDays ? { datePublicationStart: daysAgo(sinceDays) } : {}) }
 
     const running = await jobs.findRunning(source)
     if (running) throw new ConflictError(`A "${source}" scrape job is already running (job #${running.id})`)
 
-    const job = await jobs.start({ source, triggeredBy, params: { filters, maxPages, fetchDetails } })
+    const job = await jobs.start({ source, triggeredBy, params: { filters, maxPages, fetchDetails, sinceDays } })
     log.info('job started', { jobId: job.id, source })
 
     const totals = { pagesScraped: 0, itemsFound: 0, itemsCreated: 0, itemsUpdated: 0, matchesLinked: 0 }
@@ -60,11 +77,11 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
 
     try {
       if (source === 'consultations' || source === 'all') {
-        detail.consultations = await consultationScraper.scrape({ filters, maxPages, fetchDetails })
+        detail.consultations = await consultationScraper.scrape({ filters, maxPages, fetchDetails, pageSize })
         accumulate(totals, detail.consultations)
       }
       if (source === 'results' || source === 'all') {
-        detail.results = await resultScraper.scrape({ filters, maxPages, fetchDetails })
+        detail.results = await resultScraper.scrape({ filters, maxPages, fetchDetails, pageSize })
         accumulate(totals, detail.results)
       }
 

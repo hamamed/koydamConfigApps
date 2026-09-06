@@ -1,10 +1,10 @@
 [Unit]
-Description=Crawl marchespublics.gov.ma twice a day
+Description=Daily incremental crawl of marchespublics.gov.ma
 
 [Timer]
-OnCalendar=*-*-* 06,18:15:00
+OnCalendar=*-*-* 05:30:00
 # Jittered so an unattended crawl never hits the portal at a predictable second.
-RandomizedDelaySec=900
+RandomizedDelaySec=1800
 Persistent=true
 
 [Install]

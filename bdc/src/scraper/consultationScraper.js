@@ -29,6 +29,7 @@ export function createConsultationScraper({ http, consultations, articles, setti
       filters = {},
       maxPages = runtime.maxPages,
       fetchDetails = runtime.fetchDetails,
+      pageSize = runtime.pageSize,
       onProgress = () => {},
     } = options
 
@@ -46,7 +47,7 @@ export function createConsultationScraper({ http, consultations, articles, setti
     let totalPages = 1
 
     while (page <= Math.min(totalPages, maxPages)) {
-      const query = buildSearchQuery(filters, { page, pageSize: runtime.pageSize })
+      const query = buildSearchQuery('consultations', filters, { page, pageSize })
       const { html, url } = await http.getHtml(config.scraper.consultationsPath, query)
       const parsed = parseConsultationList(html, url)
 

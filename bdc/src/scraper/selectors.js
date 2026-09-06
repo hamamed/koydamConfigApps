@@ -99,35 +99,79 @@ export const FIELD_SYNONYMS = Object.freeze({
 })
 
 /**
- * Query-string parameter names used by the portal's Symfony search form.
- * These are also the names accepted by this API's own filter endpoints, so the
- * UI can forward its filter state unchanged.
+ * The portal's two search forms, as they actually are.
+ *
+ * Verified against the live pages, because all three of these were wrong before
+ * and the filters silently did nothing:
+ *
+ *  - the two listings use *different* form roots. Only the results page uses
+ *    `search_consultation_resultats`;
+ *  - dates must be ISO `YYYY-MM-DD`. `dd/mm/yyyy` is accepted and then ignored,
+ *    so a filtered crawl quietly returned the unfiltered first page;
+ *  - `pageSize` must be present on every request. Without it the form binds to
+ *    nothing and the page comes back with zero cards, which reads exactly like
+ *    "no results" rather than "malformed query".
+ *
+ * `acheteur` is deliberately absent: it is an autocomplete bound to a buyer id,
+ * and a name in it is ignored. Buyer filtering happens on our own rows instead.
  */
-export const SEARCH_PARAM_ROOT = 'search_consultation_resultats'
-
-export const SEARCH_PARAMS = Object.freeze({
-  reference: 'reference',
-  objet: 'objet',
-  categorie: 'categorie',
-  naturePrestation: 'naturePrestation',
-  acheteur: 'acheteur',
-  lieuExecution: 'lieuExecution',
-  datePublicationStart: 'datePublicationStart',
-  datePublicationEnd: 'datePublicationEnd',
-  dateLimiteStart: 'dateLimiteStart',
-  dateLimiteEnd: 'dateLimiteEnd',
+export const SEARCH_FORMS = Object.freeze({
+  consultations: {
+    root: 'search_consultation_entreprise',
+    fields: {
+      q: 'keyword',
+      reference: 'reference',
+      objet: 'objet',
+      datePublicationStart: 'dateMiseEnLigneStart',
+      datePublicationEnd: 'dateMiseEnLigneEnd',
+      dateLimiteStart: 'dateLimiteStart',
+      dateLimiteEnd: 'dateLimiteEnd',
+    },
+  },
+  results: {
+    root: 'search_consultation_resultats',
+    fields: {
+      q: 'keyword',
+      reference: 'reference',
+      objet: 'objet',
+      // On this form the award's own publication date is `dateLimitePublication`;
+      // `dateMiseEnLigne` is the date the underlying avis went online.
+      datePublicationStart: 'dateLimitePublicationStart',
+      datePublicationEnd: 'dateLimitePublicationEnd',
+      dateMiseEnLigneStart: 'dateMiseEnLigneStart',
+      dateMiseEnLigneEnd: 'dateMiseEnLigneEnd',
+    },
+  },
 })
 
-/** Builds `search_consultation_resultats[field]=value` query pairs. */
-export function buildSearchQuery(filters = {}, { page = 1, pageSize } = {}) {
+/** The page sizes the portal's own selector offers. Anything else is ignored. */
+export const PAGE_SIZES = [10, 20, 30, 50]
+
+export const clampPageSize = (value) =>
+  PAGE_SIZES.reduce((best, size) => (Math.abs(size - value) < Math.abs(best - value) ? size : best), PAGE_SIZES[0])
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Builds the query string for one listing page.
+ * @param {'consultations'|'results'} source which form to build for.
+ * @param {object} filters canonical filter names (see http/filters.js).
+ * @param {{page?: number, pageSize?: number}} options
+ */
+export function buildSearchQuery(source, filters = {}, { page = 1, pageSize = 20 } = {}) {
+  const form = SEARCH_FORMS[source] ?? SEARCH_FORMS.consultations
   const params = new URLSearchParams()
-  for (const [field, param] of Object.entries(SEARCH_PARAMS)) {
-    const value = filters[field]
-    if (value !== undefined && value !== null && value !== '') {
-      params.append(`${SEARCH_PARAM_ROOT}[${param}]`, String(value))
-    }
+
+  for (const [canonical, field] of Object.entries(form.fields)) {
+    const value = filters[canonical]
+    if (value === undefined || value === null || value === '') continue
+    // A malformed date is dropped rather than sent: the portal would ignore it
+    // and hand back the unfiltered listing, which looks like a successful crawl.
+    if (field.startsWith('date') && !ISO_DATE.test(String(value))) continue
+    params.append(`${form.root}[${field}]`, String(value))
   }
+
+  params.append(`${form.root}[pageSize]`, String(clampPageSize(pageSize)))
   if (page > 1) params.append('page', String(page))
-  if (pageSize) params.append('limit', String(pageSize))
   return params
 }

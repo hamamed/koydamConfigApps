@@ -1,0 +1,26 @@
+[Unit]
+Description=Marches publics — one-off full catalogue crawl
+Documentation=man:systemd.service(5)
+After=network-online.target bdc.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+# Every page of both listings, then every unread detail page. Started by hand
+# (`systemctl start bdc-backfill`) — this is the initial load, not a schedule.
+# At 50 rows a page the consultations listing is ~16 pages rather than 76.
+ExecStart=/usr/bin/node bin/scrape.js --source=all --page-size=50 --max-pages=200 --no-details
+ExecStart=/usr/bin/node bin/scrape.js --backfill
+# A full catalogue with one detail page per avis takes hours at a polite pace.
+TimeoutStartSec=86400
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+SyslogIdentifier=bdc-backfill

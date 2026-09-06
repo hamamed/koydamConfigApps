@@ -99,8 +99,9 @@ cd "$APP_DIR" && sudo -u "$APP_USER" node bin/db-init.js
 
 say "Installing the systemd units"
 install -m 644 "$APP_DIR/deploy/bdc.service"        /etc/systemd/system/bdc.service
-install -m 644 "$APP_DIR/deploy/bdc-scrape.service" /etc/systemd/system/bdc-scrape.service
-install -m 644 "$APP_DIR/deploy/bdc-scrape.timer"   /etc/systemd/system/bdc-scrape.timer
+install -m 644 "$APP_DIR/deploy/bdc-scrape.service"   /etc/systemd/system/bdc-scrape.service
+install -m 644 "$APP_DIR/deploy/bdc-scrape.timer"     /etc/systemd/system/bdc-scrape.timer
+install -m 644 "$APP_DIR/deploy/bdc-backfill.service" /etc/systemd/system/bdc-backfill.service
 systemctl daemon-reload
 systemctl enable --quiet "$SERVICE"
 
@@ -166,7 +167,11 @@ Next:
      portal's HTML labels are the real contract for the scraper:
        sudo -u ${APP_USER} node bin/scrape.js --source=consultations --max-pages=1
 
-  3. Only once that looks right, enable the schedule:
+  3. Load the whole catalogue once (hours, at a polite pace):
+       systemctl start bdc-backfill
+       journalctl -u bdc-backfill -f
+
+  4. Then enable the daily incremental crawl:
        systemctl enable --now bdc-scrape.timer
 
 NOTE

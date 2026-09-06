@@ -22,6 +22,7 @@ export function createResultScraper({ http, results, settings }) {
       filters = {},
       maxPages = runtime.maxPages,
       fetchDetails = runtime.fetchDetails,
+      pageSize = runtime.pageSize,
       onProgress = () => {},
     } = options
 
@@ -39,7 +40,7 @@ export function createResultScraper({ http, results, settings }) {
     let totalPages = 1
 
     while (page <= Math.min(totalPages, maxPages)) {
-      const query = buildSearchQuery(filters, { page, pageSize: runtime.pageSize })
+      const query = buildSearchQuery('results', filters, { page, pageSize })
       const { html, url } = await http.getHtml(config.scraper.resultsPath, query)
       const parsed = parseResultList(html, url)
 

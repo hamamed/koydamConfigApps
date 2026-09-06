@@ -1,5 +1,5 @@
 [Unit]
-Description=Marches publics — crawl marchespublics.gov.ma
+Description=Marches publics — daily incremental crawl
 After=network-online.target bdc.service
 Wants=network-online.target
 
@@ -9,15 +9,17 @@ User=brawl
 Group=brawl
 WorkingDirectory=/opt/bdc
 EnvironmentFile=/opt/bdc/.env
-ExecStart=/usr/bin/node bin/scrape.js --source=all --max-pages=25
-# Then close any gaps: a crawl only follows the detail page of rows it just
-# created or changed, so a page that 404'd on the day, or a row seen before
-# detail-reading existed, would keep its listing-only half-record forever.
-# Bounded, so an unattended run cannot turn into an all-night crawl.
+# Only what the portal published in the last week, at 50 rows a page.
+#
+# Not "the first N pages": both listings are ordered by deadline, not by
+# publication date, so a newly published avis does not appear near page 1 and a
+# page-capped crawl would miss most of them. A publication-date floor asks for
+# exactly what is new. The overlap of several days covers a missed run and any
+# avis published while a crawl was mid-flight.
+ExecStart=/usr/bin/node bin/scrape.js --source=all --since=7 --page-size=50 --max-pages=10
+# Then read the detail page of anything that still has none — the listing card
+# carries no category, no nature of service and no articles.
 ExecStart=/usr/bin/node bin/scrape.js --backfill --limit=300
-# A full crawl with detail pages at 2s between requests takes a while; the
-# default 90s start timeout would kill it mid-run and leave the job row stuck
-# in `running`, which then blocks the next scheduled crawl.
 TimeoutStartSec=5400
 
 NoNewPrivileges=true

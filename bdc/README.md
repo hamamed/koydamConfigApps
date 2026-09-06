@@ -120,74 +120,54 @@ nothing else. Category, nature of service and the whole article breakdown exist
 only on the detail page, so a row is half a record until that page is read.
 
 A crawl follows the detail page of rows it just created or changed. Everything
-else is a backlog, worked through by:
+else is a backlog, worked through by `npm run scrape:backfill`, by the
+**Fetch missing details** button on the dashboard, or automatically at the end of
+each scheduled run. `pendingDetails` on the dashboard is the size of the backlog.
+A page that fails permanently is stamped rather than retried forever, so one
+broken avis cannot stall the queue.
+
+### Crawling: what the portal actually accepts
+
+Verified against the live forms, because every one of these failed silently
+before — the portal answers a malformed query with the *unfiltered* listing, or
+with zero cards, and the crawl looks like it succeeded either way:
+
+| | Consultations | Awards |
+| --- | --- | --- |
+| form root | `search_consultation_entreprise` | `search_consultation_resultats` |
+| publication date | `dateMiseEnLigneStart` / `End` | `dateLimitePublicationStart` / `End` |
+| deadline | `dateLimiteStart` / `End` | — |
+| free text | `keyword`, `reference`, `objet` | same |
+| page size | `pageSize` — **10, 20, 30 or 50** | same |
+
+- **Dates must be ISO** `YYYY-MM-DD`. `dd/mm/yyyy` is accepted and then ignored.
+- **`pageSize` must be on every request.** Without it the form binds to nothing
+  and the page returns zero cards, which reads as "no results".
+- `acheteur` is an autocomplete bound to a buyer id, so a name in it does
+  nothing. Buyer filtering is applied to our own rows instead.
+
+### Both listings are ordered by deadline, not by date published
+
+Page 1 holds the furthest deadlines and the last page holds today's, so **a newly
+published avis does not appear near page 1**. Crawling "the first N pages" daily
+would miss most new work. The daily run instead asks the portal for a
+publication-date window:
 
 ```bash
-npm run scrape:backfill                 # until the backlog is empty
-node bin/scrape.js --backfill --limit=500   # a bounded sitting
+node bin/scrape.js --source=all --since=7 --page-size=50 --max-pages=10
 ```
 
-or the **Fetch missing details** button on the dashboard, which runs it in the
-background as a tracked job. `pendingDetails` on the dashboard is the size of the
-backlog. A page that fails permanently is stamped rather than retried forever, so
-one broken avis cannot stall the queue.
+Seven days of overlap covers a missed run and anything published mid-crawl.
 
-## Scraper design
+| Unit | What it does |
+| --- | --- |
+| `bdc-scrape.timer` | daily at 05:30 (jittered): the last 7 days, then the detail backlog |
+| `bdc-backfill.service` | started by hand: every page of both listings, then every unread detail page |
 
-Both listings — open consultations and results — are Bootstrap **cards**
-(`.entreprise__card`), ten to a page, not tables. Nothing here relies on
-positional selectors. `selectors.js` maps the *French label* onto a canonical
-field name, and `listParser.js` reads that label in the three shapes the portal
-mixes on the same page:
-
-```
-inline    <div><span>Acheteur :</span> COMMUNE MAGHRAOUA</div>
-siblings  <span>Lieu d'exécution</span><span>AL HOCEIMA</span>
-wrapped   <div>Caractéristiques et spécifications <span>…</span></div>
-```
-
-A new label is a one-line addition to `FIELD_SYNONYMS`; a class rename or a
-reordered column is harmless.
-
-### What lives where
-
-The listing card carries only reference, objet, acheteur, deadline and location.
-**Category, nature of service and publication date exist only on the detail
-page**, so a listing-only crawl leaves them null rather than inventing them.
-Results are the opposite — winner, amount and number of quotes received are all
-on the card, and there is no detail page to follow.
-
-Articles are an accordion on the detail page, with unit, quantity, VAT rate and
-required warranties — but **no unit price**. These are calls for quotes: the
-supplier proposes the price, which is exactly what the invoice generator asks
-for.
-
-### Things that bit, and are now tested
-
-- **The WAF.** The portal answers `403` to any User-Agent that does not look like
-  a browser. `SCRAPER_USER_AGENT` is a browser string with our own identity
-  appended, so the crawler stays attributable. A 403 is raised, never parsed as
-  an empty page — silently emptying the catalogue is the worse failure.
-- **Colons inside times.** "…des devis 02/10/2026 15:00" split on the colon in
-  `15:00`, producing the label "…devis 02/10/2026 15" and the value "00". Deadlines
-  parsed as null with no error.
-- **Values that quote their own field name.** A real cancellation motive reads
-  "changement de la date limite pour la réception des devis". Read as a label, it
-  made the parser store the *next* block as the deadline. Labels lead with their
-  name and are short; sentences are neither.
-- **Cancellations are a real state.** An avis can be published then withdrawn,
-  with a date and a reason; `status` becomes `annule`.
-- **Unsuccessful awards.** An avis with no winner prints "Avis d'achat
-  infructueux" in the award panel rather than in a labelled field.
-
-Other properties: politeness delay between requests, bounded concurrency on
-detail pages, retry with exponential backoff on 429/5xx only, a cookie jar for
-the portal session, and upserts keyed on `reference` that merge onto the stored
-row so a sparse listing pass never erases richer detail-page fields.
-
-> Every fixture under `tests/fixtures/live-*.html` is a page captured from the
-> live portal, so the suite encodes the real markup contract. When the portal
-> changes, re-capture a page and the failing assertion tells you what moved.
+The full load is `systemctl start bdc-backfill`. At 50 rows a page the
+consultations listing is ~16 pages rather than 76; the slow part is one detail
+page per avis, which takes hours at a polite pace and is resumable — it picks up
+wherever the backlog stands.
 
 ## Filters
 
@@ -329,6 +309,7 @@ first paint.
 | Screen | Who |
 | --- | --- |
 | Projects (`/panel`) — filterable list, star to track | any signed-in account |
+| Awards (`/panel/awards`) — winners, amounts, link to the consultation | any signed-in account |
 | Project detail — every article, the award, a private note | any signed-in account |
 | Favorites (`/panel/favorites`) — what you track, with notes | any signed-in account |
 | Dashboard (`/panel/dashboard`) — counters, manual crawls | **admin** |

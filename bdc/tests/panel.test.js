@@ -310,3 +310,61 @@ test('the dashboard job table has one cell per column', async (t) => {
   assert.equal(headers, 10)
   assert.equal(cells, headers, 'every column has a cell')
 })
+
+test('the awards tab lists results and links the matched ones', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const html = await (await api.page('/panel/awards', api.staff)).text()
+
+  assert.match(html, /STE AMALIA DES ETOILES D/, 'the winner is shown')
+  assert.match(html, /8064 MAD|8064/, 'the amount is shown')
+  // The one award whose (reference, buyer) matched links back to its project.
+  const linked = await api.container.repositories.results.findByReference('53/2026')
+  assert.ok(linked[0].consultation_id)
+  assert.match(html, new RegExp(`/panel/consultations/${linked[0].consultation_id}`))
+  // The rest say so rather than pretending.
+  assert.match(html, /Not linked|Non liée|غير مرتبط/)
+
+  // It is a tab for everyone, not an admin screen.
+  assert.match(html, /href="\/panel\/awards"/)
+  assert.equal((await api.page('/panel/awards', api.staff)).status, 200)
+})
+
+test('an incremental crawl asks the portal for what is new, not for page one', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const seen = []
+  const { createHttpClient } = await import('../src/scraper/httpClient.js')
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const container = await fresh({
+    http: createHttpClient({
+      fetchImpl: async (url) => {
+        seen.push(String(url))
+        return {
+          ok: true,
+          status: 200,
+          url: String(url),
+          headers: { getSetCookie: () => [] },
+          text: async () => fixture('live-consultations-empty.html'),
+        }
+      },
+      delayMs: 0,
+    }),
+  })
+
+  await container.runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false, sinceDays: 7 })
+
+  const [requested] = seen
+  const query = new URL(requested).searchParams
+  const since = query.get('search_consultation_entreprise[dateMiseEnLigneStart]')
+
+  assert.ok(since, 'the crawl carries a publication-date floor')
+  assert.match(since, /^\d{4}-\d{2}-\d{2}$/, 'ISO — the portal ignores any other format')
+
+  const expected = new Date()
+  expected.setUTCDate(expected.getUTCDate() - 7)
+  assert.equal(since, expected.toISOString().slice(0, 10))
+  assert.ok(query.get('search_consultation_entreprise[pageSize]'), 'and always a page size')
+})

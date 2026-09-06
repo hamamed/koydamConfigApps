@@ -114,6 +114,7 @@
 
     <nav>
       <a href="/panel" class="<%= active === 'projects' ? 'on' : '' %>"><%- include('icon', { name: 'search' }) %><%= t('nav.projects') %></a>
+      <a href="/panel/awards" class="<%= active === 'awards' ? 'on' : '' %>"><%- include('icon', { name: 'award' }) %><%= t('nav.awards') %></a>
       <a href="/panel/favorites" class="<%= active === 'favorites' ? 'on' : '' %>"><%- include('icon', { name: 'star', fill: active === 'favorites' ? 'currentColor' : 'none' }) %><%= t('nav.favorites') %></a>
 
       <% if (user.role === 'admin') { %>

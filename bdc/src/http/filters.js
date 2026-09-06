@@ -1,4 +1,4 @@
-import { SEARCH_PARAM_ROOT } from '../scraper/selectors.js'
+import { SEARCH_FORMS } from '../scraper/selectors.js'
 import { isIsoDate } from '../utils/dates.js'
 import { clean, normalize, normalizeReference } from '../utils/text.js'
 import { ValidationError } from '../utils/errors.js'
@@ -6,11 +6,15 @@ import { ValidationError } from '../utils/errors.js'
 /**
  * Translates incoming query strings into a canonical filter object.
  *
- * Three spellings are accepted for every filter so the front end can forward the
- * portal's own form state untouched:
- *   search_consultation_resultats[reference]=123   (portal form, nested by qs)
- *   reference=123                                   (flat alias)
- *   ref=123                                         (short alias)
+ * Several spellings are accepted for every filter so a front end can forward the
+ * portal's own form state untouched. The portal uses a different root per
+ * listing — `search_consultation_entreprise` for consultations,
+ * `search_consultation_resultats` for awards — so both are read:
+ *
+ *   search_consultation_entreprise[reference]=123   (consultations form)
+ *   search_consultation_resultats[reference]=123    (awards form)
+ *   reference=123                                    (flat alias)
+ *   ref=123                                          (short alias)
  */
 
 const TEXT_FILTERS = Object.freeze({
@@ -33,11 +37,15 @@ const DATE_FILTERS = Object.freeze({
 
 const STATUS_VALUES = new Set(['open', 'closed', 'awarded', 'all'])
 
-/** Reads a filter value from the nested portal form, then from its flat aliases. */
+const FORM_ROOTS = Object.values(SEARCH_FORMS).map((form) => form.root)
+
+/** Reads a filter value from either portal form, then from its flat aliases. */
 function readValue(query, aliases) {
-  const nested = query[SEARCH_PARAM_ROOT]
   for (const alias of aliases) {
-    if (nested && typeof nested === 'object' && clean(nested[alias])) return clean(nested[alias])
+    for (const root of FORM_ROOTS) {
+      const nested = query[root]
+      if (nested && typeof nested === 'object' && clean(nested[alias])) return clean(nested[alias])
+    }
     if (clean(query[alias])) return clean(query[alias])
   }
   return null

@@ -18,7 +18,15 @@ export const CATALOGUE = Object.freeze([
   { key: 'site.defaultLocale', group: 'site', type: 'select', options: ['fr', 'en', 'ar'], fallback: () => 'fr' },
 
   { key: 'scraper.maxPages', group: 'scraper', ...number(1, 2000), fallback: () => config.scraper.maxPages },
-  { key: 'scraper.pageSize', group: 'scraper', ...number(1, 100), fallback: () => config.scraper.pageSize },
+  // The portal's own selector offers exactly these; anything else is ignored,
+  // so offering a free number would invite a value that silently does nothing.
+  {
+    key: 'scraper.pageSize',
+    group: 'scraper',
+    type: 'select',
+    options: ['10', '20', '30', '50'],
+    fallback: () => String(config.scraper.pageSize),
+  },
   // Below about a second the portal starts refusing; this is a public service.
   { key: 'scraper.delayMs', group: 'scraper', ...number(500, 60000), fallback: () => config.scraper.delayMs },
   {

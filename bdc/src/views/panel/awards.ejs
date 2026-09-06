@@ -1,0 +1,69 @@
+<%- include('../partials/shell-open', { title: t('awards.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'award', size: 19 }) %> <%= t('awards.title') %></h1>
+  <span class="muted spacer"><%= t('awards.count', { count: total, page: pagination.page }) %></span>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <input type="hidden" name="lang" value="<%= locale %>">
+    <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q" value="<%= query.q || '' %>"></div>
+    <div><label for="reference"><%= t('filters.reference') %></label><input id="reference" name="reference" value="<%= query.reference || '' %>" dir="ltr"></div>
+    <div><label for="acheteur"><%= t('filters.acheteur') %></label><input id="acheteur" name="acheteur" value="<%= query.acheteur || '' %>"></div>
+    <div><label for="attributaire"><%= t('awards.winner') %></label><input id="attributaire" name="attributaire" value="<%= query.attributaire || '' %>"></div>
+    <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
+    <div><label for="datePublicationEnd"><%= t('filters.publishedTo') %></label><input id="datePublicationEnd" name="datePublicationEnd" type="date" value="<%= query.datePublicationEnd || '' %>" dir="ltr"></div>
+    <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
+  </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (rows.length === 0) { %>
+    <p class="empty"><%= t('awards.empty') %></p>
+  <% } else { %>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
+          <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th><th><%= t('awards.bids') %></th>
+          <th><%= t('awards.publishedOn') %></th><th><%= t('jobs.status') %></th><th><%= t('awards.linked') %></th>
+        </tr></thead>
+        <tbody>
+          <% rows.forEach(function (row) { %>
+            <tr>
+              <td><code><%= row.reference %></code></td>
+              <td style="max-width:300px"><%= row.objet || '—' %></td>
+              <td><%= row.acheteur || '—' %></td>
+              <td><%= row.attributaire || '—' %></td>
+              <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue + ' ' + row.currency %></td>
+              <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
+              <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
+              <td>
+                <span class="pill <%= row.result_status === 'attribue' ? 'ok' : 'warn' %>"><%= t('status.' + (row.result_status || 'awarded')) %></span>
+              </td>
+              <td>
+                <% if (row.consultation_id) { %>
+                  <a href="/panel/consultations/<%= row.consultation_id %>?lang=<%= locale %>"><%- include('../partials/icon', { name: 'link', size: 13 }) %> <%= t('awards.viewProject') %></a>
+                <% } else { %>
+                  <span class="muted" title="<%= t('awards.notLinkedHint') %>"><%= t('awards.notLinked') %></span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<div style="display:flex; gap:8px">
+  <% if (pagination.page > 1) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
+  <% } %>
+  <% if (pagination.page * pagination.perPage < total) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15, cls: 'flip-rtl' }) %></a>
+  <% } %>
+</div>
+
+<%- include('../partials/shell-close') %>

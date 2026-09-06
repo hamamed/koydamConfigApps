@@ -5,6 +5,8 @@
  *   npm run scrape -- --source=consultations --max-pages=3
  *   npm run scrape -- --source=results --filter.acheteur=ANCFCC
  *   npm run scrape -- --no-details
+ *   npm run scrape -- --since=7               only avis published in the last week
+ *   npm run scrape -- --page-size=50          fewer, larger pages
  *   npm run scrape -- --backfill              only the detail backlog
  *   npm run scrape -- --backfill --limit=500  a bounded sitting of it
  */
@@ -26,6 +28,10 @@ function parseArgs(argv) {
       options.maxPages = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'no-details') {
       options.fetchDetails = false
+    } else if (rawKey === 'since') {
+      options.sinceDays = Number.parseInt(rawValue, 10)
+    } else if (rawKey === 'page-size') {
+      options.pageSize = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'backfill') {
       options.backfill = rawValue !== 'false'
     } else if (rawKey === 'limit') {

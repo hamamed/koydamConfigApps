@@ -94,6 +94,20 @@ export function panelRoutes({ services }) {
   )
 
   router.get(
+    '/panel/awards',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      const pagination = parsePagination(req.query)
+      const { data, total } = await services.consultations.searchResults(filters, {
+        ...pagination,
+        sort: req.query.sort,
+      })
+      res.render('panel/awards', await shell(req, { active: 'awards', rows: data, total, pagination, query: req.query }))
+    }),
+  )
+
+  router.get(
     '/panel/favorites',
     anyUser,
     asyncHandler(async (req, res) => {

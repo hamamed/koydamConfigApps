@@ -4,7 +4,7 @@ import { fixture } from './helpers.js'
 import { parseConsultationList, parseConsultationDetail } from '../src/scraper/parsers/consultationParser.js'
 import { parseResultList } from '../src/scraper/parsers/resultParser.js'
 import { matchField } from '../src/scraper/parsers/listParser.js'
-import { buildSearchQuery } from '../src/scraper/selectors.js'
+import { buildSearchQuery, clampPageSize } from '../src/scraper/selectors.js'
 
 /**
  * Every fixture in this file is a page captured from the live portal, so these
@@ -160,15 +160,39 @@ test('an exhausted listing yields no rows', () => {
   assert.equal(items.length, 0)
 })
 
-test('builds the portal search query string', () => {
-  const query = buildSearchQuery(
-    { reference: 'AOO 12/2026', acheteur: 'ANCFCC', categorie: 'Fournitures', datePublicationStart: '2026-01-01' },
-    { page: 3, pageSize: 20 },
+test('builds the query each listing form actually accepts', () => {
+  // Every one of these was wrong before, and each failed silently: the portal
+  // answered a malformed query with the unfiltered listing, or with zero cards,
+  // and the crawl looked like it had succeeded.
+  const consultations = buildSearchQuery(
+    'consultations',
+    { q: 'travaux', datePublicationStart: '2026-09-05', dateLimiteStart: '2026-10-01' },
+    { page: 3, pageSize: 50 },
   )
-  assert.equal(query.get('search_consultation_resultats[reference]'), 'AOO 12/2026')
-  assert.equal(query.get('search_consultation_resultats[acheteur]'), 'ANCFCC')
-  assert.equal(query.get('search_consultation_resultats[categorie]'), 'Fournitures')
-  assert.equal(query.get('search_consultation_resultats[datePublicationStart]'), '2026-01-01')
-  assert.equal(query.get('page'), '3')
-  assert.equal(query.get('search_consultation_resultats[objet]'), null)
+  assert.equal(consultations.get('search_consultation_entreprise[keyword]'), 'travaux')
+  assert.equal(consultations.get('search_consultation_entreprise[dateMiseEnLigneStart]'), '2026-09-05')
+  assert.equal(consultations.get('search_consultation_entreprise[dateLimiteStart]'), '2026-10-01')
+  assert.equal(consultations.get('page'), '3')
+
+  // The awards form has its own root, and its own name for the award's date.
+  const results = buildSearchQuery('results', { datePublicationStart: '2026-09-05' })
+  assert.equal(results.get('search_consultation_resultats[dateLimitePublicationStart]'), '2026-09-05')
+  assert.equal(results.get('search_consultation_entreprise[keyword]'), null)
+
+  // pageSize is mandatory: without it the form binds to nothing and the page
+  // comes back empty, which reads as "no results" rather than a bad query.
+  for (const source of ['consultations', 'results']) {
+    const query = buildSearchQuery(source, {})
+    const root = source === 'results' ? 'search_consultation_resultats' : 'search_consultation_entreprise'
+    assert.ok(query.get(`${root}[pageSize]`), `${source} always sends pageSize`)
+  }
+
+  // Only the sizes the portal's own selector offers.
+  assert.equal(buildSearchQuery('consultations', {}, { pageSize: 37 }).get('search_consultation_entreprise[pageSize]'), '30')
+  assert.equal(clampPageSize(1000), 50)
+
+  // A non-ISO date is dropped rather than sent: the portal ignores it and hands
+  // back everything, so sending it would quietly widen the crawl.
+  const badDate = buildSearchQuery('consultations', { datePublicationStart: '05/09/2026' })
+  assert.equal(badDate.get('search_consultation_entreprise[dateMiseEnLigneStart]'), null)
 })
