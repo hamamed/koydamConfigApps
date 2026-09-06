@@ -14,9 +14,16 @@ export const SOURCES = Object.freeze(['consultations', 'results', 'all'])
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, articles, results, jobs, http = createHttpClient() }) {
-  const consultationScraper = createConsultationScraper({ http, consultations, articles })
-  const resultScraper = createResultScraper({ http, results })
+export function createScraperRunner({ db, consultations, articles, results, jobs, settings, http }) {
+  // Built per run from the current settings, so changing the delay or the user
+  // agent in the panel applies to the next crawl without a restart. A client
+  // passed in wins, which is what the tests use to serve fixtures.
+  const client =
+    http ??
+    createHttpClient(settings ? { resolveOptions: () => settings.section('scraper') } : undefined)
+
+  const consultationScraper = createConsultationScraper({ http: client, consultations, articles, settings })
+  const resultScraper = createResultScraper({ http: client, results, settings })
   const matcher = createMatcher({ db, consultations, results })
 
   /**
@@ -107,5 +114,5 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
     }
   }
 
-  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, http }
+  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, http: client }
 }

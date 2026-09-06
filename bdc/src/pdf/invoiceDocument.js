@@ -24,9 +24,10 @@ const COLUMNS = [
  * download, or a file handle for archiving).
  * @param {object} invoice invoice row including its `items`.
  * @param {import('node:stream').Writable} stream destination.
+ * @param {object} [company] issuer block; defaults to the environment's.
  * @returns {Promise<void>} resolves once the stream has been fully written.
  */
-export function renderInvoicePdf(invoice, stream) {
+export function renderInvoicePdf(invoice, stream, company = config.company) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: PAGE_MARGIN, info: { Title: `Facture ${invoice.invoice_number}` } })
 
@@ -36,12 +37,12 @@ export function renderInvoicePdf(invoice, stream) {
     doc.pipe(stream)
 
     const currency = invoice.currency || config.invoice.currency
-    drawHeader(doc, invoice)
+    drawHeader(doc, invoice, company)
     drawParties(doc, invoice)
     drawConsultationBlock(doc, invoice)
     const tableBottom = drawItems(doc, invoice.items ?? [], currency)
     drawTotals(doc, invoice, currency, tableBottom)
-    drawFooter(doc, invoice)
+    drawFooter(doc, invoice, company)
 
     doc.end()
   })
@@ -49,18 +50,18 @@ export function renderInvoicePdf(invoice, stream) {
 
 const contentWidth = (doc) => doc.page.width - PAGE_MARGIN * 2
 
-function drawHeader(doc, invoice) {
+function drawHeader(doc, invoice, company) {
   doc
     .font(FONT.bold)
     .fontSize(18)
     .fillColor(COLORS.accent)
-    .text(config.company.name, PAGE_MARGIN, PAGE_MARGIN)
+    .text(company.name, PAGE_MARGIN, PAGE_MARGIN)
 
   doc.font(FONT.regular).fontSize(9).fillColor(COLORS.muted)
-  for (const line of [config.company.address, config.company.email, config.company.phone].filter(Boolean)) {
+  for (const line of [company.address, company.email, company.phone].filter(Boolean)) {
     doc.text(line)
   }
-  if (config.company.ice) doc.text(`ICE : ${config.company.ice}`)
+  if (company.ice) doc.text(`ICE : ${company.ice}`)
 
   const boxWidth = 200
   const boxLeft = doc.page.width - PAGE_MARGIN - boxWidth
@@ -211,7 +212,7 @@ function drawTotals(doc, invoice, currency, tableBottom) {
   doc.fillColor(COLORS.text)
 }
 
-function drawFooter(doc, invoice) {
+function drawFooter(doc, invoice, company) {
   if (invoice.notes) {
     doc.font(FONT.bold).fontSize(9).fillColor(COLORS.text).text('Notes', PAGE_MARGIN, doc.y)
     doc.font(FONT.regular).fillColor(COLORS.muted).text(invoice.notes, { width: contentWidth(doc) })
@@ -224,7 +225,7 @@ function drawFooter(doc, invoice) {
     .fontSize(8)
     .fillColor(COLORS.muted)
     .text(
-      `${config.company.name}${config.company.ice ? ` — ICE ${config.company.ice}` : ''} — Facture ${invoice.invoice_number}`,
+      `${company.name}${company.ice ? ` — ICE ${company.ice}` : ''} — Facture ${invoice.invoice_number}`,
       PAGE_MARGIN,
       bottom - 16,
       { width: contentWidth(doc), align: 'center' },

@@ -50,9 +50,9 @@ export const dictionaryFor = (locale) => ({ ...DICTIONARIES[DEFAULT_LOCALE], ...
 
 /**
  * Picks a locale from, in order: an explicit `?lang=`, the saved cookie, the
- * browser's Accept-Language, then the default.
+ * browser's Accept-Language, the site's configured default, then French.
  */
-export function resolveLocale({ query, cookie, acceptLanguage } = {}) {
+export function resolveLocale({ query, cookie, acceptLanguage, fallback } = {}) {
   if (isSupported(query)) return query
   if (isSupported(cookie)) return cookie
 
@@ -60,5 +60,5 @@ export function resolveLocale({ query, cookie, acceptLanguage } = {}) {
     const code = part.split(';')[0].trim().slice(0, 2).toLowerCase()
     if (isSupported(code)) return code
   }
-  return DEFAULT_LOCALE
+  return isSupported(fallback) ? fallback : DEFAULT_LOCALE
 }

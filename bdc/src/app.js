@@ -40,7 +40,7 @@ export function createApp(container = createContainer()) {
   app.use(express.json({ limit: JSON_BODY_LIMIT }))
   app.use(express.urlencoded({ extended: true }))
   app.use(cookieParser())
-  app.use(localeMiddleware())
+  app.use(localeMiddleware(container.settings))
   if (!config.isTest) app.use(morgan(config.isProduction ? 'combined' : 'dev'))
 
   app.use('/api', createApiLimiter())

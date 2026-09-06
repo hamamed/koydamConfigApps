@@ -12,7 +12,10 @@ const log = logger.child('[scraper:consultations]')
  * `/bdc/entreprise/consultation/`, persisting every row and — when enabled —
  * the full article/lot breakdown from each detail page.
  */
-export function createConsultationScraper({ http, consultations, articles }) {
+export function createConsultationScraper({ http, consultations, articles, settings }) {
+  /** Live values, so a change in the Settings screen applies to the next crawl. */
+  const knobs = async () => (settings ? { ...config.scraper, ...(await settings.section('scraper')) } : config.scraper)
+
   /**
    * @param {object} options
    * @param {object} [options.filters] portal search filters to narrow the crawl.
@@ -21,10 +24,11 @@ export function createConsultationScraper({ http, consultations, articles }) {
    * @returns {Promise<{pagesScraped, itemsFound, itemsCreated, itemsUpdated, itemsUnchanged, articlesSaved, errors}>}
    */
   async function scrape(options = {}) {
+    const runtime = await knobs()
     const {
       filters = {},
-      maxPages = config.scraper.maxPages,
-      fetchDetails = config.scraper.fetchDetails,
+      maxPages = runtime.maxPages,
+      fetchDetails = runtime.fetchDetails,
       onProgress = () => {},
     } = options
 
@@ -42,7 +46,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
     let totalPages = 1
 
     while (page <= Math.min(totalPages, maxPages)) {
-      const query = buildSearchQuery(filters, { page, pageSize: config.scraper.pageSize })
+      const query = buildSearchQuery(filters, { page, pageSize: runtime.pageSize })
       const { html, url } = await http.getHtml(config.scraper.consultationsPath, query)
       const parsed = parseConsultationList(html, url)
 
@@ -64,7 +68,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
       }
 
       if (fetchDetails) {
-        stats.articlesSaved += await scrapeDetails(saved, stats)
+        stats.articlesSaved += await scrapeDetails(saved, stats, runtime.detailConcurrency)
       }
 
       onProgress({ page, totalPages, stats })
@@ -78,7 +82,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
   }
 
   /** Fetches the detail page of freshly seen consultations and stores their lots. */
-  async function scrapeDetails(saved, stats) {
+  async function scrapeDetails(saved, stats, concurrency) {
     const targets = saved.filter(({ row, outcome }) => row?.detail_url && outcome !== 'unchanged')
     if (targets.length === 0) return 0
 
@@ -97,7 +101,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
         }
         return 0
       },
-      config.scraper.detailConcurrency,
+      concurrency,
     )
 
     for (const outcome of outcomes) {
@@ -139,6 +143,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
    */
   async function backfillDetails(options = {}) {
     const { limit = Infinity, batchSize = 100, onProgress = () => {} } = options
+    const runtime = await knobs()
     const stats = { consultationsProcessed: 0, articlesSaved: 0, pagesScraped: 0, errors: [] }
 
     while (stats.consultationsProcessed < limit) {
@@ -149,7 +154,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
       const outcomes = await mapWithConcurrency(
         pending,
         async (row) => (await scrapeDetail(row)).articles.length,
-        config.scraper.detailConcurrency,
+        runtime.detailConcurrency,
       )
 
       for (const outcome of outcomes) {

@@ -63,5 +63,8 @@ export function createFavoriteService({ favorites, consultations }) {
 
   const count = (userId) => favorites.countForUser(userId)
 
-  return { add, remove, list, count }
+  /** The saved row itself, for showing an existing note on a project page. */
+  const find = (userId, consultationId) => favorites.find(userId, Number(consultationId))
+
+  return { add, remove, list, count, find }
 }

@@ -5,6 +5,7 @@ import { favoriteRoutes } from './favorites.js'
 import { invoiceRoutes } from './invoices.js'
 import { authRoutes } from './auth.js'
 import { adminRoutes } from './admin.js'
+import { panelRoutes } from './panel.js'
 import { ok } from '../../utils/pagination.js'
 import { dictionaryFor, LOCALES } from '../../i18n/index.js'
 
@@ -25,6 +26,8 @@ export function registerRoutes(app, container) {
   app.use('/api/favorites', favoriteRoutes(container))
   app.use('/api/invoices', invoiceRoutes(container))
   app.use('/admin', adminRoutes(container))
+  // The panel is last: its catch-all redirects must not shadow the API.
+  app.use('/', panelRoutes(container))
 
   return app
 }

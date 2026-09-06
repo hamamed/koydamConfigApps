@@ -18,12 +18,20 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export function createHttpClient(options = {}) {
   const {
     baseUrl = config.scraper.baseUrl,
-    userAgent = config.scraper.userAgent,
-    timeoutMs = config.scraper.timeoutMs,
-    delayMs = config.scraper.delayMs,
-    maxRetries = config.scraper.maxRetries,
     fetchImpl = globalThis.fetch,
+    // Optional: reads the live values before each request, so the panel's
+    // throttle and user-agent settings apply without a restart.
+    resolveOptions = null,
   } = options
+
+  const defaults = {
+    userAgent: options.userAgent ?? config.scraper.userAgent,
+    timeoutMs: options.timeoutMs ?? config.scraper.timeoutMs,
+    delayMs: options.delayMs ?? config.scraper.delayMs,
+    maxRetries: options.maxRetries ?? config.scraper.maxRetries,
+  }
+
+  const current = async () => (resolveOptions ? { ...defaults, ...(await resolveOptions()) } : defaults)
 
   const cookies = new Map()
   let lastRequestAt = 0
@@ -42,7 +50,7 @@ export function createHttpClient(options = {}) {
   }
 
   /** Honours the configured politeness delay between two outbound requests. */
-  const throttle = async () => {
+  const throttle = async (delayMs) => {
     const elapsed = Date.now() - lastRequestAt
     if (lastRequestAt > 0 && elapsed < delayMs) await sleep(delayMs - elapsed)
     lastRequestAt = Date.now()
@@ -63,9 +71,11 @@ export function createHttpClient(options = {}) {
       for (const [key, value] of search.entries()) target.searchParams.append(key, value)
     }
 
+    const { userAgent, timeoutMs, delayMs, maxRetries } = await current()
     let lastError = null
+
     for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
-      await throttle()
+      await throttle(delayMs)
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), timeoutMs)
       try {

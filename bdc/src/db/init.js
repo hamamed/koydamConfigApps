@@ -71,6 +71,7 @@ export async function dropDatabase(db = getDb()) {
     'consultation_articles',
     'consultations',
     'scrape_jobs',
+    'site_settings',
     'users',
     'schema_migrations',
   ]

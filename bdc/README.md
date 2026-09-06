@@ -49,7 +49,10 @@ src/
   services/        business logic (consultations, favorites, invoices, auth, admin)
   pdf/             pdfkit invoice document
   http/            filters, middleware, routes
-  views/admin/     server-rendered admin panel (EJS)
+  i18n/            fr / en / ar dictionaries
+  settings/        catalogue + runtime settings service
+  views/panel/     server-rendered panel (EJS)
+  views/partials/  sidebar shell and the inlined Lucide icons
 bin/               db-init · db-seed · scrape (CLI)
 tests/             unit + fixture-driven integration tests
 ```
@@ -67,7 +70,8 @@ tested against an in-memory database.
 | `result_lots` | per-lot award detail (winner, amount, status) |
 | `favorites` | `(user_id, consultation_id)` saved projects |
 | `invoices` / `invoice_items` | generated invoices and their lines |
-| `users` | admin + regular accounts (bcrypt hashes) |
+| `users` | accounts and their role (bcrypt hashes) |
+| `site_settings` | runtime settings, falling back to `.env` |
 | `scrape_jobs` | audit trail of every crawl |
 
 Portability conventions, applied everywhere:
@@ -297,7 +301,7 @@ The interface is available in **French** (default), **English** and **Arabic**,
 with Arabic rendered right-to-left.
 
 - `?lang=fr|en|ar` switches and is remembered in a cookie; otherwise the browser's
-  `Accept-Language` decides, falling back to French.
+  `Accept-Language` decides, then the site's configured default, then French.
 - `GET /api/i18n` returns the locale and its full dictionary, so a client that
   renders its own interface does not duplicate the strings.
 - Dictionaries live in `src/i18n/`. A missing key falls back to French and then to
@@ -312,25 +316,56 @@ For Arabic the layout mirrors (`dir="rtl"`, logical CSS properties), and
 references, dates and numbers are isolated `ltr` so the bidi algorithm cannot
 reorder `6/2026` into `2026/6`.
 
-## Admin panel
+## The panel
 
-`/admin/login` → `/admin`. Server-rendered (EJS), admin role required; the HTML
-routes redirect to the login page instead of returning a JSON 401.
+Sign in at `/login`; everything lives under `/panel`. Server-rendered EJS with a
+sidebar; icons are [Lucide](https://lucide.dev) SVGs inlined in
+`src/views/partials/icon.ejs` rather than fetched from a CDN, so the panel keeps
+its icons under a CSP with no external sources and with no second request before
+first paint.
 
-- **Dashboard** — record counters, match rate, unmatched and ambiguous awards,
-  how many detail pages are still unread, recent jobs.
-- **Manual scrape** — pick a source, page cap, optional buyer filter, detail
-  fetching on/off. Long crawls run in the background and are polled through
-  `/admin/api/jobs`; a second run of the same source is refused while one is
-  still running.
-- **Records** — filterable consultation table with per-row *refresh detail page*
-  and *delete*. Clicking a row opens the consultation, which shows every article
-  read from its detail page — number, designation, specifications, quantity,
-  unit, VAT and required warranties — alongside the matched award and a link
-  back to the avis on the portal.
+### Two tiers
 
-JSON API under `/admin/api`: `dashboard`, `jobs`, `scrape`, `rematch`, and CRUD
-on `consultations` / `results`.
+| Screen | Who |
+| --- | --- |
+| Projects (`/panel`) — filterable list, star to track | any signed-in account |
+| Project detail — every article, the award, a private note | any signed-in account |
+| Favorites (`/panel/favorites`) — what you track, with notes | any signed-in account |
+| Dashboard (`/panel/dashboard`) — counters, manual crawls | **admin** |
+| Users (`/panel/users`) — create, promote, deactivate, reset | **admin** |
+| Settings (`/panel/settings`) | **admin** |
+
+The split is enforced on the route, not by hiding links: an ordinary user asking
+for `/panel/dashboard` is redirected to `/panel`, and `/admin/api/*` answers them
+`403`. A test asserts both, because a hidden link is not an access control.
+
+Favourites are per account. Each user tracks their own projects and keeps their
+own note on each one; nobody sees anyone else's.
+
+### Users
+
+An **admin** additionally sees the three screens above — which can trigger crawls
+against a public government service and change how the site behaves for
+everyone. A **user** browses and tracks. Guards worth knowing: you cannot remove
+your own administrator rights, deactivate or delete your own account, or remove
+the last active administrator. Deactivating an account blocks sign-in
+immediately.
+
+### Settings
+
+`/panel/settings` writes to `site_settings` and falls back to `.env` for anything
+unset, so clearing a field restores the environment default. Changes apply to the
+next crawl and the next invoice without a restart — the HTTP client re-reads the
+delay, timeout and user agent before each request, and the invoice defaults and
+the issuer block on the PDF are read at generation time.
+
+Covered: site name and default language; crawler page cap, page size, delay,
+detail concurrency, retries, timeout and user agent; invoice currency, VAT rate
+and numbering prefix; and the issuer block printed on invoices.
+
+**Secrets are deliberately not settings.** `JWT_SECRET` and the database
+credentials stay in `.env`, where they are not one careless form submit away from
+being changed by anyone who reaches the panel.
 
 ## Scraper CLI
 

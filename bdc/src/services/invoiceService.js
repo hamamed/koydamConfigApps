@@ -18,7 +18,10 @@ const VALID_STATUSES = new Set(['draft', 'issued', 'paid', 'cancelled'])
  * All arithmetic runs in integer centimes; the decimal amounts in API payloads
  * are produced at the serialization boundary only.
  */
-export function createInvoiceService({ invoices, articles, consultations }) {
+export function createInvoiceService({ invoices, articles, consultations, settings }) {
+  /** Live invoice defaults; falls back to `.env` when no settings are stored. */
+  const defaults = async () => (settings ? { ...config.invoice, ...(await settings.section('invoice')) } : config.invoice)
+
   /**
    * @param {number|null} userId author of the invoice.
    * @param {object} payload see `normalizeItems` for the item shape.
@@ -43,14 +46,15 @@ export function createInvoiceService({ invoices, articles, consultations }) {
       throw new ValidationError(`status must be one of ${[...VALID_STATUSES].join(', ')}`)
     }
 
+    const invoiceDefaults = await defaults()
     const items = await normalizeItems(payload.items, consultation)
     const totals = computeTotals(items, {
-      taxRate: payload.taxRate ?? config.invoice.taxRate,
+      taxRate: payload.taxRate ?? invoiceDefaults.taxRate,
       discountCents: toCentimes(payload.discount) ?? 0,
     })
 
     const timestamp = nowIso()
-    const invoiceNumber = await nextInvoiceNumber(issueDate.slice(0, 4))
+    const invoiceNumber = await nextInvoiceNumber(issueDate.slice(0, 4), invoiceDefaults.numberPrefix)
 
     const created = await invoices.create(
       {
@@ -62,7 +66,7 @@ export function createInvoiceService({ invoices, articles, consultations }) {
         client_address: clean(payload.client?.address) || null,
         issue_date: issueDate,
         due_date: payload.dueDate ?? null,
-        currency: payload.currency ?? config.invoice.currency,
+        currency: payload.currency ?? invoiceDefaults.currency,
         subtotal_cents: totals.subtotalCents,
         discount_cents: totals.discountCents,
         tax_rate: totals.taxRate,
@@ -156,8 +160,7 @@ export function createInvoiceService({ invoices, articles, consultations }) {
   }
 
   /** `FCT-2026-0001`, sequential per issue year. */
-  async function nextInvoiceNumber(year) {
-    const prefix = config.invoice.numberPrefix
+  async function nextInvoiceNumber(year, prefix) {
     const sequence = (await invoices.maxSequenceForYear(prefix, year)) + 1
     return `${prefix}-${year}-${String(sequence).padStart(SEQUENCE_PADDING, '0')}`
   }
@@ -193,8 +196,11 @@ export function createInvoiceService({ invoices, articles, consultations }) {
   /** Streams the invoice PDF into `stream` (an HTTP response or a file). */
   async function streamPdf(id, stream, userId = null) {
     const invoice = await getById(id, userId)
-    return renderInvoicePdf(invoice, stream)
+    return renderInvoicePdf(invoice, stream, await company())
   }
+
+  /** Issuer block printed on the PDF, from settings. */
+  const company = async () => (settings ? { ...config.company, ...(await settings.section('company')) } : config.company)
 
   /** Renders the PDF to disk and stores its path on the invoice row. */
   async function savePdf(id) {
@@ -203,7 +209,7 @@ export function createInvoiceService({ invoices, articles, consultations }) {
     const filePath = path.join(config.invoice.storageDir, `${invoice.invoice_number}.pdf`)
     const handle = await fs.open(filePath, 'w')
     try {
-      await renderInvoicePdf(invoice, handle.createWriteStream())
+      await renderInvoicePdf(invoice, handle.createWriteStream(), await company())
     } finally {
       await handle.close().catch(() => {})
     }

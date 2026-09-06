@@ -9,12 +9,16 @@ const COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000
  * An explicit `?lang=` is remembered in a cookie, so switching language once
  * survives the redirect that follows and every later page.
  */
-export function localeMiddleware() {
-  return (req, res, next) => {
+export function localeMiddleware(settings = null) {
+  return async (req, res, next) => {
+    // The site's configured default is the last word before French, so an
+    // Arabic-first deployment does not depend on every visitor's browser.
+    const fallback = settings ? await settings.get('site.defaultLocale') : undefined
     const locale = resolveLocale({
       query: req.query?.lang,
       cookie: req.cookies?.[COOKIE_NAME],
       acceptLanguage: req.headers['accept-language'],
+      fallback,
     })
 
     if (req.query?.lang && req.query.lang === locale && req.cookies?.[COOKIE_NAME] !== locale) {

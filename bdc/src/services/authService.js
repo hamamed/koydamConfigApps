@@ -49,9 +49,13 @@ export function createAuthService({ users }) {
   }
 
   function issueToken(user) {
-    return jwt.sign({ sub: String(user.id), email: user.email, role: user.role }, config.auth.jwtSecret, {
-      expiresIn: config.auth.jwtExpiresIn,
-    })
+    return jwt.sign(
+      { sub: String(user.id), email: user.email, role: user.role, name: user.full_name ?? null },
+      config.auth.jwtSecret,
+      {
+        expiresIn: config.auth.jwtExpiresIn,
+      },
+    )
   }
 
   /** @throws {UnauthorizedError} when the token is missing, expired or forged. */
@@ -59,10 +63,19 @@ export function createAuthService({ users }) {
     if (!token) throw new UnauthorizedError()
     try {
       const payload = jwt.verify(token, config.auth.jwtSecret)
-      return { id: Number(payload.sub), email: payload.email, role: payload.role }
+      return { id: Number(payload.sub), email: payload.email, role: payload.role, fullName: payload.name ?? null }
     } catch {
       throw new UnauthorizedError('Session expired or invalid')
     }
+  }
+
+  /** Sets a password without checking the old one — administrator resets only. */
+  async function setPassword(userId, newPassword) {
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      throw new ValidationError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    }
+    await users.update(userId, { password_hash: await bcrypt.hash(newPassword, BCRYPT_ROUNDS) })
+    return { updated: true }
   }
 
   async function changePassword(userId, currentPassword, newPassword) {
@@ -78,5 +91,5 @@ export function createAuthService({ users }) {
     return { updated: true }
   }
 
-  return { register, login, verifyToken, changePassword, issueToken }
+  return { register, login, verifyToken, changePassword, setPassword, issueToken }
 }

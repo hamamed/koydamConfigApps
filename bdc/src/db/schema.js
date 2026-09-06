@@ -188,6 +188,13 @@ export function tableStatements(dialect) {
       line_total_cents INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at TEXT NOT NULL,
+      updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    )`,
+
     `CREATE TABLE IF NOT EXISTS scrape_jobs (
       ${id},
       source TEXT NOT NULL,
@@ -257,4 +264,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.005'
+export const SCHEMA_VERSION = '2026-09-06.006'

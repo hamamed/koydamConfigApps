@@ -1,0 +1,86 @@
+<%- include('../partials/shell-open', { title: t('projects.title') }) %>
+
+<div class="page-head">
+  <h1><%= t('projects.title') %></h1>
+  <span class="muted spacer"><%= t('table.count', { count: total, page: pagination.page }) %></span>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <input type="hidden" name="lang" value="<%= locale %>">
+    <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q" value="<%= query.q || '' %>"></div>
+    <div><label for="reference"><%= t('filters.reference') %></label><input id="reference" name="reference" value="<%= query.reference || '' %>" dir="ltr"></div>
+    <div><label for="acheteur"><%= t('filters.acheteur') %></label><input id="acheteur" name="acheteur" value="<%= query.acheteur || '' %>"></div>
+    <div><label for="categorie"><%= t('filters.categorie') %></label><input id="categorie" name="categorie" value="<%= query.categorie || '' %>"></div>
+    <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
+    <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
+    <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
+  </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (rows.length === 0) { %>
+    <p class="empty"><%= t('table.empty') %></p>
+  <% } else { %>
+    <table>
+      <thead><tr>
+        <th style="width:38px"></th>
+        <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
+        <th><%= t('table.categorie') %></th><th><%= t('table.deadline') %></th>
+        <th><%= t('table.articles') %></th><th><%= t('table.result') %></th>
+      </tr></thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <td>
+              <button class="star-btn" type="button" data-id="<%= row.id %>" aria-pressed="<%= row.isFavorite ? 'true' : 'false' %>"
+                      title="<%= row.isFavorite ? t('projects.untrack') : t('projects.track') %>">
+                <%- include('../partials/icon', { name: 'star', size: 17 }) %>
+              </button>
+            </td>
+            <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
+            <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a></td>
+            <td><%= row.acheteur || '—' %></td>
+            <td><%= row.categorie || '—' %></td>
+            <td class="ltr"><%= row.date_limite || '—' %></td>
+            <td class="ltr"><%= row.lots_count %></td>
+            <td>
+              <% if (row.result) { %>
+                <span class="pill ok"><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= row.result.attributaire || t('status.awarded') %></span>
+              <% } else { %><span class="pill"><%= t('status.' + row.status) %></span><% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div style="display:flex; gap:8px">
+  <% if (pagination.page > 1) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15 }) %><%= t('table.previous') %></a>
+  <% } %>
+  <% if (pagination.page * pagination.perPage < total) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15 }) %></a>
+  <% } %>
+</div>
+
+<script>
+  document.querySelectorAll('.star-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const on = button.getAttribute('aria-pressed') === 'true'
+      button.disabled = true
+      const response = await fetch(on ? '/api/favorites/' + button.dataset.id : '/api/favorites', {
+        method: on ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: on ? undefined : JSON.stringify({ consultationId: Number(button.dataset.id) }),
+      })
+      button.disabled = false
+      if (response.ok) button.setAttribute('aria-pressed', on ? 'false' : 'true')
+      else alert((await response.json()).error)
+    })
+  })
+</script>
+
+<%- include('../partials/shell-close') %>

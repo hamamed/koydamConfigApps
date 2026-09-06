@@ -41,5 +41,10 @@ export function createUserRepository(db = getDb()) {
 
   const countAll = async () => Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}`)).total)
 
-  return { findById, findByEmailWithSecret, listAll, create, touchLogin, update, countAll }
+  const remove = (id) => db.run(`DELETE FROM ${TABLE} WHERE id = ?`, [id])
+
+  const countByRole = async (role) =>
+    Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE role = ? AND is_active = 1`, [role])).total)
+
+  return { findById, findByEmailWithSecret, listAll, create, touchLogin, update, remove, countAll, countByRole }
 }

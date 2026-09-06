@@ -13,12 +13,15 @@ const log = logger.child('[scraper:results]')
  * for a consultation this instance never saw. The `reference` column is what
  * links the two datasets afterwards (see matcher.js).
  */
-export function createResultScraper({ http, results }) {
+export function createResultScraper({ http, results, settings }) {
+  const knobs = async () => (settings ? { ...config.scraper, ...(await settings.section('scraper')) } : config.scraper)
+
   async function scrape(options = {}) {
+    const runtime = await knobs()
     const {
       filters = {},
-      maxPages = config.scraper.maxPages,
-      fetchDetails = config.scraper.fetchDetails,
+      maxPages = runtime.maxPages,
+      fetchDetails = runtime.fetchDetails,
       onProgress = () => {},
     } = options
 
@@ -36,7 +39,7 @@ export function createResultScraper({ http, results }) {
     let totalPages = 1
 
     while (page <= Math.min(totalPages, maxPages)) {
-      const query = buildSearchQuery(filters, { page, pageSize: config.scraper.pageSize })
+      const query = buildSearchQuery(filters, { page, pageSize: runtime.pageSize })
       const { html, url } = await http.getHtml(config.scraper.resultsPath, query)
       const parsed = parseResultList(html, url)
 
@@ -58,7 +61,7 @@ export function createResultScraper({ http, results }) {
       }
 
       if (fetchDetails) {
-        stats.lotsSaved += await scrapeDetails(saved, stats)
+        stats.lotsSaved += await scrapeDetails(saved, stats, runtime.detailConcurrency)
       }
 
       onProgress({ page, totalPages, stats })
@@ -69,7 +72,7 @@ export function createResultScraper({ http, results }) {
     return stats
   }
 
-  async function scrapeDetails(saved, stats) {
+  async function scrapeDetails(saved, stats, concurrency) {
     const targets = saved.filter(({ row, outcome }) => row?.detail_url && outcome !== 'unchanged')
     if (targets.length === 0) return 0
 
@@ -86,7 +89,7 @@ export function createResultScraper({ http, results }) {
         const stored = await results.replaceLots(row.id, detail.lots)
         return stored.length
       },
-      config.scraper.detailConcurrency,
+      concurrency,
     )
 
     for (const outcome of outcomes) {
