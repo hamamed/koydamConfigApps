@@ -10,6 +10,11 @@ Group=brawl
 WorkingDirectory=/opt/bdc
 EnvironmentFile=/opt/bdc/.env
 ExecStart=/usr/bin/node bin/scrape.js --source=all --max-pages=25
+# Then close any gaps: a crawl only follows the detail page of rows it just
+# created or changed, so a page that 404'd on the day, or a row seen before
+# detail-reading existed, would keep its listing-only half-record forever.
+# Bounded, so an unattended run cannot turn into an all-night crawl.
+ExecStart=/usr/bin/node bin/scrape.js --backfill --limit=300
 # A full crawl with detail pages at 2s between requests takes a while; the
 # default 90s start timeout would kill it mid-run and leave the job row stuck
 # in `running`, which then blocks the next scheduled crawl.
