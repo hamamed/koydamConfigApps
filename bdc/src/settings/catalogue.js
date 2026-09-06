@@ -7,8 +7,8 @@ import { config } from '../config/index.js'
  * the box keeps working with an empty table and a value can always be reset by
  * clearing the field.
  *
- * Two `secret` entries are allowed: the Google Translate key and the SMTP
- * password. Both are delivery credentials — leaking one costs money or lets
+ * Three `secret` entries are allowed: the Google Translate key, the SMTP
+ * password and the OpenCorporates token. All are delivery or lookup credentials — leaking one costs money or lets
  * somebody send mail as this service — which is a different class of thing from
  * JWT_SECRET or DATABASE_URL, where a careless edit locks everyone out or points
  * the app at another database. Those two stay in `.env`.
@@ -17,7 +17,7 @@ import { config } from '../config/index.js'
  * empty submission means "leave it alone" rather than "erase it", and clearing
  * one is a separate, explicit action.
  */
-export const GROUPS = ['site', 'scraper', 'mail', 'translation', 'invoice', 'company']
+export const GROUPS = ['site', 'scraper', 'mail', 'translation', 'registry', 'invoice', 'company']
 
 const number = (min, max) => ({ type: 'number', min, max })
 
@@ -83,6 +83,13 @@ export const CATALOGUE = Object.freeze([
     // the panel can take over from it later.
     fallback: () => config.translation.apiKey,
   },
+
+  // OpenCorporates is the only one of the obvious company registers that can be
+  // used by a program: OMPIC's site refuses connections from outside its network
+  // and sells its data through DirectInfo, a paid subscription with no API, and
+  // OpenCorporates' own robots.txt disallows scraping its search. Their API
+  // needs a token, applied for at opencorporates.com.
+  { key: 'registry.openCorporatesToken', group: 'registry', type: 'secret', fallback: () => '' },
 
   { key: 'invoice.currency', group: 'invoice', type: 'string', fallback: () => config.invoice.currency },
   { key: 'invoice.taxRate', group: 'invoice', ...number(0, 100), fallback: () => config.invoice.taxRate },

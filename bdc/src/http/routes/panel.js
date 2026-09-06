@@ -369,7 +369,64 @@ export function panelRoutes({ services }) {
       const name = decodeURIComponent(req.params.name)
       const company = await services.analytics.company(name, services.consultations)
       if (company.awards === 0) throw new NotFoundError(`Company ${name}`)
-      res.render('panel/company', await shell(req, { active: 'awards', company }))
+      res.render('panel/company', await shell(req, {
+        active: 'awards',
+        company,
+        record: await services.companyRecords.find(name),
+        canLookup: await services.companyRecords.lookupConfigured(),
+        candidates: null,
+        notice: null,
+        error: null,
+      }))
+    }),
+  )
+
+  /**
+   * Recording what is known about a company, and asking the public register
+   * for candidates. Both are administrator actions: the register is matched by
+   * name alone, so a match is a proposal for a person to accept, never a write.
+   */
+  const companyScreen = async (req, extra) => {
+    const name = decodeURIComponent(req.params.name)
+    return {
+      active: 'awards',
+      company: await services.analytics.company(name, services.consultations),
+      record: await services.companyRecords.find(name),
+      canLookup: await services.companyRecords.lookupConfigured(),
+      candidates: null,
+      notice: null,
+      error: null,
+      ...extra,
+    }
+  }
+
+  router.post(
+    '/panel/companies/:name/record',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      let extra = {}
+      try {
+        await services.companyRecords.save(name, req.body, req.user)
+        extra = { notice: translator(req.locale)('registry.saved') }
+      } catch (error) {
+        extra = { error: error.message }
+      }
+      res.status(extra.error ? 400 : 200).render('panel/company', await shell(req, await companyScreen(req, extra)))
+    }),
+  )
+
+  router.post(
+    '/panel/companies/:name/lookup',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const result = await services.companyRecords.lookup(name)
+      res.render('panel/company', await shell(req, await companyScreen(req, {
+        candidates: result.candidates,
+        error: result.error,
+        notice: result.configured ? null : translator(req.locale)('registry.notConfigured'),
+      })))
     }),
   )
 

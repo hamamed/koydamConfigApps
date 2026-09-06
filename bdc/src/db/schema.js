@@ -212,6 +212,38 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL
     )`,
 
+    // What is known about a company beyond the name the portal prints.
+    //
+    // The portal publishes no ICE, no address and no registry number for a
+    // winning company — 0 of 21,748 award rows carry one — and Morocco has no
+    // open company register to join against: OMPIC's data is sold through
+    // DirectInfo, and OpenCorporates needs a key. So this is a store, not a
+    // mirror: each row is something an administrator recorded or confirmed,
+    // with where it came from and when it was checked.
+    `CREATE TABLE IF NOT EXISTS company_records (
+      ${id},
+      -- The attributaire string exactly as the portal prints it, which is the
+      -- only identifier a company has in this data.
+      name TEXT NOT NULL UNIQUE,
+      ice TEXT,
+      registry_number TEXT,
+      legal_form TEXT,
+      address TEXT,
+      city TEXT,
+      phone TEXT,
+      website TEXT,
+      notes TEXT,
+      -- Where this came from: 'manual', or the adapter that proposed it.
+      source TEXT NOT NULL DEFAULT 'manual',
+      source_url TEXT,
+      -- Set only when a person confirmed it. A row proposed by a lookup and
+      -- never reviewed is a guess, and the profile page says so.
+      verified_at TEXT,
+      verified_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+
     `CREATE TABLE IF NOT EXISTS saved_searches (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -339,6 +371,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets (user_id, expires_at)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests (status, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_company_records_ice ON company_records (ice)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
@@ -370,4 +403,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-07.011'
+export const SCHEMA_VERSION = '2026-09-07.012'

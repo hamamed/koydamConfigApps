@@ -21,6 +21,100 @@
 
 <p class="muted" style="margin:-4px 0 16px; font-size:11.5px"><%= t('company.note') %></p>
 
+<% if (notice) { %><div class="notice"><%= notice %></div><% } %>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+
+<%# What is known about the company beyond its name. The portal publishes none
+    of this — no ICE on any of 21,748 award rows — and Morocco has no open
+    company register to join against, so every field here was typed or confirmed
+    by a person. The card says which. %>
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'building-2', size: 15 }) %><%= t('registry.title') %></h2>
+
+  <% if (record) { %>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+      <div><label><%= t('registry.ice') %></label><span class="ltr"><%= record.ice || '—' %></span></div>
+      <div><label><%= t('registry.rc') %></label><span class="ltr"><%= record.registry_number || '—' %></span></div>
+      <div><label><%= t('registry.legalForm') %></label><span><%= record.legal_form || '—' %></span></div>
+      <div><label><%= t('registry.city') %></label><span><%= record.city || '—' %></span></div>
+      <div style="grid-column:1/-1"><label><%= t('registry.address') %></label><span><%= record.address || '—' %></span></div>
+      <div><label><%= t('registry.phone') %></label><span class="ltr"><%= record.phone || '—' %></span></div>
+      <div><label><%= t('registry.website') %></label>
+        <% if (record.website) { %><a class="ltr" href="<%= record.website %>" target="_blank" rel="noopener noreferrer"><%= record.website %></a><% } else { %>—<% } %>
+      </div>
+    </div>
+    <% if (record.notes) { %><p class="muted" style="margin:12px 0 0; font-size:13px"><%= record.notes %></p><% } %>
+    <p style="margin:12px 0 0">
+      <span class="pill <%= record.verified_at ? 'ok' : 'warn' %>">
+        <%- include('../partials/icon', { name: record.verified_at ? 'circle-check' : 'triangle-alert', size: 13 }) %>
+        <%= record.verified_at ? t('registry.verified') + ' ' + String(record.verified_at).slice(0, 10) : t('registry.unverified') %>
+      </span>
+      <span class="muted" style="margin-inline-start:8px; font-size:11.5px"><%= t('registry.source') %>: <%= record.source %></span>
+    </p>
+  <% } else { %>
+    <p class="empty"><%= t('registry.none') %></p>
+  <% } %>
+
+  <% if (user.role === 'admin') { %>
+    <% if (candidates) { %>
+      <h3 style="margin-top:20px; font-size:14px"><%= t('registry.candidates') %></h3>
+      <% if (candidates.length === 0) { %>
+        <p class="empty"><%= t('registry.noCandidates') %></p>
+      <% } else { %>
+        <p class="muted" style="font-size:12px"><%= t('registry.candidatesHint') %></p>
+        <table>
+          <thead><tr><th><%= t('registry.name') %></th><th><%= t('registry.rc') %></th><th><%= t('registry.address') %></th><th></th></tr></thead>
+          <tbody>
+            <% candidates.forEach(function (candidate) { %>
+              <tr>
+                <td><%= candidate.name %><% if (candidate.status) { %><br><span class="muted" style="font-size:11.5px"><%= candidate.status %></span><% } %></td>
+                <td class="ltr"><%= candidate.registryNumber || '—' %></td>
+                <td style="max-width:280px"><%= candidate.address || '—' %></td>
+                <td>
+                  <form method="post" action="/panel/companies/<%= encodeURIComponent(company.name) %>/record?lang=<%= locale %>">
+                    <input type="hidden" name="registryNumber" value="<%= candidate.registryNumber || '' %>">
+                    <input type="hidden" name="legalForm" value="<%= candidate.legalForm || '' %>">
+                    <input type="hidden" name="address" value="<%= candidate.address || '' %>">
+                    <input type="hidden" name="source" value="opencorporates">
+                    <input type="hidden" name="sourceUrl" value="<%= candidate.sourceUrl || '' %>">
+                    <button type="submit" class="secondary"><%= t('registry.useThis') %></button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    <% } %>
+
+    <details style="margin-top:18px" <%= record || candidates ? '' : 'open' %>>
+      <summary style="cursor:pointer; font-size:13px; color:var(--accent)"><%= t('registry.edit') %></summary>
+      <form method="post" action="/panel/companies/<%= encodeURIComponent(company.name) %>/record?lang=<%= locale %>"
+            class="grid cols-2" style="margin-top:14px">
+        <div><label for="ice"><%= t('registry.ice') %></label><input id="ice" name="ice" dir="ltr" value="<%= record && record.ice || '' %>" placeholder="15 chiffres"></div>
+        <div><label for="registryNumber"><%= t('registry.rc') %></label><input id="registryNumber" name="registryNumber" dir="ltr" value="<%= record && record.registry_number || '' %>"></div>
+        <div><label for="legalForm"><%= t('registry.legalForm') %></label><input id="legalForm" name="legalForm" value="<%= record && record.legal_form || '' %>"></div>
+        <div><label for="city"><%= t('registry.city') %></label><input id="city" name="city" value="<%= record && record.city || '' %>"></div>
+        <div style="grid-column:1/-1"><label for="address"><%= t('registry.address') %></label><input id="address" name="address" value="<%= record && record.address || '' %>"></div>
+        <div><label for="phone"><%= t('registry.phone') %></label><input id="phone" name="phone" dir="ltr" value="<%= record && record.phone || '' %>"></div>
+        <div><label for="website"><%= t('registry.website') %></label><input id="website" name="website" dir="ltr" value="<%= record && record.website || '' %>"></div>
+        <div style="grid-column:1/-1"><label for="notes"><%= t('registry.notes') %></label><input id="notes" name="notes" value="<%= record && record.notes || '' %>"></div>
+        <div style="grid-column:1/-1" class="row-actions">
+          <button type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('registry.save') %></button>
+        </div>
+      </form>
+    </details>
+
+    <form method="post" action="/panel/companies/<%= encodeURIComponent(company.name) %>/lookup?lang=<%= locale %>" style="margin-top:12px">
+      <button type="submit" class="secondary" <%= canLookup ? '' : 'disabled' %>
+              title="<%= canLookup ? t('registry.lookupHint') : t('registry.notConfigured') %>">
+        <%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('registry.lookup') %>
+      </button>
+      <span class="muted" style="margin-inline-start:8px; font-size:11.5px"><%= canLookup ? t('registry.lookupHint') : t('registry.notConfigured') %></span>
+    </form>
+  <% } %>
+</div>
+
 <div class="grid cols-2" style="align-items:start">
   <div class="card" style="padding-bottom:8px">
     <h2><%- include('../partials/icon', { name: 'building-2', size: 15 }) %><%= t('company.topBuyers') %></h2>

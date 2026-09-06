@@ -182,7 +182,8 @@ test('settings are stored, applied, and fall back when cleared', async (t) => {
 
   // And no secret reports its value or its fallback, whatever it is for.
   const secrets = groups.flatMap((g) => g.entries).filter((entry) => entry.type === 'secret')
-  assert.deepEqual(secrets.map((entry) => entry.key).sort(), ['mail.password', 'translation.googleApiKey'])
+  assert.deepEqual(secrets.map((entry) => entry.key).sort(),
+    ['mail.password', 'registry.openCorporatesToken', 'translation.googleApiKey'])
   for (const secret of secrets) {
     assert.equal(secret.value, null, `${secret.key} is never read back`)
     assert.equal(secret.fallback, null, `${secret.key} does not leak through its fallback`)

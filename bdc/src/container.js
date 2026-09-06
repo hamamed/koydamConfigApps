@@ -34,6 +34,9 @@ import { createSystemInspector } from './system/inspector.js'
 import { createPublicService } from './services/publicService.js'
 import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
 import { createAccessRequestService } from './services/accessRequestService.js'
+import { createCompanyRecordRepository } from './repositories/companyRecordRepository.js'
+import { createCompanyRecordService } from './services/companyRecordService.js'
+import { createCompanyLookup } from './enrichment/openCorporates.js'
 
 /**
  * Composition root. Every dependency is injected explicitly so services and
@@ -41,7 +44,8 @@ import { createAccessRequestService } from './services/accessRequestService.js'
  * @param {object} [db] database driver.
  * @param {{http?: object}} [overrides] e.g. a stubbed HTTP client for tests.
  */
-export function createContainer(db = getDb(), { http, mailer: injectedMailer, translator } = {}) {
+export function createContainer(db = getDb(), options = {}) {
+  const { http, mailer: injectedMailer, translator } = options
   const repositories = {
     consultations: createConsultationRepository(db),
     articles: createArticleRepository(db),
@@ -58,6 +62,7 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
     passwordResets: createPasswordResetRepository(db),
     translations: createTranslationRepository(db),
     accessRequests: createAccessRequestRepository(db),
+    companyRecords: createCompanyRecordRepository(db),
   }
 
   const settings = createSettingsService(repositories)
@@ -78,6 +83,11 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
         from: await settings.get('mail.from'),
       }),
     })
+  // Read per request, like the translation key: a token entered in the panel
+  // works on the next lookup rather than the next restart.
+  const companyLookup =
+    options.companyLookup ??
+    createCompanyLookup({ resolve: async () => ({ apiToken: await settings.get('registry.openCorporatesToken') }) })
   const runner = createScraperRunner({ db, ...repositories, settings, ...(http ? { http } : {}) })
 
   const auth = createAuthService(repositories)
@@ -103,6 +113,7 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
     mailer,
     public: createPublicService(repositories),
     accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
+    companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
   }
   services.system = createSystemInspector({
     settings,
