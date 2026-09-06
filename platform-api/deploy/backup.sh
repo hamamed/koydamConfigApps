@@ -265,9 +265,13 @@ add() {
 sqlite_dump "skincraft"  /opt/skincraft/data/skincraft.db
 sqlite_dump "minebox"    /opt/minebox/data/minebox.db
 sqlite_dump "fortnite"   /opt/fortnite/data/fortnite.db
+# Everything bdc knows was crawled, and the portal will not hand it back: its
+# listing shows only avis that are currently open, so a consultation that has
+# closed exists nowhere but here.
+sqlite_dump "bdc"        /opt/bdc/data/marches.sqlite
 
 # Secrets first: these are unrecoverable, and were lost once already.
-for svc in brawl-vps platform-api skincraft minebox fortnite; do
+for svc in brawl-vps platform-api skincraft minebox fortnite bdc; do
   add "env/$svc.env" "/opt/$svc/.env"
 done
 
@@ -278,6 +282,9 @@ add "skincraft/storage"  /opt/skincraft/storage
 # previews under storage/previews. The files are the only copy there is — nothing regenerates
 # an addon somebody uploaded — while previews can be rebuilt with `npm run regenerate-previews`.
 add "minebox/storage"    /opt/minebox/storage
+# The generated invoice PDFs. Regenerating one needs the invoice row *and* the
+# company settings as they were when it was issued, so this is the only copy.
+add "bdc/storage"        /opt/bdc/storage
 add "nginx"              /etc/nginx/sites-available
 add "systemd"            /etc/systemd/system/brawl-api.service
 add "systemd-platform"   /etc/systemd/system/platform-api.service
@@ -290,6 +297,10 @@ add "fortnite/data"      /opt/fortnite/data          media
 add "fortnite/wallpapers" /opt/fortnite/wallpapers
 add "systemd-minebox"    /etc/systemd/system/minebox.service
 add "systemd-fortnite"   /etc/systemd/system/fortnite.service
+# bdc runs a service and three timers; the loop keeps them in step as they change.
+for unit in /etc/systemd/system/bdc*.service /etc/systemd/system/bdc*.timer; do
+  [[ -e "$unit" ]] && add "systemd-bdc/$(basename "$unit")" "$unit"
+done
 
 # Certificates: reissuing is possible but rate-limited, and an expired site
 # during a restore is an outage you did not need.
@@ -357,6 +368,11 @@ ARCHIVE_LISTING=$(tar tzf "$ARCHIVE")
 if ! grep -q 'brawl-postgres.sql' <<< "$ARCHIVE_LISTING"; then
   warn "no Brawl database in this archive - check pg_dump above"
 fi
+# Every database this box holds, named. A dump that silently stopped being
+# written looks exactly like a smaller archive, and nothing else would say so.
+for db in skincraft minebox fortnite bdc; do
+  grep -q "sqlite/$db.db" <<< "$ARCHIVE_LISTING" || warn "no $db database in this archive"
+done
 
 # ── Rotation ────────────────────────────────────────────────────────────────
 
