@@ -1,6 +1,6 @@
 # Working on this repository
 
-Four Node services on one VPS, plus the control panel that configures them.
+Five Node services on one VPS, plus the control panel that configures them.
 Read this before changing anything — several of the rules below exist because
 breaking them took a service down.
 
@@ -12,6 +12,8 @@ breaking them took a service down.
 | `brawl-vps/` | Brawl Stars API — Supercell proxy, meta crawler, wallpapers | api.hamaprojects.com | 8080 | Postgres + Redis |
 | `skincraft/` | Roblox clothing catalogue, admin, AI designer | skincraft.hamaprojects.com | 3000 | SQLite |
 | `minebox/` | Minecraft skins, addons, texture packs, worlds, seeds | minebox.hamaprojects.com | 3100 | SQLite |
+| `fortnite/` | Fortnite companion — shop, news, cosmetics, wallpapers | fortnite.hamaprojects.com | 3200 | SQLite |
+| `bdc/` | Moroccan public procurement — scraper, award matching, invoicing | bdc.civictrust.ma | 3300 | SQLite |
 
 The VPS is `46.224.86.198`, root over SSH. The Flutter app (`brawlStar`) is a
 separate project and **not in this repository**.
@@ -31,6 +33,11 @@ npm run dev
 
 `skincraft` and `minebox` each have two native modules (`sharp`,
 `better-sqlite3`); `npm install` rebuilds them for Apple Silicon on its own.
+
+`bdc` has none — it uses Node's built-in `node:sqlite`, so there is nothing to
+rebuild after a Node upgrade. It needs Node >= 22.5.0 for that. Its own
+`npm test` runs 35 tests against pages captured from the live portal and needs
+no network.
 
 `minebox` reads inside every uploaded `.mcaddon`/`.mcworld` and draws its own
 card art, so `npm run seed 30` is worth running locally — it generates real
@@ -88,6 +95,13 @@ oversight.
 
 **Migrations run on every boot** and must be idempotent (`IF NOT EXISTS`).
 There are five; CI applies them to a real Postgres twice.
+
+**`CREATE TABLE IF NOT EXISTS` never adds a column.** In `bdc`, a column added to
+`src/db/schema.js` must also be listed in `additiveColumns()`, or it never
+reaches a database created by an earlier deploy — and the failure appears at
+write time as "table X has no column named Y", long after the deploy reported
+success. That is how the first crawl after the parser rewrite lost every
+consultation while happily storing every result.
 
 **The panels layer three stylesheets**: Bootstrap → `koydam.css` (tokens,
 buttons, chips) → `admin.css` (shell, tables, components). The admin never
