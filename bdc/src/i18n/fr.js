@@ -193,6 +193,13 @@ export default {
   'sort.relevance': 'Pertinence',
 
   // ---- Procurement exclusions ----
+  'exclusion.search': 'Rechercher',
+  'exclusion.searchPlaceholder': 'Nom, motif ou registre de commerce',
+  'exclusion.allEntities': 'Toutes les entités',
+  'exclusion.allStatuses': 'Tous les statuts',
+  'exclusion.clear': 'Effacer',
+  'exclusion.noMatch': 'Aucune exclusion ne correspond à cette recherche.',
+
   'exclusion.activeTitle': 'Exclue des marchés publics',
   'exclusion.pastTitle': 'A été exclue des marchés publics',
   'exclusion.entity': 'Entité ayant prononcé l’exclusion',

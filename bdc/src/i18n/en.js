@@ -193,6 +193,13 @@ export default {
   'sort.relevance': 'Relevance',
 
   // ---- Procurement exclusions ----
+  'exclusion.search': 'Search',
+  'exclusion.searchPlaceholder': 'Name, reason or trade register',
+  'exclusion.allEntities': 'All entities',
+  'exclusion.allStatuses': 'Any status',
+  'exclusion.clear': 'Clear',
+  'exclusion.noMatch': 'No exclusion matches this search.',
+
   'exclusion.activeTitle': 'Excluded from public procurement',
   'exclusion.pastTitle': 'Was excluded from public procurement',
   'exclusion.entity': 'Excluding public entity',

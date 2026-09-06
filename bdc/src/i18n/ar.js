@@ -193,6 +193,13 @@ export default {
   'sort.relevance': 'الصلة',
 
   // ---- Procurement exclusions ----
+  'exclusion.search': 'بحث',
+  'exclusion.searchPlaceholder': 'الاسم أو السبب أو السجل التجاري',
+  'exclusion.allEntities': 'كل الجهات',
+  'exclusion.allStatuses': 'كل الحالات',
+  'exclusion.clear': 'مسح',
+  'exclusion.noMatch': 'لا يوجد إقصاء يطابق هذا البحث.',
+
   'exclusion.activeTitle': 'مُقصاة من الصفقات العمومية',
   'exclusion.pastTitle': 'سبق إقصاؤها من الصفقات العمومية',
   'exclusion.entity': 'الجهة التي أصدرت الإقصاء',

@@ -115,3 +115,60 @@ test('an exclusion reaches the company it belongs to, and says whether it still 
   assert.equal(await container.repositories.exclusions.countActive('2026-09-07'), 1)
   assert.equal(await container.repositories.exclusions.countAll(), 2)
 })
+
+test('the exclusion list can be searched by name, reason or register number', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const rows = [
+    { raison_sociale: 'ORIGINAL PAPETERIES', entite_publique: 'ONEE', motif: 'Non respect des engagements contractuels',
+      registre_commerce: '45-66683', date_debut: '2024-07-08', date_fin: '2025-07-08' },
+    { raison_sociale: 'STE SOUFOUH ATLAS SARL', entite_publique: 'MINISTERE X', motif: 'acte frauduleux',
+      registre_commerce: '51-404', date_debut: '2026-01-01', date_fin: '2030-01-01' },
+    { raison_sociale: 'MK Surveillance', entite_publique: 'ONEE', motif: 'Falsification de cautions',
+      registre_commerce: '45-22475', date_debut: '2026-02-01', date_fin: null },
+  ]
+  for (const row of rows) await container.repositories.exclusions.upsert(row)
+  const find = (filters) => container.services.exclusions.search(filters, '2026-09-07')
+
+  // The company name.
+  assert.deepEqual((await find({ q: 'soufouh' })).map((r) => r.registre_commerce), ['51-404'])
+
+  // The reason, because somebody is as likely to be looking for a kind of
+  // wrongdoing as for a company.
+  assert.deepEqual((await find({ q: 'falsification' })).map((r) => r.raison_sociale), ['MK Surveillance'])
+
+  // The register number.
+  assert.deepEqual((await find({ q: '45-66683' })).map((r) => r.raison_sociale), ['ORIGINAL PAPETERIES'])
+
+  // Every term must match, not any of them.
+  assert.equal((await find({ q: 'falsification soufouh' })).length, 0)
+
+  // Accents fold the way they do everywhere else in this application.
+  assert.equal((await find({ q: 'ENGAGEMENTS' })).length, 1)
+})
+
+test('exclusions filter by excluding body and by whether the ban still bites', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  for (const row of [
+    { raison_sociale: 'A', entite_publique: 'ONEE', date_debut: '2024-01-01', date_fin: '2025-01-01' },
+    { raison_sociale: 'B', entite_publique: 'ONEE', date_debut: '2026-01-01', date_fin: '2030-01-01' },
+    { raison_sociale: 'C', entite_publique: 'MINISTERE X', date_debut: '2026-01-01', date_fin: null },
+  ]) await container.repositories.exclusions.upsert(row)
+  const find = (filters) => container.services.exclusions.search(filters, '2026-09-07')
+
+  assert.deepEqual((await find({ entite: 'ONEE' })).map((r) => r.raison_sociale).sort(), ['A', 'B'])
+
+  // In force: started, and either open-ended or not yet expired.
+  assert.deepEqual((await find({ statut: 'active' })).map((r) => r.raison_sociale).sort(), ['B', 'C'])
+  assert.deepEqual((await find({ statut: 'expired' })).map((r) => r.raison_sociale), ['A'])
+
+  // Filters combine.
+  assert.deepEqual((await find({ entite: 'ONEE', statut: 'active' })).map((r) => r.raison_sociale), ['B'])
+
+  // And the dropdown is built from what is actually there, with counts.
+  const entities = await container.services.exclusions.entities()
+  assert.deepEqual(entities, [{ label: 'MINISTERE X', total: 1 }, { label: 'ONEE', total: 2 }])
+})
