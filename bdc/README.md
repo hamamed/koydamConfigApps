@@ -169,6 +169,14 @@ consultations listing is ~16 pages rather than 76; the slow part is one detail
 page per avis, which takes hours at a polite pace and is resumable — it picks up
 wherever the backlog stands.
 
+**Paging drifts.** The listing is re-queried per page and re-sorted by deadline
+each time, so items move between requests: one sweep of the 16 pages returns 758
+cards but only ~593 distinct avis, and a few that existed never appear. This is
+the portal's behaviour, not a bug here, and it means no single sweep is complete.
+Two things cover it — upserts, so repeating a sweep only adds; and the daily
+run's seven-day publication window, which re-encounters anything a sweep missed
+within the week.
+
 ## Filters
 
 Every listing endpoint accepts the portal's own form parameter names, so a UI can
