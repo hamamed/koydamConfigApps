@@ -146,6 +146,22 @@ with zero cards, and the crawl looks like it succeeded either way:
 - `acheteur` is an autocomplete bound to a buyer id, so a name in it does
   nothing. Buyer filtering is applied to our own rows instead.
 
+### Ordering
+
+The project and award lists open in **the portal's own order — deadline first,
+furthest away at the top** — so the first row here is the first row there. A
+sort control offers closing-soonest, most recently published, and buyer.
+
+Rows with no value in the sorted column always come last. Without an explicit
+`IS NULL` key they would not: SQLite treats NULL as the smallest value and
+PostgreSQL as the largest, so a descending sort put the empty rows at the bottom
+on one engine and at the very top on the other. Ties break on `id`, so paging
+cannot repeat or skip a row.
+
+One difference from the portal remains, by design: **the portal drops an avis
+once its deadline passes and we keep it.** So this list is a superset, and grows
+past what the portal shows. Filter by `status=open` for the portal's live view.
+
 ### Both listings are ordered by deadline, not by date published
 
 Page 1 holds the furthest deadlines and the last page holds today's, so **a newly

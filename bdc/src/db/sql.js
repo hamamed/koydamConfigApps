@@ -47,12 +47,24 @@ export function buildWhere(clauses) {
   }
 }
 
-/** Builds an ORDER BY clause restricted to an allow-list of sortable columns. */
-export function buildOrderBy(sort, allowed, fallback) {
+/**
+ * Builds an ORDER BY clause restricted to an allow-list of sortable columns.
+ *
+ * Rows with no value always sort last, in both engines. Without the `IS NULL`
+ * key they would not: SQLite treats NULL as smallest, PostgreSQL as largest, so
+ * a descending sort on a nullable column puts the empty rows at the bottom on
+ * one engine and at the very top on the other. `NULLS LAST` would say it more
+ * plainly but SQLite only learned it in 3.30 and this stays portable.
+ *
+ * Ties break on `id` so paging cannot show the same row twice or skip one.
+ */
+export function buildOrderBy(sort, allowed, fallback, { table = '' } = {}) {
   const [rawColumn, rawDirection = 'desc'] = String(sort ?? '').split(':')
   const column = allowed.includes(rawColumn) ? rawColumn : fallback
   const direction = rawDirection.toLowerCase() === 'asc' ? 'ASC' : 'DESC'
-  return ` ORDER BY ${column} ${direction}`
+  const qualified = table ? `${table}.${column}` : column
+  const id = table ? `${table}.id` : 'id'
+  return ` ORDER BY (${qualified} IS NULL), ${qualified} ${direction}, ${id} DESC`
 }
 
 /** Builds an `INSERT ... RETURNING *` statement from a plain object. */

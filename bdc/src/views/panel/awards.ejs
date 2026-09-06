@@ -14,6 +14,14 @@
     <div><label for="attributaire"><%= t('awards.winner') %></label><input id="attributaire" name="attributaire" value="<%= query.attributaire || '' %>"></div>
     <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
     <div><label for="datePublicationEnd"><%= t('filters.publishedTo') %></label><input id="datePublicationEnd" name="datePublicationEnd" type="date" value="<%= query.datePublicationEnd || '' %>" dir="ltr"></div>
+    <div>
+      <label for="sort"><%= t('sort.label') %></label>
+      <select id="sort" name="sort">
+        <% [['date_publication_resultat:desc','sort.awardDesc'],['montant_attribue_cents:desc','sort.amountDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>
+          <option value="<%= o[0] %>" <%= (query.sort || 'date_publication_resultat:desc') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
+        <% }) %>
+      </select>
+    </div>
     <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
   </form>
 </div>

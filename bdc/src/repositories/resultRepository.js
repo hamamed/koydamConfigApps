@@ -78,7 +78,7 @@ export function createResultRepository(db = getDb()) {
 
   async function search(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere(resultClauses(filters, 'r'))
-    const order = buildOrderBy(sort, SORTABLE.results, 'date_publication_resultat')
+    const order = buildOrderBy(sort, SORTABLE.results, 'date_publication_resultat', { table: 'r' })
     const rows = await db.all(
       `SELECT r.*, c.id AS consultation_row_id, c.objet AS consultation_objet, c.date_limite
        FROM ${TABLE} r

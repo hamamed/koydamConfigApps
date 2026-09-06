@@ -14,6 +14,14 @@
     <div><label for="categorie"><%= t('filters.categorie') %></label><input id="categorie" name="categorie" value="<%= query.categorie || '' %>"></div>
     <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
     <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
+    <div>
+      <label for="sort"><%= t('sort.label') %></label>
+      <select id="sort" name="sort">
+        <% [['date_limite:desc','sort.deadlineDesc'],['date_limite:asc','sort.deadlineAsc'],['date_publication:desc','sort.publishedDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>
+          <option value="<%= o[0] %>" <%= (query.sort || 'date_limite:desc') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
+        <% }) %>
+      </select>
+    </div>
     <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
   </form>
 </div>

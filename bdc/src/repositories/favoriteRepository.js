@@ -39,10 +39,9 @@ export function createFavoriteRepository(db = getDb()) {
    */
   async function listForUser(userId, filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere([['f.user_id = ?', userId], ...consultationClauses(filters, 'c')])
-    const order = buildOrderBy(sort, SORTABLE.favorites, 'created_at').replace(
-      /ORDER BY (\w+)/,
-      (_, column) => `ORDER BY f.${column}`,
-    )
+    // Qualified with the table: this query joins favorites to consultations and
+    // both have created_at, so an unqualified column is ambiguous.
+    const order = buildOrderBy(sort, SORTABLE.favorites, 'created_at', { table: 'f' })
 
     const rows = await db.all(
       `SELECT f.id AS favorite_id, f.note, f.tags, f.created_at AS favorited_at,

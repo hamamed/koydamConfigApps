@@ -79,7 +79,9 @@ export function createConsultationRepository(db = getDb()) {
   /** Paginated, filtered listing. Returns `{ rows, total }`. */
   async function search(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere(consultationClauses(filters, 'c'))
-    const order = buildOrderBy(sort, SORTABLE.consultations, 'date_publication')
+    // Default: furthest deadline first — the order the portal itself uses, so
+    // our first row is the portal's first row.
+    const order = buildOrderBy(sort, SORTABLE.consultations, 'date_limite', { table: 'c' })
 
     const rows = await db.all(
       `SELECT c.*, r.attributaire, r.montant_attribue_cents, r.date_attribution, r.result_status

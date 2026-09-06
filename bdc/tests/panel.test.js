@@ -393,3 +393,63 @@ test('every status the app can produce has a label in every language', async () 
     assert.ok(status === null || AWARD_STATUSES.includes(status), `unexpected status ${status}`)
   }
 })
+
+test('the project list opens in the same order as the portal', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  // The portal orders both listings by deadline, furthest first — page 1 holds
+  // next year's deadlines and the last page holds today's. Defaulting to
+  // "newest published" meant our first row was never the portal's first row,
+  // which is confusing with both open side by side.
+  const listing = async (query = '') =>
+    (await (await fetch(`${api.base}/api/consultations?perPage=10${query}`, { headers: { cookie: api.staff } })).json())
+      .data
+
+  const byDefault = await listing()
+  assert.equal(byDefault[0].reference, '6/2026', 'the portal shows this one first too')
+  assert.equal(byDefault[0].date_limite, '2027-03-16')
+
+  /** Present values in order, then a check that empty ones came after them. */
+  const ordered = (rows, field) => {
+    const values = rows.map((row) => row[field])
+    const present = values.filter((value) => value !== null)
+    assert.deepEqual(values.slice(0, present.length), present, `${field}: empty values sort last`)
+    return present
+  }
+
+  const furthest = ordered(byDefault, 'date_limite')
+  assert.deepEqual(furthest, [...furthest].sort().reverse())
+
+  const soonest = ordered(await listing('&sort=date_limite:asc'), 'date_limite')
+  assert.deepEqual(soonest, [...soonest].sort(), 'closing soonest first')
+
+  const published = ordered(await listing('&sort=date_publication:desc'), 'date_publication')
+  assert.deepEqual(published, [...published].sort().reverse())
+
+  // A column outside the allow-list falls back rather than reaching the SQL.
+  const injected = await listing('&sort=password_hash:desc')
+  assert.equal(injected[0].reference, '6/2026')
+})
+
+test('rows with no date sort last, not first', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  // SQLite treats NULL as the smallest value and PostgreSQL as the largest, so
+  // a descending sort on a nullable column put the empty rows at the bottom on
+  // one engine and at the very top on the other. The ORDER BY carries an
+  // explicit IS NULL key so both agree.
+  const { buildOrderBy } = await import('../src/db/sql.js')
+  const clause = buildOrderBy('date_limite:desc', ['date_limite'], 'date_limite', { table: 'c' })
+  assert.match(clause, /\(c\.date_limite IS NULL\)/)
+  assert.match(clause, /c\.id DESC/, 'and a stable tiebreak, so paging cannot repeat a row')
+
+  const consultation = await api.container.repositories.consultations.findBySourceId('375169')
+  await api.container.repositories.consultations.update(consultation.id, { date_limite: null })
+
+  const { data } = await (await fetch(`${api.base}/api/consultations?perPage=100`, {
+    headers: { cookie: api.staff },
+  })).json()
+  assert.equal(data.at(-1).id, consultation.id, 'the row with no deadline is last')
+})
