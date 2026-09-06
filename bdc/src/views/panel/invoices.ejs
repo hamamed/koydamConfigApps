@@ -13,7 +13,7 @@
       <a href="/panel?lang=<%= locale %>" style="font-size:13px"><%= t('nav.projects') %></a></p>
   <% } else { %>
     <div style="overflow-x:auto">
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr>
           <th><%= t('invoices.number') %></th><th><%= t('invoices.client') %></th>
           <th><%= t('table.reference') %></th><th><%= t('invoices.issueDate') %></th>
@@ -50,7 +50,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
     </div>
   <% } %>
 </div>

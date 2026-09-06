@@ -47,7 +47,7 @@
   <% if (rows.length === 0) { %>
     <p class="empty"><%= t('table.empty') %></p>
   <% } else { %>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th style="width:38px"></th>
         <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
@@ -73,7 +73,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

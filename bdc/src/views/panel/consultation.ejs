@@ -66,7 +66,7 @@
   <div class="card" style="border-inline-start:4px solid var(--accent)">
     <h2><%- include('../partials/icon', { name: 'rotate-ccw', size: 15 }) %><%= t('precedent.title') %></h2>
     <p class="muted" style="margin:-6px 0 12px; font-size:12px"><%= t('precedent.hint') %></p>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th><%= t('table.reference') %></th><th><%= t('jobs.status') %></th>
         <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
@@ -88,7 +88,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   </div>
 <% } %>
 
@@ -192,7 +192,7 @@
     <p class="empty"><%= t('detail.noArticles') %></p>
   <% } else { %>
     <div style="overflow-x:auto">
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr>
           <th><%= t('article.number') %></th><th><%= t('article.designation') %></th>
           <th><%= t('article.description') %></th><th><%= t('article.quantity') %></th>
@@ -211,7 +211,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
     </div>
   <% } %>
 </div>

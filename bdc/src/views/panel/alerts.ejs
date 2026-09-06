@@ -51,7 +51,7 @@
   <% if (searches.length === 0) { %>
     <p class="empty"><%= t('alerts.none') %></p>
   <% } else { %>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th><%= t('alerts.name') %></th><th><%= t('alerts.criteria') %></th>
         <th><%= t('alerts.notifyNew') %></th><th><%= t('invoices.status') %></th>
@@ -87,7 +87,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 
@@ -96,7 +96,7 @@
   <% if (history.length === 0) { %>
     <p class="empty"><%= t('alerts.historyEmpty') %></p>
   <% } else { %>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr><th><%= t('jobs.startedAt') %></th><th><%= t('alerts.criteria') %></th><th><%= t('invoices.status') %></th></tr></thead>
       <tbody>
         <% history.forEach(function (n) { %>
@@ -107,7 +107,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

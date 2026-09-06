@@ -50,7 +50,7 @@
   <% if (rows.length === 0) { %>
     <p class="empty"><%= total === 0 ? t('exclusion.empty') : t('exclusion.noMatch') %></p>
   <% } else { %>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th><%= t('exclusion.company') %></th><th><%= t('exclusion.entity') %></th>
         <th><%= t('exclusion.motif') %></th><th><%= t('exclusion.period') %></th>
@@ -73,7 +73,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 

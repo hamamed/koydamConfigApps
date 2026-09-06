@@ -87,7 +87,7 @@
 <div class="card" style="padding-bottom:6px">
   <h2><%- include('../partials/icon', { name: 'database', size: 15 }) %><%= t('jobs.title') %></h2>
   <div style="overflow-x:auto">
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th>#</th><th><%= t('jobs.source') %></th><th><%= t('jobs.status') %></th>
         <th><%= t('jobs.pages') %></th><th><%= t('jobs.found') %></th><th><%= t('jobs.created') %></th>
@@ -108,7 +108,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   </div>
 </div>
 

@@ -290,6 +290,10 @@ export default {
   'stats.pendingRequests': 'طلبات الولوج',
 
   // ---- Public pages ----
+  'nav.menu': 'القائمة',
+
+  'lang.change': 'تغيير اللغة',
+
   'public.nav.guide': 'الدليل',
   'public.nav.privacy': 'الخصوصية',
   'public.nav.terms': 'الشروط',

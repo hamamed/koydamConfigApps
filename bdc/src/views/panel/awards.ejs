@@ -31,7 +31,7 @@
     <p class="empty"><%= t('awards.empty') %></p>
   <% } else { %>
     <div style="overflow-x:auto">
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr>
           <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
           <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th><th><%= t('awards.bids') %></th>
@@ -60,7 +60,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
     </div>
   <% } %>
 </div>

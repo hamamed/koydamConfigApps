@@ -290,6 +290,10 @@ export default {
   'stats.pendingRequests': 'Access requests',
 
   // ---- Public pages ----
+  'nav.menu': 'Menu',
+
+  'lang.change': 'Change language',
+
   'public.nav.guide': 'Guide',
   'public.nav.privacy': 'Privacy',
   'public.nav.terms': 'Terms',

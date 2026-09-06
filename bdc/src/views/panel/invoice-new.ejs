@@ -28,7 +28,7 @@
       <p class="empty"><%= t('invoices.noArticles') %></p>
     <% } else { %>
       <div style="overflow-x:auto">
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr>
             <th style="width:38px"><%= t('invoices.include') %></th>
             <th><%= t('article.number') %></th><th><%= t('article.designation') %></th>
@@ -52,7 +52,7 @@
               </tr>
             <% }) %>
           </tbody>
-        </table>
+        </table></div>
       </div>
     <% } %>
   </div>

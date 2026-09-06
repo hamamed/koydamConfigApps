@@ -1138,3 +1138,52 @@ test('every sidebar item has its own icon, and it means what the item does', asy
   assert.match(byHref['/panel/awards'], /circle cx="12" cy="8" r="6"/, 'Results carries the medal')
   assert.match(byHref['/panel/insights'], /rect x="7" y="13"/, 'Insights carries the bar chart')
 })
+
+test('the language picker is a menu listing every language by name', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  for (const [path, cookie] of [['/panel', api.admin], ['/', null]]) {
+    const html = await (cookie
+      ? (await api.page(`${path}?lang=ar`, cookie)).text()
+      : (await fetch(`${api.base}${path}?lang=ar`)).text())
+
+    const menu = html.slice(html.indexOf('<details class="lang'), html.indexOf('</details>', html.indexOf('<details class="lang')))
+    assert.ok(menu.length > 0, `${path} renders the menu`)
+
+    // Every language, by its own name rather than a two-letter code.
+    for (const label of ['Français', 'English', 'العربية']) {
+      assert.ok(menu.includes(label), `${path} offers ${label}`)
+    }
+    // The one in use is named on the closed menu and marked inside it.
+    assert.match(menu, /<span>العربية<\/span>/, `${path} shows the current language`)
+    assert.match(menu, /aria-current="true"/, `${path} marks the current entry`)
+
+    // It works without JavaScript: a details element and three ordinary links.
+    assert.ok(!menu.includes('onclick'), `${path} needs no script`)
+    assert.equal((menu.match(/hreflang=/g) ?? []).length, 3)
+  }
+})
+
+test('the panel collapses to a drawer on a phone, and its tables scroll inside their card', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const html = await (await api.page('/panel', api.admin)).text()
+
+  // The drawer and the shell are siblings so that opening one reveals the
+  // other in CSS alone — the panel allows no inline script.
+  assert.match(html, /<details class="drawer">/)
+  assert.match(html, /\.drawer\[open\] ~ \.shell \.side \{ display:flex; \}/)
+  assert.ok(html.indexOf('<details class="drawer">') < html.indexOf('<div class="shell">'), 'drawer precedes the shell')
+
+  // A wide table scrolls in its own container. Without this it pushes the whole
+  // document sideways and takes the sidebar with it.
+  assert.match(html, /\.table-wrap \{ overflow-x:auto/)
+  assert.match(html, /<div class="table-wrap"><table>/)
+
+  // And the guide is no longer in the sidebar.
+  const nav = html.slice(html.indexOf('<nav>'), html.indexOf('</nav>'))
+  assert.ok(!nav.includes('/guide'), 'the guide link is gone from the sidebar')
+  assert.ok(!html.includes('class="help"'))
+})

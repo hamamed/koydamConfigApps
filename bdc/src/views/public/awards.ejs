@@ -36,7 +36,7 @@
       <% if (rows.length === 0) { %>
         <p style="padding:26px; text-align:center; color:var(--muted)"><%= t('awards.empty') %></p>
       <% } else { %>
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr>
             <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
             <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
@@ -55,7 +55,7 @@
               </tr>
             <% }) %>
           </tbody>
-        </table>
+        </table></div>
       <% } %>
     </div>
 

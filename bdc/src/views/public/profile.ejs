@@ -24,7 +24,7 @@
     <% if (profile.related.length > 0) { %>
       <h2 style="margin-top:32px"><%- include('../partials/icon', { name: kind === 'buyer' ? 'award' : 'building-2', size: 17 }) %><%= t(profile.relatedTitle) %></h2>
       <div class="card" style="padding:0; overflow-x:auto">
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr><th><%= t(profile.relatedLabel) %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
           <tbody>
             <% profile.related.forEach(function (row) { %>
@@ -35,14 +35,14 @@
               </tr>
             <% }) %>
           </tbody>
-        </table>
+        </table></div>
       </div>
     <% } %>
 
     <% if (profile.awards.length > 0) { %>
       <h2 style="margin-top:32px"><%- include('../partials/icon', { name: 'file-text', size: 17 }) %><%= t('buyer.recentAwards') %></h2>
       <div class="card" style="padding:0; overflow-x:auto">
-        <table>
+        <div class="table-wrap"><table>
           <thead><tr>
             <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
             <% if (kind === 'buyer') { %><th><%= t('awards.winner') %></th><% } %>
@@ -62,7 +62,7 @@
               </tr>
             <% }) %>
           </tbody>
-        </table>
+        </table></div>
       </div>
     <% } %>
   </div>

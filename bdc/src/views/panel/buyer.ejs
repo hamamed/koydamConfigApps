@@ -33,7 +33,7 @@
     <% if (buyer.winners.length === 0) { %>
       <p class="empty"><%= t('insights.empty') %></p>
     <% } else { %>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th><%= t('insights.company') %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
         <tbody>
           <% buyer.winners.forEach(function (row) { %>
@@ -44,7 +44,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
     <% } %>
   </div>
 
@@ -53,7 +53,7 @@
     <% if (buyer.recentAvis.length === 0) { %>
       <p class="empty"><%= t('table.empty') %></p>
     <% } else { %>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.result') %></th></tr></thead>
         <tbody>
           <% buyer.recentAvis.forEach(function (row) { %>
@@ -64,7 +64,7 @@
             </tr>
           <% }) %>
         </tbody>
-      </table>
+      </table></div>
       <p style="margin:10px 0 4px">
         <a class="btn secondary" href="/panel?<%= new URLSearchParams({ acheteur: buyer.name, lang: locale }).toString() %>"><%= t('buyer.allAvis') %></a>
       </p>
@@ -77,7 +77,7 @@
   <% if (buyer.recentAwards.length === 0) { %>
     <p class="empty"><%= t('awards.empty') %></p>
   <% } else { %>
-    <table>
+    <div class="table-wrap"><table>
       <thead><tr>
         <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
         <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
@@ -95,7 +95,7 @@
           </tr>
         <% }) %>
       </tbody>
-    </table>
+    </table></div>
   <% } %>
 </div>
 
