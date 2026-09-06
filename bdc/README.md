@@ -25,7 +25,7 @@ Runs on **SQLite** out of the box (via Node's built-in `node:sqlite` — no nati
 build step). Switch to PostgreSQL with `DB_CLIENT=postgres` + `DATABASE_URL`.
 
 ```bash
-npm test              # 89 tests, no network access required
+npm test              # 109 tests, no network access required
 npm run test:coverage # ~90% line coverage
 ```
 
@@ -350,6 +350,58 @@ process.
 
 The backup-coverage check earns its place: `bdc` was absent from the backup
 script for its whole first month and every nightly archive reported success.
+
+### Access requests
+
+Account creation is an administrator action and stays one. `/request-access` is
+a public form whose submissions land in a queue at `/panel/requests`; approving
+one creates the account and shows a generated password **once** — only its
+bcrypt hash is kept — and mails it when a mail server is configured, saying
+plainly when it could not.
+
+The form answers identically whether or not the address already has an account
+or a pending request. A form that says "you already have an account" is an
+enumeration oracle for whoever asks it. A filled honeypot is accepted and
+dropped rather than refused, so nothing teaches a bot the shape of the trap.
+
+### Company profiles
+
+`/panel/companies/<name>` is the award side of a buyer profile: what a company
+wins, from how many buyers, the spread, and how contested it was. Only the award
+side exists for a company — an avis names its buyer and never who might bid on
+it — which is why there is no equivalent of the buyer's "how much do they
+publish".
+
+### Search that ranks
+
+Free text used to be one substring `LIKE` over `search_text`, so a two-word
+query only matched when those words happened to be adjacent: **"produits
+nettoyage" found nothing** while "produits de nettoyage" found rows. Every term
+is now required independently, folded the same way the scraper folded
+`search_text`, and a `relevance` sort ranks a verbatim phrase in the objet above
+scattered words, and the objet above the buyer's name. The same query now
+returns ten rows.
+
+`relevance` is in the sortable allow-list but is not a column; asked for without
+a query it falls back to the default order rather than producing
+`ORDER BY c.relevance`.
+
+### Open data
+
+`/awards`, `/buyers/<name>`, `/companies/<name>`, `/data` and capped CSV
+downloads are readable without an account, and `/status` reports whether the
+crawl is current.
+
+Everything they show was already published by the administration on a public
+portal; what is new is that this copy is public too. That is a decision, so it
+is a **setting** — `site.publicData`, read per request — and not a deploy:
+turning it off 404s those pages on the next click. The landing page, privacy,
+terms, guide and status stay open either way, because a policy nobody can read
+is worse than useless.
+
+`/status` deliberately carries none of the System screen's operational detail —
+no disk, no backups, no versions, no error text. A test asserts none of it
+reaches the page.
 
 ### Alerts
 
