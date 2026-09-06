@@ -108,7 +108,7 @@ export function createAlertService({ savedSearches, notifications, consultations
         subject: email.subject,
         body: email.text,
         payload_json: JSON.stringify({ html: email.html, to: user.email, ids: closing.map((r) => r.id) }),
-        channel: mailer.isConfigured() ? 'email' : 'log',
+        channel: (await mailer.isConfigured()) ? 'email' : 'log',
       })
       stats.alerts += 1
     }
@@ -122,7 +122,7 @@ export function createAlertService({ savedSearches, notifications, consultations
       subject: email.subject,
       body: email.text,
       payload_json: JSON.stringify({ html: email.html, to: search.email, ids: rows.map((row) => row.id) }),
-      channel: mailer.isConfigured() ? 'email' : 'log',
+      channel: (await mailer.isConfigured()) ? 'email' : 'log',
     })
     await savedSearches.update(search.id, { last_notified_at: nowIso() })
     stats.alerts += 1

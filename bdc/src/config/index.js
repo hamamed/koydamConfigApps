@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
@@ -5,6 +6,16 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+/** Read rather than imported: a JSON import attribute still warns on Node 22,
+ *  and this is one small synchronous read at startup. */
+export const APP_VERSION = (() => {
+  try {
+    return JSON.parse(readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8')).version ?? ''
+  } catch {
+    return ''
+  }
+})()
 
 const DEFAULT_PORT = 3300
 const DEFAULT_TIMEOUT_MS = 30_000

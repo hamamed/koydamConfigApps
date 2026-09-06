@@ -172,7 +172,7 @@ export function panelRoutes({ services }) {
         active: 'alerts',
         searches: await services.savedSearches.list(req.user.id),
         history: await services.savedSearches.history(req.user.id, 25),
-        mailConfigured: config.mail.enabled,
+        mailConfigured: await services.mailer.isConfigured(),
         error: null,
       }))
     }),
@@ -197,7 +197,7 @@ export function panelRoutes({ services }) {
           active: 'alerts',
           searches: await services.savedSearches.list(req.user.id),
           history: await services.savedSearches.history(req.user.id, 25),
-          mailConfigured: config.mail.enabled,
+          mailConfigured: await services.mailer.isConfigured(),
           error: error.message,
         }))
       }
@@ -284,6 +284,14 @@ export function panelRoutes({ services }) {
     adminOnly,
     asyncHandler(async (req, res) => {
       res.render('panel/dashboard', await shell(req, { active: 'dashboard', dashboard: await services.admin.dashboard() }))
+    }),
+  )
+
+  router.get(
+    '/panel/system',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/system', await shell(req, { active: 'system', system: await services.system.report() }))
     }),
   )
 

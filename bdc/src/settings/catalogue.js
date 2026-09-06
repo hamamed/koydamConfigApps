@@ -7,8 +7,9 @@ import { config } from '../config/index.js'
  * the box keeps working with an empty table and a value can always be reset by
  * clearing the field.
  *
- * One `secret` entry is allowed: the Google Translate key. It is a spending
- * credential — leaking it costs money — which is a different class of thing from
+ * Two `secret` entries are allowed: the Google Translate key and the SMTP
+ * password. Both are delivery credentials — leaking one costs money or lets
+ * somebody send mail as this service — which is a different class of thing from
  * JWT_SECRET or DATABASE_URL, where a careless edit locks everyone out or points
  * the app at another database. Those two stay in `.env`.
  *
@@ -16,7 +17,7 @@ import { config } from '../config/index.js'
  * empty submission means "leave it alone" rather than "erase it", and clearing
  * one is a separate, explicit action.
  */
-export const GROUPS = ['site', 'scraper', 'translation', 'invoice', 'company']
+export const GROUPS = ['site', 'scraper', 'mail', 'translation', 'invoice', 'company']
 
 const number = (min, max) => ({ type: 'number', min, max })
 
@@ -51,6 +52,18 @@ export const CATALOGUE = Object.freeze([
   // here does not move the timer.
   { key: 'scraper.dailyRunAt', group: 'scraper', type: 'string', fallback: () => '05:30' },
   { key: 'scraper.dailySinceDays', group: 'scraper', ...number(1, 60), fallback: () => 7 },
+  // Likewise display only, mirroring bdc-alerts.timer.
+  { key: 'alerts.dailyRunAt', group: 'scraper', type: 'string', fallback: () => '06:30' },
+
+  // Without a host the alert pipeline still runs end to end and writes what it
+  // would have sent to the log, so this can be filled in later without anything
+  // having silently stopped working in the meantime.
+  { key: 'mail.host', group: 'mail', type: 'string', fallback: () => config.mail.host },
+  { key: 'mail.port', group: 'mail', ...number(1, 65535), fallback: () => config.mail.port },
+  { key: 'mail.secure', group: 'mail', type: 'boolean', fallback: () => config.mail.secure },
+  { key: 'mail.user', group: 'mail', type: 'string', fallback: () => config.mail.user },
+  { key: 'mail.password', group: 'mail', type: 'secret', fallback: () => config.mail.password },
+  { key: 'mail.from', group: 'mail', type: 'string', fallback: () => config.mail.from },
 
   {
     key: 'translation.googleApiKey',

@@ -173,16 +173,20 @@ test('settings are stored, applied, and fall back when cleared', async (t) => {
   })
   assert.equal(await api.container.settings.get('scraper.maxPages'), 50)
 
-  // The app's own credentials are not settings at all.
+  // The app's own credentials are not settings at all. Delivery credentials —
+  // the Google key, the SMTP password — are, because a careless edit there
+  // costs a message rather than locking everyone out of the application.
   const groups = await api.container.settings.describe()
   const keys = groups.flatMap((group) => group.entries.map((entry) => entry.key))
-  assert.ok(!keys.some((key) => /jwtSecret|databaseUrl|password/i.test(key)))
+  assert.ok(!keys.some((key) => /jwtSecret|databaseUrl|cookieSecret|adminPassword/i.test(key)))
 
-  // The one secret that is a setting never reports its value.
-  const secret = groups.flatMap((g) => g.entries).find((entry) => entry.type === 'secret')
-  assert.ok(secret, 'the Google key is configurable')
-  assert.equal(secret.value, null)
-  assert.equal(secret.fallback, null)
+  // And no secret reports its value or its fallback, whatever it is for.
+  const secrets = groups.flatMap((g) => g.entries).filter((entry) => entry.type === 'secret')
+  assert.deepEqual(secrets.map((entry) => entry.key).sort(), ['mail.password', 'translation.googleApiKey'])
+  for (const secret of secrets) {
+    assert.equal(secret.value, null, `${secret.key} is never read back`)
+    assert.equal(secret.fallback, null, `${secret.key} does not leak through its fallback`)
+  }
 })
 
 test('an administrator manages accounts but cannot lock everyone out', async (t) => {

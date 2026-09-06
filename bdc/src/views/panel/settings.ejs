@@ -10,8 +10,8 @@
   <% groups.forEach(function (group) { %>
     <div class="card">
       <h2><%= t('settings.group.' + group.group) %></h2>
-      <% if (group.group === 'translation') { %>
-        <p class="muted" style="margin:-6px 0 14px; font-size:12px"><%= t('settings.group.translationHint') %></p>
+      <% if (group.group === 'translation' || group.group === 'mail') { %>
+        <p class="muted" style="margin:-6px 0 14px; font-size:12px"><%= t('settings.group.' + group.group + 'Hint') %></p>
       <% } %>
       <div class="cols-2">
         <% group.entries.forEach(function (entry) { %>

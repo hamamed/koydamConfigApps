@@ -1,3 +1,4 @@
+import { APP_VERSION } from './config/index.js'
 import { getDb } from './db/index.js'
 import { createConsultationRepository } from './repositories/consultationRepository.js'
 import { createArticleRepository } from './repositories/articleRepository.js'
@@ -29,6 +30,7 @@ import { createPasswordResetService } from './services/passwordResetService.js'
 import { createTranslationService } from './services/translationService.js'
 import { createTranslator } from './translation/translator.js'
 import { createMailer } from './notifications/mailer.js'
+import { createSystemInspector } from './system/inspector.js'
 
 /**
  * Composition root. Every dependency is injected explicitly so services and
@@ -36,7 +38,7 @@ import { createMailer } from './notifications/mailer.js'
  * @param {object} [db] database driver.
  * @param {{http?: object}} [overrides] e.g. a stubbed HTTP client for tests.
  */
-export function createContainer(db = getDb(), { http, mailer = createMailer(), translator } = {}) {
+export function createContainer(db = getDb(), { http, mailer: injectedMailer, translator } = {}) {
   const repositories = {
     consultations: createConsultationRepository(db),
     articles: createArticleRepository(db),
@@ -59,6 +61,19 @@ export function createContainer(db = getDb(), { http, mailer = createMailer(), t
   // translation rather than on the next restart.
   const translationClient =
     translator ?? createTranslator({ resolve: async () => ({ apiKey: await settings.get('translation.googleApiKey') }) })
+  // Same reason: an SMTP server entered in the panel sends the next alert.
+  const mailer =
+    injectedMailer ??
+    createMailer({
+      resolve: async () => ({
+        host: await settings.get('mail.host'),
+        port: await settings.get('mail.port'),
+        secure: await settings.get('mail.secure'),
+        user: await settings.get('mail.user'),
+        password: await settings.get('mail.password'),
+        from: await settings.get('mail.from'),
+      }),
+    })
   const runner = createScraperRunner({ db, ...repositories, settings, ...(http ? { http } : {}) })
 
   const auth = createAuthService(repositories)
@@ -81,7 +96,14 @@ export function createContainer(db = getDb(), { http, mailer = createMailer(), t
     translation: createTranslationService({ ...repositories, translator: translationClient }),
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
+    mailer,
   }
+  services.system = createSystemInspector({
+    settings,
+    mailer,
+    translation: services.translation,
+    appVersion: APP_VERSION,
+  })
 
   return { db, repositories, services, runner, settings }
 }

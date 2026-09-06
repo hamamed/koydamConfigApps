@@ -12,15 +12,31 @@ const log = logger.child('[mail]')
  * a feature that looks like it works and silently delivers nothing, which is the
  * failure mode this project has already been bitten by more than once.
  *
+ * The settings are read per send rather than at construction, so a server
+ * entered in the panel takes effect on the next alert instead of the next
+ * restart — the same reason the translator resolves its key that way. The
+ * transport is rebuilt only when they actually change; nodemailer holds a
+ * connection pool, and discarding it on every message would be worse than
+ * caching a stale one.
+ *
  * `nodemailer` is imported lazily, so a deployment that never sends mail does
  * not need it installed.
  */
 export function createMailer(options = {}) {
-  const settings = { ...config.mail, ...options }
+  const resolve = options.resolve ?? (async () => ({}))
   let transport = null
+  let transportKey = ''
 
-  async function getTransport() {
-    if (transport) return transport
+  /** The settings in force right now: explicit options, then the panel, then `.env`. */
+  async function current() {
+    const stored = await safely(resolve)
+    const merged = { ...config.mail, ...clean(stored), ...clean(options) }
+    return { ...merged, enabled: Boolean(merged.host) }
+  }
+
+  async function getTransport(settings) {
+    const key = JSON.stringify([settings.host, settings.port, settings.secure, settings.user, settings.password])
+    if (transport && key === transportKey) return transport
     const { default: nodemailer } = await import('nodemailer')
     transport = nodemailer.createTransport({
       host: settings.host,
@@ -28,6 +44,7 @@ export function createMailer(options = {}) {
       secure: settings.secure,
       auth: settings.user ? { user: settings.user, pass: settings.password } : undefined,
     })
+    transportKey = key
     return transport
   }
 
@@ -37,16 +54,31 @@ export function createMailer(options = {}) {
    *   against the notification rather than dropping it.
    */
   async function send({ to, subject, text, html }) {
+    const settings = await current()
     if (!settings.enabled) {
       log.info('mail not configured — logging instead of sending', { to, subject })
       return { delivered: true, channel: 'log' }
     }
 
-    const mailer = await getTransport()
+    const mailer = await getTransport(settings)
     await mailer.sendMail({ from: settings.from, to, subject, text, html })
     log.info('sent', { to, subject })
     return { delivered: true, channel: 'email' }
   }
 
-  return { send, isConfigured: () => settings.enabled }
+  return { send, isConfigured: async () => (await current()).enabled }
+}
+
+/** Drops empty values so a blank setting falls through to the layer below. */
+const clean = (source) =>
+  Object.fromEntries(Object.entries(source ?? {}).filter(([, value]) => value !== null && value !== undefined && value !== ''))
+
+async function safely(fn) {
+  try {
+    return await fn()
+  } catch (error) {
+    // A settings read that fails must not stop an alert from being recorded.
+    log.warn('could not read mail settings', { error: error.message })
+    return {}
+  }
 }

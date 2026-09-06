@@ -25,6 +25,8 @@ export function adminRoutes({ services }) {
 
   api.get('/dashboard', asyncHandler(async (_req, res) => res.json(ok(await services.admin.dashboard()))))
 
+  api.get('/system', asyncHandler(async (_req, res) => res.json(ok(await services.system.report()))))
+
   api.get('/jobs', asyncHandler(async (req, res) => res.json(ok(await services.admin.listJobs(Number(req.query.limit) || 20)))))
 
   /** Manually triggers a scrape; returns 202 unless `wait=true` is requested. */
