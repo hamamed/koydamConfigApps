@@ -25,10 +25,9 @@
       <div style="display:flex; gap:12px; align-items:flex-start">
         <div style="flex:1; min-width:0">
           <p style="margin:0 0 4px"><code><%= row.reference %></code>
-            <% if (row.result) { %><span class="pill ok"><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= row.result.attributaire || t('status.awarded') %></span>
-            <% } else { %><span class="pill"><%= t('status.' + row.status) %></span><% } %>
+            <%- include('../partials/status-pill', { row: row }) %>
           </p>
-          <p style="margin:0 0 8px; font-weight:600"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a></p>
+          <p style="margin:0 0 8px; font-weight:600"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></p>
           <p class="muted" style="margin:0; display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px">
             <span><%- include('../partials/icon', { name: 'building-2', size: 14 }) %> <%= row.acheteur || '—' %></span>
             <span><%- include('../partials/icon', { name: 'map-pin', size: 14 }) %> <%= row.lieu_execution || '—' %></span>

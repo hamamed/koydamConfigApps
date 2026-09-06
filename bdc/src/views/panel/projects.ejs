@@ -64,16 +64,12 @@
               </button>
             </td>
             <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
-            <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a></td>
+            <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></td>
             <td><%= row.acheteur || '—' %></td>
             <td><%= row.categorie || '—' %></td>
             <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></td>
             <td class="ltr"><%= row.lots_count %></td>
-            <td>
-              <% if (row.result) { %>
-                <span class="pill ok"><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= row.result.attributaire || t('status.awarded') %></span>
-              <% } else { %><span class="pill"><%= t('status.' + row.status) %></span><% } %>
-            </td>
+            <td><%- include('../partials/status-pill', { row: row }) %></td>
           </tr>
         <% }) %>
       </tbody>

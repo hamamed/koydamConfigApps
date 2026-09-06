@@ -480,6 +480,39 @@ test('a cancelled project shows why, and the notice explaining it', async (t) =>
   assert.ok(links.some((href) => href.includes('/download/')), 'links point at the portal')
 })
 
+test('the project list says which avis are cancelled, and why, without opening one', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const html = await (await api.page('/panel?status=annule&lang=fr&perPage=50', api.staff)).text()
+  const cancelled = (await (await fetch(`${api.base}/api/consultations?status=annule&perPage=50`,
+    { headers: { cookie: api.staff } })).json()).data
+  assert.ok(cancelled.length >= 3, 'the fixtures contain withdrawn avis')
+
+  // Every cancelled row says so on the row itself.
+  assert.equal((html.match(/pill warn/g) ?? []).length, cancelled.length, 'one cancelled pill per row')
+  assert.ok(html.includes('Annulée'))
+
+  // Including the date and the reason the buyer published, for the rows that
+  // carry them — that is the whole point of not having to open the avis.
+  const withReason = cancelled.find((row) => row.motif_annulation)
+  assert.ok(html.includes(withReason.motif_annulation), 'the reason is on the listing')
+  assert.ok(html.includes(withReason.date_annulation), 'and the date it was withdrawn')
+
+  // A row cancelled after its award was published is still cancelled. The award
+  // pill used to win this cell, so the listing showed the winner's name and no
+  // sign at all that the avis had been withdrawn.
+  const alsoAwarded = cancelled.find((row) => row.result)
+  assert.ok(alsoAwarded, 'the fixtures cancel an avis that was awarded')
+  assert.ok(!html.includes(alsoAwarded.result.attributaire),
+    'the winner does not stand in for the cancelled state')
+
+  // Rows scraped from the listing alone have no date yet; the pill still renders.
+  const noDate = cancelled.find((row) => !row.date_annulation)
+  assert.ok(noDate, 'a listing-only cancellation carries no date')
+  assert.ok(html.includes(`/panel/consultations/${noDate.id}?`), 'and is still listed')
+})
+
 test('cancelled projects can be filtered for', async (t) => {
   const api = await setup()
   t.after(() => api.close())

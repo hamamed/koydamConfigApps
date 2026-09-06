@@ -1,0 +1,7 @@
+<%# The published reason for a cancellation, on the listing itself, so it can be
+    read without opening the avis. No visible label: the warn-coloured pill next
+    to it already says "cancelled", and the label would eat a fifth of the
+    clamped line. It is in the title, with the full untruncated motif. %>
+<% if ((row.is_cancelled || row.status === 'annule') && row.motif_annulation) { %>
+  <span class="cancel-note" title="<%= t('detail.cancelReason') %> : <%= row.motif_annulation %>"><%= row.motif_annulation %></span>
+<% } %>

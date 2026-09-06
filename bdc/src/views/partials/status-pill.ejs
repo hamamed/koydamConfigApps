@@ -1,0 +1,13 @@
+<%# Lifecycle of one consultation, in a single pill.
+
+    Cancelled outranks an award deliberately. matcher.deriveStatus() ranks
+    cancelled highest, and an avis cancelled after an award was published is
+    still cancelled — showing the winner's name there would hide that from
+    anyone reading the listing. %>
+<% if (row.is_cancelled || row.status === 'annule') { %>
+  <span class="pill warn" title="<%= row.motif_annulation ? t('detail.cancelReason') + ' : ' + row.motif_annulation : t('status.annule') %>"><%- include('icon', { name: 'circle-x', size: 13 }) %><%= t('status.annule') %><% if (row.date_annulation) { %> <span class="ltr"><%= row.date_annulation %></span><% } %></span>
+<% } else if (row.result) { %>
+  <span class="pill ok"><%- include('icon', { name: 'award', size: 13 }) %><%= row.result.attributaire || t('status.awarded') %></span>
+<% } else { %>
+  <span class="pill"><%= t('status.' + row.status) %></span>
+<% } %>
