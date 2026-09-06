@@ -25,7 +25,15 @@ export function normalize(value) {
  * "123/2025 " and "123 / 2025" resolve to the same key.
  */
 export function normalizeReference(value) {
-  return clean(value).toUpperCase().replace(/[\s._]+/g, '').replace(/[^A-Z0-9/-]/g, '')
+  return clean(value)
+    .toUpperCase()
+    .replace(/[\s._]+/g, '')
+    .replace(/[^A-Z0-9/-]/g, '')
+    // Some avis are published with a leading separator — "/69/2026/ISTAHTT" is
+    // real portal data. Keeping it in the join key would mean the award for the
+    // same avis, published as "69/2026/ISTAHTT", never matched it.
+    .replace(/^[/-]+/, '')
+    .replace(/[/-]+$/, '')
 }
 
 /** Extracts the first reference-looking token from a free text blob. */

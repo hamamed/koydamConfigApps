@@ -46,6 +46,11 @@ test('normalises references so both datasets join on the same key', () => {
   assert.equal(normalizeReference('AOO 12/2026'), 'AOO12/2026')
   assert.equal(normalizeReference(' aoo  12 / 2026 '), 'AOO12/2026')
   assert.equal(normalizeReference('AOO_12/2026'), 'AOO12/2026')
+  // Real portal data: an avis published with a leading separator must resolve to
+  // the same key as its award, which carries no such prefix.
+  assert.equal(normalizeReference('/69/2026/ISTAHTT'), '69/2026/ISTAHTT')
+  assert.equal(normalizeReference('69/2026/ISTAHTT'), normalizeReference('/69/2026/ISTAHTT'))
+  assert.equal(normalizeReference('53/2026-'), '53/2026')
   assert.equal(extractReference('Consultation AOO 12/2026 - fournitures'), 'CONSULTATION')
 })
 
