@@ -62,8 +62,15 @@ try {
     : await runner.run({ ...options, triggeredBy: 'cli' })
   console.log(JSON.stringify({ stats: result.stats, detail: result.detail }, null, 2))
 } catch (error) {
-  console.error(`Scrape failed: ${error.message}`)
-  process.exitCode = 1
+  // "Another crawl is already running" is the guard doing its job, not a
+  // failure. A scheduled run that steps aside should not colour the unit red
+  // and page whoever is watching.
+  if (error.statusCode === 409) {
+    console.log(`Skipped: ${error.message}`)
+  } else {
+    console.error(`Scrape failed: ${error.message}`)
+    process.exitCode = 1
+  }
 } finally {
   await closeDb()
 }
