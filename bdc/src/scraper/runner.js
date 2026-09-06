@@ -134,12 +134,17 @@ export function createScraperRunner({ db, consultations, articles, documents, re
 
   /** Runs only the detail backlog, recorded as its own job. */
   async function backfillDetailsJob(options = {}) {
-    const { triggeredBy = 'system', limit } = options
+    const { triggeredBy = 'system', limit, refreshAll = false } = options
     const running = await jobs.findRunning('backfill')
     if (running) throw new ConflictError(`A backfill is already running (job #${running.id})`)
 
-    const job = await jobs.start({ source: 'backfill', triggeredBy, params: { limit } })
+    const job = await jobs.start({ source: 'backfill', triggeredBy, params: { limit, refreshAll } })
     try {
+      // Re-reading everything is how a new field on the detail page reaches rows
+      // that were scraped before it was parsed.
+      const staled = refreshAll ? await consultations.markDetailsStale() : 0
+      if (staled) log.info('marked detail pages stale', { rows: staled })
+
       const stats = await consultationScraper.backfillDetails({ limit })
       const finished = await jobs.finish(job.id, {
         status: 'success',

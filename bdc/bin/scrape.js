@@ -8,6 +8,7 @@
  *   npm run scrape -- --since=7               only avis published in the last week
  *   npm run scrape -- --page-size=50          fewer, larger pages
  *   npm run scrape -- --backfill              only the detail backlog
+ *   npm run scrape -- --backfill --refresh-all  re-read every detail page
  *   npm run scrape -- --backfill --limit=500  a bounded sitting of it
  */
 import { initDatabase } from '../src/db/init.js'
@@ -34,6 +35,8 @@ function parseArgs(argv) {
       options.pageSize = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'backfill') {
       options.backfill = rawValue !== 'false'
+    } else if (rawKey === 'refresh-all') {
+      options.refreshAll = rawValue !== 'false'
     } else if (rawKey === 'limit') {
       options.limit = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'details') {
@@ -55,7 +58,7 @@ const { runner } = createContainer(db)
 
 try {
   const result = options.backfill
-    ? await runner.backfillDetails({ limit: options.limit, triggeredBy: 'cli' })
+    ? await runner.backfillDetails({ limit: options.limit, refreshAll: options.refreshAll, triggeredBy: 'cli' })
     : await runner.run({ ...options, triggeredBy: 'cli' })
   console.log(JSON.stringify({ stats: result.stats, detail: result.detail }, null, 2))
 } catch (error) {

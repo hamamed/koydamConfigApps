@@ -222,3 +222,28 @@ test('a 403 from the portal is reported rather than parsed as an empty page', as
 
   await assert.rejects(() => runner.run({ source: 'consultations' }), /403/)
 })
+
+test('a detail re-read reaches rows scraped before a field existed', async () => {
+  const { runner, repositories } = await setup()
+  await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+  await runner.consultationScraper.backfillDetails()
+
+  assert.equal(await repositories.consultations.countPendingDetails(), 0)
+  const before = await repositories.documents.countAll()
+  assert.ok(before > 0, 'attachments were captured')
+
+  // Simulate rows read before the parser knew about attachments.
+  await repositories.documents.replaceForConsultation(
+    (await repositories.consultations.findBySourceId('375169')).id,
+    [],
+  )
+
+  // The plain backfill will not revisit them: it only looks at unread pages.
+  const untouched = await runner.backfillDetails({})
+  assert.equal(untouched.stats.consultationsProcessed, 0)
+
+  // Asking for a refresh does.
+  const refreshed = await runner.backfillDetails({ refreshAll: true })
+  assert.equal(refreshed.stats.consultationsProcessed, 10)
+  assert.equal(await repositories.documents.countAll(), before)
+})

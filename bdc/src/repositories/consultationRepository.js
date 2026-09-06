@@ -68,8 +68,15 @@ export function createConsultationRepository(db = getDb()) {
     merged.content_hash = hashColumns(merged, CONSULTATION_HASH_COLUMNS)
 
     if (existing.content_hash === merged.content_hash) {
-      await db.run(`UPDATE ${TABLE} SET last_seen_at = ? WHERE id = ?`, [timestamp, existing.id])
-      return { row: existing, outcome: 'unchanged' }
+      // `detail_scraped_at` is stamped even when nothing changed. It records
+      // that the page was read, not that it differed — and the backfill picks
+      // its work from it, so leaving it null on an unchanged re-read makes the
+      // queue hand back the same rows forever.
+      await db.run(
+        `UPDATE ${TABLE} SET last_seen_at = ?${fromDetail ? ', detail_scraped_at = ?' : ''} WHERE id = ?`,
+        fromDetail ? [timestamp, timestamp, existing.id] : [timestamp, existing.id],
+      )
+      return { row: fromDetail ? await findById(existing.id) : existing, outcome: 'unchanged' }
     }
 
     const update = buildUpdate(TABLE, { ...merged, id: existing.id, last_seen_at: timestamp, updated_at: timestamp })
@@ -140,6 +147,16 @@ export function createConsultationRepository(db = getDb()) {
       [limit],
     )
 
+  /**
+   * Marks every detail page as unread, so the backfill reads them again.
+   *
+   * Needed when the detail parser starts capturing something it did not before
+   * — attachments, say. Without it those rows keep their old shape forever,
+   * because the backfill only ever looks at pages it has never read.
+   */
+  const markDetailsStale = async () =>
+    (await db.run(`UPDATE ${TABLE} SET detail_scraped_at = NULL WHERE detail_url IS NOT NULL`)).changes
+
   const countPendingDetails = async () =>
     Number(
       (await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE detail_url IS NOT NULL AND detail_scraped_at IS NULL`))
@@ -159,5 +176,6 @@ export function createConsultationRepository(db = getDb()) {
     countCancelled,
     listPendingDetails,
     countPendingDetails,
+    markDetailsStale,
   }
 }
