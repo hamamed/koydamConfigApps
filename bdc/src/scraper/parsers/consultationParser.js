@@ -1,11 +1,9 @@
 import {
   extractDetailUrl,
-  extractHeaderMap,
   extractLabelledFields,
-  extractRowFields,
+  extractStatusBadge,
   extractTotalCount,
   extractTotalPages,
-  findListTable,
   findRows,
   loadHtml,
 } from './listParser.js'
@@ -16,31 +14,28 @@ import { parseAmountToCentimes } from '../../utils/money.js'
 
 /**
  * Parses a page of the open-consultations listing.
+ *
+ * Rows are Bootstrap cards (`.entreprise__card`), ten to a page. The card
+ * carries reference, objet, acheteur, the deadline and the execution location;
+ * category, nature and publication date only exist on the detail page.
  * @returns {{items: object[], totalPages: number, totalCount: number|null}}
  */
 export function parseConsultationList(html, pageUrl) {
   const $ = loadHtml(html)
-  const table = findListTable($)
   const items = []
 
-  if (table) {
-    const headerMap = extractHeaderMap($, table)
-    findRows($, table).each((_, element) => {
-      const row = $(element)
-      const fields = extractRowFields($, row, headerMap)
-      const record = toConsultationRecord(fields, {
-        detailUrl: extractDetailUrl($, row, pageUrl),
-        sourceUrl: pageUrl,
-      })
-      if (record) items.push(record)
+  findRows($).each((_, element) => {
+    const card = $(element)
+    const fields = extractLabelledFields($, card)
+    const record = toConsultationRecord(fields, {
+      detailUrl: extractDetailUrl($, card, pageUrl),
+      sourceUrl: pageUrl,
+      statusLabel: extractStatusBadge($, card),
     })
-  }
+    if (record) items.push(record)
+  })
 
-  return {
-    items,
-    totalPages: extractTotalPages($),
-    totalCount: extractTotalCount($),
-  }
+  return { items, totalPages: extractTotalPages($), totalCount: extractTotalCount($) }
 }
 
 /**
@@ -52,11 +47,21 @@ export function parseConsultationDetail(html, pageUrl, knownReference = null) {
   const $ = loadHtml(html)
   const fields = extractLabelledFields($, $('body'))
 
-  if (!fields.reference && knownReference) fields.reference = knownReference
-  if (!fields.reference) fields.reference = extractReference($('h1, h2, .reference').first().text())
+  // The reference is not a labelled field on the detail page; the only reliable
+  // carrier is the document title, "Détails de l'avis d'achat #53/2026".
+  // Scanning headings instead picks up the article accordion, whose entries all
+  // start with "#01".
+  if (!fields.reference) {
+    const title = clean($('title').text())
+    fields.reference = title.match(/#\s*([A-Z0-9][A-Z0-9._/-]*)/i)?.[1] ?? knownReference
+  }
   if (!fields.objet) fields.objet = clean($('h1, h2').first().text()) || null
 
-  const consultation = toConsultationRecord(fields, { detailUrl: pageUrl, sourceUrl: pageUrl })
+  const consultation = toConsultationRecord(fields, {
+    detailUrl: pageUrl,
+    sourceUrl: pageUrl,
+    statusLabel: extractStatusBadge($, $('body')),
+  })
   const reference = consultation?.reference ?? normalizeReference(knownReference ?? '')
   const articles = reference ? parseArticles($, reference) : []
 
@@ -71,7 +76,7 @@ export function parseConsultationDetail(html, pageUrl, knownReference = null) {
  * Normalises raw scraped fields into a `consultations` row.
  * @returns {object|null} null when the row carries no usable reference.
  */
-export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = null } = {}) {
+export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = null, statusLabel = null } = {}) {
   const referenceRaw = cleanOrNull(fields.reference)
   const reference = referenceRaw ? normalizeReference(referenceRaw) : extractReference(fields.objet ?? '')
   if (!reference) return null
@@ -96,10 +101,13 @@ export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = nul
     caution_provisoire_cents: parseAmountToCentimes(fields.cautionProvisoire),
     qualification: cleanOrNull(fields.qualification),
     agrement: cleanOrNull(fields.agrement),
-    lots_count: Number.parseInt(clean(fields.lotsCount), 10) || 0,
+    lots_count: 0,
+    date_annulation: parseDate(fields.dateAnnulation),
+    motif_annulation: cleanOrNull(fields.motifAnnulation),
+    status: /annul/i.test(statusLabel ?? '') || fields.dateAnnulation ? 'annule' : 'open',
     detail_url: detailUrl,
     source_url: sourceUrl,
-    source_id: detailUrl ? (detailUrl.match(/(\d{4,})/)?.[1] ?? null) : null,
+    source_id: detailUrl ? (detailUrl.match(/\/show\/(\d+)/)?.[1] ?? detailUrl.match(/(\d{4,})/)?.[1] ?? null) : null,
     raw_json: JSON.stringify(fields),
     first_seen_at: timestamp,
     last_seen_at: timestamp,

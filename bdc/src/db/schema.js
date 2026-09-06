@@ -57,6 +57,8 @@ export function tableStatements(dialect) {
       qualification TEXT,
       agrement TEXT,
       lots_count INTEGER NOT NULL DEFAULT 0,
+      date_annulation TEXT,
+      motif_annulation TEXT,
       detail_url TEXT,
       source_url TEXT,
       source_id TEXT,
@@ -85,6 +87,8 @@ export function tableStatements(dialect) {
       unit_price_cents INTEGER,
       estimation_cents INTEGER,
       caution_cents INTEGER,
+      tva_rate REAL,
+      garanties TEXT,
       delai_execution TEXT,
       lieu_execution TEXT,
       raw_json TEXT,
@@ -236,4 +240,4 @@ export function indexStatements() {
   ]
 }
 
-export const SCHEMA_VERSION = '2026-09-06.001'
+export const SCHEMA_VERSION = '2026-09-06.002'

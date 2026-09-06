@@ -1,62 +1,66 @@
-import { ARTICLE_TABLE_SELECTORS } from '../selectors.js'
-import { extractHeaderMap, extractLabelledFields, findRows, matchField } from './listParser.js'
-import { cleanOrNull, normalizeReference } from '../../utils/text.js'
+import {
+  ARTICLE_ITEM_SELECTORS,
+  ARTICLE_HEADING_SELECTORS,
+  ARTICLE_SPEC_SELECTORS,
+} from '../selectors.js'
+import { extractLabelledFields, firstMatch } from './listParser.js'
+import { clean, cleanOrNull, normalizeReference } from '../../utils/text.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 import { nowIso } from '../../utils/dates.js'
 
 const QUANTITY_PATTERN = /(\d+(?:[.,]\d+)?)/
+const ARTICLE_NUMBER = /^#?\s*(\d+)/
 
-const parseQuantity = (value) => {
+const parseNumber = (value) => {
   const match = String(value ?? '').match(QUANTITY_PATTERN)
   return match ? Number.parseFloat(match[1].replace(',', '.')) : null
 }
 
-/** A lot/article table is only interesting if it exposes a designation-like column. */
-const looksLikeArticleTable = ($, table) => {
-  const headers = table.find('th').toArray().map((cell) => matchField($(cell).text()))
-  return headers.some((field) => ['designation', 'lotNumber', 'articleNumber', 'quantity'].includes(field))
-}
-
 /**
- * Parses the article / lot breakdown of a consultation detail page.
+ * Parses the article breakdown of a consultation detail page.
  *
- * The portal renders lots either as a dedicated table or as repeated
- * "Lot n° X" blocks; both shapes are handled.
- * @returns {object[]} article records ready for `consultation_articles`.
+ * Each article is a Bootstrap accordion item: the heading holds "#01" and the
+ * designation, the panel holds the specification text and a mini-card of
+ * labelled attributes (unit, quantity, VAT, required warranties).
+ *
+ * Note there is no unit price. These are calls for quotes — the supplier
+ * proposes the price, which is exactly what the invoice generator supplies.
+ * @returns {object[]} records ready for `consultation_articles`.
  */
 export function parseArticles($, reference) {
-  const rows = []
+  const items = firstMatch($, ARTICLE_ITEM_SELECTORS)
+  if (!items) return []
 
-  for (const selector of ARTICLE_TABLE_SELECTORS) {
-    const tables = $(selector)
-    for (let i = 0; i < tables.length; i += 1) {
-      const table = tables.eq(i)
-      if (!looksLikeArticleTable($, table)) continue
-      const headerMap = extractHeaderMap($, table)
-      findRows($, table).each((_, element) => {
-        const row = $(element)
-        const fields = {}
-        row.children('td, th').each((index, cell) => {
-          const field = headerMap[index]
-          if (field) fields[field] = $(cell).text()
-        })
-        const record = toArticleRecord(fields, reference)
-        if (record) rows.push(record)
-      })
-      if (rows.length > 0) return dedupe(rows)
-    }
-  }
+  const articles = []
+  items.each((index, element) => {
+    const item = $(element)
+    const heading = firstMatch($, ARTICLE_HEADING_SELECTORS, item)
+    const headingText = clean(heading?.first().text())
+    if (!headingText) return
 
-  // Fallback: "Lot n° 1 — ..." blocks rendered as cards.
-  $('[class*="lot"], [id*="lot"]').each((_, element) => {
-    const block = $(element)
-    if (block.find('[class*="lot"]').length > 0) return
-    const fields = extractLabelledFields($, block)
-    const record = toArticleRecord(fields, reference)
-    if (record) rows.push(record)
+    // "#01CÂBLE PNI avec brassard" — the number is its own span, so removing it
+    // from the heading text leaves the designation.
+    const numberSpan = clean(heading.first().find('span').first().text())
+    const articleNumber = numberSpan.match(ARTICLE_NUMBER)?.[1] ?? String(index + 1)
+    const designation = clean(headingText.replace(numberSpan, ''))
+    if (!designation) return
+
+    const fields = extractLabelledFields($, item)
+    const description = specificationText($, item) ?? cleanOrNull(fields.description)
+
+    articles.push(toArticleRecord({ ...fields, designation, articleNumber, description }, reference))
   })
 
-  return dedupe(rows)
+  return articles.filter(Boolean)
+}
+
+/** The free-text specification block, which is not a "label: value" pair. */
+function specificationText($, item) {
+  const block = firstMatch($, ARTICLE_SPEC_SELECTORS, item)
+  if (!block) return null
+  // The label is the block's own text and the body sits in a nested span.
+  const body = block.first().find('span').first()
+  return cleanOrNull(body.length > 0 ? body.text() : block.first().text())
 }
 
 /**
@@ -64,7 +68,7 @@ export function parseArticles($, reference) {
  * @returns {object|null} null when the row carries no usable designation.
  */
 export function toArticleRecord(fields, reference) {
-  const designation = cleanOrNull(fields.designation ?? fields.objet ?? fields.description)
+  const designation = cleanOrNull(fields.designation)
   if (!designation) return null
 
   const timestamp = nowIso()
@@ -75,26 +79,17 @@ export function toArticleRecord(fields, reference) {
     designation,
     description: cleanOrNull(fields.description),
     categorie: cleanOrNull(fields.categorie),
-    quantity: parseQuantity(fields.quantity),
+    quantity: parseNumber(fields.quantity),
     unit: cleanOrNull(fields.unit),
     unit_price_cents: parseAmountToCentimes(fields.unitPrice),
     estimation_cents: parseAmountToCentimes(fields.estimation),
     caution_cents: parseAmountToCentimes(fields.cautionProvisoire),
+    tva_rate: parseNumber(fields.tvaRate),
+    garanties: cleanOrNull(fields.garanties),
     delai_execution: cleanOrNull(fields.delaiExecution),
     lieu_execution: cleanOrNull(fields.lieuExecution),
     raw_json: JSON.stringify(fields),
     created_at: timestamp,
     updated_at: timestamp,
   }
-}
-
-/** Guards against the same lot being picked up by two selector candidates. */
-function dedupe(records) {
-  const seen = new Set()
-  return records.filter((record) => {
-    const key = `${record.lot_number ?? ''}|${record.article_number ?? ''}|${record.designation}`
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
-  })
 }

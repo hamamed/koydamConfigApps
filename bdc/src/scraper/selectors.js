@@ -14,87 +14,88 @@
  * When the portal adds a label, add the synonym here — no parser change needed.
  */
 
-export const LIST_CONTAINERS = [
-  'table.table-results',
-  'table#resultats',
-  'table.table',
-  '.consultation-list',
-  '.list-consultations',
-  'table',
-]
-
-export const ROW_SELECTORS = ['tbody > tr', 'tr.consultation', '.consultation-item', 'article.consultation']
-
-export const DETAIL_LINK_SELECTORS = [
-  'a[href*="/consultation/"]',
-  'a[href*="detail"]',
-  'a[href*="voir"]',
-  'a[href]',
-]
-
-export const PAGINATION_SELECTORS = [
-  '.pagination a',
-  'nav.pagination a',
-  'ul.pagination li a',
-  'a[href*="page="]',
-]
-
-export const ARTICLE_TABLE_SELECTORS = [
-  'table.table-lots',
-  'table#lots',
-  'table.lots',
-  'table.articles',
-  'table',
-]
+export const LIST_CONTAINERS = ['.entreprise__card', 'table.table-results', 'table']
 
 /**
- * Canonical field <- accent-free lowercase label fragments.
- * Matching is "label contains synonym", longest synonym wins.
+ * A listing row. The portal renders both listings — open consultations and
+ * results — as the same Bootstrap card, not as a table.
  */
+export const ROW_SELECTORS = ['.entreprise__card']
+
+/** The label/value blocks of a detail page ("Acheteur public" over its value). */
+export const DETAIL_FIELD_SELECTORS = ['.content__icons .col-lg-3', '.content__icons > div']
+
+/** One article on a detail page: an accordion item with a heading and a panel. */
+export const ARTICLE_ITEM_SELECTORS = ['.accordion-item']
+export const ARTICLE_HEADING_SELECTORS = ['.accordion-header', 'h2']
+export const ARTICLE_SPEC_SELECTORS = ['.accordion-body .text-gray', '.accordion-body']
+export const ARTICLE_ATTRIBUTE_SELECTORS = ['.content__article__miniCard > div', '.content__article__miniCard']
+
+export const DETAIL_LINK_SELECTORS = ['a[href*="/consultation/show/"]', 'a[href*="/consultation/"]', 'a[href]']
+
+export const PAGINATION_SELECTORS = ['.pagination .page-link', '.page-item a', 'a[href*="page="]']
+
+/** Status pill printed on a card or a detail header ("Annulé"). */
+export const STATUS_BADGE_SELECTORS = ['.badge', '.entreprise__card .badge']
+
+/**
+ * The award panel of a result card. Its state is not always a labelled field —
+ * an unsuccessful avis simply prints "Avis d'achat infructueux" here — so the
+ * panel's text is scanned for the state. Scanning the whole card instead would
+ * misread an objet that happens to mention an annulment.
+ */
+export const RESULT_STATE_SELECTORS = ['.entreprise__rightSubCard', '.entreprise__rightSubCard--top']
+
 export const FIELD_SYNONYMS = Object.freeze({
-  reference: ['reference', 'ref consultation', 'num consultation', 'numero de consultation', 'n consultation'],
-  objet: ['objet', 'intitule', 'designation de la consultation', 'sujet'],
-  acheteur: ['acheteur', 'acheteur public', 'organisme', 'maitre d ouvrage', 'entite', 'administration'],
-  acheteurService: ['service', 'direction', 'entite acheteuse', 'sous ordonnateur'],
-  categorie: ['categorie'],
-  naturePrestation: ['nature de la prestation', 'nature prestation', 'nature'],
-  lieuExecution: ["lieu d execution", 'lieu execution', 'lieu de livraison', 'lieu', 'localisation'],
-  procedureType: ['type de procedure', 'procedure', 'type d annonce'],
-  modePassation: ['mode de passation', 'mode'],
-  datePublication: ['date de publication', 'date publication', 'publiee le', 'date de mise en ligne'],
+  reference: ['reference'],
+  objet: ['objet', 'intitule'],
+  acheteur: ['acheteur public', 'acheteur', 'organisme'],
+  categorie: ['categorie principale', 'categorie'],
+  naturePrestation: ['nature de prestation', 'nature de la prestation', 'nature'],
+  lieuExecution: ["lieu d execution", 'lieu de livraison', 'localisation'],
+  // "Date mise en ligne" is the portal's wording for publication, and it carries
+  // a time ("31/08/2026 15:51").
+  datePublication: ['date mise en ligne', 'date de mise en ligne', 'date de publication'],
+  // The listing says "remise des devis", the detail page "reception des devis".
   dateLimite: [
-    'date limite de remise des plis',
-    'date limite de remise',
+    'date limite de reception des devis',
+    'date limite de remise des devis',
+    'date limite de reception',
     'date limite',
-    'date de cloture',
-    'cloture',
-    'remise des plis',
   ],
-  dateOuverturePlis: ["date d ouverture des plis", 'ouverture des plis', 'seance publique'],
-  estimation: ['estimation', 'montant estime', 'budget previsionnel'],
+  estimation: ['estimation', 'montant estime'],
   cautionProvisoire: ['caution provisoire', 'cautionnement provisoire'],
   qualification: ['qualification'],
   agrement: ['agrement'],
-  lotsCount: ['nombre de lots', 'nb lots', 'lots'],
+  // Cancellations are a first-class state here: an avis can be published and
+  // then withdrawn, and the reason is printed on the detail page.
+  dateAnnulation: ["date d annulation"],
+  motifAnnulation: ['reference annulation motif', 'motif'],
 
   // Results-only fields
-  datePublicationResultat: ['date de publication du resultat', 'date du resultat', 'date de publication'],
-  dateAttribution: ["date d attribution", 'attribue le', 'date de notification'],
-  attributaire: ['attributaire', 'titulaire', 'adjudicataire', 'entreprise retenue', 'soumissionnaire retenu'],
-  attributaireIce: ['ice', 'identifiant commun de l entreprise'],
-  montantAttribue: ['montant attribue', "montant de l attribution", 'montant', 'montant ttc', 'montant marche'],
-  nombreOffres: ['nombre d offres', 'nb offres', 'offres recues'],
+  datePublicationResultat: ['date de publication du resultat', 'date du resultat'],
+  dateAttribution: ["date d attribution", 'attribue le'],
+  attributaire: ['entreprise attributaire', 'attributaire', 'titulaire', 'adjudicataire'],
+  attributaireIce: ['ice'],
+  montantAttribue: ['montant ttc', 'montant attribue', 'montant'],
+  nombreOffres: ['nombre de devis recus', 'nombre de devis', "nombre d offres"],
   resultStatus: ['statut', 'etat', 'resultat'],
 
-  // Article / lot fields
-  lotNumber: ['lot', 'n lot', 'numero de lot'],
-  articleNumber: ['article', 'n article', 'numero article', 'poste'],
-  designation: ['designation', 'libelle', 'description de l article'],
-  description: ['description', 'specifications', 'caracteristiques'],
+  // Article fields
+  lotNumber: ['lot', 'numero de lot'],
+  articleNumber: ['article', 'numero article'],
+  designation: ['designation', 'libelle'],
+  description: ['caracteristiques et specifications', 'caracteristiques', 'description'],
   quantity: ['quantite', 'qte'],
-  unit: ['unite', 'u'],
-  unitPrice: ['prix unitaire', 'pu', 'prix'],
-  delaiExecution: ["delai d execution", 'delai', 'duree'],
+  unit: ['unite de mesure', 'unite'],
+  unitPrice: ['prix unitaire'],
+  tvaRate: ['tva', 'tva %'],
+  garanties: ['garanties exigees', 'garanties', 'garantie'],
+  delaiExecution: ["delai d execution", 'delai'],
+
+  // Not stored — it exists so that collectSiblings stops at it instead of
+  // swallowing the attachment row into the value of the field above it.
+  pieceJointe: ['piece jointe', 'pieces jointes'],
 })
 
 /**

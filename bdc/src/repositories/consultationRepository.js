@@ -18,7 +18,8 @@ const MUTABLE_COLUMNS = [
   'reference_raw', 'objet', 'acheteur', 'acheteur_service', 'categorie', 'nature_prestation',
   'lieu_execution', 'procedure_type', 'mode_passation', 'date_publication', 'date_limite',
   'heure_limite', 'date_ouverture_plis', 'estimation_cents', 'caution_provisoire_cents',
-  'qualification', 'agrement', 'detail_url', 'source_url', 'source_id',
+  'qualification', 'agrement', 'date_annulation', 'motif_annulation',
+  'detail_url', 'source_url', 'source_id', 'status',
   'search_text', 'raw_json', 'last_seen_at', 'updated_at',
 ]
 

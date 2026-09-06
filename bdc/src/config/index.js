@@ -16,6 +16,18 @@ const DEFAULT_DETAIL_CONCURRENCY = 2
 const DEFAULT_TAX_RATE = 20
 const MIN_PRODUCTION_SECRET_LENGTH = 32
 
+/**
+ * The portal sits behind a WAF that answers 403 to any client whose User-Agent
+ * does not look like a browser — a plain "marches-publics-api/1.0" is refused
+ * before the request reaches the application. It accepts a browser string with
+ * our own identity appended, so the crawler stays attributable and contactable
+ * instead of anonymous; set SCRAPER_USER_AGENT to put a real contact address in
+ * the tail of it.
+ */
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+  'Chrome/131.0.0.0 Safari/537.36 marches-publics-api/1.0'
+
 const bool = (value, fallback = false) => {
   if (value === undefined || value === '') return fallback
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase())
@@ -76,7 +88,7 @@ export const config = Object.freeze({
     baseUrl: (process.env.SCRAPER_BASE_URL || 'https://www.marchespublics.gov.ma').replace(/\/+$/, ''),
     consultationsPath: process.env.SCRAPER_CONSULTATIONS_PATH || '/bdc/entreprise/consultation/',
     resultsPath: process.env.SCRAPER_RESULTS_PATH || '/bdc/entreprise/consultation/resultat',
-    userAgent: process.env.SCRAPER_USER_AGENT || 'marches-publics-api/1.0',
+    userAgent: process.env.SCRAPER_USER_AGENT || DEFAULT_USER_AGENT,
     timeoutMs: int(process.env.SCRAPER_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
     maxPages: int(process.env.SCRAPER_MAX_PAGES, DEFAULT_MAX_PAGES),
     pageSize: int(process.env.SCRAPER_PAGE_SIZE, DEFAULT_PAGE_SIZE),

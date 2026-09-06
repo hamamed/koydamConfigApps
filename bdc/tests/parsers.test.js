@@ -2,100 +2,143 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { fixture } from './helpers.js'
 import { parseConsultationList, parseConsultationDetail } from '../src/scraper/parsers/consultationParser.js'
-import { parseResultList, parseResultDetail } from '../src/scraper/parsers/resultParser.js'
+import { parseResultList } from '../src/scraper/parsers/resultParser.js'
 import { matchField } from '../src/scraper/parsers/listParser.js'
 import { buildSearchQuery } from '../src/scraper/selectors.js'
 
-const LIST_URL = 'https://www.marchespublics.gov.ma/bdc/entreprise/consultation/'
+/**
+ * Every fixture in this file is a page captured from the live portal, so these
+ * tests encode the actual markup contract rather than an assumed one.
+ */
+const BASE = 'https://www.marchespublics.gov.ma/bdc/entreprise/consultation/'
 
-test('maps French column labels onto canonical fields', () => {
+test('maps the portal labels onto canonical fields', () => {
   assert.equal(matchField('Référence'), 'reference')
-  assert.equal(matchField("Lieu d'exécution"), 'lieuExecution')
-  assert.equal(matchField('Date limite de remise des plis'), 'dateLimite')
-  assert.equal(matchField('Nature de la prestation'), 'naturePrestation')
   assert.equal(matchField('Acheteur public'), 'acheteur')
+  assert.equal(matchField('Catégorie principale'), 'categorie')
+  assert.equal(matchField('Nature de prestation'), 'naturePrestation')
+  assert.equal(matchField("Lieu d'exécution"), 'lieuExecution')
+  assert.equal(matchField('Date mise en ligne'), 'datePublication')
+  assert.equal(matchField('Date limite de réception des devis'), 'dateLimite')
+  assert.equal(matchField('Date limite de remise des devis'), 'dateLimite')
+  assert.equal(matchField('Entreprise attributaire'), 'attributaire')
+  assert.equal(matchField('Montant TTC'), 'montantAttribue')
+  assert.equal(matchField('Nombre de devis reçus'), 'nombreOffres')
+  assert.equal(matchField('Unité de mesure'), 'unit')
   assert.equal(matchField('Colonne inconnue'), null)
 })
 
-test('parses the open consultations listing', () => {
-  const { items, totalPages, totalCount } = parseConsultationList(fixture('consultations-page1.html'), LIST_URL)
+test('a value that quotes its own field name is not a label', () => {
+  // The cancellation motive on a real avis contains "date limite". Reading that
+  // sentence as a label made the parser store the following block as the
+  // deadline; labels lead with their name and are short.
+  assert.equal(matchField('changement de la date limite pour la réception des devis'), null)
+  assert.equal(matchField('Date limite de réception des devis'), 'dateLimite')
+})
 
-  assert.equal(items.length, 2)
-  assert.equal(totalPages, 2)
-  assert.equal(totalCount, 248)
+test('parses the open consultations listing', () => {
+  const { items, totalPages } = parseConsultationList(fixture('live-consultations.html'), BASE)
+
+  assert.equal(items.length, 10, 'the portal renders ten cards to a page')
+  assert.equal(totalPages, 76)
 
   const [first] = items
-  assert.equal(first.reference, 'AOO12/2026')
-  assert.equal(first.reference_raw, 'AOO 12/2026')
-  assert.equal(first.objet, 'Acquisition de matériel informatique pour les services centraux')
-  assert.equal(first.acheteur, 'Agence Nationale de la Conservation Foncière')
-  assert.equal(first.categorie, 'Fournitures')
-  assert.equal(first.nature_prestation, 'Achat')
-  assert.equal(first.lieu_execution, 'Rabat')
-  assert.equal(first.date_publication, '2026-05-12')
-  assert.equal(first.date_limite, '2026-06-02')
-  assert.equal(first.heure_limite, '10:30')
-  assert.match(first.detail_url, /\/consultation\/detail\/884512$/)
-  assert.match(first.search_text, /materiel informatique/)
+  assert.equal(first.reference, '6/2026')
+  assert.equal(first.objet, "TRAVAUX D'INSTALLATION D'UN ABRIS A LA STATION DU TAXIS")
+  assert.equal(first.acheteur, 'Commune IZEMMOUREN')
+  assert.equal(first.lieu_execution, 'AL HOCEIMA')
+  assert.equal(first.date_limite, '2027-03-16')
+  assert.equal(first.heure_limite, '14:00')
+  assert.equal(first.status, 'annule', 'the card carries an "Annulé" badge')
+  assert.match(first.detail_url, /\/consultation\/show\/316430$/)
+  assert.equal(first.source_id, '316430')
+
+  // Category, nature and publication date are not on the card — only on the
+  // detail page. The listing pass must leave them null rather than invent them.
+  assert.equal(first.categorie, null)
+  assert.equal(first.nature_prestation, null)
+  assert.equal(first.date_publication, null)
+
+  assert.ok(items.every((item) => item.reference && item.objet && item.acheteur))
 })
 
-test('parses a consultation detail page with its article/lot breakdown', () => {
+test('parses a consultation detail page and its articles', () => {
   const { consultation, articles } = parseConsultationDetail(
-    fixture('consultation-detail.html'),
-    `${LIST_URL}detail/884512`,
-    'AOO12/2026',
+    fixture('live-consultation-detail.html'),
+    `${BASE}show/375169`,
   )
 
-  assert.equal(consultation.reference, 'AOO12/2026')
-  assert.equal(consultation.mode_passation, "Appel d'offres ouvert")
-  assert.equal(consultation.estimation_cents, 125_000_000)
-  assert.equal(consultation.caution_provisoire_cents, 2_500_000)
-  assert.equal(consultation.qualification, 'Secteur 5 - Classe 3')
-  assert.equal(consultation.lots_count, 3)
+  // The reference lives only in the document title on this page.
+  assert.equal(consultation.reference, '53/2026')
+  assert.equal(consultation.acheteur, 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA')
+  assert.equal(consultation.categorie, 'Fournitures')
+  assert.equal(consultation.nature_prestation, 'Achat de pièces de rechange pour matériel technique et informatique')
+  assert.equal(consultation.lieu_execution, 'MAROC, KHENIFRA')
+  assert.equal(consultation.date_publication, '2026-08-31')
+  assert.equal(consultation.date_limite, '2026-10-02')
+  assert.equal(consultation.heure_limite, '15:00')
 
-  assert.equal(articles.length, 3)
-  assert.deepEqual(
-    articles.map((article) => [article.lot_number, article.quantity, article.unit_price_cents]),
-    [['1', 120, 950_000], ['2', 35, 425_050], ['3', 40, 180_000]],
-  )
-  assert.equal(articles[0].designation, 'Ordinateurs portables 14 pouces i7')
-  assert.equal(articles[0].consultation_reference, 'AOO12/2026')
-  assert.equal(articles[0].delai_execution, '60 jours')
+  // Cancellation is a real state here: an avis can be published then withdrawn.
+  assert.equal(consultation.status, 'annule')
+  assert.equal(consultation.date_annulation, '2026-09-01')
+  assert.match(consultation.motif_annulation, /changement de la date limite/)
+
+  assert.equal(articles.length, 19)
+  assert.equal(consultation.lots_count, 19)
+
+  const [article] = articles
+  assert.equal(article.article_number, '01')
+  assert.equal(article.designation, 'CÂBLE PNI avec brassard')
+  assert.equal(article.quantity, 25)
+  assert.equal(article.unit, 'unité')
+  assert.equal(article.tva_rate, 20)
+  assert.match(article.description, /moniteur multiparam/)
+  assert.equal(article.consultation_reference, '53/2026')
+
+  // These are calls for quotes: the supplier proposes the price, so the portal
+  // publishes no unit price. The invoice generator is where one is supplied.
+  assert.equal(article.unit_price_cents, null)
+  assert.ok(articles.every((row) => row.designation && row.quantity !== null))
 })
 
-test('parses the results listing including unsuccessful awards', () => {
-  const { items } = parseResultList(fixture('results-page1.html'), `${LIST_URL}resultat`)
+test('parses the results listing, which is complete without a detail page', () => {
+  const { items } = parseResultList(fixture('live-results.html'), `${BASE}resultat`)
 
-  assert.equal(items.length, 2)
-  const [awarded, unsuccessful] = items
+  assert.equal(items.length, 10)
+  const [first] = items
+  assert.equal(first.reference, '32/2026')
+  assert.equal(first.attributaire, "STE AMALIA DES ETOILES D'OR")
+  assert.equal(first.montant_attribue_cents, 806_400, '8 064,00 MAD in centimes')
+  assert.equal(first.nombre_offres, 12)
+  assert.equal(first.date_publication_resultat, '2026-09-05')
+  assert.equal(first.result_status, 'attribue')
 
-  assert.equal(awarded.reference, 'AOO12/2026')
-  assert.equal(awarded.attributaire, 'SOCIETE TECHNO SARL')
-  assert.equal(awarded.montant_attribue_cents, 118_040_000)
-  assert.equal(awarded.date_attribution, '2026-06-20')
-  assert.equal(awarded.date_publication_resultat, '2026-06-25')
-  assert.equal(awarded.result_status, 'attribue')
+  assert.equal(items[1].reference, '34/2026/BG')
+  assert.equal(items[1].montant_attribue_cents, 3_919_200)
+  assert.ok(items.every((item) => item.reference))
 
-  assert.equal(unsuccessful.reference, 'MP99/2025')
+  // An unsuccessful avis has no winner and no amount, and says so in the award
+  // panel rather than in a labelled field.
+  const unsuccessful = items.find((item) => item.reference === '37/2026')
   assert.equal(unsuccessful.result_status, 'infructueux')
   assert.equal(unsuccessful.attributaire, null)
+  assert.equal(unsuccessful.montant_attribue_cents, null)
+  assert.equal(unsuccessful.nombre_offres, 25)
 })
 
-test('the result reference matches the consultation reference exactly', () => {
-  const [consultation] = parseConsultationList(fixture('consultations-page1.html'), LIST_URL).items
-  const [result] = parseResultList(fixture('results-page1.html'), `${LIST_URL}resultat`).items
-  assert.equal(consultation.reference, result.reference)
+test('both parsers normalise a reference to the same join key', () => {
+  const consultations = parseConsultationList(fixture('live-consultations.html'), BASE).items
+  const results = parseResultList(fixture('live-results-matching.html'), `${BASE}resultat`).items
+
+  const consultation = consultations.find((item) => item.reference === '53/2026')
+  const award = results.find((item) => item.reference === '53/2026')
+  assert.ok(consultation && award, 'the shared reference is what links the two datasets')
+  assert.equal(consultation.reference, award.reference)
 })
 
-test('parses per-lot awards from a result detail page', () => {
-  const { result, lots } = parseResultDetail(fixture('result-detail.html'), `${LIST_URL}resultat/detail/884512`, 'AOO12/2026')
-
-  assert.equal(result.reference, 'AOO12/2026')
-  assert.equal(result.nombre_offres, 7)
-  assert.equal(lots.length, 3)
-  assert.equal(lots[1].attributaire, 'BUREAUTIQUE PLUS SA')
-  assert.equal(lots[1].montant_cents, 14_875_000)
-  assert.equal(lots[2].lot_status, 'infructueux')
+test('an exhausted listing yields no rows', () => {
+  const { items } = parseConsultationList(fixture('live-consultations-empty.html'), BASE)
+  assert.equal(items.length, 0)
 })
 
 test('builds the portal search query string', () => {

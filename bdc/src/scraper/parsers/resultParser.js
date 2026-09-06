@@ -1,11 +1,10 @@
 import {
   extractDetailUrl,
-  extractHeaderMap,
   extractLabelledFields,
-  extractRowFields,
+  extractStatusBadge,
+  firstMatch,
   extractTotalCount,
   extractTotalPages,
-  findListTable,
   findRows,
   loadHtml,
 } from './listParser.js'
@@ -14,6 +13,7 @@ import { clean, cleanOrNull, extractReference, normalizeReference } from '../../
 import { parseDate, nowIso } from '../../utils/dates.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 import { config } from '../../config/index.js'
+import { RESULT_STATE_SELECTORS } from '../selectors.js'
 
 const AWARDED = /attribu/i
 const CANCELLED = /annul/i
@@ -30,26 +30,28 @@ export function normalizeResultStatus(value) {
 }
 
 /**
- * Parses a page of the awards / results listing.
+ * Parses a page of the awards listing.
+ *
+ * Results use the same card as the consultations listing, and unlike the
+ * consultations they are complete in the listing itself — winner, amount and
+ * the number of quotes received are all on the card, and there is no detail
+ * link to follow.
  * @returns {{items: object[], totalPages: number, totalCount: number|null}}
  */
 export function parseResultList(html, pageUrl) {
   const $ = loadHtml(html)
-  const table = findListTable($)
   const items = []
 
-  if (table) {
-    const headerMap = extractHeaderMap($, table)
-    findRows($, table).each((_, element) => {
-      const row = $(element)
-      const fields = extractRowFields($, row, headerMap)
-      const record = toResultRecord(fields, {
-        detailUrl: extractDetailUrl($, row, pageUrl),
-        sourceUrl: pageUrl,
-      })
-      if (record) items.push(record)
+  findRows($).each((_, element) => {
+    const card = $(element)
+    const fields = extractLabelledFields($, card)
+    const record = toResultRecord(fields, {
+      detailUrl: extractDetailUrl($, card, pageUrl),
+      sourceUrl: pageUrl,
+      statusLabel: extractStatusBadge($, card) ?? clean(firstMatch($, RESULT_STATE_SELECTORS, card)?.text()),
     })
-  }
+    if (record) items.push(record)
+  })
 
   return { items, totalPages: extractTotalPages($), totalCount: extractTotalCount($) }
 }
@@ -62,9 +64,15 @@ export function parseResultDetail(html, pageUrl, knownReference = null) {
   const $ = loadHtml(html)
   const fields = extractLabelledFields($, $('body'))
   if (!fields.reference && knownReference) fields.reference = knownReference
-  if (!fields.reference) fields.reference = extractReference($('h1, h2, .reference').first().text())
+  if (!fields.reference) {
+    fields.reference = clean($('h1, h2').first().text()).match(/#\s*([A-Z0-9][A-Z0-9._/-]*)/i)?.[1] ?? null
+  }
 
-  const result = toResultRecord(fields, { detailUrl: pageUrl, sourceUrl: pageUrl })
+  const result = toResultRecord(fields, {
+    detailUrl: pageUrl,
+    sourceUrl: pageUrl,
+    statusLabel: extractStatusBadge($, $('body')),
+  })
   const reference = result?.reference ?? normalizeReference(knownReference ?? '')
   const lots = reference ? parseResultLots($, reference) : []
   return { result, lots }
@@ -73,38 +81,27 @@ export function parseResultDetail(html, pageUrl, knownReference = null) {
 /** Extracts the per-lot award rows of a result detail page. */
 export function parseResultLots($, reference) {
   const lots = []
-  const tables = $('table')
 
-  for (let i = 0; i < tables.length; i += 1) {
-    const table = tables.eq(i)
-    const headerMap = extractHeaderMap($, table)
-    if (!headerMap.some((field) => ['attributaire', 'montantAttribue', 'lotNumber'].includes(field))) continue
+  $('.accordion-item').each((index, element) => {
+    const item = $(element)
+    const fields = extractLabelledFields($, item)
+    if (!fields.attributaire && !fields.montantAttribue) return
 
-    findRows($, table).each((_, element) => {
-      const row = $(element)
-      const fields = {}
-      row.children('td, th').each((index, cell) => {
-        const field = headerMap[index]
-        if (field) fields[field] = $(cell).text()
-      })
-      const timestamp = nowIso()
-      const lot = {
-        consultation_reference: normalizeReference(reference),
-        lot_number: cleanOrNull(fields.lotNumber),
-        designation: cleanOrNull(fields.designation ?? fields.objet),
-        attributaire: cleanOrNull(fields.attributaire),
-        attributaire_ice: cleanOrNull(fields.attributaireIce),
-        montant_cents: parseAmountToCentimes(fields.montantAttribue),
-        lot_status: normalizeResultStatus(fields.resultStatus ?? fields.attributaire),
-        nombre_offres: Number.parseInt(clean(fields.nombreOffres), 10) || null,
-        raw_json: JSON.stringify(fields),
-        created_at: timestamp,
-        updated_at: timestamp,
-      }
-      if (lot.attributaire || lot.montant_cents !== null || lot.lot_number) lots.push(lot)
+    const timestamp = nowIso()
+    lots.push({
+      consultation_reference: normalizeReference(reference),
+      lot_number: cleanOrNull(fields.lotNumber) ?? String(index + 1),
+      designation: cleanOrNull(fields.designation ?? fields.objet),
+      attributaire: cleanOrNull(fields.attributaire),
+      attributaire_ice: cleanOrNull(fields.attributaireIce),
+      montant_cents: parseAmountToCentimes(fields.montantAttribue),
+      lot_status: normalizeResultStatus(fields.resultStatus ?? fields.attributaire),
+      nombre_offres: Number.parseInt(clean(fields.nombreOffres), 10) || null,
+      raw_json: JSON.stringify(fields),
+      created_at: timestamp,
+      updated_at: timestamp,
     })
-    if (lots.length > 0) break
-  }
+  })
 
   return lots
 }
@@ -116,7 +113,7 @@ export function parseResultLots($, reference) {
  * consultation parser — it is the foreign key the matcher joins on.
  * @returns {object|null} null when no reference can be recovered.
  */
-export function toResultRecord(fields, { detailUrl = null, sourceUrl = null } = {}) {
+export function toResultRecord(fields, { detailUrl = null, sourceUrl = null, statusLabel = null } = {}) {
   const referenceRaw = cleanOrNull(fields.reference)
   const reference = referenceRaw ? normalizeReference(referenceRaw) : extractReference(fields.objet ?? '')
   if (!reference) return null
@@ -139,7 +136,8 @@ export function toResultRecord(fields, { detailUrl = null, sourceUrl = null } = 
     montant_attribue_cents: parseAmountToCentimes(fields.montantAttribue),
     currency: config.invoice.currency,
     nombre_offres: Number.parseInt(clean(fields.nombreOffres), 10) || null,
-    result_status: normalizeResultStatus(fields.resultStatus) ?? (fields.attributaire ? 'attribue' : null),
+    result_status:
+      normalizeResultStatus(fields.resultStatus ?? statusLabel) ?? (fields.attributaire ? 'attribue' : null),
     detail_url: detailUrl,
     source_url: sourceUrl,
     raw_json: JSON.stringify(fields),

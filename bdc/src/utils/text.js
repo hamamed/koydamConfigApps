@@ -34,10 +34,20 @@ export function extractReference(value) {
   return match ? normalizeReference(match[1]) : null
 }
 
-/** Splits "Label : value" cells into a [label, value] pair. */
+/**
+ * Splits "Label : value" text into a [label, value] pair.
+ *
+ * Colons inside a time are skipped: the portal prints deadlines as
+ * "Date limite de réception des devis 02/10/2026 15:00", and splitting on the
+ * colon in "15:00" yields the label "…devis 02/10/2026 15" and the value "00".
+ * That silently produced an unparseable date rather than an obvious error.
+ */
 export function splitLabelled(value) {
   const cleaned = clean(value)
-  const index = cleaned.indexOf(':')
-  if (index === -1) return [null, cleaned]
-  return [cleaned.slice(0, index).trim(), cleaned.slice(index + 1).trim()]
+  for (let index = cleaned.indexOf(':'); index !== -1; index = cleaned.indexOf(':', index + 1)) {
+    const isTime = /\d/.test(cleaned[index - 1] ?? '') && /\d/.test(cleaned[index + 1] ?? '')
+    if (isTime) continue
+    return [cleaned.slice(0, index).trim(), cleaned.slice(index + 1).trim()]
+  }
+  return [null, cleaned]
 }

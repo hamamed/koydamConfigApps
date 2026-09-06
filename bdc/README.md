@@ -97,35 +97,60 @@ attaching the wrong award to a consultation would corrupt downstream invoices.
 
 ## Scraper design
 
-The portal's DOM changes regularly, so **no positional selectors** are used.
-Instead `selectors.js` maps the *French label* printed in a table header or a
-`Label : value` cell onto a canonical field name:
+Both listings — open consultations and results — are Bootstrap **cards**
+(`.entreprise__card`), ten to a page, not tables. Nothing here relies on
+positional selectors. `selectors.js` maps the *French label* onto a canonical
+field name, and `listParser.js` reads that label in the three shapes the portal
+mixes on the same page:
 
-```js
-dateLimite: ['date limite de remise des plis', 'date limite', 'date de cloture', ...]
+```
+inline    <div><span>Acheteur :</span> COMMUNE MAGHRAOUA</div>
+siblings  <span>Lieu d'exécution</span><span>AL HOCEIMA</span>
+wrapped   <div>Caractéristiques et spécifications <span>…</span></div>
 ```
 
-Column reorders and class renames are therefore harmless; a new label is a
-one-line addition to `FIELD_SYNONYMS`. Matching is whole-word to stop short
-synonyms (`u` for *unité*) swallowing unrelated headers.
+A new label is a one-line addition to `FIELD_SYNONYMS`; a class rename or a
+reordered column is harmless.
 
-Other properties:
+### What lives where
 
-- **Politeness** — configurable delay between requests, bounded concurrency on
-  detail pages, retry with exponential backoff on 429/5xx only.
-- **Session** — the portal issues a Symfony session cookie on the first GET and
-  expects it back on paginated requests; the client keeps a cookie jar.
-- **Idempotency** — rows are upserted on `reference`. An incoming scrape is
-  merged onto the stored row before hashing, so a sparse listing pass never
-  erases richer detail-page fields, and unchanged rows are detected by hash
-  instead of being rewritten.
+The listing card carries only reference, objet, acheteur, deadline and location.
+**Category, nature of service and publication date exist only on the detail
+page**, so a listing-only crawl leaves them null rather than inventing them.
+Results are the opposite — winner, amount and number of quotes received are all
+on the card, and there is no detail page to follow.
 
-> **Before the first production run**, verify `src/scraper/selectors.js` against
-> the live HTML. The parsers are validated against the fixtures in
-> `tests/fixtures/`, which reproduce the documented table structure — but the
-> live labels are the contract, and only a live run confirms them. Start with
-> `npm run scrape -- --source=consultations --max-pages=1` and inspect the
-> resulting rows.
+Articles are an accordion on the detail page, with unit, quantity, VAT rate and
+required warranties — but **no unit price**. These are calls for quotes: the
+supplier proposes the price, which is exactly what the invoice generator asks
+for.
+
+### Things that bit, and are now tested
+
+- **The WAF.** The portal answers `403` to any User-Agent that does not look like
+  a browser. `SCRAPER_USER_AGENT` is a browser string with our own identity
+  appended, so the crawler stays attributable. A 403 is raised, never parsed as
+  an empty page — silently emptying the catalogue is the worse failure.
+- **Colons inside times.** "…des devis 02/10/2026 15:00" split on the colon in
+  `15:00`, producing the label "…devis 02/10/2026 15" and the value "00". Deadlines
+  parsed as null with no error.
+- **Values that quote their own field name.** A real cancellation motive reads
+  "changement de la date limite pour la réception des devis". Read as a label, it
+  made the parser store the *next* block as the deadline. Labels lead with their
+  name and are short; sentences are neither.
+- **Cancellations are a real state.** An avis can be published then withdrawn,
+  with a date and a reason; `status` becomes `annule`.
+- **Unsuccessful awards.** An avis with no winner prints "Avis d'achat
+  infructueux" in the award panel rather than in a labelled field.
+
+Other properties: politeness delay between requests, bounded concurrency on
+detail pages, retry with exponential backoff on 429/5xx only, a cookie jar for
+the portal session, and upserts keyed on `reference` that merge onto the stored
+row so a sparse listing pass never erases richer detail-page fields.
+
+> Every fixture under `tests/fixtures/live-*.html` is a page captured from the
+> live portal, so the suite encodes the real markup contract. When the portal
+> changes, re-capture a page and the failing assertion tells you what moved.
 
 ## Filters
 

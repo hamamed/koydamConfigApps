@@ -4,24 +4,27 @@ import { createApp } from '../src/app.js'
 import { createHttpClient } from '../src/scraper/httpClient.js'
 import { createTestContainer, createFetchStub, fixture, startTestServer } from './helpers.js'
 
-const REFERENCE = encodeURIComponent('AOO12/2026')
+// 53/2026 appears on both captured listings, so it is the consultation that has
+// a matched award, a full article breakdown, and a category.
+const REFERENCE = encodeURIComponent('53/2026')
 
 /** Boots the API over an in-memory database pre-filled from the HTML fixtures. */
 async function setup() {
   const http = createHttpClient({
     fetchImpl: createFetchStub([
-      [/consultation\/detail\/884512/, fixture('consultation-detail.html')],
-      [/consultation\/detail\/884513/, fixture('consultation-detail-2.html')],
-      [/resultat\/detail\//, fixture('result-detail.html')],
-      [/consultation\/resultat/, fixture('results-page1.html')],
-      [/page=2/, fixture('consultations-page2.html')],
-      [/consultation\//, fixture('consultations-page1.html')],
+      [/consultation\/show\//, fixture('live-consultation-detail.html')],
+      [/consultation\/resultat/, fixture('live-results-matching.html')],
+      [/page=2/, fixture('live-consultations-empty.html')],
+      [/consultation\//, fixture('live-consultations.html')],
     ]),
     delayMs: 0,
   })
 
   const container = await createTestContainer({ http })
-  await container.runner.run({ source: 'all', maxPages: 5, fetchDetails: true })
+  await container.runner.run({ source: 'all', maxPages: 2, fetchDetails: false })
+  // The stub serves one detail page, so only its consultation gets articles.
+  const withArticles = await container.repositories.consultations.findByReference('53/2026')
+  await container.runner.consultationScraper.scrapeDetail(withArticles)
   await container.services.auth.register({
     email: 'admin@test.ma',
     password: 'a-very-long-test-password',
@@ -40,35 +43,41 @@ test('applies the portal filter parameters', async (t) => {
   t.after(() => api.close())
 
   const all = await api.request('GET', '/api/consultations')
-  assert.equal(all.body.meta.total, 2)
+  assert.equal(all.body.meta.total, 10)
 
   const byBuyer = await api.request(
     'GET',
-    '/api/consultations?search_consultation_resultats[acheteur]=Conservation',
+    '/api/consultations?search_consultation_resultats[acheteur]=KHENIFRA',
   )
   assert.equal(byBuyer.body.data.length, 1)
-  assert.equal(byBuyer.body.data[0].reference, 'AOO12/2026')
+  assert.equal(byBuyer.body.data[0].reference, '53/2026')
 
   // Flat aliases are equivalent to the nested portal form names.
-  const flat = await api.request('GET', '/api/consultations?categorie=Travaux&lieuExecution=Casablanca')
+  const flat = await api.request('GET', '/api/consultations?acheteur=IZEMMOUREN')
   assert.equal(flat.body.data.length, 1)
-  assert.equal(flat.body.data[0].reference, 'BC45/2026')
+  assert.equal(flat.body.data[0].reference, '6/2026')
 
-  const byNature = await api.request(
+  const byCategory = await api.request(
     'GET',
-    '/api/consultations?search_consultation_resultats[naturePrestation]=Achat',
+    '/api/consultations?search_consultation_resultats[categorie]=Fournitures',
   )
-  assert.equal(byNature.body.data.length, 1)
+  assert.equal(byCategory.body.data.length, 1, 'only the detail-scraped row has a category')
 
-  const byDateRange = await api.request(
+  const byLocation = await api.request(
     'GET',
-    '/api/consultations?datePublicationStart=2026-05-13&datePublicationEnd=2026-05-31',
+    '/api/consultations?search_consultation_resultats[lieuExecution]=HOCEIMA',
   )
-  assert.equal(byDateRange.body.data.length, 1)
-  assert.equal(byDateRange.body.data[0].reference, 'BC45/2026')
+  assert.equal(byLocation.body.data.length, 1)
 
-  const byReference = await api.request('GET', '/api/consultations?search_consultation_resultats[reference]=AOO 12/2026')
+  const byReference = await api.request('GET', '/api/consultations?search_consultation_resultats[reference]=53/2026')
   assert.equal(byReference.body.data.length, 1)
+
+  const byDeadline = await api.request('GET', '/api/consultations?dateLimiteStart=2027-01-01')
+  assert.equal(byDeadline.body.data.length, 1)
+  assert.equal(byDeadline.body.data[0].reference, '6/2026')
+
+  const freeText = await api.request('GET', '/api/consultations?q=pièces de rechange')
+  assert.equal(freeText.body.data.length, 1, 'free text search is accent insensitive')
 
   const noMatch = await api.request('GET', '/api/consultations?acheteur=Inexistant')
   assert.equal(noMatch.body.meta.total, 0)
@@ -95,12 +104,15 @@ test('returns a consultation with its articles and matched award', async (t) => 
 
   const { status, body } = await api.request('GET', `/api/consultations/${REFERENCE}`)
   assert.equal(status, 200)
-  assert.equal(body.data.reference, 'AOO12/2026')
-  assert.equal(body.data.articles.length, 3)
-  assert.equal(body.data.articles[0].unit_price, 9500)
-  assert.equal(body.data.result.attributaire, 'SOCIETE TECHNO SARL')
-  assert.equal(body.data.result.montant_attribue, 1_180_400)
-  assert.equal(body.data.result.lots.length, 3)
+  assert.equal(body.data.reference, '53/2026')
+  assert.equal(body.data.acheteur, 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA')
+  assert.equal(body.data.categorie, 'Fournitures')
+  assert.equal(body.data.articles.length, 19)
+  assert.equal(body.data.articles[0].designation, 'CÂBLE PNI avec brassard')
+  assert.equal(body.data.articles[0].quantity, 25)
+  assert.equal(body.data.articles[0].unit, 'unité')
+  assert.equal(body.data.result.attributaire, "STE AMALIA DES ETOILES D'OR")
+  assert.equal(body.data.result.montant_attribue, 8064)
 
   // Internal columns never leave the API.
   assert.equal(body.data.search_text, undefined)
@@ -119,29 +131,29 @@ test('favorites require authentication and carry the award through', async (t) =
 
   const added = await api.request('POST', '/api/favorites', {
     token: api.token,
-    body: { reference: 'AOO 12/2026', note: 'À préparer', tags: ['informatique'] },
+    body: { reference: '53/2026', note: 'À préparer', tags: ['informatique'] },
   })
   assert.equal(added.status, 201)
-  assert.equal(added.body.data.consultation_reference, 'AOO12/2026')
+  assert.equal(added.body.data.consultation_reference, '53/2026')
 
   const list = await api.request('GET', '/api/favorites', { token: api.token })
   assert.equal(list.body.meta.total, 1)
-  assert.equal(list.body.data[0].objet, 'Acquisition de matériel informatique pour les services centraux')
+  assert.match(list.body.data[0].objet, /pièces de rechanges/)
   assert.equal(list.body.data[0].favorite.note, 'À préparer')
   assert.deepEqual(list.body.data[0].favorite.tags, ['informatique'])
-  assert.equal(list.body.data[0].result.attributaire, 'SOCIETE TECHNO SARL')
+  assert.equal(list.body.data[0].result.attributaire, "STE AMALIA DES ETOILES D'OR")
   assert.equal(list.body.data[0].isFavorite, true)
 
   // Adding twice updates the note instead of failing.
-  await api.request('POST', '/api/favorites', { token: api.token, body: { reference: 'AOO12/2026', note: 'Revu' } })
+  await api.request('POST', '/api/favorites', { token: api.token, body: { reference: '53/2026', note: 'Revu' } })
   const afterRepeat = await api.request('GET', '/api/favorites', { token: api.token })
   assert.equal(afterRepeat.body.meta.total, 1)
   assert.equal(afterRepeat.body.data[0].favorite.note, 'Revu')
 
   // The main listing reports favourite state for signed-in callers.
   const listing = await api.request('GET', '/api/consultations', { token: api.token })
-  assert.equal(listing.body.data.find((row) => row.reference === 'AOO12/2026').isFavorite, true)
-  assert.equal(listing.body.data.find((row) => row.reference === 'BC45/2026').isFavorite, false)
+  assert.equal(listing.body.data.find((row) => row.reference === '53/2026').isFavorite, true)
+  assert.equal(listing.body.data.find((row) => row.reference === '6/2026').isFavorite, false)
 
   const unknown = await api.request('POST', '/api/favorites', { token: api.token, body: { reference: 'NOPE/1' } })
   assert.equal(unknown.status, 404)
@@ -156,20 +168,22 @@ test('generates an invoice from selected articles and renders it as a PDF', asyn
   t.after(() => api.close())
 
   const articles = (await api.request('GET', `/api/consultations/${REFERENCE}/articles`)).body.data
-  assert.equal(articles.length, 3)
+  assert.equal(articles.length, 19)
+  assert.equal(articles[0].unit_price, null, 'the portal publishes no prices — the supplier quotes them')
 
   const created = await api.request('POST', '/api/invoices', {
     token: api.token,
     body: {
-      consultationReference: 'AOO 12/2026',
-      client: { name: 'SOCIETE TECHNO SARL', ice: '001234567000045', address: 'Rabat' },
+      consultationReference: '53/2026',
+      client: { name: 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA', ice: '001234567000045', address: 'Khénifra' },
       items: [
-        { articleId: articles[0].id, quantity: 120, unitPrice: 9500 },
-        { articleId: articles[1].id, quantity: 35 },
-        { designation: 'Installation et mise en service', quantity: 1, unitPrice: 15_000 },
+        // No quantity: it falls back to the 25 units the portal published.
+        { articleId: articles[0].id, unitPrice: 450 },
+        { articleId: articles[1].id, quantity: 10, unitPrice: 300 },
+        { designation: 'Installation et mise en service', quantity: 1, unitPrice: 1500 },
       ],
       taxRate: 20,
-      notes: 'Livraison sous 60 jours.',
+      notes: 'Livraison sous 30 jours.',
     },
   })
 
@@ -177,13 +191,15 @@ test('generates an invoice from selected articles and renders it as a PDF', asyn
   const invoice = created.body.data
   assert.match(invoice.invoice_number, /^FCT-\d{4}-0001$/)
   assert.equal(invoice.items.length, 3)
+  assert.equal(invoice.items[0].quantity, 25, 'quantity falls back to the scraped article')
+  assert.equal(invoice.items[0].designation, 'CÂBLE PNI avec brassard')
+  assert.equal(invoice.items[0].unit, 'unité')
 
-  // 120 x 9 500 + 35 x 4 250,50 + 15 000 = 1 303 767,50 HT
-  assert.equal(invoice.subtotal, 1_303_767.5)
-  assert.equal(invoice.tax, 260_753.5)
-  assert.equal(invoice.total, 1_564_521)
-  assert.equal(invoice.consultation_reference, 'AOO12/2026')
-  assert.equal(invoice.items[1].unit_price, 4250.5, 'unit price falls back to the scraped article price')
+  // 25 x 450 + 10 x 300 + 1 500 = 15 750 HT
+  assert.equal(invoice.subtotal, 15_750)
+  assert.equal(invoice.tax, 3_150)
+  assert.equal(invoice.total, 18_900)
+  assert.equal(invoice.consultation_reference, '53/2026')
 
   const pdf = await api.request('GET', `/api/invoices/${invoice.id}/pdf`, { token: api.token, raw: true })
   assert.equal(pdf.status, 200)
@@ -204,16 +220,21 @@ test('rejects invalid invoice payloads', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
+  const articles = (await api.request('GET', `/api/consultations/${REFERENCE}/articles`)).body.data
+
   const cases = [
     [{ client: { name: 'X' }, items: [] }, /At least one invoice item/],
     [{ client: { name: '' }, items: [{ designation: 'A', quantity: 1, unitPrice: 1 }] }, /client.name is required/],
     [{ client: { name: 'X' }, items: [{ designation: 'A', quantity: 0, unitPrice: 1 }] }, /positive number/],
     [{ client: { name: 'X' }, items: [{ designation: 'A', quantity: 1, unitPrice: -5 }] }, /non-negative/],
-    [{ client: { name: 'X' }, items: [{ articleId: 9999, quantity: 1, unitPrice: 1 }] }, /Unknown article ids/],
+    [{ client: { name: 'X' }, items: [{ articleId: 99_999, quantity: 1, unitPrice: 1 }] }, /Unknown article ids/],
     [
       { client: { name: 'X' }, items: [{ designation: 'A', quantity: 1, unitPrice: 10 }], taxRate: 250 },
       /taxRate must be a percentage/,
     ],
+    // The portal never publishes a price, so an article alone cannot be billed:
+    // the caller has to supply what the supplier quoted.
+    [{ client: { name: 'X' }, items: [{ articleId: articles[0].id, quantity: 1 }] }, /non-negative amount/],
   ]
 
   for (const [body, expected] of cases) {
@@ -223,11 +244,14 @@ test('rejects invalid invoice payloads', async (t) => {
   }
 
   // An article belonging to another consultation cannot be invoiced here.
-  const foreign = (await api.request('GET', `/api/consultations/${encodeURIComponent('BC45/2026')}/articles`)).body.data
+  const other = await api.container.repositories.consultations.findByReference('6/2026')
+  await api.container.runner.consultationScraper.scrapeDetail(other)
+  const foreign = (await api.request('GET', `/api/consultations/${encodeURIComponent('6/2026')}/articles`)).body.data
+
   const mismatch = await api.request('POST', '/api/invoices', {
     token: api.token,
     body: {
-      consultationReference: 'AOO12/2026',
+      consultationReference: '53/2026',
       client: { name: 'X' },
       items: [{ articleId: foreign[0].id, quantity: 1, unitPrice: 10 }],
     },
@@ -244,10 +268,11 @@ test('protects the admin API and exposes dashboard counters', async (t) => {
 
   const dashboard = await api.request('GET', '/admin/api/dashboard', { token: api.token })
   assert.equal(dashboard.status, 200)
-  assert.equal(dashboard.body.data.counts.consultations, 2)
-  assert.equal(dashboard.body.data.counts.results, 2)
-  assert.equal(dashboard.body.data.counts.unmatchedResults, 1)
-  assert.equal(dashboard.body.data.matchRate, 50)
+  assert.equal(dashboard.body.data.counts.consultations, 10)
+  assert.equal(dashboard.body.data.counts.results, 10)
+  assert.equal(dashboard.body.data.counts.articles, 19)
+  assert.equal(dashboard.body.data.counts.unmatchedResults, 9)
+  assert.equal(dashboard.body.data.matchRate, 10)
 
   // A regular user must not reach the admin API.
   await api.container.services.auth.register({ email: 'user@test.ma', password: 'another-long-password' })
@@ -259,7 +284,7 @@ test('protects the admin API and exposes dashboard counters', async (t) => {
 
   const rematch = await api.request('POST', '/admin/api/rematch', { token: api.token })
   assert.equal(rematch.status, 200)
-  assert.equal(rematch.body.data.unmatchedResults, 1)
+  assert.equal(rematch.body.data.unmatchedResults, 9)
 })
 
 test('does not leak whether an email exists on failed login', async (t) => {
