@@ -18,7 +18,7 @@ export function createTranslationService({ consultations, articles, translations
    * @returns {Promise<{locale, model, articles: Array, translated: number, cached: number}>}
    */
   async function translateConsultation(consultationId, locale) {
-    if (!translator.isConfigured()) {
+    if (!(await translator.isConfigured())) {
       throw new ValidationError('Translation is not configured on this server')
     }
     if (!isSupported(locale)) throw new ValidationError(`Unsupported language: ${locale}`)

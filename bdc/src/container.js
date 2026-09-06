@@ -36,7 +36,7 @@ import { createMailer } from './notifications/mailer.js'
  * @param {object} [db] database driver.
  * @param {{http?: object}} [overrides] e.g. a stubbed HTTP client for tests.
  */
-export function createContainer(db = getDb(), { http, mailer = createMailer(), translator = createTranslator() } = {}) {
+export function createContainer(db = getDb(), { http, mailer = createMailer(), translator } = {}) {
   const repositories = {
     consultations: createConsultationRepository(db),
     articles: createArticleRepository(db),
@@ -55,6 +55,10 @@ export function createContainer(db = getDb(), { http, mailer = createMailer(), t
   }
 
   const settings = createSettingsService(repositories)
+  // Reads the key per request, so one saved in the panel works on the next
+  // translation rather than on the next restart.
+  const translationClient =
+    translator ?? createTranslator({ resolve: async () => ({ apiKey: await settings.get('translation.googleApiKey') }) })
   const runner = createScraperRunner({ db, ...repositories, settings, ...(http ? { http } : {}) })
 
   const auth = createAuthService(repositories)
@@ -74,7 +78,7 @@ export function createContainer(db = getDb(), { http, mailer = createMailer(), t
       baseUrl,
     }),
     passwordReset: createPasswordResetService({ ...repositories, auth, mailer, baseUrl }),
-    translation: createTranslationService({ ...repositories, translator }),
+    translation: createTranslationService({ ...repositories, translator: translationClient }),
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
   }

@@ -34,9 +34,23 @@ const decodeEntities = (text) =>
     .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity])
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
 
+/**
+ * @param {object} [options]
+ * @param {() => Promise<{apiKey: string}>} [options.resolve] reads the current
+ *   key. Called per request, so a key saved in the panel takes effect on the
+ *   next translation rather than on the next restart.
+ */
 export function createTranslator(options = {}) {
-  const settings = { ...config.translation, ...options }
-  const fetchImpl = settings.fetchImpl ?? globalThis.fetch
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch
+  const resolve =
+    options.resolve ??
+    (async () => ({ apiKey: options.apiKey ?? config.translation.apiKey }))
+
+  const current = async () => {
+    const resolved = await resolve()
+    const apiKey = String(resolved?.apiKey ?? '').trim()
+    return { apiKey, enabled: options.enabled ?? Boolean(apiKey) }
+  }
 
   /**
    * @param {Array<{id: number, designation: string, description: string|null}>} articles
@@ -44,6 +58,7 @@ export function createTranslator(options = {}) {
    * @returns {Promise<{translations: Array<{id, designation, description}>, model: string}>}
    */
   async function translate(articles, target) {
+    const settings = await current()
     if (!settings.enabled) throw new Error('Translation is not configured')
     if (!LANGUAGES.has(target)) throw new Error(`Unsupported language: ${target}`)
 
@@ -60,7 +75,7 @@ export function createTranslator(options = {}) {
 
     const translated = new Map()
     for (const batch of batches(segments)) {
-      const results = await translateBatch(batch.map((segment) => segment.text), target)
+      const results = await translateBatch(batch.map((segment) => segment.text), target, settings.apiKey)
       batch.forEach((segment, index) => {
         translated.set(`${segment.id}:${segment.field}`, results[index] ?? segment.text)
       })
@@ -92,15 +107,16 @@ export function createTranslator(options = {}) {
     if (current.length > 0) yield current
   }
 
-  async function translateBatch(texts, target) {
-    const response = await fetchImpl(`${ENDPOINT}?key=${encodeURIComponent(settings.apiKey)}`, {
+  async function translateBatch(texts, target, apiKey) {
+    const response = await fetchImpl(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: texts, target, format: 'text' }),
     })
 
     if (!response.ok) {
-      // The API puts the useful part in the body, not the status line.
+      // The API puts the useful part in the body, not the status line. The key
+      // is in the URL, so nothing from the request is echoed into the message.
       const detail = await response.text().catch(() => '')
       const message = safeParse(detail)?.error?.message ?? `HTTP ${response.status}`
       throw new Error(`Google Translate refused the request: ${message}`)
@@ -124,5 +140,7 @@ export function createTranslator(options = {}) {
     }
   }
 
-  return { translate, isConfigured: () => settings.enabled, model: 'google-translate-v2' }
+  const isConfigured = async () => (await current()).enabled
+
+  return { translate, isConfigured, model: 'google-translate-v2' }
 }

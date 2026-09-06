@@ -145,7 +145,7 @@ export function panelRoutes({ services }) {
         active: 'projects',
         consultation,
         favorite,
-        canTranslate: services.translation.isConfigured(),
+        canTranslate: await services.translation.isConfigured(),
       }))
     }),
   )
@@ -341,7 +341,11 @@ export function panelRoutes({ services }) {
     adminOnly,
     asyncHandler(async (req, res) => {
       try {
-        await services.settings.update(req.body, req.user.id)
+        // `clear` carries the keys whose "erase" box was ticked; a checkbox
+        // group arrives as a string when one is ticked and an array when more.
+        const { clear, ...values } = req.body
+        const cleared = clear === undefined ? [] : Array.isArray(clear) ? clear : [clear]
+        await services.settings.update(values, req.user.id, { clear: cleared })
         res.redirect(`/panel/settings?saved=1&lang=${req.locale}`)
       } catch (error) {
         res.status(400).render('panel/settings', await shell(req, {

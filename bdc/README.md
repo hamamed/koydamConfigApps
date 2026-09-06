@@ -333,9 +333,17 @@ avis is identified and a translated buyer name is not searchable against the
 portal.
 
 It uses the **Google Cloud Translation API** (v2, API-key auth — v3 needs a
-service account). Set `GOOGLE_TRANSLATE_API_KEY` in `.env`: enable *Cloud
-Translation API* in the Google Cloud console, create an API key, and restrict it
-to that API.
+service account). Enable *Cloud Translation API* in the Google Cloud console,
+create an API key, restrict it to that API, and paste it into
+**Settings → Translation**. `GOOGLE_TRANSLATE_API_KEY` in `.env` still works and
+is used when nothing is stored, so an existing deployment keeps running.
+
+The key is read on every request, so saving one takes effect on the next
+translation rather than the next restart. It is **write-only**: the field renders
+empty, `describe()` reports only whether a key is set and never its value, and
+nothing puts it in the page, the JSON API or the log. An empty submission means
+*no change* — the field is empty on every load, so treating it as "erase" would
+wipe the key on any save that did not retype it — and erasing is a separate tick.
 
 Two details the API makes you handle:
 
@@ -465,12 +473,15 @@ delay, timeout and user agent before each request, and the invoice defaults and
 the issuer block on the PDF are read at generation time.
 
 Covered: site name and default language; crawler page cap, page size, delay,
-detail concurrency, retries, timeout and user agent; invoice currency, VAT rate
-and numbering prefix; and the issuer block printed on invoices.
+detail concurrency, retries, timeout and user agent; the Google Translate key;
+invoice currency, VAT rate and numbering prefix; and the issuer block printed on
+invoices.
 
-**Secrets are deliberately not settings.** `JWT_SECRET` and the database
-credentials stay in `.env`, where they are not one careless form submit away from
-being changed by anyone who reaches the panel.
+**`JWT_SECRET` and the database credentials are deliberately not settings** —
+a careless edit there locks everyone out or points the app at another database,
+so they stay in `.env`. The Google Translate key is the one exception: it is a
+spending credential rather than one the app's own security rests on, and it is
+handled as write-only (above).
 
 ## Scraper CLI
 

@@ -10,6 +10,9 @@
   <% groups.forEach(function (group) { %>
     <div class="card">
       <h2><%= t('settings.group.' + group.group) %></h2>
+      <% if (group.group === 'translation') { %>
+        <p class="muted" style="margin:-6px 0 14px; font-size:12px"><%= t('settings.group.translationHint') %></p>
+      <% } %>
       <div class="cols-2">
         <% group.entries.forEach(function (entry) { %>
           <div>
@@ -28,13 +31,32 @@
                   <option value="<%= option %>" <%= String(entry.value) === option ? 'selected' : '' %>><%= option %></option>
                 <% }) %>
               </select>
+            <% } else if (entry.type === 'secret') { %>
+              <%/* Never rendered back. The field is always empty; an empty
+                   submission means "no change", and erasing is its own tick. */%>
+              <input id="<%= entry.key %>" name="<%= entry.key %>" type="password" autocomplete="off"
+                     dir="ltr" placeholder="<%= t('settings.secret.placeholder') %>">
+              <p class="muted" style="margin:6px 0 0; font-size:11.5px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+                <% if (entry.isSet) { %>
+                  <span class="pill ok"><%- include('../partials/icon', { name: 'circle-check', size: 12 }) %>
+                    <%= entry.fromEnvironment ? t('settings.secret.fromEnv') : t('settings.secret.set') %></span>
+                  <label style="display:flex; gap:5px; align-items:center; margin:0; font-size:11.5px">
+                    <input type="checkbox" name="clear" value="<%= entry.key %>" style="width:auto"> <%= t('settings.secret.clear') %>
+                  </label>
+                <% } else { %>
+                  <span class="pill warn"><%= t('settings.secret.none') %></span>
+                <% } %>
+                <span><%= t('settings.secret.unchanged') %></span>
+              </p>
             <% } else if (entry.type === 'number') { %>
               <input id="<%= entry.key %>" name="<%= entry.key %>" type="number" value="<%= entry.value %>"
                      min="<%= entry.min %>" max="<%= entry.max %>" dir="ltr">
             <% } else { %>
               <input id="<%= entry.key %>" name="<%= entry.key %>" value="<%= entry.value %>" dir="ltr">
             <% } %>
-            <small class="muted" style="font-size:11.5px"><%= t('settings.default', { value: String(entry.fallback) }) %></small>
+            <% if (entry.type !== 'secret') { %>
+              <small class="muted" style="font-size:11.5px"><%= t('settings.default', { value: String(entry.fallback) }) %></small>
+            <% } %>
           </div>
         <% }) %>
       </div>

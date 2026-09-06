@@ -173,9 +173,16 @@ test('settings are stored, applied, and fall back when cleared', async (t) => {
   })
   assert.equal(await api.container.settings.get('scraper.maxPages'), 50)
 
-  // Secrets are not exposed as settings.
-  const described = JSON.stringify(await api.container.settings.describe())
-  assert.doesNotMatch(described, /jwt|secret|password|DATABASE_URL/i)
+  // The app's own credentials are not settings at all.
+  const groups = await api.container.settings.describe()
+  const keys = groups.flatMap((group) => group.entries.map((entry) => entry.key))
+  assert.ok(!keys.some((key) => /jwtSecret|databaseUrl|password/i.test(key)))
+
+  // The one secret that is a setting never reports its value.
+  const secret = groups.flatMap((g) => g.entries).find((entry) => entry.type === 'secret')
+  assert.ok(secret, 'the Google key is configurable')
+  assert.equal(secret.value, null)
+  assert.equal(secret.fallback, null)
 })
 
 test('an administrator manages accounts but cannot lock everyone out', async (t) => {
@@ -975,4 +982,84 @@ test('the signed-out pages carry a background pattern', async (t) => {
   const arabic = await (await fetch(`${api.base}/login?lang=ar`)).text()
   assert.match(arabic, /body\[dir="rtl"\]::before/)
   assert.match(arabic, /repeating-linear-gradient\(45deg/)
+})
+
+test('the translate key is set from Settings, and never read back', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const describe = async () =>
+    (await api.container.settings.describe())
+      .flatMap((group) => group.entries)
+      .find((entry) => entry.key === 'translation.googleApiKey')
+
+  assert.equal((await describe()).isSet, false)
+
+  const save = (body) =>
+    fetch(`${api.base}/admin/api/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', cookie: api.admin },
+      body: JSON.stringify(body),
+    })
+
+  assert.equal((await save({ 'translation.googleApiKey': 'AIza-secret-value' })).status, 200)
+
+  // Stored and usable...
+  assert.equal(await api.container.settings.get('translation.googleApiKey'), 'AIza-secret-value')
+  assert.equal(await api.container.services.translation.isConfigured(), true)
+
+  // ...but never handed back. A field that renders the key is a field that
+  // leaks it to anyone who views source, and into every error report after.
+  const entry = await describe()
+  assert.equal(entry.isSet, true)
+  assert.equal(entry.value, null)
+  assert.doesNotMatch(JSON.stringify(await api.container.settings.describe()), /AIza-secret-value/)
+
+  const page = await (await api.page('/panel/settings', api.admin)).text()
+  assert.doesNotMatch(page, /AIza-secret-value/, 'not in the rendered page either')
+  assert.match(page, /type="password"/)
+
+  // An empty submission means "no change" — the field is empty on every load,
+  // so treating it as "erase" would wipe the key on any save that did not
+  // retype it.
+  await save({ 'translation.googleApiKey': '', 'site.name': 'Untouched' })
+  assert.equal(await api.container.settings.get('translation.googleApiKey'), 'AIza-secret-value')
+  assert.equal(await api.container.settings.get('site.name'), 'Untouched')
+
+  // Erasing is its own explicit action.
+  await fetch(`${api.base}/panel/settings`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', cookie: api.admin },
+    body: new URLSearchParams({ clear: 'translation.googleApiKey' }),
+  })
+  assert.equal(await api.container.settings.get('translation.googleApiKey'), '')
+  assert.equal((await describe()).isSet, false)
+})
+
+test('a key saved in the panel works without a restart', async (t) => {
+  const requests = []
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const { createTranslator } = await import('../src/translation/translator.js')
+
+  const container = await fresh({})
+  // The real wiring: the translator asks the settings service for the key on
+  // every call, so saving one takes effect on the next translation.
+  const translator = createTranslator({
+    resolve: async () => ({ apiKey: await container.settings.get('translation.googleApiKey') }),
+    fetchImpl: async (url, init) => {
+      requests.push(String(url))
+      const body = JSON.parse(init.body)
+      return { ok: true, json: async () => ({ data: { translations: body.q.map((q) => ({ translatedText: q })) } }) }
+    },
+  })
+
+  assert.equal(await translator.isConfigured(), false)
+  await assert.rejects(() => translator.translate([{ id: 1, designation: 'x' }], 'en'), /not configured/)
+
+  await container.settings.update({ 'translation.googleApiKey': 'AIza-live' }, null)
+
+  assert.equal(await translator.isConfigured(), true)
+  await translator.translate([{ id: 1, designation: 'Rame de papier' }], 'en')
+  assert.match(requests[0], /key=AIza-live/)
 })

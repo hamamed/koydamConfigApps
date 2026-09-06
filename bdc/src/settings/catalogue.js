@@ -5,11 +5,18 @@ import { config } from '../config/index.js'
  *
  * A setting lives in the database and falls back to its environment default, so
  * the box keeps working with an empty table and a value can always be reset by
- * clearing the field. Secrets are deliberately absent: JWT_SECRET and
- * DATABASE_URL stay in `.env`, where they are not one careless form submit away
- * from being changed by anyone who reaches the panel.
+ * clearing the field.
+ *
+ * One `secret` entry is allowed: the Google Translate key. It is a spending
+ * credential — leaking it costs money — which is a different class of thing from
+ * JWT_SECRET or DATABASE_URL, where a careless edit locks everyone out or points
+ * the app at another database. Those two stay in `.env`.
+ *
+ * A secret is never read back: `describe()` reports only whether one is set, an
+ * empty submission means "leave it alone" rather than "erase it", and clearing
+ * one is a separate, explicit action.
  */
-export const GROUPS = ['site', 'scraper', 'invoice', 'company']
+export const GROUPS = ['site', 'scraper', 'translation', 'invoice', 'company']
 
 const number = (min, max) => ({ type: 'number', min, max })
 
@@ -44,6 +51,15 @@ export const CATALOGUE = Object.freeze([
   // here does not move the timer.
   { key: 'scraper.dailyRunAt', group: 'scraper', type: 'string', fallback: () => '05:30' },
   { key: 'scraper.dailySinceDays', group: 'scraper', ...number(1, 60), fallback: () => 7 },
+
+  {
+    key: 'translation.googleApiKey',
+    group: 'translation',
+    type: 'secret',
+    // Falls back to the environment, so a key already in .env keeps working and
+    // the panel can take over from it later.
+    fallback: () => config.translation.apiKey,
+  },
 
   { key: 'invoice.currency', group: 'invoice', type: 'string', fallback: () => config.invoice.currency },
   { key: 'invoice.taxRate', group: 'invoice', ...number(0, 100), fallback: () => config.invoice.taxRate },
@@ -81,6 +97,11 @@ export function coerce(definition, raw) {
         throw new Error(`${definition.key} must be one of ${definition.options.join(', ')}`)
       }
       return String(raw)
+    case 'secret':
+      // Not trimmed the way a plain string is — a key is used verbatim, and
+      // silently altering one produces an authentication error nobody can
+      // explain. Surrounding whitespace from a paste is the one exception.
+      return String(raw).trim()
     default:
       return String(raw).trim()
   }
