@@ -169,6 +169,26 @@ export default {
   'settings.secretsNote': 'Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.',
 
 
+  // ---- Open data ----
+  'status.title': 'État du service',
+  'status.lede': 'À quand remonte la dernière collecte, et ce que la base contient.',
+  'status.fresh': 'Données à jour',
+  'status.stale': 'Collecte en retard',
+  'status.lastCrawl': 'Dernière collecte réussie :',
+  'status.never': 'Aucune collecte réussie enregistrée.',
+  'status.note': 'La collecte tourne chaque matin. Un retard tient le plus souvent à une indisponibilité du portail source, sur lequel ce service n’a aucune prise.',
+  'data.title': 'Données ouvertes',
+  'data.lede': 'Les résultats d’attribution, les acheteurs et les entreprises, consultables sans compte et téléchargeables.',
+  'data.awardsLede': 'Chaque attribution publiée : qui a gagné, pour combien, contre combien de concurrents.',
+  'data.browse': 'Consulter',
+  'data.download': 'Télécharger',
+  'data.downloadNote': 'Fichiers CSV encodés en UTF-8, plafonnés à 5 000 lignes par téléchargement. Les filtres de la page des résultats s’appliquent aux paramètres de l’URL.',
+  'data.licenceTitle': 'Origine et réutilisation',
+  'data.licence': 'Ces données proviennent du portail public marchespublics.gov.ma et restent la propriété de l’administration qui les publie. Ce service les recopie et les organise ; il ne revendique aucun droit sur leur contenu. Citez le portail officiel comme source, et vérifiez-y toute donnée avant de vous en servir.',
+  'public.nav.data': 'Données ouvertes',
+  'public.nav.status': 'État',
+  'settings.key.site.publicData': 'Données consultables sans compte',
+
   // ---- Search ----
   'sort.relevance': 'Pertinence',
 

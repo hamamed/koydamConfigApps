@@ -3,6 +3,8 @@
   <div class="wrap">
     <span class="muted"><%= operator %> · <span class="ltr"><%= new Date().getFullYear() %></span></span>
     <nav class="spacer">
+      <% if (publicData) { %><a href="/data?lang=<%= locale %>"><%= t('public.nav.data') %></a><% } %>
+      <a href="/status?lang=<%= locale %>"><%= t('public.nav.status') %></a>
       <a href="/guide?lang=<%= locale %>"><%= t('public.nav.guide') %></a>
       <a href="/privacy?lang=<%= locale %>"><%= t('public.nav.privacy') %></a>
       <a href="/terms?lang=<%= locale %>"><%= t('public.nav.terms') %></a>

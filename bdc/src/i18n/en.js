@@ -169,6 +169,26 @@ export default {
   'settings.secretsNote': 'Secrets (JWT_SECRET, database credentials) stay in the server\u2019s .env file.',
 
 
+  // ---- Open data ----
+  'status.title': 'Service status',
+  'status.lede': 'When the last crawl ran, and what the database holds.',
+  'status.fresh': 'Data is current',
+  'status.stale': 'The crawl is behind',
+  'status.lastCrawl': 'Last successful crawl:',
+  'status.never': 'No successful crawl on record.',
+  'status.note': 'The crawl runs every morning. A delay is usually the source portal being unavailable, over which this service has no control.',
+  'data.title': 'Open data',
+  'data.lede': 'Award results, buyers and companies — readable without an account and downloadable.',
+  'data.awardsLede': 'Every published award: who won, for how much, against how many bidders.',
+  'data.browse': 'Browse',
+  'data.download': 'Download',
+  'data.downloadNote': 'UTF-8 CSV files, capped at 5,000 rows per download. The filters on the results page apply as URL parameters.',
+  'data.licenceTitle': 'Source and reuse',
+  'data.licence': 'This data comes from the public portal marchespublics.gov.ma and remains the property of the administration that publishes it. This service copies and organises it; it claims no rights over the content. Cite the official portal as the source, and check anything there before relying on it.',
+  'public.nav.data': 'Open data',
+  'public.nav.status': 'Status',
+  'settings.key.site.publicData': 'Data readable without an account',
+
   // ---- Search ----
   'sort.relevance': 'Relevance',
 

@@ -29,6 +29,11 @@ export const CATALOGUE = Object.freeze([
   // as, which on a shared deployment is not the operator of the site.
   { key: 'site.operator', group: 'site', type: 'string', fallback: () => config.company.name },
   { key: 'site.contactEmail', group: 'site', type: 'string', fallback: () => config.company.email },
+  // Whether the award history, the buyer and company profiles and the bulk
+  // exports are readable without an account. Everything they show was already
+  // published by the administration; this decides whether this copy of it is
+  // public too. Turning it off makes those pages 404 immediately — no deploy.
+  { key: 'site.publicData', group: 'site', type: 'boolean', fallback: () => true },
 
   { key: 'scraper.maxPages', group: 'scraper', ...number(1, 2000), fallback: () => config.scraper.maxPages },
   // The portal's own selector offers exactly these; anything else is ignored,

@@ -119,7 +119,7 @@ test('robots and the sitemap point at the public pages and away from the panel',
 
   const sitemap = await (await get(api.base, '/sitemap.xml')).text()
   assert.match(sitemap, /^<\?xml/)
-  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 15, 'five pages in three languages')
+  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 24, 'eight pages in three languages')
   assert.ok(!sitemap.includes('/panel'), 'the panel is not advertised')
 })
 
@@ -137,4 +137,91 @@ test('the landing page counts the database rather than claiming a number', async
   })
   const filled = await (await get(api.base, '/')).text()
   assert.ok(filled.includes('>1<'), 'and one row says one')
+})
+
+test('the open-data pages can be closed from Settings, without a deploy', async (t) => {
+  const api = await site()
+  t.after(() => api.close())
+
+  const guarded = ['/awards', '/data', '/data/awards.csv', '/data/notices.csv']
+  for (const path of guarded) {
+    assert.equal((await get(api.base, path)).status, 200, `${path} is open by default`)
+  }
+
+  await api.container.settings.update({ 'site.publicData': false })
+  for (const path of guarded) {
+    assert.equal((await get(api.base, path)).status, 404, `${path} closes on the next request`)
+  }
+
+  // The pages that are not about the data stay open either way: a privacy
+  // policy nobody can read is worse than useless.
+  for (const path of ['/', '/privacy', '/terms', '/guide', '/status', '/request-access']) {
+    assert.equal((await get(api.base, path)).status, 200, `${path} is unaffected`)
+  }
+
+  await api.container.settings.update({ 'site.publicData': true })
+  assert.equal((await get(api.base, '/awards')).status, 200, 'and it comes back')
+})
+
+test('the public status page reports freshness without leaking operations', async (t) => {
+  const api = await site()
+  t.after(() => api.close())
+
+  const html = await (await get(api.base, '/status')).text()
+  assert.ok(html.includes('État du service'))
+
+  // What an outside reader needs is whether the data is current. The disk, the
+  // backups, the running version and the error text are not their business,
+  // and every one of them is on the admin-only System screen instead.
+  for (const leaked of ['/var/backups', 'sqlite', 'node_modules', 'v2', 'Sauvegarde', 'JWT']) {
+    assert.ok(!html.includes(leaked), `the status page does not mention ${leaked}`)
+  }
+  const json = await api.container.services.public.status()
+  assert.deepEqual(Object.keys(json).sort(), ['ageHours', 'counts', 'fresh', 'lastCrawlAt'])
+})
+
+test('a public buyer page links to the companies that win from them', async (t) => {
+  const api = await site()
+  t.after(() => api.close())
+
+  await api.container.repositories.results.upsert({
+    result_key: 'k1', reference: '9/2026', reference_raw: '9/2026', match_key: '9/2026|x',
+    objet: 'Achat de fournitures', acheteur: 'COMMUNE DE TEST', attributaire: 'STE GAGNANTE',
+    montant_attribue_cents: 250000, currency: 'MAD', nombre_offres: 7, result_status: 'attribue',
+    date_publication_resultat: '2026-08-01', search_text: 'achat',
+    first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+  })
+
+  const buyer = await (await get(api.base, `/buyers/${encodeURIComponent('COMMUNE DE TEST')}`)).text()
+  assert.ok(buyer.includes('STE GAGNANTE'))
+  assert.ok(buyer.includes(`/companies/${encodeURIComponent('STE GAGNANTE')}`))
+
+  const company = await (await get(api.base, `/companies/${encodeURIComponent('STE GAGNANTE')}`)).text()
+  assert.ok(company.includes('COMMUNE DE TEST'))
+
+  // A name nobody has is a 404, not an empty page pretending to be a profile.
+  assert.equal((await get(api.base, '/companies/NOBODY%20AT%20ALL')).status, 404)
+})
+
+test('a bulk download is a CSV, capped, and safe to open in a spreadsheet', async (t) => {
+  const api = await site()
+  t.after(() => api.close())
+
+  await api.container.repositories.results.upsert({
+    result_key: 'k2', reference: '=CMD|calc', reference_raw: '=CMD|calc', match_key: 'x|y',
+    objet: 'Achat', acheteur: 'COMMUNE', attributaire: 'STE', montant_attribue_cents: 1000,
+    currency: 'MAD', nombre_offres: 2, result_status: 'attribue',
+    date_publication_resultat: '2026-08-01', search_text: 'achat',
+    first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+  })
+
+  const response = await get(api.base, '/data/awards.csv')
+  assert.equal(response.headers.get('content-type'), 'text/csv; charset=utf-8')
+  assert.match(response.headers.get('content-disposition') ?? '', /attachment; filename="awards-/)
+
+  const body = await response.text()
+  // The same formula guard the panel's export carries: this text is scraped
+  // from a third party and a cell starting with = is a formula to a spreadsheet.
+  assert.ok(!/(^|,)"?=CMD/m.test(body.replace(/\t/g, 'TAB')), 'a leading = is neutralised')
+  assert.ok(body.includes('Attributaire'), 'and the header is there')
 })

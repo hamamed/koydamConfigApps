@@ -1,0 +1,79 @@
+<%- include('../partials/public-open', { pageTitle: profile.name, pageDescription: t(profile.note) }) %>
+
+<section>
+  <div class="wrap">
+    <h1 style="display:flex; align-items:center; gap:10px; font-size:26px">
+      <%- include('../partials/icon', { name: kind === 'buyer' ? 'building-2' : 'award', size: 22 }) %>
+      <%= profile.name %>
+    </h1>
+    <% if (profile.since) { %>
+      <p class="muted" style="margin-top:-6px"><%= t('buyer.since') %> <span class="ltr"><%= profile.since %></span></p>
+    <% } %>
+
+    <div class="grid cols-4" style="margin-top:18px">
+      <% profile.stats.forEach(function (stat) { %>
+        <div class="card">
+          <b class="ltr" style="display:block; font-size:21px; font-weight:650"><%= stat.value %></b>
+          <span class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.05em"><%= t(stat.label) %></span>
+        </div>
+      <% }) %>
+    </div>
+
+    <p class="muted" style="font-size:12px; margin-top:12px"><%= t(profile.note) %></p>
+
+    <% if (profile.related.length > 0) { %>
+      <h2 style="margin-top:32px"><%= t(profile.relatedTitle) %></h2>
+      <div class="card" style="padding:0; overflow-x:auto">
+        <table>
+          <thead><tr><th><%= t(profile.relatedLabel) %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
+          <tbody>
+            <% profile.related.forEach(function (row) { %>
+              <tr>
+                <td><a href="<%= profile.relatedPath %>/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>"><%= row.label %></a></td>
+                <td class="ltr"><%= row.awards %></td>
+                <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+
+    <% if (profile.awards.length > 0) { %>
+      <h2 style="margin-top:32px"><%= t('buyer.recentAwards') %></h2>
+      <div class="card" style="padding:0; overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
+            <% if (kind === 'buyer') { %><th><%= t('awards.winner') %></th><% } %>
+            <th><%= t('awards.amount') %></th><th><%= t('awards.bids') %></th><th><%= t('awards.publishedOn') %></th>
+          </tr></thead>
+          <tbody>
+            <% profile.awards.forEach(function (row) { %>
+              <tr>
+                <td><code class="ltr"><%= row.reference %></code></td>
+                <td style="max-width:300px"><%= row.objet || '—' %></td>
+                <% if (kind === 'buyer') { %>
+                  <td><% if (row.attributaire) { %><a href="/companies/<%= encodeURIComponent(row.attributaire) %>?lang=<%= locale %>"><%= row.attributaire %></a><% } else { %>—<% } %></td>
+                <% } %>
+                <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+                <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
+                <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<style>
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:start; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; }
+  tbody tr:last-child td { border-bottom:0; }
+  code { direction:ltr; unicode-bidi:isolate; background:#f2f5f9; padding:1px 6px; border-radius:5px; font-size:12.5px; }
+</style>
+
+<%- include('../partials/public-close') %>
