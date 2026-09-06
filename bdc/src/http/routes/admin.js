@@ -11,6 +11,14 @@ import { ok, paginated, parsePagination } from '../../utils/pagination.js'
 export function adminRoutes({ services }) {
   const router = Router()
 
+  // The panel moved to /panel; old bookmarks land here. This has to live on the
+  // router mounted at /admin, because that mount answers /admin itself before
+  // any later route can.
+  router.get('/', (_req, res) => res.redirect('/panel/dashboard'))
+  router.get('/login', (_req, res) => res.redirect('/login'))
+  router.get('/consultations', (_req, res) => res.redirect('/panel'))
+  router.get('/consultations/:id', (req, res) => res.redirect(`/panel/consultations/${req.params.id}`))
+
   // --------------------------------------------------------------- JSON API
   const api = Router()
   api.use(requireAdmin(services.auth))

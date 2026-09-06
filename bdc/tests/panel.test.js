@@ -244,3 +244,22 @@ test('the panel renders in Arabic with a mirrored sidebar', async (t) => {
   assert.match(html, /<svg class="ic/)
   assert.doesNotMatch(html, /lucide.*\.js|cdn/i, 'no CDN dependency for icons')
 })
+
+test('old /admin bookmarks land on the panel', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const cases = [
+    ['/admin', '/panel/dashboard'],
+    ['/admin/login', '/login'],
+    ['/admin/consultations', '/panel'],
+    [`/admin/consultations/${api.consultationId}`, `/panel/consultations/${api.consultationId}`],
+    ['/', '/panel'],
+  ]
+
+  for (const [from, to] of cases) {
+    const response = await api.page(from, api.admin)
+    assert.equal(response.status, 302, from)
+    assert.equal(response.headers.get('location'), to, from)
+  }
+})

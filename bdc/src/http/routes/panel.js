@@ -183,10 +183,9 @@ export function panelRoutes({ services }) {
     }),
   )
 
-  // Old bookmarks keep working.
-  router.get('/', (req, res) => res.redirect('/panel'))
-  router.get('/admin', (req, res) => res.redirect('/panel/dashboard'))
-  router.get('/admin/login', (req, res) => res.redirect('/login'))
+  // Old bookmarks keep working. The /admin ones live in routes/admin.js, on the
+  // router that is mounted there.
+  router.get('/', (_req, res) => res.redirect('/panel'))
 
   return router
 }
