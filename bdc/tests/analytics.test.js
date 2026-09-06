@@ -174,3 +174,23 @@ test('a median over a filtered slice binds its own parameters', async (t) => {
   const everything = await container.services.analytics.overview({})
   assert.equal(everything.summary.median, 5000, 'the unfiltered median still works')
 })
+
+test('a user with no saved search is offered one that needs no filters', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+  const user = await container.services.auth.register({
+    email: 'u@test.ma', password: 'a-very-long-password', role: 'user',
+  })
+
+  // The offer on screen posts exactly this, and it has to be accepted: a
+  // filterless search is the digest, and it runs through the same pipeline as
+  // any other rather than a second code path that nothing has ever tested.
+  const userId = user.user?.id ?? user.id
+  await container.services.savedSearches.create(userId, {
+    name: 'Every new avis', filters: {}, notifyNew: true, notifyAwards: false,
+  })
+
+  const [saved] = await container.services.savedSearches.list(userId)
+  assert.deepEqual(saved.filters, {}, 'no filters at all is a valid alert')
+  assert.equal(saved.notify_new, true)
+})

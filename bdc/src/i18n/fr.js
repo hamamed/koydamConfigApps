@@ -169,6 +169,12 @@ export default {
   'settings.secretsNote': 'Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.',
 
 
+  // ---- Daily digest ----
+  'alerts.digestTitle': 'Recevoir tout ce qui est nouveau',
+  'alerts.digestHint': 'La collecte tourne chaque matin. Sans alerte enregistrée, personne n’est prévenu de ce qu’elle a trouvé. Ceci crée une alerte sans filtre : tous les nouveaux avis, une fois par jour.',
+  'alerts.digestName': 'Tous les nouveaux avis',
+  'alerts.digestCreate': 'Créer cette alerte',
+
   // ---- Repeat purchases ----
   'precedent.title': 'Cet acheteur a déjà publié cet achat',
   'precedent.hint': 'Même acheteur, même objet, référence différente : l’achat a déjà été lancé une fois. Un avis précédent resté infructueux dit pourquoi personne n’a répondu ; un avis attribué donne un prix de référence du même acheteur.',

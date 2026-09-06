@@ -25,7 +25,7 @@ Runs on **SQLite** out of the box (via Node's built-in `node:sqlite` — no nati
 build step). Switch to PostgreSQL with `DB_CLIENT=postgres` + `DATABASE_URL`.
 
 ```bash
-npm test              # 30 tests, no network access required
+npm test              # 89 tests, no network access required
 npm run test:coverage # ~90% line coverage
 ```
 
@@ -297,6 +297,60 @@ was not an identity at all.
   excludes unsuccessful and cancelled notices from every amount, since they have
   no price.
 
+### What work like this goes for
+
+Every avis carries a **price benchmark**: the median of what comparable work has
+been awarded for, the interquartile range around it, the typical number of
+bidders, and how often such work ends with nobody awarded.
+
+Comparables are found on the words of the objet, because award rows carry no
+category — the portal publishes one on a consultation and not on its result,
+verified across ten thousand of them. Two things make that work rather than
+produce noise. The match is against `objet` and not `search_text`, which also
+holds the buyer's name; and the buyer's own name is excluded from the terms,
+because most objets name their buyer ("… pour le centre hospitalier provincial
+de Khénifra") and those are the longest words in the sentence. Without both, a
+"comparable" set collapses into everything that one hospital has ever bought,
+and the median becomes circular. Below five priced comparables it declines to
+quote a figure rather than offering a median of three.
+
+### Repeat purchases, which are not matches
+
+119 award/avis pairs in this database share a buyer and a word-for-word
+identical objet — and in every one of them the references disagree, always with
+the award's the lower of the two. They are not two views of one avis. They are
+the same purchase published twice, and 38% of them were unsuccessful against a
+16.6% baseline, so the usual story is a first attempt that drew no valid offer
+and was relaunched.
+
+A fuzzy matcher would link these and thereby state that an open avis had already
+been awarded. They are shown on the avis as **precedent** instead: what the same
+buyer put out before, what happened to it, and for how much.
+
+### Buyer profiles
+
+`/panel/buyers/<name>` is one buyer's record: how much they publish, how much of
+it they withdraw — a cancellation rate, because 1 in 4 and 1 in 400 are
+different buyers — what their work settles for, how contested it is, and who
+keeps winning it. Addressed by the name the portal prints, which is the only
+identifier a buyer has anywhere in its markup; two directorates of one ministry
+that publish separately stay two buyers, deliberately.
+
+### System
+
+`/panel/system` is what the box looks like from inside the application: the last
+backup and whether this database was actually in it, disk and database size, the
+running version and uptime, and whether mail and translation are configured.
+
+It reads files rather than running commands. Backups come from the world-readable
+manifest `backup.sh` publishes for exactly this purpose — the archives beside it
+hold every secret on the host and stay unreadable here — and the crawl schedule
+comes from a setting, not from `systemctl`. Nothing on this screen spawns a
+process.
+
+The backup-coverage check earns its place: `bdc` was absent from the backup
+script for its whole first month and every nightly archive reported success.
+
 ### Alerts
 
 A saved search is a set of filters plus what to be told about: new projects
@@ -473,15 +527,22 @@ delay, timeout and user agent before each request, and the invoice defaults and
 the issuer block on the PDF are read at generation time.
 
 Covered: site name and default language; crawler page cap, page size, delay,
-detail concurrency, retries, timeout and user agent; the Google Translate key;
-invoice currency, VAT rate and numbering prefix; and the issuer block printed on
-invoices.
+detail concurrency, retries, timeout and user agent; the SMTP server, port, TLS,
+credentials and sender; the Google Translate key; invoice currency, VAT rate and
+numbering prefix; and the issuer block printed on invoices.
+
+Mail settings are resolved per send, like the translation key, so a server
+entered in the panel delivers the next alert rather than the next restart. The
+transport is rebuilt only when the settings actually change — nodemailer holds a
+connection pool, and discarding it on every message would be worse than caching
+a stale one.
 
 **`JWT_SECRET` and the database credentials are deliberately not settings** —
 a careless edit there locks everyone out or points the app at another database,
-so they stay in `.env`. The Google Translate key is the one exception: it is a
-spending credential rather than one the app's own security rests on, and it is
-handled as write-only (above).
+so they stay in `.env`. Two delivery credentials are the exception, the Google
+Translate key and the SMTP password: leaking one costs money or lets somebody
+send mail as this service, which is a different class of thing from losing
+everyone their session. Both are handled as write-only (above).
 
 ## Scraper CLI
 

@@ -13,7 +13,7 @@ breaking them took a service down.
 | `skincraft/` | Roblox clothing catalogue, admin, AI designer | skincraft.hamaprojects.com | 3000 | SQLite |
 | `minebox/` | Minecraft skins, addons, texture packs, worlds, seeds | minebox.hamaprojects.com | 3100 | SQLite |
 | `fortnite/` | Fortnite companion — shop, news, cosmetics, wallpapers | fortnite.hamaprojects.com | 3200 | SQLite |
-| `bdc/` | Moroccan public procurement — scraper, award matching, invoicing | bdc.civictrust.ma | 3300 | SQLite |
+| `bdc/` | Moroccan public procurement — scraper, award analysis, invoicing | bdc.civictrust.ma | 3300 | SQLite |
 
 The VPS is `46.224.86.198`, root over SSH. The Flutter app (`brawlStar`) is a
 separate project and **not in this repository**.
@@ -36,7 +36,7 @@ npm run dev
 
 `bdc` has none — it uses Node's built-in `node:sqlite`, so there is nothing to
 rebuild after a Node upgrade. It needs Node >= 22.5.0 for that. Its own
-`npm test` runs 35 tests against pages captured from the live portal and needs
+`npm test` runs 89 tests against pages captured from the live portal and needs
 no network.
 
 `minebox` reads inside every uploaded `.mcaddon`/`.mcworld` and draws its own
@@ -95,6 +95,16 @@ oversight.
 
 **Migrations run on every boot** and must be idempotent (`IF NOT EXISTS`).
 There are five; CI applies them to a real Postgres twice.
+
+**`backup.sh` names every service explicitly, so a new one is not backed up
+until somebody adds it.** `bdc` ran for a month with its database, its `.env`
+and its invoices in no archive at all, and every nightly backup reported
+success the whole time — the archive was simply smaller. Adding a service means
+four places: `sqlite_dump` (or the Postgres list), the `.env` loop, its data
+directories, and its unit files. The post-archive check now names each database
+it expects to find, and bdc's System screen fails its own backup check when the
+manifest does not list `sqlite/bdc`, so the next such gap is visible from
+inside the application rather than only at restore time.
 
 **`CREATE TABLE IF NOT EXISTS` never adds a column.** In `bdc`, a column added to
 `src/db/schema.js` must also be listed in `additiveColumns()`, or it never

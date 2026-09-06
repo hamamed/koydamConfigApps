@@ -9,6 +9,21 @@
   </p>
 <% } %>
 
+<%# The crawl finds new avis every morning and, with no saved search on file,
+    tells nobody. A search with no filters at all is a perfectly good digest and
+    goes through exactly the same, already-tested pipeline as any other. %>
+<% if (searches.length === 0) { %>
+  <div class="card" style="border-inline-start:4px solid var(--accent)">
+    <h2><%- include('../partials/icon', { name: 'bell', size: 15 }) %><%= t('alerts.digestTitle') %></h2>
+    <p class="muted" style="margin-top:0"><%= t('alerts.digestHint') %></p>
+    <form method="post" action="/panel/alerts?lang=<%= locale %>">
+      <input type="hidden" name="name" value="<%= t('alerts.digestName') %>">
+      <input type="hidden" name="notifyNew" value="on">
+      <button type="submit"><%- include('../partials/icon', { name: 'bell', size: 15 }) %><%= t('alerts.digestCreate') %></button>
+    </form>
+  </div>
+<% } %>
+
 <div class="card">
   <h2><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('alerts.criteria') %></h2>
   <p class="muted" style="margin-top:0"><%= t('alerts.intro') %></p>

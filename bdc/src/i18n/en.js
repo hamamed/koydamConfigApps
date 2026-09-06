@@ -169,6 +169,12 @@ export default {
   'settings.secretsNote': 'Secrets (JWT_SECRET, database credentials) stay in the server\u2019s .env file.',
 
 
+  // ---- Daily digest ----
+  'alerts.digestTitle': 'Get everything that is new',
+  'alerts.digestHint': 'The crawl runs every morning. With no alert on file, nobody is told what it found. This creates one with no filters at all: every new avis, once a day.',
+  'alerts.digestName': 'Every new avis',
+  'alerts.digestCreate': 'Create this alert',
+
   // ---- Repeat purchases ----
   'precedent.title': 'This buyer has published this purchase before',
   'precedent.hint': 'Same buyer, same objet, a different reference: this purchase has been put out before. A previous attempt that drew no valid offer tells you why; one that was awarded gives a price precedent from this very buyer.',
