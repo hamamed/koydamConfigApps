@@ -1,7 +1,13 @@
 import { fromCentimes } from '../utils/money.js'
 
-/** Internal-only columns that never leave the API. */
-const HIDDEN = new Set(['raw_json', 'search_text', 'content_hash', 'password_hash'])
+/**
+ * Internal-only columns that never leave the API.
+ *
+ * `match_key` and `result_key` are join plumbing — derived keys with no meaning
+ * to a client, which would only invite someone to rely on their shape. The
+ * portal's `source_id` does leave, because it is a real, citable identifier.
+ */
+const HIDDEN = new Set(['raw_json', 'search_text', 'content_hash', 'password_hash', 'match_key', 'result_key'])
 
 /**
  * Converts a DB row into an API payload: `*_cents` integers become decimal

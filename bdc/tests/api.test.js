@@ -120,9 +120,13 @@ test('returns a consultation with its articles and matched award', async (t) => 
   assert.equal(body.data.result.attributaire, "STE AMALIA DES ETOILES D'OR")
   assert.equal(body.data.result.montant_attribue, 8064)
 
-  // Internal columns never leave the API.
+  // Internal columns never leave the API. `source_id` does — it is the portal's
+  // own citable id — but the derived join keys do not.
   assert.equal(body.data.search_text, undefined)
   assert.equal(body.data.raw_json, undefined)
+  assert.equal(body.data.content_hash, undefined)
+  assert.equal(body.data.match_key, undefined)
+  assert.equal(body.data.result.result_key, undefined)
 
   const missing = await api.request('GET', '/api/consultations/999999')
   assert.equal(missing.status, 404)
