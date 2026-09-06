@@ -18,10 +18,14 @@ EnvironmentFile=/opt/bdc/.env
 # empty. The cap is a guard, not a target.
 ExecStart=/usr/bin/node bin/scrape.js --source=consultations --page-size=50 --max-pages=100 --no-details
 
-# Awards are capped deliberately. The portal advertises ~31,700 pages of award
-# history at ten a page — the whole archive is hundreds of thousands of rows and
-# days of polite crawling. This takes the most recent slice; widen it by raising
-# the cap and re-running if the older history is ever wanted.
+# Awards are capped deliberately. The portal advertises ~6,300 pages of award
+# history at fifty a page — the whole archive is roughly 300,000 rows and days of
+# polite crawling. The cap is what makes the initial load finish in an evening.
+#
+# The deeper history is worth having: it is what the price medians and the
+# competitor picture on the Insights screen are built from, and they get sharper
+# with every year of it. Raise this and re-run when there is time for it; the
+# crawl is resumable and upserts, so a partial pass is never wasted.
 ExecStart=/usr/bin/node bin/scrape.js --source=results --page-size=50 --max-pages=200 --no-details
 
 # Then the detail page of every consultation that has none. This is the long
