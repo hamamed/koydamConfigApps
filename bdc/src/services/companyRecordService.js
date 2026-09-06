@@ -16,7 +16,7 @@ const ICE = /^\d{15}$/
  * came from and whether a person has confirmed it, and the profile page shows
  * the difference.
  */
-export function createCompanyRecordService({ companyRecords, companyLookup }) {
+export function createCompanyRecordService({ companyRecords, companyLookup, exclusions }) {
   /** The stored fields, or null when every one of them was cleared — an empty
    *  row labelled "verified" says something was checked when nothing is there. */
   async function find(name) {
@@ -56,7 +56,23 @@ export function createCompanyRecordService({ companyRecords, companyLookup }) {
   const lookup = (name) => companyLookup.search(name)
   const lookupConfigured = () => companyLookup.isConfigured()
 
-  return { find, save, remove, lookup, lookupConfigured }
+  /**
+   * Official exclusions recorded against this company, newest first, each
+   * flagged with whether it is in force today.
+   *
+   * Matched on a normalised name because neither source publishes an id the
+   * other has — so this is a strong indication, not a certainty, and the panel
+   * says as much rather than asserting the two are the same legal person.
+   */
+  async function exclusionsFor(name, today = new Date().toISOString().slice(0, 10)) {
+    const rows = await exclusions.findForCompany(name)
+    return rows.map((row) => ({
+      ...serializeRow(row),
+      active: (!row.date_debut || row.date_debut <= today) && (!row.date_fin || row.date_fin >= today),
+    }))
+  }
+
+  return { find, save, remove, lookup, lookupConfigured, exclusionsFor }
 }
 
 function field(value, key) {

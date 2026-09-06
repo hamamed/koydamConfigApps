@@ -119,5 +119,74 @@ export function createHttpClient(options = {}) {
     })
   }
 
-  return { getHtml, absolute, cookies }
+  /**
+   * POSTs a form and returns the resulting HTML.
+   *
+   * Shares GET's throttle, retry, timeout, user agent and cookie jar — the
+   * politeness settings are a property of this crawler, not of the verb. The
+   * session cookie matters more here than for GET: the exclusions page is a
+   * PRADO form whose view state the server ties to the session, and posting
+   * without carrying the cookie back gets a fresh empty form instead of results.
+   *
+   * @param {string} url absolute URL or path relative to the portal base.
+   * @param {URLSearchParams|object} [params] query string parameters.
+   * @param {object} body form fields, sent url-encoded.
+   */
+  async function postForm(url, params, body = {}) {
+    const target = new URL(absolute(url))
+    if (params) {
+      const search = params instanceof URLSearchParams ? params : new URLSearchParams(params)
+      for (const [key, value] of search.entries()) target.searchParams.append(key, value)
+    }
+    const payload = new URLSearchParams(body).toString()
+
+    const { userAgent, timeoutMs, delayMs, maxRetries } = await current()
+    let lastError = null
+
+    for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+      await throttle(delayMs)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+      try {
+        log.debug('POST', { url: target.toString(), attempt })
+        const response = await fetchImpl(target, {
+          method: 'POST',
+          redirect: 'follow',
+          signal: controller.signal,
+          body: payload,
+          headers: {
+            'User-Agent': userAgent,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-FR,fr;q=0.9,ar;q=0.8,en;q=0.7',
+            ...(cookies.size > 0 ? { Cookie: cookieHeader() } : {}),
+          },
+        })
+        storeCookies(response)
+
+        if (!response.ok) {
+          const error = new ScraperError(`HTTP ${response.status} for ${target}`, { status: response.status })
+          if (!RETRYABLE_STATUSES.has(response.status)) throw error
+          lastError = error
+        } else {
+          return { html: await response.text(), url: response.url || target.toString() }
+        }
+      } catch (error) {
+        if (error instanceof ScraperError && !RETRYABLE_STATUSES.has(error.details?.status)) throw error
+        lastError = error
+      } finally {
+        clearTimeout(timer)
+      }
+
+      if (attempt < maxRetries) {
+        const backoff = BACKOFF_BASE_MS * 2 ** (attempt - 1)
+        log.warn('retrying', { url: target.toString(), attempt, backoff, reason: lastError?.message })
+        await sleep(backoff)
+      }
+    }
+
+    throw new ScraperError(`Failed to post ${target} after ${maxRetries} attempts`, { cause: lastError?.message })
+  }
+
+  return { getHtml, postForm, absolute, cookies }
 }

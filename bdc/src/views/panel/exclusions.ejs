@@ -1,0 +1,41 @@
+<%- include('../partials/shell-open', { title: t('exclusion.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'triangle-alert', size: 19 }) %> <%= t('exclusion.title') %></h1>
+  <span class="muted spacer"><span class="ltr"><%= rows.length %></span></span>
+</div>
+
+<p class="muted" style="margin:-6px 0 16px; font-size:12.5px"><%= t('exclusion.lede') %></p>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (rows.length === 0) { %>
+    <p class="empty"><%= t('exclusion.empty') %></p>
+  <% } else { %>
+    <table>
+      <thead><tr>
+        <th><%= t('exclusion.company') %></th><th><%= t('exclusion.entity') %></th>
+        <th><%= t('exclusion.motif') %></th><th><%= t('exclusion.period') %></th>
+        <th><%= t('exclusion.scope') %></th><th><%= t('registry.rc') %></th>
+      </tr></thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <td style="max-width:220px">
+              <a href="/panel/companies/<%= encodeURIComponent(row.raison_sociale) %>?lang=<%= locale %>"><%= row.raison_sociale %></a>
+            </td>
+            <td style="max-width:210px"><%= row.entite_publique || '—' %></td>
+            <td style="max-width:260px"><%= row.motif || '—' %></td>
+            <td class="ltr">
+              <%= row.date_debut || '—' %> → <%= row.date_fin || '—' %>
+              <span class="pill <%= row.active ? 'warn' : '' %>" style="margin-inline-start:6px"><%= row.active ? t('exclusion.inForce') : t('exclusion.expired') %></span>
+            </td>
+            <td><%= row.portee || '—' %></td>
+            <td class="ltr"><%= row.registre_commerce || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<%- include('../partials/shell-close') %>

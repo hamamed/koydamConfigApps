@@ -21,6 +21,41 @@
 
 <p class="muted" style="margin:-4px 0 16px; font-size:11.5px"><%= t('company.note') %></p>
 
+<%# An official exclusion from public procurement. Placed above everything else
+    on the page: somebody about to deal with this company needs it before the
+    turnover figures, not after them. %>
+<% if (exclusions.length > 0) { %>
+  <% const live = exclusions.filter(function (e) { return e.active }) %>
+  <div class="card" style="border-inline-start:4px solid <%= live.length ? '#a4262c' : 'var(--warn)' %>">
+    <h2 style="color:<%= live.length ? '#a4262c' : 'var(--warn)' %>">
+      <%- include('../partials/icon', { name: 'triangle-alert', size: 16 }) %>
+      <%= live.length ? t('exclusion.activeTitle') : t('exclusion.pastTitle') %>
+      <span class="pill warn"><%= exclusions.length %></span>
+    </h2>
+    <table>
+      <thead><tr>
+        <th><%= t('exclusion.entity') %></th><th><%= t('exclusion.motif') %></th>
+        <th><%= t('exclusion.period') %></th><th><%= t('exclusion.scope') %></th><th><%= t('registry.rc') %></th>
+      </tr></thead>
+      <tbody>
+        <% exclusions.forEach(function (row) { %>
+          <tr>
+            <td style="max-width:230px"><%= row.entite_publique || '—' %></td>
+            <td style="max-width:280px"><%= row.motif || '—' %></td>
+            <td class="ltr">
+              <%= row.date_debut || '—' %> → <%= row.date_fin || '—' %>
+              <span class="pill <%= row.active ? 'warn' : '' %>" style="margin-inline-start:6px"><%= row.active ? t('exclusion.inForce') : t('exclusion.expired') %></span>
+            </td>
+            <td><%= row.portee || '—' %></td>
+            <td class="ltr"><%= row.registre_commerce || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <p class="muted" style="margin:12px 0 0; font-size:11.5px"><%= t('exclusion.note') %></p>
+  </div>
+<% } %>
+
 <% if (notice) { %><div class="notice"><%= notice %></div><% } %>
 <% if (error) { %><p class="error"><%= error %></p><% } %>
 

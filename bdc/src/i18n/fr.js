@@ -192,6 +192,23 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Pertinence',
 
+  // ---- Procurement exclusions ----
+  'exclusion.activeTitle': 'Exclue des marchés publics',
+  'exclusion.pastTitle': 'A été exclue des marchés publics',
+  'exclusion.entity': 'Entité ayant prononcé l’exclusion',
+  'exclusion.motif': 'Motif',
+  'exclusion.period': 'Période',
+  'exclusion.scope': 'Portée',
+  'exclusion.inForce': 'En vigueur',
+  'exclusion.expired': 'Échue',
+  'exclusion.note': 'Publié par le Portail marocain des marchés publics. Le rapprochement se fait sur le nom, car aucune des deux sources ne publie d’identifiant commun : il s’agit d’une forte présomption, à vérifier avant toute décision.',
+  'exclusion.title': 'Sociétés exclues',
+  'nav.exclusions': 'Sociétés exclues',
+  'exclusion.company': 'Raison sociale',
+  'exclusion.empty': 'Aucune exclusion enregistrée. Lancez la collecte depuis le tableau de bord.',
+  'exclusion.lede': 'Liste officielle publiée par le Portail marocain des marchés publics.',
+  'stats.exclusions': 'Sociétés exclues',
+
   // ---- Company register ----
   'registry.title': 'Identité de l’entreprise',
   'registry.none': 'Rien d’enregistré pour cette entreprise.',

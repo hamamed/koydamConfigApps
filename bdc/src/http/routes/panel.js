@@ -373,6 +373,7 @@ export function panelRoutes({ services }) {
         active: 'awards',
         company,
         record: await services.companyRecords.find(name),
+        exclusions: await services.companyRecords.exclusionsFor(name),
         canLookup: await services.companyRecords.lookupConfigured(),
         candidates: null,
         notice: null,
@@ -392,6 +393,7 @@ export function panelRoutes({ services }) {
       active: 'awards',
       company: await services.analytics.company(name, services.consultations),
       record: await services.companyRecords.find(name),
+      exclusions: await services.companyRecords.exclusionsFor(name),
       canLookup: await services.companyRecords.lookupConfigured(),
       candidates: null,
       notice: null,
@@ -427,6 +429,20 @@ export function panelRoutes({ services }) {
         error: result.error,
         notice: result.configured ? null : translator(req.locale)('registry.notConfigured'),
       })))
+    }),
+  )
+
+  /** The official exclusion list as a browsable table. */
+  router.get(
+    '/panel/exclusions',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const today = new Date().toISOString().slice(0, 10)
+      const rows = (await services.exclusions.list()).map((row) => ({
+        ...row,
+        active: (!row.date_debut || row.date_debut <= today) && (!row.date_fin || row.date_fin >= today),
+      }))
+      res.render('panel/exclusions', await shell(req, { active: 'exclusions', rows }))
     }),
   )
 

@@ -192,6 +192,23 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Relevance',
 
+  // ---- Procurement exclusions ----
+  'exclusion.activeTitle': 'Excluded from public procurement',
+  'exclusion.pastTitle': 'Was excluded from public procurement',
+  'exclusion.entity': 'Excluding public entity',
+  'exclusion.motif': 'Reason',
+  'exclusion.period': 'Period',
+  'exclusion.scope': 'Scope',
+  'exclusion.inForce': 'In force',
+  'exclusion.expired': 'Expired',
+  'exclusion.note': 'Published by the Moroccan public procurement portal. Matched on the name, because neither source publishes a shared identifier: treat it as a strong indication to verify, not a certainty.',
+  'exclusion.title': 'Excluded companies',
+  'nav.exclusions': 'Excluded companies',
+  'exclusion.company': 'Company',
+  'exclusion.empty': 'No exclusions recorded. Run the crawl from the dashboard.',
+  'exclusion.lede': 'The official list published by the Moroccan public procurement portal.',
+  'stats.exclusions': 'Excluded companies',
+
   // ---- Company register ----
   'registry.title': 'Company identity',
   'registry.none': 'Nothing recorded for this company.',

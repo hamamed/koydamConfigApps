@@ -1,13 +1,17 @@
 import { createHttpClient } from './httpClient.js'
 import { createConsultationScraper } from './consultationScraper.js'
 import { createResultScraper } from './resultScraper.js'
+import { createExclusionScraper } from './exclusionScraper.js'
 import { createMatcher } from './matcher.js'
 import { ConflictError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 
 const log = logger.child('[scraper:runner]')
 
-export const SOURCES = Object.freeze(['consultations', 'results', 'all'])
+// 'exclusions' is deliberately outside 'all': it is a small, near-static list
+// on a different portal, and re-reading it on every daily crawl would spend
+// requests on a page that changes a few times a year.
+export const SOURCES = Object.freeze(['consultations', 'results', 'exclusions', 'all'])
 
 /** An ISO date N days back, the format the portal's date filters require. */
 function daysAgo(days) {
@@ -21,7 +25,7 @@ function daysAgo(days) {
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, articles, documents, results, jobs, settings, http }) {
+export function createScraperRunner({ db, consultations, articles, documents, results, exclusions, jobs, settings, http }) {
   // Built per run from the current settings, so changing the delay or the user
   // agent in the panel applies to the next crawl without a restart. A client
   // passed in wins, which is what the tests use to serve fixtures.
@@ -31,6 +35,7 @@ export function createScraperRunner({ db, consultations, articles, documents, re
 
   const consultationScraper = createConsultationScraper({ http: client, consultations, articles, documents, settings })
   const resultScraper = createResultScraper({ http: client, results, settings })
+  const exclusionScraper = createExclusionScraper({ http: client, exclusions })
   const matcher = createMatcher({ db, consultations, results })
 
   /**
@@ -88,6 +93,11 @@ export function createScraperRunner({ db, consultations, articles, documents, re
       if (source === 'results' || source === 'all') {
         detail.results = await resultScraper.scrape({ filters, maxPages, startPage, fetchDetails, pageSize })
         accumulate(totals, detail.results)
+      }
+
+      if (source === 'exclusions') {
+        detail.exclusions = await exclusionScraper.scrape()
+        accumulate(totals, detail.exclusions)
       }
 
       if (backfillDetails) {
@@ -166,5 +176,5 @@ export function createScraperRunner({ db, consultations, articles, documents, re
     }
   }
 
-  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, http: client }
+  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, exclusionScraper, http: client }
 }

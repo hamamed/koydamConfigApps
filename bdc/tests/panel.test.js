@@ -1124,7 +1124,7 @@ test('every sidebar item has its own icon, and it means what the item does', asy
   const items = [...nav.matchAll(/<a href="([^"]+)"[^>]*>\s*<svg[^>]*>([\s\S]*?)<\/svg>\s*([^<]+)/g)]
     .map(([, href, paths, label]) => ({ href: href.split('?')[0], paths, label: label.trim() }))
 
-  assert.equal(items.length, 11, 'every nav item renders an icon')
+  assert.equal(items.length, 12, 'every nav item renders an icon')
 
   // Two items drawn the same are worse than one drawn badly: the sidebar is
   // scanned by shape, not read. Awards and Insights carried each other's icon

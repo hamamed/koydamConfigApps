@@ -1,4 +1,5 @@
 import { APP_VERSION } from './config/index.js'
+import { serializeRows } from './services/serializers.js'
 import { getDb } from './db/index.js'
 import { createConsultationRepository } from './repositories/consultationRepository.js'
 import { createArticleRepository } from './repositories/articleRepository.js'
@@ -35,6 +36,7 @@ import { createPublicService } from './services/publicService.js'
 import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
 import { createAccessRequestService } from './services/accessRequestService.js'
 import { createCompanyRecordRepository } from './repositories/companyRecordRepository.js'
+import { createExclusionRepository } from './repositories/exclusionRepository.js'
 import { createCompanyRecordService } from './services/companyRecordService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
 
@@ -63,6 +65,7 @@ export function createContainer(db = getDb(), options = {}) {
     translations: createTranslationRepository(db),
     accessRequests: createAccessRequestRepository(db),
     companyRecords: createCompanyRecordRepository(db),
+    exclusions: createExclusionRepository(db),
   }
 
   const settings = createSettingsService(repositories)
@@ -112,6 +115,11 @@ export function createContainer(db = getDb(), options = {}) {
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
     mailer,
     public: createPublicService(repositories),
+    exclusions: {
+      list: async (limit) => serializeRows(await repositories.exclusions.listAll(limit)),
+      countAll: () => repositories.exclusions.countAll(),
+      countActive: () => repositories.exclusions.countActive(),
+    },
     accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
     companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
   }

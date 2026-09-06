@@ -244,6 +244,37 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL
     )`,
 
+    // The official list of companies excluded from public procurement, from
+    // marchespublics.gov.ma — the same portal the avis come from. This is the
+    // one piece of company identity that is published freely and officially:
+    // it even carries a trade-register number, which no award row does.
+    `CREATE TABLE IF NOT EXISTS company_exclusions (
+      ${id},
+      -- The company as the exclusion decision names it. Not necessarily the
+      -- same string an award uses, which is why matching is normalised.
+      raison_sociale TEXT NOT NULL,
+      match_name TEXT NOT NULL,
+      entite_publique TEXT,
+      registre_commerce TEXT,
+      motif TEXT,
+      date_debut TEXT,
+      date_fin TEXT,
+      -- 'totale' or 'partielle': whether the ban covers all public buyers or
+      -- only the body that issued it.
+      portee TEXT,
+      document_id TEXT,
+      source_url TEXT,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      -- The trade-register number is part of the key, not decoration: two
+      -- companies trade under the same name and are told apart only by it
+      -- (81-1 and 81-11 both trade as COMMUNE RURALE MEJJATIA OULD TALEB, and
+      -- were excluded by the same body on the same day for the same thing).
+      UNIQUE (match_name, entite_publique, date_debut, registre_commerce)
+    )`,
+
     `CREATE TABLE IF NOT EXISTS saved_searches (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -372,6 +403,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_company_records_ice ON company_records (ice)',
+    'CREATE INDEX IF NOT EXISTS idx_company_exclusions_match ON company_exclusions (match_name)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
@@ -403,4 +435,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-07.012'
+export const SCHEMA_VERSION = '2026-09-07.014'
