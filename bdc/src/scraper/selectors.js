@@ -31,6 +31,15 @@ export const ARTICLE_HEADING_SELECTORS = ['.accordion-header', 'h2']
 export const ARTICLE_SPEC_SELECTORS = ['.accordion-body .text-gray', '.accordion-body']
 export const ARTICLE_ATTRIBUTE_SELECTORS = ['.content__article__miniCard > div', '.content__article__miniCard']
 
+/**
+ * Attachments on a detail page. Two kinds, told apart by the URL:
+ *   /consultation/download/<id>/<fileId>              the avis itself
+ *   /consultation/download/annulation/<id>/<fileId>   the cancellation notice
+ * The first carries its filename as the link text; the second just says
+ * "Télécharger", so it gets a name from its kind.
+ */
+export const DOCUMENT_LINK_SELECTORS = ['a[href*="/consultation/download/"]']
+
 export const DETAIL_LINK_SELECTORS = ['a[href*="/consultation/show/"]', 'a[href*="/consultation/"]', 'a[href]']
 
 export const PAGINATION_SELECTORS = ['.pagination .page-link', '.page-item a', 'a[href*="page="]']

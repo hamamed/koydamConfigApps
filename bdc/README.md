@@ -66,6 +66,7 @@ tested against an in-memory database.
 | --- | --- |
 | `consultations` | open procurement listings, unique on `source_id` (the portal's id) |
 | `consultation_articles` | article breakdown of a consultation, FK `consultation_id` |
+| `consultation_documents` | attachments published with an avis, and its cancellation notice |
 | `consultation_results` | awards, unique on `result_key`, FK `consultation_id` |
 | `result_lots` | per-lot award detail (winner, amount, status) |
 | `favorites` | `(user_id, consultation_id)` saved projects |
@@ -177,8 +178,16 @@ Seven days of overlap covers a missed run and anything published mid-crawl.
 
 | Unit | What it does |
 | --- | --- |
-| `bdc-scrape.timer` | daily at 05:30 (jittered): the last 7 days, then the detail backlog |
+| `bdc-scrape.timer` | daily at 05:30 (jittered): the last 7 days, **10 pages per source at 50 rows**, then the detail backlog |
 | `bdc-backfill.service` | started by hand: every page of both listings, then every unread detail page |
+
+The dashboard shows what the last run brought in — new projects, new awards,
+awards linked, detail pages read, how long it took — and when the next one is
+due. **The next-run time is read from a setting, not from systemd**: the app has
+no business shelling out to `systemctl`, and reading it would tie the panel to
+one init system. `scraper.dailyRunAt` and `scraper.dailySinceDays` label the
+timer; changing them does not move it, so keep them in step with
+`deploy/bdc-scrape.timer`.
 
 The full load is `systemctl start bdc-backfill`. At 50 rows a page the
 consultations listing is ~16 pages rather than 76; the slow part is one detail

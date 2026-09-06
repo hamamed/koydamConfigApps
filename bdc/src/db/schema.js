@@ -95,6 +95,18 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (consultation_id, lot_number, article_number, designation)
     )`,
+    `CREATE TABLE IF NOT EXISTS consultation_documents (
+      ${id},
+      consultation_id INTEGER NOT NULL REFERENCES consultations(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      file_name TEXT,
+      url TEXT NOT NULL,
+      source_file_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE (consultation_id, url)
+    )`,
+
     `CREATE TABLE IF NOT EXISTS consultation_results (
       ${id},
       result_key TEXT NOT NULL UNIQUE,
@@ -207,6 +219,10 @@ export function tableStatements(dialect) {
       items_updated INTEGER NOT NULL DEFAULT 0,
       matches_linked INTEGER NOT NULL DEFAULT 0,
       error_message TEXT,
+      -- Per-source counts for the run, so the dashboard can say how many
+      -- projects and how many awards a crawl actually brought in. The flat
+      -- columns above only carry the combined total.
+      detail_json TEXT,
       started_at TEXT NOT NULL,
       finished_at TEXT,
       duration_ms INTEGER
@@ -225,6 +241,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_consultations_limite ON consultations (date_limite)',
     'CREATE INDEX IF NOT EXISTS idx_consultations_status ON consultations (status)',
     'CREATE INDEX IF NOT EXISTS idx_articles_consultation ON consultation_articles (consultation_id)',
+    'CREATE INDEX IF NOT EXISTS idx_documents_consultation ON consultation_documents (consultation_id)',
     'CREATE INDEX IF NOT EXISTS idx_results_reference ON consultation_results (reference)',
     'CREATE INDEX IF NOT EXISTS idx_results_match_key ON consultation_results (match_key)',
     'CREATE INDEX IF NOT EXISTS idx_results_consultation ON consultation_results (consultation_id)',
@@ -254,6 +271,9 @@ export function indexStatements() {
  */
 export function additiveColumns() {
   return [
+    // 2026-09-06.007 — the portal publishes attachments, and a run's per-source
+    // counts are worth keeping.
+    { table: 'scrape_jobs', column: 'detail_json', definition: 'TEXT' },
     // 2026-09-06.002 — an avis can be published and then withdrawn, and the
     // portal publishes a VAT rate and required warranties per article.
     { table: 'consultations', column: 'is_cancelled', definition: 'INTEGER NOT NULL DEFAULT 0' },
@@ -264,4 +284,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.006'
+export const SCHEMA_VERSION = '2026-09-06.007'

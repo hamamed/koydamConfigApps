@@ -15,6 +15,14 @@
     <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
     <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
     <div>
+      <label for="status"><%= t('filters.status') %></label>
+      <select id="status" name="status">
+        <% [['all','filters.status.all'],['open','status.open'],['closed','status.closed'],['awarded','status.awarded'],['annule','status.annule']].forEach(function (o) { %>
+          <option value="<%= o[0] %>" <%= (query.status || 'all') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
       <label for="sort"><%= t('sort.label') %></label>
       <select id="sort" name="sort">
         <% [['date_limite:desc','sort.deadlineDesc'],['date_limite:asc','sort.deadlineAsc'],['date_publication:desc','sort.publishedDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>

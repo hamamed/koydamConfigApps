@@ -21,7 +21,7 @@ function daysAgo(days) {
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, articles, results, jobs, settings, http }) {
+export function createScraperRunner({ db, consultations, articles, documents, results, jobs, settings, http }) {
   // Built per run from the current settings, so changing the delay or the user
   // agent in the panel applies to the next crawl without a restart. A client
   // passed in wins, which is what the tests use to serve fixtures.
@@ -29,7 +29,7 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
     http ??
     createHttpClient(settings ? { resolveOptions: () => settings.section('scraper') } : undefined)
 
-  const consultationScraper = createConsultationScraper({ http: client, consultations, articles, settings })
+  const consultationScraper = createConsultationScraper({ http: client, consultations, articles, documents, settings })
   const resultScraper = createResultScraper({ http: client, results, settings })
   const matcher = createMatcher({ db, consultations, results })
 
@@ -93,7 +93,7 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
       detail.matching = await matcher.run()
       totals.matchesLinked = detail.matching.matchesLinked
 
-      const finished = await jobs.finish(job.id, { status: 'success', stats: totals })
+      const finished = await jobs.finish(job.id, { status: 'success', stats: totals, detail: summarize(detail) })
       log.info('job finished', { jobId: job.id, ...totals })
       return { job: finished, stats: totals, detail }
     } catch (error) {
@@ -102,6 +102,28 @@ export function createScraperRunner({ db, consultations, articles, results, jobs
       throw error
     }
   }
+
+  /** The few numbers worth keeping per run; the raw stats carry error lists. */
+  const summarize = (detail) => ({
+    consultations: pick(detail.consultations),
+    results: pick(detail.results),
+    backfill: detail.backfill
+      ? { processed: detail.backfill.consultationsProcessed, articles: detail.backfill.articlesSaved }
+      : null,
+    matching: detail.matching ?? null,
+  })
+
+  const pick = (stats) =>
+    stats
+      ? {
+          pages: stats.pagesScraped,
+          found: stats.itemsFound,
+          created: stats.itemsCreated,
+          updated: stats.itemsUpdated,
+          unchanged: stats.itemsUnchanged,
+          errors: stats.errors?.length ?? 0,
+        }
+      : null
 
   const accumulate = (totals, stats) => {
     totals.pagesScraped += stats.pagesScraped ?? 0

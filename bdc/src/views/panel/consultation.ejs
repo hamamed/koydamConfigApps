@@ -26,11 +26,16 @@
     <div><label><%= t('detail.portalId') %></label><span class="ltr"><%= consultation.source_id %></span></div>
   </div>
 
-  <% if (consultation.date_annulation || consultation.motif_annulation) { %>
-    <p class="error" style="margin-top:16px">
+  <% const cancellationDocs = consultation.documents.filter(function (d) { return d.kind === 'annulation' }) %>
+  <% if (consultation.is_cancelled || consultation.date_annulation || consultation.motif_annulation) { %>
+    <div class="error" style="margin-top:16px">
       <strong><%= t('detail.cancelledOn') %> <span class="ltr"><%= consultation.date_annulation || '—' %></span></strong>
       <% if (consultation.motif_annulation) { %><br><%= t('detail.cancelReason') %> : <%= consultation.motif_annulation %><% } %>
-    </p>
+      <% cancellationDocs.forEach(function (doc) { %>
+        <br><a href="<%= doc.url %>" target="_blank" rel="noopener noreferrer"><%- include('../partials/icon', { name: 'file-text', size: 13 }) %>
+          <%= doc.file_name || t('detail.documentAnnulation') %></a>
+      <% }) %>
+    </div>
   <% } %>
 
   <p style="margin:16px 0 0; display:flex; gap:8px; flex-wrap:wrap">
@@ -52,6 +57,23 @@
     </form>
   </div>
 <% } %>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('detail.documents') %> (<span class="ltr"><%= consultation.documents.length %></span>)</h2>
+  <% if (consultation.documents.length === 0) { %>
+    <p class="empty"><%= t('detail.noDocuments') %></p>
+  <% } else { %>
+    <ul style="margin:0; padding-inline-start:18px">
+      <% consultation.documents.forEach(function (doc) { %>
+        <li style="margin-bottom:6px">
+          <a href="<%= doc.url %>" target="_blank" rel="noopener noreferrer"><%= doc.file_name || t('detail.document' + (doc.kind === 'annulation' ? 'Annulation' : 'Avis')) %></a>
+          <span class="pill <%= doc.kind === 'annulation' ? 'warn' : '' %>"><%= t('detail.document' + (doc.kind === 'annulation' ? 'Annulation' : 'Avis')) %></span>
+          <span class="muted" style="font-size:11.5px"><%- include('../partials/icon', { name: 'external-link', size: 12 }) %> <%= t('detail.onPortal') %></span>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div>
 
 <div class="card" style="padding-bottom:6px">
   <h2><%- include('../partials/icon', { name: 'package', size: 15 }) %><%= t('detail.articles') %> (<span class="ltr"><%= consultation.articles.length %></span>)</h2>

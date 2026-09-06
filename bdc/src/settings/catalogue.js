@@ -39,6 +39,11 @@ export const CATALOGUE = Object.freeze([
   { key: 'scraper.maxRetries', group: 'scraper', ...number(1, 10), fallback: () => config.scraper.maxRetries },
   { key: 'scraper.timeoutMs', group: 'scraper', ...number(5000, 120000), fallback: () => config.scraper.timeoutMs },
   { key: 'scraper.userAgent', group: 'scraper', type: 'string', fallback: () => config.scraper.userAgent },
+  // Display only: what the dashboard says the next run is. The schedule itself
+  // lives in bdc-scrape.timer, so this has to be kept in step with it — a value
+  // here does not move the timer.
+  { key: 'scraper.dailyRunAt', group: 'scraper', type: 'string', fallback: () => '05:30' },
+  { key: 'scraper.dailySinceDays', group: 'scraper', ...number(1, 60), fallback: () => 7 },
 
   { key: 'invoice.currency', group: 'invoice', type: 'string', fallback: () => config.invoice.currency },
   { key: 'invoice.taxRate', group: 'invoice', ...number(0, 100), fallback: () => config.invoice.taxRate },

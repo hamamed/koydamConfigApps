@@ -124,6 +124,9 @@ export function createConsultationRepository(db = getDb()) {
 
   const countAll = async () => Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}`)).total)
 
+  const countCancelled = async () =>
+    Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE is_cancelled = 1`)).total)
+
   /**
    * Consultations whose detail page has never been read, newest first.
    * The listing card carries no category, nature or article breakdown, so a row
@@ -153,6 +156,7 @@ export function createConsultationRepository(db = getDb()) {
     remove,
     deriveStatus,
     countAll,
+    countCancelled,
     listPendingDetails,
     countPendingDetails,
   }

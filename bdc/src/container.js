@@ -1,6 +1,7 @@
 import { getDb } from './db/index.js'
 import { createConsultationRepository } from './repositories/consultationRepository.js'
 import { createArticleRepository } from './repositories/articleRepository.js'
+import { createDocumentRepository } from './repositories/documentRepository.js'
 import { createResultRepository } from './repositories/resultRepository.js'
 import { createFavoriteRepository } from './repositories/favoriteRepository.js'
 import { createInvoiceRepository } from './repositories/invoiceRepository.js'
@@ -26,6 +27,7 @@ export function createContainer(db = getDb(), { http } = {}) {
   const repositories = {
     consultations: createConsultationRepository(db),
     articles: createArticleRepository(db),
+    documents: createDocumentRepository(db),
     results: createResultRepository(db),
     favorites: createFavoriteRepository(db),
     invoices: createInvoiceRepository(db),
@@ -45,7 +47,7 @@ export function createContainer(db = getDb(), { http } = {}) {
     auth,
     users: createUserService({ ...repositories, auth }),
     settings,
-    admin: createAdminService({ ...repositories, runner }),
+    admin: createAdminService({ ...repositories, runner, settings }),
   }
 
   return { db, repositories, services, runner, settings }

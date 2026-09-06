@@ -35,7 +35,9 @@ const DATE_FILTERS = Object.freeze({
   dateLimiteEnd: ['dateLimiteEnd', 'date_limite_end', 'closingTo'],
 })
 
-const STATUS_VALUES = new Set(['open', 'closed', 'awarded', 'all'])
+// Mirrors the lifecycle the matcher derives; `annule` is how a withdrawn avis
+// is found.
+const STATUS_VALUES = new Set(['open', 'closed', 'awarded', 'annule', 'all'])
 
 const FORM_ROOTS = Object.values(SEARCH_FORMS).map((form) => form.root)
 

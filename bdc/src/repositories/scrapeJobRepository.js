@@ -16,7 +16,7 @@ export function createScrapeJobRepository(db = getDb()) {
     return db.get(sql, values)
   }
 
-  async function finish(id, { status, stats = {}, error = null }) {
+  async function finish(id, { status, stats = {}, detail = null, error = null }) {
     const job = await db.get(`SELECT started_at FROM ${TABLE} WHERE id = ?`, [id])
     const finishedAt = nowIso()
     const statement = buildUpdate(TABLE, {
@@ -28,6 +28,7 @@ export function createScrapeJobRepository(db = getDb()) {
       items_updated: stats.itemsUpdated ?? 0,
       matches_linked: stats.matchesLinked ?? 0,
       error_message: error,
+      detail_json: detail ? JSON.stringify(detail) : null,
       finished_at: finishedAt,
       duration_ms: job ? new Date(finishedAt) - new Date(job.started_at) : null,
     })
@@ -39,8 +40,16 @@ export function createScrapeJobRepository(db = getDb()) {
   const listRecent = (limit = 20) =>
     db.all(`SELECT * FROM ${TABLE} ORDER BY started_at DESC LIMIT ?`, [limit])
 
+  /** The most recent finished run, for the dashboard's "last crawl" panel. */
+  const lastFinished = (source = null) =>
+    db.get(
+      `SELECT * FROM ${TABLE} WHERE finished_at IS NOT NULL${source ? ' AND source = ?' : ''}
+       ORDER BY finished_at DESC LIMIT 1`,
+      source ? [source] : [],
+    )
+
   const findRunning = (source) =>
     db.get(`SELECT * FROM ${TABLE} WHERE source = ? AND status = 'running' ORDER BY started_at DESC`, [source])
 
-  return { start, finish, findById, listRecent, findRunning }
+  return { start, finish, findById, listRecent, lastFinished, findRunning }
 }

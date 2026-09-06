@@ -8,6 +8,7 @@ import {
   loadHtml,
 } from './listParser.js'
 import { parseArticles } from './articleParser.js'
+import { DOCUMENT_LINK_SELECTORS } from '../selectors.js'
 import { clean, cleanOrNull, matchKey, normalize, normalizeReference } from '../../utils/text.js'
 import { parseDate, parseTime, nowIso } from '../../utils/dates.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
@@ -39,6 +40,51 @@ export function parseConsultationList(html, pageUrl) {
 }
 
 /**
+ * Attachments published with an avis, and with its cancellation notice.
+ *
+ * The links are relative, so they are resolved against the page they came from;
+ * the files stay on the portal and are linked, not copied.
+ * @returns {object[]} rows for `consultation_documents`.
+ */
+export function parseDocuments($, pageUrl) {
+  const timestamp = nowIso()
+  const seen = new Set()
+  const documents = []
+
+  for (const selector of DOCUMENT_LINK_SELECTORS) {
+    $(selector).each((_, node) => {
+      const link = $(node)
+      const href = link.attr('href')
+      if (!href) return
+
+      let url
+      try {
+        url = new URL(href, pageUrl).toString()
+      } catch {
+        return
+      }
+      if (seen.has(url)) return
+      seen.add(url)
+
+      const isCancellation = /\/download\/annulation\//.test(url)
+      const label = clean(link.text())
+      documents.push({
+        kind: isCancellation ? 'annulation' : 'avis',
+        // The cancellation link is only ever labelled "Télécharger", which is
+        // not a name; the file id at least distinguishes one from another.
+        file_name: label && !/^t[ée]l[ée]charger$/i.test(label) ? label : null,
+        url,
+        source_file_id: url.match(/\/(\d+)$/)?.[1] ?? null,
+        created_at: timestamp,
+        updated_at: timestamp,
+      })
+    })
+  }
+
+  return documents
+}
+
+/**
  * Parses a consultation detail page: the header fields plus the full article /
  * lot breakdown.
  * @returns {{consultation: object|null, articles: object[]}}
@@ -63,12 +109,13 @@ export function parseConsultationDetail(html, pageUrl, knownReference = null) {
     statusLabel: extractStatusBadge($, $('body')),
   })
   const articles = parseArticles($)
+  const documents = parseDocuments($, pageUrl)
 
   if (consultation && articles.length > 0 && !consultation.lots_count) {
     consultation.lots_count = articles.length
   }
 
-  return { consultation, articles }
+  return { consultation, articles, documents }
 }
 
 /**

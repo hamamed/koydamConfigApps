@@ -6,7 +6,7 @@ import { NotFoundError } from '../utils/errors.js'
  * already joined to its award (when one has been published), which is the whole
  * point of the reference-based matching.
  */
-export function createConsultationService({ consultations, articles, results, favorites, matcher }) {
+export function createConsultationService({ consultations, articles, documents, results, favorites, matcher }) {
   /**
    * @param {object} filters canonical filters from http/filters.js
    * @param {{limit:number, offset:number, sort?:string}} pagination
@@ -41,14 +41,16 @@ export function createConsultationService({ consultations, articles, results, fa
     const consultation = await consultations.findById(id)
     if (!consultation) throw new NotFoundError(`Consultation ${id}`)
 
-    const [rows, result, favorite] = await Promise.all([
+    const [rows, files, result, favorite] = await Promise.all([
       articles.findByConsultationId(consultation.id),
+      documents.findByConsultationId(consultation.id),
       matcher.findResultFor(consultation.id),
       userId ? favorites.find(userId, consultation.id) : Promise.resolve(null),
     ])
 
     return serializeConsultation(consultation, {
       articles: rows,
+      documents: files,
       result,
       ...(userId ? { isFavorite: Boolean(favorite) } : {}),
     })

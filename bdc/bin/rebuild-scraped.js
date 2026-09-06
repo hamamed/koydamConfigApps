@@ -27,6 +27,7 @@ const SCRAPED_TABLES = [
   'result_lots',
   'consultation_results',
   'consultation_articles',
+  'consultation_documents',
   'consultations',
 ]
 const PRESERVED = ['users', 'scrape_jobs']

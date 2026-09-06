@@ -17,6 +17,8 @@ EnvironmentFile=/opt/bdc/.env
 # exactly what is new. The overlap of several days covers a missed run and any
 # avis published while a crawl was mid-flight.
 ExecStart=/usr/bin/node bin/scrape.js --source=all --since=7 --page-size=50 --max-pages=10
+# 10 pages per source at 50 rows: up to 500 projects and 500 awards a day, which
+# is far more than the portal publishes in a week.
 # Then read the detail page of anything that still has none — the listing card
 # carries no category, no nature of service and no articles.
 ExecStart=/usr/bin/node bin/scrape.js --backfill --limit=300

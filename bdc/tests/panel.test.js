@@ -453,3 +453,71 @@ test('rows with no date sort last, not first', async (t) => {
   })).json()
   assert.equal(data.at(-1).id, consultation.id, 'the row with no deadline is last')
 })
+
+test('a cancelled project shows why, and the notice explaining it', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const html = await (await api.page(`/panel/consultations/${api.consultationId}`, api.staff)).text()
+
+  // The reason the buyer gave, and the notice they published with it.
+  assert.match(html, /changement de la date limite/, 'the reason is shown')
+  assert.match(html, /download\/annulation\/375169\/52333941/, 'the cancellation notice is linked')
+
+  // The tender pack is listed too, by its own filename.
+  assert.match(html, /avis 53 2026\.zip/)
+  assert.match(html, /download\/375169\/52291457/)
+
+  // The files stay on the portal — this links them, it does not serve copies.
+  const links = [...html.matchAll(/href="(https:\/\/www\.marchespublics[^"]+)"/g)].map((m) => m[1])
+  assert.ok(links.some((href) => href.includes('/download/')), 'links point at the portal')
+})
+
+test('cancelled projects can be filtered for', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const listing = async (query) =>
+    (await (await fetch(`${api.base}/api/consultations?perPage=50${query}`, { headers: { cookie: api.staff } })).json())
+      .data
+
+  const cancelled = await listing('&status=annule')
+  assert.ok(cancelled.length > 0, 'the fixtures contain withdrawn avis')
+  assert.ok(cancelled.every((row) => row.status === 'annule' && row.is_cancelled === true))
+
+  const open = await listing('&status=open')
+  assert.ok(open.every((row) => row.status === 'open'))
+
+  const all = await listing('&status=all')
+  assert.ok(all.length > cancelled.length)
+
+  // The filter is on an allow-list; an unknown state is refused, not ignored.
+  const bad = await fetch(`${api.base}/api/consultations?status=nonsense`, { headers: { cookie: api.staff } })
+  assert.equal(bad.status, 400)
+})
+
+test('the dashboard reports what the last crawl brought in, and when the next one is', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const { data } = await (await fetch(`${api.base}/admin/api/dashboard`, { headers: { cookie: api.admin } })).json()
+
+  // The flat item counts on a job row are a combined total; the dashboard needs
+  // projects and awards apart, which is what the per-run detail carries.
+  assert.ok(data.lastRun, 'the setup crawl is reported')
+  assert.equal(data.lastRun.status, 'success')
+  assert.equal(data.lastRun.consultations.created, 10, 'new projects')
+  assert.equal(data.lastRun.results.created, 10, 'new awards')
+  assert.equal(typeof data.lastRun.durationMs, 'number')
+  assert.equal(typeof data.lastRun.matchesLinked, 'number')
+
+  // Next run is derived from the schedule setting, in UTC, always ahead of now.
+  assert.match(data.schedule.runAt, /^\d{2}:\d{2}$/)
+  assert.ok(new Date(data.schedule.nextRunAt) > new Date(), 'the next run is in the future')
+  assert.equal(data.schedule.sinceDays, 7)
+
+  const html = await (await api.page('/panel/dashboard', api.admin)).text()
+  assert.match(html, /New projects|Nouveaux projets/)
+  assert.match(html, /Next crawl|Prochaine collecte/)
+  assert.match(html, /Cancelled projects|Projets annulés/)
+})

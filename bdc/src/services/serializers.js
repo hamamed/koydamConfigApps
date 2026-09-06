@@ -26,6 +26,7 @@ export function serializeRow(row, { keepRaw = false } = {}) {
     output[column] = value
   }
   if ('has_result' in output) output.has_result = Boolean(output.has_result)
+  if ('is_cancelled' in output) output.is_cancelled = Boolean(output.is_cancelled)
   if ('is_active' in output) output.is_active = Boolean(output.is_active)
   if (keepRaw && row.raw_json) output.raw = safeParse(row.raw_json)
   return output
@@ -33,11 +34,12 @@ export function serializeRow(row, { keepRaw = false } = {}) {
 
 export const serializeRows = (rows, options) => rows.map((row) => serializeRow(row, options))
 
-/** Consultation payload with its articles and, when published, its award. */
-export function serializeConsultation(consultation, { articles = [], result = null, isFavorite } = {}) {
+/** Consultation payload with its articles, documents and, when published, its award. */
+export function serializeConsultation(consultation, { articles = [], documents = [], result = null, isFavorite } = {}) {
   return {
     ...serializeRow(consultation),
     articles: serializeRows(articles),
+    documents: serializeRows(documents),
     result: result ? { ...serializeRow(result), lots: serializeRows(result.lots ?? []) } : null,
     ...(isFavorite === undefined ? {} : { isFavorite }),
   }

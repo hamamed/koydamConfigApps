@@ -9,8 +9,47 @@
   <div class="stat"><b class="ltr"><%= dashboard.matchRate === null ? '—' : dashboard.matchRate + ' %' %></b><span><%- include('../partials/icon', { name: 'link', size: 13 }) %><%= t('stats.matchRate') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.unmatchedResults %></b><span><%= t('stats.unmatched') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.ambiguousResults %></b><span><%= t('stats.ambiguous') %></span></div>
+  <div class="stat"><b class="ltr"><%= dashboard.counts.cancelled %></b><span><%= t('stats.cancelled') %></span></div>
+  <div class="stat"><b class="ltr"><%= dashboard.counts.documents %></b><span><%= t('stats.documents') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.pendingDetails %></b><span><%= t('stats.pendingDetails') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.users %></b><span><%- include('../partials/icon', { name: 'users', size: 13 }) %><%= t('stats.users') %></span></div>
+</div>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'refresh-cw', size: 15 }) %><%= t('run.title') %></h2>
+  <% const run = dashboard.lastRun %>
+  <% if (!run) { %>
+    <p class="empty"><%= t('run.never') %></p>
+  <% } else { %>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div>
+        <label><%= t('run.finishedAt') %></label>
+        <span class="ltr"><%= (run.finishedAt || '').replace('T', ' ').slice(0, 16) %></span>
+        <% if (run.status !== 'success') { %> <span class="pill warn"><%= t('run.failed') %></span><% } %>
+      </div>
+      <div><label><%= t('run.duration') %></label><span class="ltr"><%= run.durationMs === null ? '—' : Math.round(run.durationMs / 1000) + ' s' %></span></div>
+      <div>
+        <label><%= t('run.newProjects') %></label>
+        <b class="ltr" style="font-size:19px"><%= run.consultations ? run.consultations.created : '—' %></b>
+        <% if (run.consultations) { %><br><small class="muted ltr"><%= t('run.pages', { pages: run.consultations.pages, found: run.consultations.found }) %></small><% } %>
+      </div>
+      <div>
+        <label><%= t('run.newAwards') %></label>
+        <b class="ltr" style="font-size:19px"><%= run.results ? run.results.created : '—' %></b>
+        <% if (run.results) { %><br><small class="muted ltr"><%= t('run.pages', { pages: run.results.pages, found: run.results.found }) %></small><% } %>
+      </div>
+      <div><label><%= t('run.linked') %></label><b class="ltr" style="font-size:19px"><%= run.matchesLinked %></b></div>
+      <div><label><%= t('run.detailsRead') %></label><span class="ltr"><%= run.backfill ? run.backfill.processed : '—' %></span></div>
+    </div>
+    <% if (run.error) { %><p class="error" style="margin:14px 0 0"><%= run.error %></p><% } %>
+  <% } %>
+
+  <p style="margin:16px 0 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+    <span class="pill"><%- include('../partials/icon', { name: 'calendar', size: 13 }) %>
+      <%= t('run.next') %> : <span class="ltr"><%= dashboard.schedule.nextRunAt ? dashboard.schedule.nextRunAt.replace('T', ' ').slice(0, 16) : '—' %></span></span>
+    <span class="muted" style="font-size:12.5px"><%= t('run.scheduleHint', { time: dashboard.schedule.runAt, days: dashboard.schedule.sinceDays }) %></span>
+  </p>
+  <p class="muted" style="margin:6px 0 0; font-size:11.5px"><%= t('run.scheduleNote') %></p>
 </div>
 
 <div class="card">

@@ -12,7 +12,7 @@ const log = logger.child('[scraper:consultations]')
  * `/bdc/entreprise/consultation/`, persisting every row and — when enabled —
  * the full article/lot breakdown from each detail page.
  */
-export function createConsultationScraper({ http, consultations, articles, settings }) {
+export function createConsultationScraper({ http, consultations, articles, documents, settings }) {
   /** Live values, so a change in the Settings screen applies to the next crawl. */
   const knobs = async () => (settings ? { ...config.scraper, ...(await settings.section('scraper')) } : config.scraper)
 
@@ -96,6 +96,7 @@ export function createConsultationScraper({ http, consultations, articles, setti
         if (detail.consultation) {
           await consultations.upsert({ ...detail.consultation, source_id: row.source_id }, { fromDetail: true })
         }
+        await documents.replaceForConsultation(row.id, detail.documents)
         if (detail.articles.length > 0) {
           const stored = await articles.replaceForConsultation(row.id, detail.articles)
           return stored.length
@@ -124,10 +125,11 @@ export function createConsultationScraper({ http, consultations, articles, setti
     if (detail.consultation) {
       await consultations.upsert({ ...detail.consultation, source_id: consultation.source_id }, { fromDetail: true })
     }
+    const storedDocuments = await documents.replaceForConsultation(consultation.id, detail.documents)
     const stored = detail.articles.length
       ? await articles.replaceForConsultation(consultation.id, detail.articles)
       : []
-    return { articles: stored }
+    return { articles: stored, documents: storedDocuments }
   }
 
   /**
