@@ -70,3 +70,42 @@ test('builds an upsert that preserves the conflict key', () => {
   assert.match(sql, /ON CONFLICT \(reference\) DO UPDATE SET objet = excluded\.objet/)
   assert.deepEqual(params, ['R', 'O'])
 })
+
+test('an additive column migration reaches a database created by an earlier version', async () => {
+  const { createSqliteDriver } = await import('../src/db/drivers/sqlite.js')
+  const { initDatabase } = await import('../src/db/init.js')
+  const { additiveColumns } = await import('../src/db/schema.js')
+
+  const db = createSqliteDriver({ file: ':memory:' })
+
+  // A table that predates the columns added later. `CREATE TABLE IF NOT EXISTS`
+  // is a no-op against it, so only the ALTER pass can fix it — without one the
+  // failure surfaces at write time as "no column named date_annulation", well
+  // after the deploy reported success.
+  await db.exec(`CREATE TABLE consultations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reference TEXT NOT NULL UNIQUE,
+    objet TEXT, acheteur TEXT, categorie TEXT, nature_prestation TEXT,
+    lieu_execution TEXT, date_publication TEXT, date_limite TEXT,
+    status TEXT NOT NULL DEFAULT 'open',
+    first_seen_at TEXT NOT NULL,
+    last_seen_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`)
+
+  await initDatabase(db)
+
+  const columns = new Set((await db.all('PRAGMA table_info(consultations)')).map((row) => row.name))
+  assert.ok(columns.has('date_annulation'))
+  assert.ok(columns.has('motif_annulation'))
+
+  // Running again must change nothing.
+  await initDatabase(db)
+  for (const { table, column } of additiveColumns()) {
+    const present = new Set((await db.all(`PRAGMA table_info(${table})`)).map((row) => row.name))
+    assert.ok(present.has(column), `${table}.${column} is missing`)
+  }
+
+  await db.close()
+})

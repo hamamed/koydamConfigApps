@@ -240,4 +240,27 @@ export function indexStatements() {
   ]
 }
 
+/**
+ * Columns added after a table's first release.
+ *
+ * `CREATE TABLE IF NOT EXISTS` is a no-op on a table that already exists, so a
+ * column added to the definition above never reaches a database created by an
+ * earlier version — it fails at write time with "table X has no column named Y",
+ * long after deploy reported success. Every column added later must also be
+ * listed here.
+ *
+ * Additive only, and applied when missing, so running this on every boot is
+ * idempotent.
+ */
+export function additiveColumns() {
+  return [
+    // 2026-09-06.002 — an avis can be published and then withdrawn, and the
+    // portal publishes a VAT rate and required warranties per article.
+    { table: 'consultations', column: 'date_annulation', definition: 'TEXT' },
+    { table: 'consultations', column: 'motif_annulation', definition: 'TEXT' },
+    { table: 'consultation_articles', column: 'tva_rate', definition: 'REAL' },
+    { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
+  ]
+}
+
 export const SCHEMA_VERSION = '2026-09-06.002'
