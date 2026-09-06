@@ -105,7 +105,16 @@ systemctl daemon-reload
 systemctl enable --quiet "$SERVICE"
 
 say "Installing the nginx site"
-install -m 644 "$APP_DIR/deploy/nginx.conf" "/etc/nginx/sites-available/${SERVICE}"
+# Never overwrite an existing site file. Once certbot has run it owns that file:
+# it holds the 443 server block and the certificate paths, none of which are in
+# the repository copy. Replacing it silently drops HTTPS for this host and every
+# request falls through to another site on the box.
+if [[ -f "/etc/nginx/sites-available/${SERVICE}" ]]; then
+  echo "    /etc/nginx/sites-available/${SERVICE} already exists — left alone"
+  echo "    (edit it in place; the repository copy is the first-run template)"
+else
+  install -m 644 "$APP_DIR/deploy/nginx.conf" "/etc/nginx/sites-available/${SERVICE}"
+fi
 ln -sf "/etc/nginx/sites-available/${SERVICE}" "/etc/nginx/sites-enabled/${SERVICE}"
 nginx -t
 systemctl reload nginx

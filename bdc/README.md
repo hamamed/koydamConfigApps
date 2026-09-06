@@ -414,7 +414,7 @@ the certificate.
 | --- | --- |
 | `deploy/bdc.service` | the API unit, runs as `brawl` under `ProtectSystem=strict` |
 | `deploy/bdc-scrape.{service,timer}` | the crawl, 06:15 and 18:15, jittered |
-| `deploy/nginx.conf` | reverse proxy; unbuffered PDF streaming, longer admin timeouts |
+| `deploy/nginx.conf` | reverse proxy, **first-run template only** — certbot owns the installed copy |
 | `deploy/setup.sh` | first-time install, idempotent |
 | `deploy/update.sh` | dependencies + schema + restart, if you are not using deploy.sh |
 
@@ -435,6 +435,12 @@ favourites or invoices, which are the only rows a crawl cannot reproduce.
 
 Operational notes:
 
+- **Do not copy `deploy/nginx.conf` over a live site file.** Certbot rewrites the
+  installed copy with the 443 server block and the certificate paths; replacing
+  it drops HTTPS for the host and requests fall through to another site on the
+  box, which shows up as a certificate mismatch rather than an obvious outage.
+  Edit the installed file, or re-run `certbot install --cert-name <domain> --nginx`
+  afterwards. `setup.sh` refuses to overwrite an existing one.
 - The app binds `127.0.0.1` in production (override with `HOST`), so nginx is
   the only way in.
 - `data/` and `storage/` are `preserve`d in `services.conf`; a deploy syncs with
