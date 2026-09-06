@@ -46,7 +46,11 @@ export function createAnalyticsService({ analytics }) {
       },
       winners: group(winners),
       buyers: group(buyers),
-      categories: group(categories),
+      categories: categories.map((row) => ({
+        label: row.label,
+        projects: Number(row.projects),
+        openProjects: Number(row.open_projects ?? 0),
+      })),
       months: months
         .map((row) => ({ month: row.month, awards: Number(row.awards), total: amount(row.total_cents) }))
         .reverse(),

@@ -1,6 +1,6 @@
 import { getDb } from '../db/index.js'
 import { buildWhere } from '../db/sql.js'
-import { resultClauses } from './filterClauses.js'
+import { consultationClauses, resultClauses } from './filterClauses.js'
 
 /**
  * Read models over the award history.
@@ -74,6 +74,26 @@ export function createAnalyticsRepository(db = getDb()) {
     )
   }
 
+  /**
+   * Categories, counted over *consultations* rather than awards.
+   *
+   * The awards listing does not publish a category at all — zero of ten
+   * thousand rows carry one — so ranking awards by category would show an empty
+   * table forever. Consultations do carry it, and "what work is being
+   * published, and how much of it is still open" is the more useful question
+   * anyway when deciding where to compete.
+   */
+  async function topCategories(filters = {}, limit = 12) {
+    const where = buildWhere(consultationClauses(filters, 'consultations'))
+    return db.all(
+      `SELECT categorie AS label, COUNT(*) AS projects,
+              SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS open_projects
+       FROM consultations${where.sql}${where.sql ? ' AND' : ' WHERE'} categorie IS NOT NULL AND categorie <> ''
+       GROUP BY categorie ORDER BY projects DESC LIMIT ?`,
+      [...where.params, limit],
+    )
+  }
+
   /** Awards per month, so a seasonal pattern in publication is visible. */
   async function byMonth(filters = {}, months = 12) {
     const { sql, params } = scope(filters)
@@ -100,7 +120,7 @@ export function createAnalyticsRepository(db = getDb()) {
     summary,
     topWinners: topBy('attributaire'),
     topBuyers: topBy('acheteur'),
-    topCategories: topBy('categorie'),
+    topCategories,
     byMonth,
     outcomes,
   }

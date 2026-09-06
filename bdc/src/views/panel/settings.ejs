@@ -10,7 +10,7 @@
   <% groups.forEach(function (group) { %>
     <div class="card">
       <h2><%= t('settings.group.' + group.group) %></h2>
-      <div class="filters" style="align-items:start">
+      <div class="cols-2">
         <% group.entries.forEach(function (entry) { %>
           <div>
             <label for="<%= entry.key %>">

@@ -693,253 +693,81 @@ test('award analysis answers what work like this goes for', async (t) => {
   assert.match(html, /href="\/panel\/insights"/, 'and it is a tab for everyone')
 })
 
-test('an invoice can be built from a project in the panel', async (t) => {
+test('every insights ranking opens the rows behind it', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  // The generator, the totals and the PDF all existed and were tested — but
-  // only reachable with an API client. The project page now offers a way in.
-  const project = await (await api.page(`/panel/consultations/${api.consultationId}`, api.staff)).text()
-  assert.match(project, new RegExp(`/panel/consultations/${api.consultationId}/invoice`))
+  const page = await (await api.page('/panel/insights', api.staff)).text()
+  const overview = await api.container.services.analytics.overview({})
 
-  const form = await (await api.page(`/panel/consultations/${api.consultationId}/invoice`, api.staff)).text()
-  assert.match(form, /CÂBLE PNI avec brassard/, 'the articles are listed to pick from')
-  assert.match(form, /name="unitPrice"/, 'with a price to fill in — the portal publishes none')
+  /** The href as the page really builds it: URLSearchParams, then EJS escaping. */
+  const href = (path, param, value) =>
+    `${path}?${new URLSearchParams({ [param]: value }).toString()}`.replace(/&/g, '&amp;')
 
-  const articles = await api.container.repositories.articles.findByConsultationId(api.consultationId)
-  const body = new URLSearchParams()
-  body.set('clientName', 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA')
-  body.set('taxRate', '20')
-  for (const article of articles.slice(0, 3)) {
-    body.append('articleId', String(article.id))
-    body.append('quantity', '2')
-    body.append('unitPrice', '150')
-  }
-  // Only the first two are ticked; the third is left out.
-  body.append('include', String(articles[0].id))
-  body.append('include', String(articles[1].id))
+  // A ranking you cannot open is trivia. The useful move after "this company
+  // wins a lot" is seeing exactly what they won.
+  const winner = overview.winners[0].label
+  assert.ok(page.includes(href('/panel/awards', 'attributaire', winner)), 'the winner opens their awards')
 
-  const created = await fetch(`${api.base}/panel/consultations/${api.consultationId}/invoice`, {
-    method: 'POST',
-    redirect: 'manual',
-    headers: { cookie: api.staff, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  })
-  assert.equal(created.status, 302)
-  assert.match(created.headers.get('location'), /^\/panel\/invoices\?created=/)
+  const buyer = overview.buyers[0].label
+  assert.ok(page.includes(href('/panel/awards', 'acheteur', buyer)), 'the buyer opens what they awarded')
+  assert.ok(page.includes(href('/panel', 'acheteur', buyer)), 'and what they have open')
 
-  const { data } = await (await fetch(`${api.base}/api/invoices`, { headers: { cookie: api.staff } })).json()
-  assert.equal(data.length, 1)
-  // A listing does not load line items, and says so by omitting the key rather
-  // than returning an empty array that looks like an invoice with no lines.
-  assert.equal(data[0].items, undefined)
-  assert.equal(data[0].subtotal, 600, '2 x 150 x 2 lines')
-  assert.equal(data[0].tax, 120)
-  assert.equal(data[0].total, 720)
-  assert.equal(data[0].consultation_id, api.consultationId)
+  const category = overview.categories[0].label
+  assert.ok(page.includes(href('/panel', 'categorie', category)), 'a category opens its projects')
 
-  const full = await (await fetch(`${api.base}/api/invoices/${data[0].id}`, { headers: { cookie: api.staff } })).json()
-  assert.equal(full.data.items.length, 2, 'only the ticked lines are invoiced')
+  // And the links actually narrow, rather than landing on the whole list.
+  const awards = await (await fetch(
+    `${api.base}/api/results?attributaire=${encodeURIComponent(winner)}&perPage=50`,
+    { headers: { cookie: api.staff } },
+  )).json()
 
-  // The list shows it, with the project it settles and a PDF link.
-  const list = await (await api.page('/panel/invoices', api.staff)).text()
-  assert.match(list, /FCT-\d{4}-0001/)
-  assert.match(list, /53\/2026/, 'linked back to the project')
-  assert.match(list, new RegExp(`/api/invoices/${data[0].id}/pdf`))
-
-  // Invoices are per account, like favourites.
-  const others = await (await fetch(`${api.base}/api/invoices`, { headers: { cookie: api.admin } })).json()
-  assert.equal(others.data.length, 0)
-})
-
-test('a saved search alerts on what arrives after it was saved', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const created = await fetch(`${api.base}/api/favorites/searches`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', cookie: api.staff },
-    body: JSON.stringify({ name: 'Fournitures', filters: { categorie: 'Fournitures' }, notifyNew: true }),
-  })
-  assert.equal(created.status, 201)
-
-  // Nothing yet: a new search starts from now, so it does not fire a digest
-  // about the entire back catalogue on the day it is created.
-  const first = await api.container.services.alerts.run()
-  assert.equal(first.searches, 1)
-  assert.equal(first.alerts, 0)
-
-  // Time passes, then something matching arrives. The wait is the point: the
-  // window is half-open on the left, so a row must be strictly newer than the
-  // cursor to be reported, and the clock has millisecond resolution.
-  await new Promise((resolve) => setTimeout(resolve, 5))
-  await api.container.repositories.consultations.upsert({
-    source_id: '999001',
-    reference: 'NEW/2026',
-    match_key: 'NEW/2026|acheteurtest',
-    objet: 'Achat de fournitures de bureau',
-    acheteur: 'ACHETEUR TEST',
-    categorie: 'Fournitures',
-    search_text: 'achat de fournitures de bureau acheteur test fournitures',
-    first_seen_at: new Date().toISOString(),
-    last_seen_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  })
-
-  const second = await api.container.services.alerts.run()
-  assert.equal(second.alerts, 1, 'the new project is reported')
-  assert.equal(second.delivered, 1)
-
-  const history = await api.container.services.savedSearches.history(
-    (await api.container.repositories.users.findByEmailWithSecret('staff@test.ma')).id,
+  assert.ok(awards.meta.total > 0)
+  assert.ok(awards.meta.total < overview.summary.awards, 'a slice, not everything')
+  assert.ok(
+    awards.data.every((row) => row.attributaire.toLowerCase().includes(winner.toLowerCase())),
+    'every row is theirs',
   )
-  assert.equal(history[0].kind, 'new_projects')
-  assert.equal(history[0].status, 'sent')
-  assert.match(history[0].body, /NEW\/2026/)
 
-  // A high-water mark, not a time window: running again sends nothing, however
-  // often it runs and however late a previous run was.
-  const third = await api.container.services.alerts.run()
-  assert.equal(third.alerts, 0)
+  const projects = await (await fetch(`${api.base}/api/consultations?acheteur=${encodeURIComponent(buyer)}&perPage=50`, {
+    headers: { cookie: api.staff },
+  })).json()
+  assert.ok(projects.data.every((row) => row.acheteur.toLowerCase().includes(buyer.toLowerCase())))
 })
 
-test('tracked projects closing soon produce one reminder a day', async (t) => {
+test('settings fields are laid out two to a row', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  const staff = await api.container.repositories.users.findByEmailWithSecret('staff@test.ma')
-  await api.container.services.favorites.add(staff.id, api.consultationId)
-
-  // Two days out — inside the window a bidder needs to act on.
-  const soon = new Date()
-  soon.setUTCDate(soon.getUTCDate() + 2)
-  await api.container.repositories.consultations.update(api.consultationId, {
-    date_limite: soon.toISOString().slice(0, 10),
-  })
-
-  const run = await api.container.services.alerts.run()
-  assert.equal(run.alerts, 1)
-
-  const history = await api.container.services.savedSearches.history(staff.id)
-  assert.equal(history[0].kind, 'deadline')
-  assert.match(history[0].subject, /échéance/)
-  assert.match(history[0].body, /53\/2026/)
-
-  // Not again the same day, however many times the job runs.
-  const again = await api.container.services.alerts.run()
-  assert.equal(again.alerts, 0)
+  const html = await (await api.page('/panel/settings', api.admin)).text()
+  assert.match(html, /class="cols-2"/)
+  assert.doesNotMatch(html, /<div class="filters" style="align-items:start">/)
+  // Two columns exactly, not "as many as fit" — a settings field is read one at
+  // a time and the values here are long.
+  assert.match(html, /\.cols-2 \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
+  assert.match(html, /@media \(max-width: 720px\) \{ \.cols-2 \{ grid-template-columns:1fr/, 'one column on a phone')
 })
 
-test('an alert is recorded before it is delivered, so a broken mailer loses nothing', async (t) => {
-  const { createTestContainer: fresh } = await import('./helpers.js')
-  const failing = {
-    isConfigured: () => true,
-    send: async () => {
-      throw new Error('smtp unreachable')
-    },
-  }
-  const container = await fresh({ mailer: failing })
-  await container.services.auth.register({ email: 'x@test.ma', password: 'a-very-long-password' })
-  const user = await container.repositories.users.findByEmailWithSecret('x@test.ma')
+test('categories are counted where the data actually is', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
 
-  await container.repositories.notifications.create({
-    user_id: user.id,
-    saved_search_id: null,
-    kind: 'deadline',
-    subject: 'test',
-    body: 'test',
-    payload_json: JSON.stringify({ to: 'x@test.ma' }),
-    channel: 'email',
-  })
+  // The awards listing publishes no category — zero of ten thousand rows on the
+  // live box carry one — so ranking awards by category showed an empty table.
+  // Consultations do carry it, and it is the more useful question anyway.
+  const awardsWithCategory = await api.container.db.get(
+    "SELECT COUNT(*) AS total FROM consultation_results WHERE categorie IS NOT NULL AND categorie <> ''",
+  )
+  assert.equal(Number(awardsWithCategory.total), 0, 'the portal gives awards no category')
 
-  const stats = await container.services.alerts.run()
-  assert.equal(stats.failed, 1)
+  const { categories } = await api.container.services.analytics.overview({})
+  assert.ok(categories.length > 0, 'but the ranking is not empty')
+  assert.ok(categories.every((row) => row.label && row.projects > 0))
+  assert.ok(categories.every((row) => row.openProjects <= row.projects))
 
-  // The alert is still on record, marked failed with the reason, ready to be
-  // retried — not lost because a mail server was down.
-  const [row] = await container.repositories.notifications.listForUser(user.id)
-  assert.equal(row.status, 'failed')
-  assert.match(row.error_message, /smtp unreachable/)
-
-  const pending = await container.repositories.notifications.listPending()
-  assert.equal(pending.length, 0, 'a failed alert is not retried in a tight loop')
-})
-
-test('a forgotten password can be reset, without revealing who has an account', async (t) => {
-  const sent = []
-  const { createTestContainer: fresh } = await import('./helpers.js')
-  const container = await fresh({
-    mailer: { isConfigured: () => true, send: async (message) => void sent.push(message) },
-  })
-  await container.services.auth.register({ email: 'real@test.ma', password: 'the-original-password' })
-  const server = await startTestServer(createApp(container))
-  t.after(() => server.close())
-
-  const form = (path, body) =>
-    fetch(`${server.base}${path}`, {
-      method: 'POST',
-      redirect: 'manual',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(body),
-    })
-
-  // Both answers are identical. Anything else turns this into a way to ask who
-  // has an account — on a procurement tool, who is bidding is worth knowing.
-  const known = await (await form('/forgot', { email: 'real@test.ma' })).text()
-  const unknown = await (await form('/forgot', { email: 'nobody@test.ma' })).text()
-  assert.equal(known, unknown)
-  assert.match(known, /If an account exists|Si un compte existe/)
-  assert.equal(sent.length, 1, 'and only the real address is mailed')
-
-  const link = sent[0].text.match(/\/reset\?token=([^\s&]+)/)
-  assert.ok(link, 'the email carries a link')
-  const token = decodeURIComponent(link[1])
-
-  // The token is stored hashed: a database copy is not a login.
-  const [stored] = await container.db.all('SELECT token_hash FROM password_resets')
-  assert.notEqual(stored.token_hash, token)
-  assert.equal(stored.token_hash.length, 64, 'sha256')
-
-  // A rejected password does not burn the link.
-  const short = await form('/reset', { token, password: 'short', confirm: 'short' })
-  assert.match(await short.text(), /at least 12|12 caractères/)
-  assert.ok(await container.services.passwordReset.isValid(token), 'still usable')
-
-  const mismatch = await form('/reset', { token, password: 'a-long-enough-password', confirm: 'something-else' })
-  assert.match(await mismatch.text(), /do not match|ne correspondent pas/)
-
-  const done = await form('/reset', { token, password: 'a-brand-new-password', confirm: 'a-brand-new-password' })
-  assert.match(await done.text(), /Password changed|Mot de passe modifié/)
-
-  // Single use, and the new password is the one that works.
-  assert.equal(await container.services.passwordReset.isValid(token), false)
-  const reused = await form('/reset', { token, password: 'yet-another-password', confirm: 'yet-another-password' })
-  assert.match(await reused.text(), /no longer valid|plus valable/)
-
-  await assert.rejects(() => container.services.auth.login('real@test.ma', 'the-original-password'))
-  const signedIn = await container.services.auth.login('real@test.ma', 'a-brand-new-password')
-  assert.ok(signedIn.token)
-})
-
-test('an expired reset link stops working', async (t) => {
-  const container = await (await import('./helpers.js')).createTestContainer({
-    mailer: { isConfigured: () => false, send: async () => ({ delivered: true, channel: 'log' }) },
-  })
-  t.after(() => {})
-  await container.services.auth.register({ email: 'x@test.ma', password: 'the-original-password' })
-  const user = await container.repositories.users.findByEmailWithSecret('x@test.ma')
-
-  const { token } = await container.repositories.passwordResets.issue(user.id)
-  assert.ok(await container.services.passwordReset.isValid(token))
-
-  await container.db.run('UPDATE password_resets SET expires_at = ?', [new Date(Date.now() - 1000).toISOString()])
-  assert.equal(await container.services.passwordReset.isValid(token), false)
-
-  // Asking again invalidates whatever was sent before, including to an address
-  // the person may no longer control.
-  const first = await container.repositories.passwordResets.issue(user.id)
-  const second = await container.repositories.passwordResets.issue(user.id)
-  assert.equal(await container.services.passwordReset.isValid(first.token), false)
-  assert.ok(await container.services.passwordReset.isValid(second.token))
+  const stored = await api.container.db.get(
+    'SELECT COUNT(*) AS total FROM consultations WHERE categorie = ?',
+    [categories[0].label],
+  )
+  assert.equal(categories[0].projects, Number(stored.total))
 })

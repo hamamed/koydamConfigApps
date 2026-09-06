@@ -34,23 +34,65 @@
 
   <% const bar = function (value, max) { return max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0 } %>
 
+  <%
+    /*
+      Every row leads somewhere. A ranking that cannot be opened is trivia; the
+      useful move after "this company wins a lot" is seeing exactly what they
+      won, and after "this buyer publishes a lot" is seeing what they have open
+      right now. Each label carries the filter that produced it into the list
+      that shows the rows behind it.
+    */
+    const link = (path, param, value) =>
+      `${path}?${new URLSearchParams({ [param]: value, lang: locale }).toString()}`
+  %>
+
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); align-items:start">
-    <% [['winners','insights.winners','insights.company'],['buyers','insights.buyers','insights.buyer'],['categories','insights.categories','insights.category']].forEach(function (block) { %>
-      <% const rows = insights[block[0]]; const max = rows.length ? Math.max(...rows.map(function (r) { return r.awards })) : 0 %>
+    <%
+      const blocks = [
+        { key: 'winners', title: 'insights.winners', head: 'insights.company', hint: null,
+          count: 'awards', countLabel: 'insights.count', extra: 'total',
+          primary: function (v) { return { href: link('/panel/awards', 'attributaire', v), title: t('insights.seeAwards') } },
+          secondary: null },
+        { key: 'buyers', title: 'insights.buyers', head: 'insights.buyer', hint: null,
+          count: 'awards', countLabel: 'insights.count', extra: 'total',
+          primary: function (v) { return { href: link('/panel/awards', 'acheteur', v), title: t('insights.seeBuyerAwards') } },
+          secondary: function (v) { return { href: link('/panel', 'acheteur', v), title: t('insights.seeProjects'), icon: 'search' } } },
+        { key: 'categories', title: 'insights.categories', head: 'insights.category', hint: 'insights.categoriesHint',
+          count: 'projects', countLabel: 'insights.projects', extra: 'openProjects',
+          primary: function (v) { return { href: link('/panel', 'categorie', v), title: t('insights.seeCategory') } },
+          secondary: function (v) { return { href: link('/panel/awards', 'categorie', v), title: t('insights.seeBuyerAwards'), icon: 'award' } } },
+      ]
+    %>
+    <% blocks.forEach(function (block) { %>
+      <% const rows = insights[block.key]; const max = rows.length ? Math.max(...rows.map(function (r) { return r[block.count] })) : 0 %>
       <div class="card" style="padding-bottom:8px">
-        <h2><%= t(block[1]) %></h2>
+        <h2><%= t(block.title) %></h2>
+        <% if (block.hint) { %><p class="muted" style="margin:-6px 0 12px; font-size:11.5px"><%= t(block.hint) %></p><% } %>
         <% if (rows.length === 0) { %><p class="empty"><%= t('insights.empty') %></p><% } else { %>
           <table>
-            <thead><tr><th><%= t(block[2]) %></th><th style="width:34%"><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
+            <thead><tr>
+              <th><%= t(block.head) %></th>
+              <th style="width:34%"><%= t(block.countLabel) %></th>
+              <th><%= block.extra === 'total' ? t('insights.total') : t('insights.stillOpen') %></th>
+            </tr></thead>
             <tbody>
               <% rows.forEach(function (r) { %>
+                <% const primary = block.primary(r.label); const secondary = block.secondary && block.secondary(r.label) %>
                 <tr>
-                  <td style="max-width:210px"><%= r.label %></td>
-                  <td>
-                    <span class="ltr"><%= r.awards %></span>
-                    <span style="display:block; height:5px; border-radius:3px; background:var(--accent); opacity:.75; width:<%= bar(r.awards, max) %>%"></span>
+                  <td style="max-width:210px">
+                    <a href="<%= primary.href %>" title="<%= primary.title %>"><%= r.label %></a>
+                    <% if (secondary) { %>
+                      <a href="<%= secondary.href %>" title="<%= secondary.title %>" class="muted" style="margin-inline-start:5px"><%- include('../partials/icon', { name: secondary.icon, size: 12 }) %></a>
+                    <% } %>
                   </td>
-                  <td class="ltr"><%= r.total === null ? '—' : Math.round(r.total).toLocaleString('fr-MA') %></td>
+                  <td>
+                    <span class="ltr"><%= r[block.count] %></span>
+                    <span style="display:block; height:5px; border-radius:3px; background:var(--accent); opacity:.75; width:<%= bar(r[block.count], max) %>%"></span>
+                  </td>
+                  <td class="ltr">
+                    <% if (block.extra === 'total') { %><%= r.total === null ? '—' : Math.round(r.total).toLocaleString('fr-MA') %>
+                    <% } else { %><%= r.openProjects %><% } %>
+                  </td>
                 </tr>
               <% }) %>
             </tbody>
