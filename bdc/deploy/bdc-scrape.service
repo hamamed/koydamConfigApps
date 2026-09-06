@@ -16,9 +16,21 @@ EnvironmentFile=/opt/bdc/.env
 # page-capped crawl would miss most of them. A publication-date floor asks for
 # exactly what is new. The overlap of several days covers a missed run and any
 # avis published while a crawl was mid-flight.
-ExecStart=/usr/bin/node bin/scrape.js --source=all --since=7 --page-size=50 --max-pages=10
-# 10 pages per source at 50 rows: up to 500 projects and 500 awards a day, which
-# is far more than the portal publishes in a week.
+#
+# The two sources are crawled separately because they need different things.
+#
+# The open listing is finite — about 16 pages at 50 rows — and it is ordered by
+# deadline descending, so its LAST pages are the avis closing within a day. A
+# 10-page cap stopped at row 500, which is precisely where every remaining avis
+# closes tomorrow: roughly 200 a day were never recorded at all, and they were
+# the most urgent ones to bid on and the next ones to become awards. So this
+# takes the whole listing; the crawl stops on its own at the first empty page,
+# and the cap is a guard rather than a target.
+ExecStart=/usr/bin/node bin/scrape.js --source=consultations --page-size=50 --max-pages=30
+# Awards are an archive that only grows, so recency is what matters here, not
+# depth. The overlap of several days covers a missed run and anything published
+# while a crawl was mid-flight.
+ExecStart=/usr/bin/node bin/scrape.js --source=results --since=7 --page-size=50 --max-pages=25
 # Then read the detail page of anything that still has none — the listing card
 # carries no category, no nature of service and no articles.
 ExecStart=/usr/bin/node bin/scrape.js --backfill --limit=300

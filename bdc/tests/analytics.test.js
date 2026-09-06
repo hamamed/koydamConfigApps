@@ -250,3 +250,38 @@ test('a company profile answers what they win and from whom', async (t) => {
   assert.ok(profile.topBuyers.some((row) => row.label === BUYER))
   assert.ok(!profile.recentAwards.some((row) => row.attributaire === 'CONCURRENT SARL'))
 })
+
+test('the open listing is ordered by deadline descending, so its tail is the urgent end', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  // The shape the live listing has: page 1 closes months away, the last page
+  // closes tomorrow. A page-capped daily crawl therefore drops the avis nearest
+  // their deadline — the ones most worth bidding on, and the next to be awarded.
+  for (const [index, deadline] of [['1', '2027-03-16'], ['2', '2026-12-31'], ['3', '2026-09-07'], ['4', '2026-09-07']]) {
+    const { row } = await container.repositories.consultations.upsert({
+      source_id: index, reference: `${index}/2026`, reference_raw: `${index}/2026`,
+      match_key: `${index}/2026|x`, objet: `Achat ${index}`, acheteur: BUYER,
+      date_publication: '2026-09-01', date_limite: deadline, status: 'open',
+      search_text: `achat ${index}`,
+      first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+    })
+    assert.ok(row.id)
+  }
+
+  const { data } = await container.services.consultations.search({}, { limit: 10, offset: 0 })
+  assert.deepEqual(
+    data.map((row) => row.date_limite),
+    ['2027-03-16', '2026-12-31', '2026-09-07', '2026-09-07'],
+    'our list opens in the portal’s own order, furthest deadline first',
+  )
+
+  // Which is why a deadline window, not the page order, is how somebody finds
+  // what is urgent. (`closingWithin` is a query-parameter name; parseFilters
+  // turns it into the canonical dateLimiteStart/End the read model takes.)
+  const soon = await container.services.consultations.search(
+    { dateLimiteEnd: '2026-09-09' }, { limit: 10, offset: 0 },
+  )
+  assert.equal(soon.data.length, 2, 'the urgent ones are reachable by filter')
+  assert.ok(soon.data.every((row) => row.date_limite <= '2026-09-09'))
+})
