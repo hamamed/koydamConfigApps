@@ -30,6 +30,8 @@
   .side nav a { display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:var(--sidebar-muted); font-size:13.5px; }
   .side nav a:hover { background:rgba(255,255,255,.08); color:#fff; text-decoration:none; }
   .side nav a.on { background:#fff; color:var(--sidebar); font-weight:600; }
+  .side .help { display:flex; align-items:center; gap:8px; color:var(--sidebar-muted); font-size:12.5px; padding:4px 0 8px; }
+  .side .help:hover { color:#fff; text-decoration:none; }
   .side nav .sep { margin:12px 11px 6px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:#5f7c9c; }
   .side .bottom { margin-top:auto; display:flex; flex-direction:column; gap:8px; padding-top:14px; border-top:1px solid rgba(255,255,255,.12); }
   .side .who { padding:0 11px; font-size:12px; color:var(--sidebar-muted); overflow-wrap:anywhere; }
@@ -150,6 +152,7 @@
 
     <div class="bottom">
       <div class="who"><b><%= user.fullName || user.email %></b><%= user.role === 'admin' ? t('users.role.admin') : t('users.role.user') %></div>
+      <a href="/guide?lang=<%= locale %>" class="help"><%- include('icon', { name: 'circle-help', size: 14 }) %><%= t('public.nav.guide') %></a>
       <div class="langs">
         <% locales.forEach(function (l) { %><a href="<%= langUrl(l.code) %>" class="<%= l.code === locale ? 'on' : '' %>" hreflang="<%= l.code %>"><%= l.code.toUpperCase() %></a><% }) %>
       </div>
