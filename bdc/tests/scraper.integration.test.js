@@ -82,6 +82,17 @@ test('re-scraping is idempotent and does not duplicate rows', async () => {
   const after = await repositories.consultations.findByReference('53/2026')
   assert.equal(after.categorie, 'Fournitures')
   assert.equal(after.lots_count, 19)
+
+  // The two sources disagree about the execution location — the card says
+  // "AL HOCEIMA", the detail page "MAROC, KHENIFRA" — so once the detail page
+  // has described a row, the listing may only fill gaps. Without that, each pass
+  // overwrote the other and every crawl rewrote the same rows forever.
+  assert.equal(after.lieu_execution, 'MAROC, KHENIFRA')
+  assert.ok(after.detail_scraped_at)
+
+  const third = await runner.run({ source: 'consultations', maxPages: 2, fetchDetails: false })
+  assert.equal(third.detail.consultations.itemsUpdated, 0, 'a settled row is never rewritten')
+  assert.equal(third.detail.consultations.itemsUnchanged, 10)
 })
 
 test('records every run in scrape_jobs and refuses concurrent runs of one source', async () => {

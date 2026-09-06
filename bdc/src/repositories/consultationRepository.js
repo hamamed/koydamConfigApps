@@ -19,7 +19,7 @@ const MUTABLE_COLUMNS = [
   'lieu_execution', 'procedure_type', 'mode_passation', 'date_publication', 'date_limite',
   'heure_limite', 'date_ouverture_plis', 'estimation_cents', 'caution_provisoire_cents',
   'qualification', 'agrement', 'is_cancelled', 'date_annulation', 'motif_annulation',
-  'detail_url', 'source_url', 'source_id',
+  'detail_url', 'detail_scraped_at', 'source_url', 'source_id',
   'search_text', 'raw_json', 'last_seen_at', 'updated_at',
 ]
 
@@ -35,21 +35,29 @@ export function createConsultationRepository(db = getDb()) {
    * The incoming row is merged onto the stored one before hashing, so a sparse
    * listing-page pass never erases the richer fields captured from the detail
    * page (see repositories/scrapedRecord.js).
+   *
+   * @param {object} record the scraped row.
+   * @param {{fromDetail?: boolean}} [options] a detail-page scrape is
+   *   authoritative and overwrites; once a row has been described by its detail
+   *   page, a later listing pass may only fill gaps.
    * @returns {Promise<{row: object, outcome: 'created'|'updated'|'unchanged'}>}
    */
-  async function upsert(record) {
+  async function upsert(record, { fromDetail = false } = {}) {
     const existing = await findByReference(record.reference)
     const timestamp = nowIso()
+    const incoming = fromDetail ? { ...record, detail_scraped_at: timestamp } : record
 
     if (!existing) {
       const { sql, params } = buildInsert(TABLE, {
-        ...record,
-        content_hash: hashColumns(record, CONSULTATION_HASH_COLUMNS),
+        ...incoming,
+        content_hash: hashColumns(incoming, CONSULTATION_HASH_COLUMNS),
       })
       return { row: await db.get(sql, params), outcome: 'created' }
     }
 
-    const merged = mergeScraped(existing, record, MUTABLE_COLUMNS)
+    const merged = mergeScraped(existing, incoming, MUTABLE_COLUMNS, {
+      fillOnly: !fromDetail && Boolean(existing.detail_scraped_at),
+    })
     merged.content_hash = hashColumns(merged, CONSULTATION_HASH_COLUMNS)
 
     if (existing.content_hash === merged.content_hash) {

@@ -32,16 +32,25 @@ export function hashColumns(row, columns) {
 
 /**
  * Applies an incoming scrape onto the stored row.
+ *
  * @param {object} existing stored row.
  * @param {object} incoming freshly scraped row.
  * @param {string[]} mutableColumns columns a scrape is allowed to touch.
+ * @param {{fillOnly?: boolean}} [options] when `fillOnly`, the incoming row may
+ *   only fill columns that are still empty — it never overwrites a stored value.
+ *   This is how a listing pass is applied to a row the detail page already
+ *   described: the two sources genuinely disagree (a listing card says
+ *   "AL HOCEIMA" where the detail page says "MAROC, AL HOCEIMA"), so letting
+ *   each overwrite the other made every crawl rewrite the same rows forever.
  * @returns {object} the merged column values (no id, no timestamps).
  */
-export function mergeScraped(existing, incoming, mutableColumns) {
+export function mergeScraped(existing, incoming, mutableColumns, { fillOnly = false } = {}) {
   const merged = {}
   for (const column of mutableColumns) {
     const value = incoming[column]
-    merged[column] = value === null || value === undefined || value === '' ? existing[column] : value
+    const isEmpty = value === null || value === undefined || value === ''
+    const keepExisting = isEmpty || (fillOnly && existing[column] !== null && existing[column] !== undefined)
+    merged[column] = keepExisting ? existing[column] : value
   }
   return merged
 }

@@ -61,6 +61,7 @@ export function tableStatements(dialect) {
       date_annulation TEXT,
       motif_annulation TEXT,
       detail_url TEXT,
+      detail_scraped_at TEXT,
       source_url TEXT,
       source_id TEXT,
       search_text TEXT,
@@ -260,9 +261,10 @@ export function additiveColumns() {
     { table: 'consultations', column: 'is_cancelled', definition: 'INTEGER NOT NULL DEFAULT 0' },
     { table: 'consultations', column: 'date_annulation', definition: 'TEXT' },
     { table: 'consultations', column: 'motif_annulation', definition: 'TEXT' },
+    { table: 'consultations', column: 'detail_scraped_at', definition: 'TEXT' },
     { table: 'consultation_articles', column: 'tva_rate', definition: 'REAL' },
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
 
-export const SCHEMA_VERSION = '2026-09-06.003'
+export const SCHEMA_VERSION = '2026-09-06.004'

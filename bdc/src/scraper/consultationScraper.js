@@ -88,7 +88,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
         const { html, url } = await http.getHtml(row.detail_url)
         const detail = parseConsultationDetail(html, url, row.reference)
         if (detail.consultation) {
-          await consultations.upsert({ ...detail.consultation, reference: row.reference })
+          await consultations.upsert({ ...detail.consultation, reference: row.reference }, { fromDetail: true })
         }
         if (detail.articles.length > 0) {
           const stored = await articles.replaceForConsultation(row.id, row.reference, detail.articles)
@@ -116,7 +116,7 @@ export function createConsultationScraper({ http, consultations, articles }) {
     const { html, url } = await http.getHtml(consultation.detail_url)
     const detail = parseConsultationDetail(html, url, consultation.reference)
     if (detail.consultation) {
-      await consultations.upsert({ ...detail.consultation, reference: consultation.reference })
+      await consultations.upsert({ ...detail.consultation, reference: consultation.reference }, { fromDetail: true })
     }
     const stored = detail.articles.length
       ? await articles.replaceForConsultation(consultation.id, consultation.reference, detail.articles)
