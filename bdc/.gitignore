@@ -1,0 +1,10 @@
+node_modules/
+.env
+data/*.sqlite
+!data/.gitkeep
+data/*.sqlite
+!data/.gitkeep-journal
+storage/invoices/*.pdf
+!storage/invoices/.gitkeep
+coverage/
+*.log

@@ -1,0 +1,64 @@
+import { serializeRow } from './serializers.js'
+import { NotFoundError, ValidationError } from '../utils/errors.js'
+import { normalizeReference } from '../utils/text.js'
+
+const MAX_NOTE_LENGTH = 1000
+
+/**
+ * Backs the Favorites sub-tab. A favourite stores only the consultation
+ * *reference*, never a row id — the same key the matcher uses — so a saved
+ * project keeps resolving to its award even if the consultation row is
+ * re-created by a later scrape.
+ */
+export function createFavoriteService({ favorites, consultations }) {
+  async function add(userId, rawReference, { note = null, tags = null } = {}) {
+    const reference = normalizeReference(rawReference)
+    if (!reference) throw new ValidationError('A consultation reference is required')
+    if (note && note.length > MAX_NOTE_LENGTH) {
+      throw new ValidationError(`note must be ${MAX_NOTE_LENGTH} characters or fewer`)
+    }
+
+    const consultation = await consultations.findByReference(reference)
+    if (!consultation) throw new NotFoundError(`Consultation ${rawReference}`)
+
+    const normalizedTags = Array.isArray(tags) ? tags.join(',') : tags
+    return serializeRow(await favorites.add(userId, reference, { note, tags: normalizedTags }))
+  }
+
+  async function remove(userId, rawReference) {
+    const reference = normalizeReference(rawReference)
+    const removed = await favorites.remove(userId, reference)
+    if (removed === 0) throw new NotFoundError(`Favorite ${rawReference}`)
+    return { reference, removed: true }
+  }
+
+  /**
+   * Favorites tab payload: saved consultations with their award status, so the
+   * sub-tab renders from one request.
+   */
+  async function list(userId, filters, pagination) {
+    const { rows, total } = await favorites.listForUser(userId, filters, pagination)
+
+    const data = rows.map((row) => {
+      const payload = serializeRow(row)
+      payload.favorite = { id: row.favorite_id, note: row.note, tags: row.tags?.split(',') ?? [], favorited_at: row.favorited_at }
+      payload.result = row.attributaire || row.result_status
+        ? {
+            attributaire: row.attributaire,
+            montant_attribue: payload.montant_attribue ?? null,
+            date_attribution: row.date_attribution,
+            result_status: row.result_status,
+          }
+        : null
+      payload.isFavorite = true
+      delete payload.favorite_id
+      return payload
+    })
+
+    return { data, total }
+  }
+
+  const count = (userId) => favorites.countForUser(userId)
+
+  return { add, remove, list, count }
+}

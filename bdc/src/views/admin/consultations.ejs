@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head><%- include('../partials/head', { title: 'Consultations' }) %></head>
+<body>
+  <%- include('../partials/nav', { user: user, active: 'consultations' }) %>
+  <main>
+    <div class="card">
+      <form class="filters" method="get">
+        <div><label for="reference">Référence</label><input id="reference" name="reference" value="<%= query.reference || '' %>"></div>
+        <div><label for="objet">Objet</label><input id="objet" name="objet" value="<%= query.objet || '' %>"></div>
+        <div><label for="acheteur">Acheteur</label><input id="acheteur" name="acheteur" value="<%= query.acheteur || '' %>"></div>
+        <div><label for="categorie">Catégorie</label><input id="categorie" name="categorie" value="<%= query.categorie || '' %>"></div>
+        <div><label for="lieuExecution">Lieu d'exécution</label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
+        <div><label for="datePublicationStart">Publié du</label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>"></div>
+        <div><label for="datePublicationEnd">au</label><input id="datePublicationEnd" name="datePublicationEnd" type="date" value="<%= query.datePublicationEnd || '' %>"></div>
+        <div><button type="submit">Filtrer</button></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <p class="muted"><%= total %> consultation(s) — page <%= pagination.page %></p>
+      <table>
+        <thead><tr><th>Référence</th><th>Objet</th><th>Acheteur</th><th>Catégorie</th><th>Limite</th><th>Résultat</th><th></th></tr></thead>
+        <tbody>
+          <% if (rows.length === 0) { %><tr><td colspan="7" class="muted">Aucune consultation.</td></tr><% } %>
+          <% rows.forEach(function (row) { %>
+            <tr data-id="<%= row.id %>">
+              <td><code><%= row.reference %></code></td>
+              <td style="max-width:340px"><%= row.objet || '—' %></td>
+              <td><%= row.acheteur || '—' %></td>
+              <td><%= row.categorie || '—' %></td>
+              <td><%= row.date_limite || '—' %></td>
+              <td>
+                <% if (row.result) { %>
+                  <span class="pill ok"><%= row.result.attributaire || row.result.result_status %></span>
+                <% } else { %><span class="pill">en cours</span><% } %>
+              </td>
+              <td style="white-space:nowrap">
+                <button class="secondary refresh" type="button">Rafraîchir</button>
+                <button class="secondary remove" type="button">Supprimer</button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+
+      <div style="margin-top:14px; display:flex; gap:8px">
+        <% if (pagination.page > 1) { %><a class="btn" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1 })).toString() %>">Précédent</a><% } %>
+        <% if (pagination.page * pagination.perPage < total) { %><a class="btn" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1 })).toString() %>">Suivant</a><% } %>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const call = async (method, url, button) => {
+      button.disabled = true
+      const response = await fetch(url, { method, credentials: 'same-origin' })
+      button.disabled = false
+      if (response.ok) window.location.reload()
+      else alert((await response.json()).error)
+    }
+
+    document.querySelectorAll('.refresh').forEach((button) =>
+      button.addEventListener('click', () =>
+        call('POST', '/admin/api/consultations/' + button.closest('tr').dataset.id + '/refresh', button)))
+
+    document.querySelectorAll('.remove').forEach((button) =>
+      button.addEventListener('click', () => {
+        if (!confirm('Supprimer cette consultation ?')) return
+        call('DELETE', '/admin/api/consultations/' + button.closest('tr').dataset.id, button)
+      }))
+  </script>
+</body>
+</html>

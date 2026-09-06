@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head><%- include('../partials/head', { title: 'Tableau de bord' }) %></head>
+<body>
+  <%- include('../partials/nav', { user: user, active: 'dashboard' }) %>
+  <main>
+    <div class="grid" style="margin-bottom:20px">
+      <div class="stat"><b><%= dashboard.counts.consultations %></b><span>Consultations</span></div>
+      <div class="stat"><b><%= dashboard.counts.articles %></b><span>Articles / lots</span></div>
+      <div class="stat"><b><%= dashboard.counts.results %></b><span>Résultats</span></div>
+      <div class="stat"><b><%= dashboard.matchRate === null ? '—' : dashboard.matchRate + ' %' %></b><span>Taux de liaison</span></div>
+      <div class="stat"><b><%= dashboard.counts.unmatchedResults %></b><span>Résultats non liés</span></div>
+      <div class="stat"><b><%= dashboard.counts.invoices %></b><span>Factures</span></div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0; font-size:16px">Lancer un scraping manuel</h2>
+      <form id="scrape-form" class="filters">
+        <div>
+          <label for="source">Source</label>
+          <select id="source" name="source">
+            <option value="all">Tout (consultations + résultats)</option>
+            <option value="consultations">Consultations ouvertes</option>
+            <option value="results">Résultats / attributions</option>
+          </select>
+        </div>
+        <div>
+          <label for="maxPages">Pages max</label>
+          <input id="maxPages" name="maxPages" type="number" min="1" max="500" value="5">
+        </div>
+        <div>
+          <label for="acheteur">Filtre acheteur (optionnel)</label>
+          <input id="acheteur" name="acheteur" type="text" placeholder="ex. ANCFCC">
+        </div>
+        <div>
+          <label for="fetchDetails">Détails / lots</label>
+          <select id="fetchDetails" name="fetchDetails"><option value="true">Oui</option><option value="false">Non</option></select>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button type="submit">Démarrer</button>
+          <button type="button" id="rematch" class="secondary">Re-lier</button>
+        </div>
+      </form>
+      <p id="scrape-status" class="muted" style="margin-bottom:0"></p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0; font-size:16px">Derniers travaux</h2>
+      <table>
+        <thead><tr><th>#</th><th>Source</th><th>Statut</th><th>Pages</th><th>Trouvés</th><th>Créés</th><th>MAJ</th><th>Liés</th><th>Démarré</th><th>Durée</th></tr></thead>
+        <tbody>
+          <% if (dashboard.recentJobs.length === 0) { %><tr><td colspan="10" class="muted">Aucun travail enregistré.</td></tr><% } %>
+          <% dashboard.recentJobs.forEach(function (job) { %>
+            <tr>
+              <td><%= job.id %></td>
+              <td><%= job.source %></td>
+              <td><span class="pill <%= job.status === 'success' ? 'ok' : job.status === 'failed' ? 'warn' : '' %>"><%= job.status %></span></td>
+              <td><%= job.pages_scraped %></td><td><%= job.items_found %></td><td><%= job.items_created %></td>
+              <td><%= job.items_updated %></td><td><%= job.matches_linked %></td>
+              <td class="muted"><%= job.started_at %></td>
+              <td class="muted"><%= job.duration_ms === null ? '—' : Math.round(job.duration_ms / 1000) + ' s' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const status = document.getElementById('scrape-status')
+    const post = async (url, body, button) => {
+      button.disabled = true
+      status.textContent = 'En cours…'
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(body),
+        })
+        const payload = await response.json()
+        status.textContent = response.ok ? JSON.stringify(payload.data) : payload.error
+        if (response.ok) setTimeout(() => window.location.reload(), 2500)
+      } catch (error) {
+        status.textContent = error.message
+      } finally {
+        button.disabled = false
+      }
+    }
+
+    document.getElementById('scrape-form').addEventListener('submit', (event) => {
+      event.preventDefault()
+      const form = new FormData(event.target)
+      const acheteur = form.get('acheteur')
+      post('/admin/api/scrape', {
+        source: form.get('source'),
+        maxPages: Number(form.get('maxPages')),
+        fetchDetails: form.get('fetchDetails') === 'true',
+        filters: acheteur ? { acheteur } : {},
+      }, event.submitter)
+    })
+
+    document.getElementById('rematch').addEventListener('click', (event) => post('/admin/api/rematch', {}, event.target))
+  </script>
+</body>
+</html>

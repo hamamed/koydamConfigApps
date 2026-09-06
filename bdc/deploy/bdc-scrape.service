@@ -1,0 +1,23 @@
+[Unit]
+Description=Marches publics — crawl marchespublics.gov.ma
+After=network-online.target bdc.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+ExecStart=/usr/bin/node bin/scrape.js --source=all --max-pages=25
+# A full crawl with detail pages at 2s between requests takes a while; the
+# default 90s start timeout would kill it mid-run and leave the job row stuck
+# in `running`, which then blocks the next scheduled crawl.
+TimeoutStartSec=5400
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+SyslogIdentifier=bdc-scrape

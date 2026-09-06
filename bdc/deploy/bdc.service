@@ -1,0 +1,34 @@
+[Unit]
+Description=Marches publics — bons de commande scraper, API and admin panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# The shared platform account. deploy.sh chowns every service it manages to
+# this one, so a service given its own user starts fine and then dies on the
+# first deploy with "attempt to write a readonly database".
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+
+# The service writes its SQLite database and the invoice PDFs it generates, and
+# nothing else on the box. ProtectSystem=strict makes everything else read-only,
+# so a path left out of this list is not a permissions bug to chase later — it
+# is an EROFS at the moment of writing.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bdc
+
+[Install]
+WantedBy=multi-user.target

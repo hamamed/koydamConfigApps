@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+/**
+ * CLI entry point for the scraper — the same code path the admin panel triggers.
+ *
+ *   npm run scrape -- --source=consultations --max-pages=3
+ *   npm run scrape -- --source=results --filter.acheteur=ANCFCC
+ *   npm run scrape -- --no-details
+ */
+import { initDatabase } from '../src/db/init.js'
+import { closeDb, getDb } from '../src/db/index.js'
+import { createContainer } from '../src/container.js'
+import { SOURCES } from '../src/scraper/runner.js'
+import { assertConfigIsValid } from '../src/config/index.js'
+
+function parseArgs(argv) {
+  const options = { source: 'all', filters: {} }
+  for (const arg of argv) {
+    const [rawKey, rawValue = 'true'] = arg.replace(/^--/, '').split('=')
+    if (rawKey.startsWith('filter.')) {
+      options.filters[rawKey.slice('filter.'.length)] = rawValue
+    } else if (rawKey === 'source') {
+      options.source = rawValue
+    } else if (rawKey === 'max-pages') {
+      options.maxPages = Number.parseInt(rawValue, 10)
+    } else if (rawKey === 'no-details') {
+      options.fetchDetails = false
+    } else if (rawKey === 'details') {
+      options.fetchDetails = rawValue !== 'false'
+    }
+  }
+  return options
+}
+
+const options = parseArgs(process.argv.slice(2))
+if (!SOURCES.includes(options.source)) {
+  console.error(`--source must be one of ${SOURCES.join(', ')}`)
+  process.exit(1)
+}
+
+assertConfigIsValid()
+const db = await initDatabase(getDb())
+const { runner } = createContainer(db)
+
+try {
+  const { stats, detail } = await runner.run({ ...options, triggeredBy: 'cli' })
+  console.log(JSON.stringify({ stats, detail }, null, 2))
+} catch (error) {
+  console.error(`Scrape failed: ${error.message}`)
+  process.exitCode = 1
+} finally {
+  await closeDb()
+}

@@ -1,0 +1,45 @@
+import { getDb } from '../db/index.js'
+import { buildInsert, buildUpdate } from '../db/sql.js'
+import { nowIso } from '../utils/dates.js'
+
+const TABLE = 'users'
+const PUBLIC_COLUMNS = 'id, email, full_name, role, is_active, last_login_at, created_at, updated_at'
+
+export function createUserRepository(db = getDb()) {
+  /** Includes `password_hash` — only for the auth service. */
+  const findByEmailWithSecret = (email) =>
+    db.get(`SELECT * FROM ${TABLE} WHERE email = ?`, [String(email).toLowerCase().trim()])
+
+  const findById = (id) => db.get(`SELECT ${PUBLIC_COLUMNS} FROM ${TABLE} WHERE id = ?`, [id])
+
+  const listAll = () => db.all(`SELECT ${PUBLIC_COLUMNS} FROM ${TABLE} ORDER BY created_at DESC`)
+
+  async function create({ email, passwordHash, fullName = null, role = 'user' }) {
+    const timestamp = nowIso()
+    const { sql, params } = buildInsert(TABLE, {
+      email: String(email).toLowerCase().trim(),
+      password_hash: passwordHash,
+      full_name: fullName,
+      role,
+      is_active: 1,
+      created_at: timestamp,
+      updated_at: timestamp,
+    })
+    const row = await db.get(sql, params)
+    return findById(row.id)
+  }
+
+  const touchLogin = (id) =>
+    db.run(`UPDATE ${TABLE} SET last_login_at = ?, updated_at = ? WHERE id = ?`, [nowIso(), nowIso(), id])
+
+  async function update(id, patch) {
+    const statement = buildUpdate(TABLE, { ...patch, id, updated_at: nowIso() })
+    if (!statement) return findById(id)
+    await db.get(statement.sql, statement.params)
+    return findById(id)
+  }
+
+  const countAll = async () => Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}`)).total)
+
+  return { findById, findByEmailWithSecret, listAll, create, touchLogin, update, countAll }
+}
