@@ -148,7 +148,7 @@ export default {
   'table.next': 'Next',
 
   'detail.title': 'Consultation detail',
-  'detail.back': '← Back to the list',
+  'detail.back': 'Back to the list',
   'detail.buyer': 'Public buyer',
   'detail.category': 'Main category',
   'detail.nature': 'Nature of service',

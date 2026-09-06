@@ -79,9 +79,20 @@
   .muted { color:var(--muted); }
   .empty { padding:26px 10px; text-align:center; color:var(--muted); }
   /* References, dates and counts stay LTR on an RTL page: the bidi algorithm
-     otherwise renders "6/2026" as "2026/6". */
-  code, .ltr { direction:ltr; unicode-bidi:isolate; display:inline-block; }
-  code { background:#f2f5f9; padding:1px 6px; border-radius:5px; font-size:12.5px; }
+     otherwise renders "6/2026" as "2026/6".
+
+     Direction and isolation only — no `display`. This class is on table cells,
+     and `display:inline-block` on a <td> takes it out of the table layout, so
+     every cell carrying it dropped out of its column and the values bunched up
+     under whichever header came before them. */
+  .ltr { direction:ltr; unicode-bidi:isolate; }
+  /* Buttons inside a cell go in their own flex row: laying the <td> out as flex
+     has the same effect as inline-block — it stops being a table cell. */
+  .row-actions { display:flex; gap:6px; align-items:center; }
+  /* Direction-bearing icons mirror on an RTL page; "back" points the other way
+     in Arabic, and an unflipped chevron sends the reader the wrong direction. */
+  body[dir="rtl"] .flip-rtl { transform:scaleX(-1); }
+  code { direction:ltr; unicode-bidi:isolate; display:inline-block; background:#f2f5f9; padding:1px 6px; border-radius:5px; font-size:12.5px; }
 
   @media (max-width: 860px) {
     .shell { grid-template-columns:1fr; }

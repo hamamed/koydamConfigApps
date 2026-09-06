@@ -148,7 +148,7 @@ export default {
   'table.next': 'Suivant',
 
   'detail.title': 'Détail de la consultation',
-  'detail.back': '← Retour à la liste',
+  'detail.back': 'Retour à la liste',
   'detail.buyer': 'Acheteur public',
   'detail.category': 'Catégorie principale',
   'detail.nature': 'Nature de prestation',

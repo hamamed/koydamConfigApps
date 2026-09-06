@@ -263,3 +263,50 @@ test('old /admin bookmarks land on the panel', async (t) => {
     assert.equal(response.headers.get('location'), to, from)
   }
 })
+
+test('table cells stay table cells', async () => {
+  // `display:inline-block` on the .ltr class, and `display:flex` on a <td>,
+  // both take the cell out of the table layout: every value carrying it dropped
+  // out of its column and bunched up under the previous header. The dashboard's
+  // job table, the article table and the user table all rendered scrambled.
+  const { readFile } = await import('node:fs/promises')
+  const shell = await readFile(new URL('../src/views/partials/shell-open.ejs', import.meta.url), 'utf8')
+
+  const ltrRule = shell.match(/^\s*\.ltr \{[^}]*\}/m)?.[0] ?? ''
+  assert.ok(ltrRule, 'the .ltr rule still exists')
+  assert.doesNotMatch(ltrRule, /display\s*:/, '.ltr must not change display — it is used on <td>')
+  assert.match(ltrRule, /direction\s*:\s*ltr/)
+  assert.match(ltrRule, /unicode-bidi\s*:\s*isolate/)
+
+  for (const view of ['projects', 'favorites', 'consultation', 'dashboard', 'users', 'settings']) {
+    const html = await readFile(new URL(`../src/views/panel/${view}.ejs`, import.meta.url), 'utf8')
+    assert.doesNotMatch(html, /<t[dh][^>]*style="[^"]*display\s*:\s*(flex|grid|inline)/, `${view}.ejs`)
+  }
+})
+
+test('navigation labels carry no hardcoded arrows', async () => {
+  // The back button renders an arrow icon, so an arrow in the string showed up
+  // twice — and a literal "←" points the wrong way on an RTL page.
+  for (const locale of ['fr', 'en', 'ar']) {
+    const { default: strings } = await import(`../src/i18n/${locale}.js`)
+    for (const [key, value] of Object.entries(strings)) {
+      assert.doesNotMatch(value, /[←→⟵⟶]/, `${locale}: ${key} contains an arrow`)
+    }
+  }
+})
+
+test('the dashboard job table has one cell per column', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+  await api.container.repositories.jobs.start({ source: 'all', triggeredBy: 'test' })
+
+  const html = await (await api.page('/panel/dashboard', api.admin)).text()
+  const table = html.slice(html.indexOf('<thead>'), html.indexOf('</table>', html.indexOf('<thead>')))
+
+  const headers = (table.match(/<th\b/g) ?? []).length
+  const firstRow = table.slice(table.indexOf('<tbody>')).match(/<tr>([\s\S]*?)<\/tr>/)?.[1] ?? ''
+  const cells = (firstRow.match(/<td\b/g) ?? []).length
+
+  assert.equal(headers, 10)
+  assert.equal(cells, headers, 'every column has a cell')
+})

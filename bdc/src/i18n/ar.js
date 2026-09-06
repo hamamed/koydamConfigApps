@@ -148,7 +148,7 @@ export default {
   'table.next': 'التالي',
 
   'detail.title': 'تفاصيل الإعلان',
-  'detail.back': '← العودة إلى القائمة',
+  'detail.back': 'العودة إلى القائمة',
   'detail.buyer': 'المشتري العمومي',
   'detail.category': 'الفئة الرئيسية',
   'detail.nature': 'طبيعة الخدمة',

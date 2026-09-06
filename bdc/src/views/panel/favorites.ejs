@@ -52,10 +52,10 @@
 
   <div style="display:flex; gap:8px">
     <% if (pagination.page > 1) { %>
-      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15 }) %><%= t('table.previous') %></a>
+      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
     <% } %>
     <% if (pagination.page * pagination.perPage < total) { %>
-      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15 }) %></a>
+      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15, cls: 'flip-rtl' }) %></a>
     <% } %>
   </div>
 <% } %>

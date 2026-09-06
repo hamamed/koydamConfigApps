@@ -47,7 +47,7 @@
             </td>
             <td class="ltr"><%= row.favoriteCount %></td>
             <td class="muted ltr"><%= row.last_login_at ? row.last_login_at.replace('T', ' ').slice(0, 16) : '—' %></td>
-            <td style="white-space:nowrap; display:flex; gap:6px">
+            <td style="white-space:nowrap"><div class="row-actions">
               <% if (row.id !== user.id) { %>
                 <button class="secondary icon toggle" type="button" data-id="<%= row.id %>" data-active="<%= row.is_active ? '1' : '0' %>"
                         title="<%= row.is_active ? t('users.deactivate') : t('users.activate') %>">
@@ -62,7 +62,7 @@
                   <%- include('../partials/icon', { name: 'trash-2', size: 15 }) %>
                 </button>
               <% } %>
-            </td>
+            </div></td>
           </tr>
         <% }) %>
       </tbody>
