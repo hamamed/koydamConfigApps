@@ -384,9 +384,15 @@ Operational commands on the box:
 ```bash
 sudo -u brawl node bin/stats.js                                  # counts, match rate, recent jobs
 sudo -u brawl node bin/scrape.js --source=consultations --max-pages=1
+sudo -u brawl node bin/scrape.js --backfill                      # read every unread detail page
 systemctl start bdc-scrape                                       # a full crawl now
 journalctl -u bdc-scrape -n 100                                  # what the last crawl did
+sudo -u brawl node bin/rebuild-scraped.js                        # dry run; --yes to rebuild
 ```
+
+`rebuild-scraped.js` exists for an identity change that cannot be migrated. It
+keeps accounts and job history and refuses outright if anyone has saved
+favourites or invoices, which are the only rows a crawl cannot reproduce.
 
 Operational notes:
 
