@@ -17,7 +17,8 @@
     "scrape:results": "node bin/scrape.js --source=results",
     "test": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test \"tests/*.test.js\"",
     "test:coverage": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --experimental-test-coverage \"tests/*.test.js\"",
-    "test:watch": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --watch \"tests/*.test.js\""
+    "test:watch": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --watch \"tests/*.test.js\"",
+    "stats": "node bin/stats.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

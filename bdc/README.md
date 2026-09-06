@@ -323,6 +323,15 @@ the certificate.
 | `deploy/setup.sh` | first-time install, idempotent |
 | `deploy/update.sh` | dependencies + schema + restart, if you are not using deploy.sh |
 
+Operational commands on the box:
+
+```bash
+sudo -u brawl node bin/stats.js                                  # counts, match rate, recent jobs
+sudo -u brawl node bin/scrape.js --source=consultations --max-pages=1
+systemctl start bdc-scrape                                       # a full crawl now
+journalctl -u bdc-scrape -n 100                                  # what the last crawl did
+```
+
 Operational notes:
 
 - The app binds `127.0.0.1` in production (override with `HOST`), so nginx is
@@ -332,6 +341,12 @@ Operational notes:
 - SQLite runs on Node's built-in `node:sqlite`, so unlike `better-sqlite3` there
   is no native module to rebuild after a Node upgrade. It needs Node >= 22.5.0;
   `setup.sh` checks.
+- **A column added to `schema.js` must also be listed in `additiveColumns()`.**
+  `CREATE TABLE IF NOT EXISTS` is a no-op against an existing table, so without
+  that entry the column never reaches a database created by an earlier deploy,
+  and every write fails at runtime long after the deploy reported success.
+- `SCRAPER_USER_AGENT` must look like a browser or the portal's WAF answers 403
+  to every request.
 - Postgres is already on the box if this outgrows one file: set `DB_CLIENT=postgres`
   and `DATABASE_URL`, then run `node bin/db-init.js`.
 - `SCRAPER_DELAY_MS` and `SCRAPER_DETAIL_CONCURRENCY` are the throttle knobs;
