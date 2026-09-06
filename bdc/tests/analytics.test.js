@@ -148,3 +148,29 @@ test('a buyer profile counts what they publish, and how often they withdraw it',
   assert.ok(profile.winners.length >= 1)
   assert.equal(profile.recentAvis.length, 4)
 })
+
+test('a median over a filtered slice binds its own parameters', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  // Two buyers, deliberately different price levels. Until the fix, the WHERE
+  // clause's parameters were not bound and the LIMIT took their place, so any
+  // median over a filtered slice came back as 0/0 — NaN on the page.
+  for (const [index, cents] of [[1, 100000], [2, 300000], [3, 500000]]) {
+    await award(container, index, { objet: `Achat lot ${index}`, cents })
+  }
+  for (const [index, cents] of [[4, 8_000_000], [5, 9_000_000]]) {
+    await award(container, index, { objet: `Achat lot ${index}`, cents, acheteur: 'AUTRE ACHETEUR' })
+  }
+  await consultation(container, { sourceId: '1', reference: '1/2026', objet: 'Achat lot 1' })
+
+  const profile = await container.services.analytics.buyer(BUYER, container.services.consultations)
+  assert.equal(profile.awards.median, 3000, 'the middle of 1000, 3000, 5000 — not the other buyer’s')
+
+  const filtered = await container.services.analytics.overview({ acheteur: 'AUTRE ACHETEUR' })
+  // An even count averages the two middle values: (80000 + 90000) / 2.
+  assert.equal(filtered.summary.median, 85000, 'and the same holds for a filtered overview')
+
+  const everything = await container.services.analytics.overview({})
+  assert.equal(everything.summary.median, 5000, 'the unfiltered median still works')
+})

@@ -30,12 +30,17 @@ export function createAnalyticsRepository(db = getDb()) {
     const count = Number(total)
     if (count === 0) return null
     const offset = Math.floor((count - 1) / 2)
+    // `params` belongs to `where` and must be bound before the two that follow
+    // it. Omitting them bound the limit to the first placeholder instead, and
+    // every caller until the buyer profile happened to pass a WHERE with no
+    // placeholders at all, so the median came back as 0/0 the first time one did.
     const rows = await db.all(
       `SELECT montant_attribue_cents AS amount FROM consultation_results${where}
        ORDER BY montant_attribue_cents LIMIT ? OFFSET ?`,
-      [count % 2 === 0 ? 2 : 1, offset],
+      [...params, count % 2 === 0 ? 2 : 1, offset],
     )
     const values = rows.map((row) => Number(row.amount))
+    if (values.length === 0) return null
     return Math.round(values.reduce((a, b) => a + b, 0) / values.length)
   }
 
