@@ -384,9 +384,10 @@ export function panelRoutes({ services }) {
     }),
   )
 
-  // Old bookmarks keep working. The /admin ones live in routes/admin.js, on the
-  // router that is mounted there.
-  router.get('/', (_req, res) => res.redirect('/panel'))
+  // `/` is the public landing page now, served by routes/public.js, which is
+  // mounted ahead of this router. The redirect that used to live here would
+  // never fire, and leaving it would suggest the front door still bounces
+  // straight into the panel.
 
   return router
 }

@@ -265,7 +265,6 @@ test('old /admin bookmarks land on the panel', async (t) => {
     ['/admin/login', '/login'],
     ['/admin/consultations', '/panel'],
     [`/admin/consultations/${api.consultationId}`, `/panel/consultations/${api.consultationId}`],
-    ['/', '/panel'],
   ]
 
   for (const [from, to] of cases) {
@@ -273,6 +272,14 @@ test('old /admin bookmarks land on the panel', async (t) => {
     assert.equal(response.status, 302, from)
     assert.equal(response.headers.get('location'), to, from)
   }
+
+  // `/` used to bounce into the panel. It is the public landing page now, and
+  // it stays a page for a signed-in visitor too — the privacy and terms pages
+  // have to be reachable from inside the product, not only from outside it.
+  const signedIn = await api.page('/', api.admin)
+  assert.equal(signedIn.status, 200)
+  const signedOut = await fetch(`${api.base}/`, { redirect: 'manual' })
+  assert.equal(signedOut.status, 200)
 })
 
 test('table cells stay table cells', async () => {

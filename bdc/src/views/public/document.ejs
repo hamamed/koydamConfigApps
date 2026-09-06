@@ -1,0 +1,29 @@
+<%- include('../partials/public-open', { pageTitle: doc.title, pageDescription: doc.lede }) %>
+
+<section>
+  <div class="wrap" style="max-width:760px">
+    <h1><%= doc.title %></h1>
+    <p class="lede"><%= doc.lede %></p>
+    <p class="muted" style="font-size:12.5px">
+      <%= t('public.updated') %> <span class="ltr"><%= content.updated %></span>
+    </p>
+
+    <% doc.sections.forEach(function (section) { %>
+      <h2 style="margin-top:30px; font-size:18px"><%= section.heading %></h2>
+      <% section.paragraphs.forEach(function (paragraph) { %>
+        <p><%= paragraph %></p>
+      <% }) %>
+    <% }) %>
+
+    <% if (showContact && contactEmail) { %>
+      <div class="card" style="margin-top:30px">
+        <h3><%= t('public.contactTitle') %></h3>
+        <p class="muted" style="margin:0; font-size:14px">
+          <%= operator %> — <a href="mailto:<%= contactEmail %>" class="ltr"><%= contactEmail %></a>
+        </p>
+      </div>
+    <% } %>
+  </div>
+</section>
+
+<%- include('../partials/public-close') %>

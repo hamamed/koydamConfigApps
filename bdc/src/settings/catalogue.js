@@ -24,6 +24,11 @@ const number = (min, max) => ({ type: 'number', min, max })
 export const CATALOGUE = Object.freeze([
   { key: 'site.name', group: 'site', type: 'string', fallback: () => 'Marchés publics' },
   { key: 'site.defaultLocale', group: 'site', type: 'select', options: ['fr', 'en', 'ar'], fallback: () => 'fr' },
+  // Who runs the service and how to reach them, as printed on the public pages.
+  // Separate from the invoice issuer below: that block is whoever the user bills
+  // as, which on a shared deployment is not the operator of the site.
+  { key: 'site.operator', group: 'site', type: 'string', fallback: () => config.company.name },
+  { key: 'site.contactEmail', group: 'site', type: 'string', fallback: () => config.company.email },
 
   { key: 'scraper.maxPages', group: 'scraper', ...number(1, 2000), fallback: () => config.scraper.maxPages },
   // The portal's own selector offers exactly these; anything else is ignored,

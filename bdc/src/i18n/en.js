@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'Secrets (JWT_SECRET, database credentials) stay in the server\u2019s .env file.',
 
 
+  // ---- Public pages ----
+  'public.nav.guide': 'Guide',
+  'public.nav.privacy': 'Privacy',
+  'public.nav.terms': 'Terms',
+  'public.nav.portal': 'Official portal',
+  'public.updated': 'Last updated:',
+  'public.contactTitle': 'Contact us',
+  'public.stats.avis': 'Notices tracked',
+  'public.stats.articles': 'Line items read',
+  'public.stats.awards': 'Results published',
+  'public.stats.buyers': 'Public buyers',
+  'public.roadmap.now': 'In progress',
+  'public.roadmap.next': 'Next',
+  'public.roadmap.later': 'Later',
+  'settings.key.site.operator': 'Service operator',
+  'settings.key.site.contactEmail': 'Public contact email',
+
   // ---- Daily digest ----
   'alerts.digestTitle': 'Get everything that is new',
   'alerts.digestHint': 'The crawl runs every morning. With no alert on file, nobody is told what it found. This creates one with no filters at all: every new avis, once a day.',

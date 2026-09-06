@@ -1,0 +1,17 @@
+</main>
+<footer>
+  <div class="wrap">
+    <span class="muted"><%= operator %> · <span class="ltr"><%= new Date().getFullYear() %></span></span>
+    <nav class="spacer">
+      <a href="/guide?lang=<%= locale %>"><%= t('public.nav.guide') %></a>
+      <a href="/privacy?lang=<%= locale %>"><%= t('public.nav.privacy') %></a>
+      <a href="/terms?lang=<%= locale %>"><%= t('public.nav.terms') %></a>
+      <% if (contactEmail) { %><a href="mailto:<%= contactEmail %>" class="ltr"><%= contactEmail %></a><% } %>
+      <a href="https://www.marchespublics.gov.ma/bdc/entreprise/consultation/" target="_blank" rel="noopener noreferrer">
+        <%= t('public.nav.portal') %><%- include('icon', { name: 'external-link', size: 12 }) %>
+      </a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

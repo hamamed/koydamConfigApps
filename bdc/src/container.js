@@ -31,6 +31,7 @@ import { createTranslationService } from './services/translationService.js'
 import { createTranslator } from './translation/translator.js'
 import { createMailer } from './notifications/mailer.js'
 import { createSystemInspector } from './system/inspector.js'
+import { createPublicService } from './services/publicService.js'
 
 /**
  * Composition root. Every dependency is injected explicitly so services and
@@ -97,6 +98,7 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
     mailer,
+    public: createPublicService(repositories),
   }
   services.system = createSystemInspector({
     settings,

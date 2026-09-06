@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'تبقى الأسرار (JWT_SECRET وبيانات قاعدة البيانات) في ملف ‎.env على الخادم.',
 
 
+  // ---- Public pages ----
+  'public.nav.guide': 'الدليل',
+  'public.nav.privacy': 'الخصوصية',
+  'public.nav.terms': 'الشروط',
+  'public.nav.portal': 'البوابة الرسمية',
+  'public.updated': 'آخر تحديث:',
+  'public.contactTitle': 'مراسلتنا',
+  'public.stats.avis': 'إعلانات متابَعة',
+  'public.stats.articles': 'بنود مفصَّلة',
+  'public.stats.awards': 'نتائج منشورة',
+  'public.stats.buyers': 'مشترون عموميون',
+  'public.roadmap.now': 'قيد التنفيذ',
+  'public.roadmap.next': 'لاحقًا',
+  'public.roadmap.later': 'في المدى الأبعد',
+  'settings.key.site.operator': 'الجهة المشغّلة للخدمة',
+  'settings.key.site.contactEmail': 'بريد الاتصال العمومي',
+
   // ---- Daily digest ----
   'alerts.digestTitle': 'استقبال كل ما هو جديد',
   'alerts.digestHint': 'يعمل الجمع كل صباح. وبدون تنبيه مسجَّل لا يُعلَم أحد بما وجده. هذا ينشئ تنبيهًا دون أي مرشّح: كل إعلان جديد، مرة في اليوم.',

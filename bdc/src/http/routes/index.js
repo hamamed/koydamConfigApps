@@ -7,6 +7,7 @@ import { authRoutes } from './auth.js'
 import { adminRoutes } from './admin.js'
 import { panelRoutes } from './panel.js'
 import { exportRoutes } from './exports.js'
+import { publicRoutes } from './public.js'
 import { ok } from '../../utils/pagination.js'
 import { dictionaryFor, LOCALES } from '../../i18n/index.js'
 
@@ -28,6 +29,9 @@ export function registerRoutes(app, container) {
   app.use('/api/invoices', invoiceRoutes(container))
   app.use('/api/export', exportRoutes(container))
   app.use('/admin', adminRoutes(container))
+  // The public pages before the panel, so `/` is the front door rather than a
+  // redirect into a login form.
+  app.use('/', publicRoutes(container))
   // The panel is last: its catch-all redirects must not shadow the API.
   app.use('/', panelRoutes(container))
 

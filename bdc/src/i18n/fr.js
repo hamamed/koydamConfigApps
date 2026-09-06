@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.',
 
 
+  // ---- Public pages ----
+  'public.nav.guide': 'Guide',
+  'public.nav.privacy': 'Confidentialité',
+  'public.nav.terms': 'Conditions',
+  'public.nav.portal': 'Portail officiel',
+  'public.updated': 'Dernière mise à jour :',
+  'public.contactTitle': 'Nous écrire',
+  'public.stats.avis': 'Avis suivis',
+  'public.stats.articles': 'Articles détaillés',
+  'public.stats.awards': 'Résultats publiés',
+  'public.stats.buyers': 'Acheteurs publics',
+  'public.roadmap.now': 'En cours',
+  'public.roadmap.next': 'Ensuite',
+  'public.roadmap.later': 'Plus tard',
+  'settings.key.site.operator': 'Éditeur du service',
+  'settings.key.site.contactEmail': 'E-mail de contact public',
+
   // ---- Daily digest ----
   'alerts.digestTitle': 'Recevoir tout ce qui est nouveau',
   'alerts.digestHint': 'La collecte tourne chaque matin. Sans alerte enregistrée, personne n’est prévenu de ce qu’elle a trouvé. Ceci crée une alerte sans filtre : tous les nouveaux avis, une fois par jour.',
