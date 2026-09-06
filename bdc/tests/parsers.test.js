@@ -49,7 +49,8 @@ test('parses the open consultations listing', () => {
   assert.equal(first.lieu_execution, 'AL HOCEIMA')
   assert.equal(first.date_limite, '2027-03-16')
   assert.equal(first.heure_limite, '14:00')
-  assert.equal(first.status, 'annule', 'the card carries an "Annulé" badge')
+  assert.equal(first.is_cancelled, 1, 'the card carries an "Annulé" badge')
+  assert.equal(first.status, undefined, 'the lifecycle status is derived, not scraped')
   assert.match(first.detail_url, /\/consultation\/show\/316430$/)
   assert.equal(first.source_id, '316430')
 
@@ -79,7 +80,7 @@ test('parses a consultation detail page and its articles', () => {
   assert.equal(consultation.heure_limite, '15:00')
 
   // Cancellation is a real state here: an avis can be published then withdrawn.
-  assert.equal(consultation.status, 'annule')
+  assert.equal(consultation.is_cancelled, 1)
   assert.equal(consultation.date_annulation, '2026-09-01')
   assert.match(consultation.motif_annulation, /changement de la date limite/)
 

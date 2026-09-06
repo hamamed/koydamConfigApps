@@ -104,7 +104,11 @@ export function toConsultationRecord(fields, { detailUrl = null, sourceUrl = nul
     lots_count: 0,
     date_annulation: parseDate(fields.dateAnnulation),
     motif_annulation: cleanOrNull(fields.motifAnnulation),
-    status: /annul/i.test(statusLabel ?? '') || fields.dateAnnulation ? 'annule' : 'open',
+    // The scraper reports only what the portal says — whether the avis was
+    // withdrawn. The lifecycle `status` column is derived by the matcher, which
+    // also knows about awards and expired deadlines; letting a listing pass
+    // write it would reset "awarded" on every crawl.
+    is_cancelled: /annul/i.test(statusLabel ?? '') || fields.dateAnnulation ? 1 : 0,
     detail_url: detailUrl,
     source_url: sourceUrl,
     source_id: detailUrl ? (detailUrl.match(/\/show\/(\d+)/)?.[1] ?? detailUrl.match(/(\d{4,})/)?.[1] ?? null) : null,

@@ -18,8 +18,8 @@ const MUTABLE_COLUMNS = [
   'reference_raw', 'objet', 'acheteur', 'acheteur_service', 'categorie', 'nature_prestation',
   'lieu_execution', 'procedure_type', 'mode_passation', 'date_publication', 'date_limite',
   'heure_limite', 'date_ouverture_plis', 'estimation_cents', 'caution_provisoire_cents',
-  'qualification', 'agrement', 'date_annulation', 'motif_annulation',
-  'detail_url', 'source_url', 'source_id', 'status',
+  'qualification', 'agrement', 'is_cancelled', 'date_annulation', 'motif_annulation',
+  'detail_url', 'source_url', 'source_id',
   'search_text', 'raw_json', 'last_seen_at', 'updated_at',
 ]
 
@@ -86,12 +86,25 @@ export function createConsultationRepository(db = getDb()) {
       reference,
     ])
 
-  /** Flags consultations whose closing date has passed as `closed`. */
-  const closeExpired = (today = nowIso().slice(0, 10)) =>
-    db.run(
-      `UPDATE ${TABLE} SET status = 'closed', updated_at = ? WHERE status = 'open' AND date_limite IS NOT NULL AND date_limite < ?`,
-      [nowIso(), today],
+  /**
+   * Recomputes the lifecycle status of every consultation from the facts on
+   * record. This is the only writer of `status`: the scraper reports whether the
+   * portal cancelled an avis, and everything else — awarded, closed, open — is
+   * derived here, so a listing pass can never reset it.
+   */
+  async function deriveStatus(today = nowIso().slice(0, 10)) {
+    const expression = `CASE
+        WHEN is_cancelled = 1 THEN 'annule'
+        WHEN has_result = 1 THEN 'awarded'
+        WHEN date_limite IS NOT NULL AND date_limite < ? THEN 'closed'
+        ELSE 'open'
+      END`
+    const result = await db.run(
+      `UPDATE ${TABLE} SET status = ${expression}, updated_at = ? WHERE status <> ${expression}`,
+      [today, nowIso(), today],
     )
+    return result.changes
+  }
 
   async function update(id, patch) {
     const statement = buildUpdate(TABLE, { ...patch, id, updated_at: nowIso() })
@@ -109,5 +122,5 @@ export function createConsultationRepository(db = getDb()) {
       [limit],
     )
 
-  return { findById, findByReference, upsert, search, update, remove, markHasResult, closeExpired, countAll, listPendingDetails }
+  return { findById, findByReference, upsert, search, update, remove, deriveStatus, countAll, listPendingDetails }
 }

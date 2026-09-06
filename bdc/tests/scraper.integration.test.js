@@ -31,8 +31,12 @@ test('scrapes both sources and matches them by reference', async () => {
   assert.ok(consultation && award)
   assert.equal(award.consultation_id, consultation.id)
   assert.ok(award.matched_at)
-  assert.equal(consultation.has_result, 1)
-  assert.equal(consultation.status, 'awarded')
+  assert.equal(consultation.has_result, 1, 'the award is linked to its consultation')
+
+  // Status precedence: a withdrawn avis stays "annule" even once an award is
+  // linked to it. Being cancelled is terminal and outranks every other state.
+  assert.equal(consultation.is_cancelled, 1)
+  assert.equal(consultation.status, 'annule')
   assert.equal(stats.matchesLinked, 1)
 
   // The other nine awards refer to consultations this instance never saw. They
@@ -111,6 +115,32 @@ test('a failing page marks the job failed and surfaces the error', async () => {
   const [job] = await repositories.jobs.listRecent(1)
   assert.equal(job.status, 'failed')
   assert.match(job.error_message, /Failed to fetch/)
+})
+
+test('the matcher derives status from the facts on record', async () => {
+  const { runner, repositories } = await setup()
+  await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+
+  const open = await repositories.consultations.findByReference('03/2026')
+  assert.equal(open.is_cancelled, 0)
+  assert.equal(open.status, 'open', 'its deadline of 2026-09-16 has not passed')
+
+  const cancelled = await repositories.consultations.findByReference('6/2026')
+  assert.equal(cancelled.status, 'annule')
+
+  // An explicit date rather than "now", so the assertion does not change meaning
+  // as the fixture's deadlines age past today.
+  await repositories.consultations.deriveStatus('2027-01-01')
+  assert.equal((await repositories.consultations.findByReference('03/2026')).status, 'closed')
+  assert.equal(
+    (await repositories.consultations.findByReference('6/2026')).status,
+    'annule',
+    'a cancelled avis does not become merely closed',
+  )
+
+  // A listing pass must never reset a status the matcher derived.
+  await runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+  assert.equal((await repositories.consultations.findByReference('6/2026')).status, 'annule')
 })
 
 test('the matcher links awards scraped before their consultation', async () => {

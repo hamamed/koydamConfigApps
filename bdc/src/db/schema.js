@@ -57,6 +57,7 @@ export function tableStatements(dialect) {
       qualification TEXT,
       agrement TEXT,
       lots_count INTEGER NOT NULL DEFAULT 0,
+      is_cancelled INTEGER NOT NULL DEFAULT 0,
       date_annulation TEXT,
       motif_annulation TEXT,
       detail_url TEXT,
@@ -256,6 +257,7 @@ export function additiveColumns() {
   return [
     // 2026-09-06.002 — an avis can be published and then withdrawn, and the
     // portal publishes a VAT rate and required warranties per article.
+    { table: 'consultations', column: 'is_cancelled', definition: 'INTEGER NOT NULL DEFAULT 0' },
     { table: 'consultations', column: 'date_annulation', definition: 'TEXT' },
     { table: 'consultations', column: 'motif_annulation', definition: 'TEXT' },
     { table: 'consultation_articles', column: 'tva_rate', definition: 'REAL' },
@@ -263,4 +265,4 @@ export function additiveColumns() {
   ]
 }
 
-export const SCHEMA_VERSION = '2026-09-06.002'
+export const SCHEMA_VERSION = '2026-09-06.003'

@@ -15,7 +15,7 @@ import crypto from 'node:crypto'
 export const CONSULTATION_HASH_COLUMNS = [
   'objet', 'acheteur', 'categorie', 'nature_prestation', 'lieu_execution', 'procedure_type',
   'mode_passation', 'date_publication', 'date_limite', 'heure_limite', 'estimation_cents',
-  'caution_provisoire_cents', 'qualification', 'agrement', 'date_annulation', 'status',
+  'caution_provisoire_cents', 'qualification', 'agrement', 'is_cancelled', 'date_annulation',
 ]
 
 export const RESULT_HASH_COLUMNS = [

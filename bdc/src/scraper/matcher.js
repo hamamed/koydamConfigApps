@@ -13,7 +13,8 @@ const log = logger.child('[scraper:matcher]')
  * The matcher runs in two passes:
  *  1. Exact reference join — fills `consultation_results.consultation_id` and
  *     flips `consultations.has_result` / `status` to `awarded`.
- *  2. Housekeeping — closes consultations whose deadline has passed.
+ *  2. Housekeeping — recomputes every consultation's lifecycle status from the
+ *     facts on record (cancelled, awarded, past its deadline, or still open).
  *
  * A deliberate non-goal: fuzzy matching on `objet`. Awarding the wrong result to
  * a consultation would corrupt downstream invoices, so unmatched results simply
@@ -24,19 +25,19 @@ export function createMatcher({ db, consultations, results }) {
     const linked = await results.linkUnmatched()
 
     const flagged = await db.run(
-      `UPDATE consultations SET has_result = 1, status = 'awarded', updated_at = ?
+      `UPDATE consultations SET has_result = 1, updated_at = ?
        WHERE has_result = 0
          AND EXISTS (SELECT 1 FROM consultation_results r WHERE r.reference = consultations.reference)`,
       [nowIso()],
     )
 
-    const closed = await consultations.closeExpired()
+    const restated = await consultations.deriveStatus()
     const unmatched = await results.countUnmatched()
 
     const stats = {
       matchesLinked: linked,
       consultationsFlagged: flagged.changes,
-      consultationsClosed: closed.changes,
+      statusesChanged: restated,
       unmatchedResults: unmatched,
     }
     log.info('matching pass complete', stats)
