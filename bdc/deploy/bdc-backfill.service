@@ -10,10 +10,22 @@ User=brawl
 Group=brawl
 WorkingDirectory=/opt/bdc
 EnvironmentFile=/opt/bdc/.env
-# Every page of both listings, then every unread detail page. Started by hand
-# (`systemctl start bdc-backfill`) — this is the initial load, not a schedule.
-# At 50 rows a page the consultations listing is ~16 pages rather than 76.
-ExecStart=/usr/bin/node bin/scrape.js --source=all --page-size=50 --max-pages=200 --no-details
+# The initial load, started by hand (`systemctl start bdc-backfill`), not a
+# schedule.
+#
+# Consultations first, every page: at 50 rows a page the open listing is ~16
+# pages rather than 76, and the crawl stops on its own when a page comes back
+# empty. The cap is a guard, not a target.
+ExecStart=/usr/bin/node bin/scrape.js --source=consultations --page-size=50 --max-pages=100 --no-details
+
+# Awards are capped deliberately. The portal advertises ~31,700 pages of award
+# history at ten a page — the whole archive is hundreds of thousands of rows and
+# days of polite crawling. This takes the most recent slice; widen it by raising
+# the cap and re-running if the older history is ever wanted.
+ExecStart=/usr/bin/node bin/scrape.js --source=results --page-size=50 --max-pages=200 --no-details
+
+# Then the detail page of every consultation that has none. This is the long
+# part, and it is resumable: it picks up wherever the backlog stands.
 ExecStart=/usr/bin/node bin/scrape.js --backfill
 # A full catalogue with one detail page per avis takes hours at a polite pace.
 TimeoutStartSec=86400
