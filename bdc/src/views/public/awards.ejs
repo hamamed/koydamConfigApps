@@ -2,7 +2,7 @@
 
 <section>
   <div class="wrap">
-    <h1><%= t('awards.title') %></h1>
+    <h1><%- include('../partials/icon', { name: 'award', size: 22 }) %> <%= t('awards.title') %></h1>
     <p class="lede"><%= t('data.awardsLede') %></p>
 
     <form method="get" class="card" style="display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); align-items:end">

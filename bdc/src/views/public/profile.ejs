@@ -22,7 +22,7 @@
     <p class="muted" style="font-size:12px; margin-top:12px"><%= t(profile.note) %></p>
 
     <% if (profile.related.length > 0) { %>
-      <h2 style="margin-top:32px"><%= t(profile.relatedTitle) %></h2>
+      <h2 style="margin-top:32px"><%- include('../partials/icon', { name: kind === 'buyer' ? 'award' : 'building-2', size: 17 }) %><%= t(profile.relatedTitle) %></h2>
       <div class="card" style="padding:0; overflow-x:auto">
         <table>
           <thead><tr><th><%= t(profile.relatedLabel) %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
@@ -40,7 +40,7 @@
     <% } %>
 
     <% if (profile.awards.length > 0) { %>
-      <h2 style="margin-top:32px"><%= t('buyer.recentAwards') %></h2>
+      <h2 style="margin-top:32px"><%- include('../partials/icon', { name: 'file-text', size: 17 }) %><%= t('buyer.recentAwards') %></h2>
       <div class="card" style="padding:0; overflow-x:auto">
         <table>
           <thead><tr>

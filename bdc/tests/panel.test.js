@@ -1114,3 +1114,27 @@ test('a key saved in the panel works without a restart', async (t) => {
   await translator.translate([{ id: 1, designation: 'Rame de papier' }], 'en')
   assert.match(requests[0], /key=AIza-live/)
 })
+
+test('every sidebar item has its own icon, and it means what the item does', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const html = await (await api.page('/panel', api.admin)).text()
+  const nav = html.slice(html.indexOf('<nav>'), html.indexOf('</nav>'))
+  const items = [...nav.matchAll(/<a href="([^"]+)"[^>]*>\s*<svg[^>]*>([\s\S]*?)<\/svg>\s*([^<]+)/g)]
+    .map(([, href, paths, label]) => ({ href: href.split('?')[0], paths, label: label.trim() }))
+
+  assert.equal(items.length, 11, 'every nav item renders an icon')
+
+  // Two items drawn the same are worse than one drawn badly: the sidebar is
+  // scanned by shape, not read. Awards and Insights carried each other's icon
+  // for months, and Access requests was the same two figures as Users.
+  const drawings = items.map((item) => item.paths)
+  assert.equal(new Set(drawings).size, items.length, 'no two nav icons are the same drawing')
+
+  // And the two that were swapped are the right way round: the trophy belongs
+  // to Results, not to the analysis screen.
+  const byHref = Object.fromEntries(items.map((item) => [item.href, item.paths]))
+  assert.match(byHref['/panel/awards'], /circle cx="12" cy="8" r="6"/, 'Results carries the medal')
+  assert.match(byHref['/panel/insights'], /rect x="7" y="13"/, 'Insights carries the bar chart')
+})

@@ -47,7 +47,7 @@
 </div>
 
 <div class="card" style="padding-bottom:8px">
-  <h2><%= t('alerts.saved') %></h2>
+  <h2><%- include('../partials/icon', { name: 'list-checks', size: 15 }) %><%= t('alerts.saved') %></h2>
   <% if (searches.length === 0) { %>
     <p class="empty"><%= t('alerts.none') %></p>
   <% } else { %>
@@ -92,7 +92,7 @@
 </div>
 
 <div class="card" style="padding-bottom:8px">
-  <h2><%= t('alerts.history') %></h2>
+  <h2><%- include('../partials/icon', { name: 'history', size: 15 }) %><%= t('alerts.history') %></h2>
   <% if (history.length === 0) { %>
     <p class="empty"><%= t('alerts.historyEmpty') %></p>
   <% } else { %>

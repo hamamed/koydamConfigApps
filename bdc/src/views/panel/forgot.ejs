@@ -59,7 +59,7 @@
 </head>
 <body dir="<%= dir %>">
   <div class="box">
-    <h1><%= t('reset.requestTitle') %></h1>
+    <h1><%- include('../partials/icon', { name: 'key-round', size: 20 }) %><%= t('reset.requestTitle') %></h1>
     <% if (done) { %>
       <p class="notice"><%= t('reset.requestDone') %></p>
     <% } else { %>

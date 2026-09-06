@@ -1,7 +1,7 @@
 <%- include('../partials/shell-open', { title: t('projects.title') }) %>
 
 <div class="page-head">
-  <h1><%= t('projects.title') %></h1>
+  <h1><%- include('../partials/icon', { name: 'search', size: 19 }) %> <%= t('projects.title') %></h1>
   <span class="muted spacer"><%= t('table.count', { count: total, page: pagination.page }) %></span>
 </div>
 

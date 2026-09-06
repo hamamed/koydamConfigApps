@@ -49,15 +49,15 @@
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); align-items:start">
     <%
       const blocks = [
-        { key: 'winners', title: 'insights.winners', head: 'insights.company', hint: null,
+        { key: 'winners', icon: 'award', title: 'insights.winners', head: 'insights.company', hint: null,
           count: 'awards', countLabel: 'insights.count', extra: 'total',
           primary: function (v) { return { href: '/panel/companies/' + encodeURIComponent(v) + '?lang=' + locale, title: t('company.profile') } },
           secondary: function (v) { return { href: link('/panel/awards', 'attributaire', v), title: t('insights.seeAwards'), icon: 'file-text' } } },
-        { key: 'buyers', title: 'insights.buyers', head: 'insights.buyer', hint: null,
+        { key: 'buyers', icon: 'building-2', title: 'insights.buyers', head: 'insights.buyer', hint: null,
           count: 'awards', countLabel: 'insights.count', extra: 'total',
           primary: function (v) { return { href: '/panel/buyers/' + encodeURIComponent(v) + '?lang=' + locale, title: t('buyer.profile') } },
           secondary: function (v) { return { href: link('/panel', 'acheteur', v), title: t('insights.seeProjects'), icon: 'search' } } },
-        { key: 'categories', title: 'insights.categories', head: 'insights.category', hint: 'insights.categoriesHint',
+        { key: 'categories', icon: 'package', title: 'insights.categories', head: 'insights.category', hint: 'insights.categoriesHint',
           count: 'projects', countLabel: 'insights.projects', extra: 'openProjects',
           primary: function (v) { return { href: link('/panel', 'categorie', v), title: t('insights.seeCategory') } },
           secondary: function (v) { return { href: link('/panel/awards', 'categorie', v), title: t('insights.seeBuyerAwards'), icon: 'award' } } },
@@ -66,7 +66,7 @@
     <% blocks.forEach(function (block) { %>
       <% const rows = insights[block.key]; const max = rows.length ? Math.max(...rows.map(function (r) { return r[block.count] })) : 0 %>
       <div class="card" style="padding-bottom:8px">
-        <h2><%= t(block.title) %></h2>
+        <h2><%- include('../partials/icon', { name: block.icon, size: 15 }) %><%= t(block.title) %></h2>
         <% if (block.hint) { %><p class="muted" style="margin:-6px 0 12px; font-size:11.5px"><%= t(block.hint) %></p><% } %>
         <% if (rows.length === 0) { %><p class="empty"><%= t('insights.empty') %></p><% } else { %>
           <table>

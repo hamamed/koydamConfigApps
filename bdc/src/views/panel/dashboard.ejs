@@ -1,6 +1,6 @@
 <%- include('../partials/shell-open', { title: t('nav.dashboard') }) %>
 
-<div class="page-head"><h1><%= t('nav.dashboard') %></h1></div>
+<div class="page-head"><h1><%- include('../partials/icon', { name: 'layout-dashboard', size: 19 }) %> <%= t('nav.dashboard') %></h1></div>
 
 <div class="grid" style="margin-bottom:18px">
   <div class="stat"><b class="ltr"><%= dashboard.counts.consultations %></b><span><%- include('../partials/icon', { name: 'file-text', size: 13 }) %><%= t('stats.consultations') %></span></div>

@@ -2,7 +2,7 @@
 
 <section>
   <div class="wrap" style="max-width:720px">
-    <h1><%= t('status.title') %></h1>
+    <h1><%- include('../partials/icon', { name: 'refresh-cw', size: 22 }) %> <%= t('status.title') %></h1>
     <p class="lede"><%= t('status.lede') %></p>
 
     <div class="card" style="border-inline-start:4px solid <%= status.fresh ? 'var(--ok)' : 'var(--warn)' %>">

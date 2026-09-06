@@ -139,9 +139,9 @@
 
     <nav>
       <a href="/panel" class="<%= active === 'projects' ? 'on' : '' %>"><%- include('icon', { name: 'search' }) %><%= t('nav.projects') %></a>
-      <a href="/panel/awards" class="<%= active === 'awards' ? 'on' : '' %>"><%- include('icon', { name: 'file-text' }) %><%= t('nav.awards') %></a>
-      <a href="/panel/insights" class="<%= active === 'insights' ? 'on' : '' %>"><%- include('icon', { name: 'award' }) %><%= t('nav.insights') %></a>
-      <a href="/panel/invoices" class="<%= active === 'invoices' ? 'on' : '' %>"><%- include('icon', { name: 'file-text' }) %><%= t('nav.invoices') %></a>
+      <a href="/panel/awards" class="<%= active === 'awards' ? 'on' : '' %>"><%- include('icon', { name: 'award' }) %><%= t('nav.awards') %></a>
+      <a href="/panel/insights" class="<%= active === 'insights' ? 'on' : '' %>"><%- include('icon', { name: 'chart-column' }) %><%= t('nav.insights') %></a>
+      <a href="/panel/invoices" class="<%= active === 'invoices' ? 'on' : '' %>"><%- include('icon', { name: 'receipt' }) %><%= t('nav.invoices') %></a>
       <a href="/panel/alerts" class="<%= active === 'alerts' ? 'on' : '' %>"><%- include('icon', { name: 'bell' }) %><%= t('nav.alerts') %></a>
       <a href="/panel/favorites" class="<%= active === 'favorites' ? 'on' : '' %>"><%- include('icon', { name: 'star', fill: active === 'favorites' ? 'currentColor' : 'none' }) %><%= t('nav.favorites') %></a>
 
@@ -149,7 +149,9 @@
         <div class="sep"><%= t('nav.administration') %></div>
         <a href="/panel/dashboard" class="<%= active === 'dashboard' ? 'on' : '' %>"><%- include('icon', { name: 'layout-dashboard' }) %><%= t('nav.dashboard') %></a>
         <a href="/panel/system" class="<%= active === 'system' ? 'on' : '' %>"><%- include('icon', { name: 'server' }) %><%= t('nav.system') %></a>
-        <a href="/panel/requests" class="<%= active === 'requests' ? 'on' : '' %>"><%- include('icon', { name: 'user-plus' }) %><%= t('nav.requests') %><% if (pendingRequests > 0) { %><span class="badge ltr"><%= pendingRequests %></span><% } %></a>
+        <%# `inbox`, not `user-plus`: this sits directly above Users, whose icon is the
+    same two figures, and at sidebar size the pair was indistinguishable. %>
+        <a href="/panel/requests" class="<%= active === 'requests' ? 'on' : '' %>"><%- include('icon', { name: 'inbox' }) %><%= t('nav.requests') %><% if (pendingRequests > 0) { %><span class="badge ltr"><%= pendingRequests %></span><% } %></a>
         <a href="/panel/users" class="<%= active === 'users' ? 'on' : '' %>"><%- include('icon', { name: 'users' }) %><%= t('nav.users') %></a>
         <a href="/panel/settings" class="<%= active === 'settings' ? 'on' : '' %>"><%- include('icon', { name: 'settings' }) %><%= t('nav.settings') %></a>
       <% } %>

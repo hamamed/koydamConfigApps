@@ -60,7 +60,7 @@
 
 <% if (history.length > 0) { %>
   <div class="card" style="padding:0; overflow:hidden; margin-top:18px">
-    <h2 style="padding:16px 16px 0"><%= t('requests.history') %></h2>
+    <h2 style="padding:16px 16px 0"><%- include('../partials/icon', { name: 'history', size: 15 }) %><%= t('requests.history') %></h2>
     <table>
       <thead><tr>
         <th><%= t('access.fullName') %></th><th><%= t('access.email') %></th>

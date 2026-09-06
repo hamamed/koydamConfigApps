@@ -2,7 +2,7 @@
 
 <section>
   <div class="wrap" style="max-width:660px">
-    <h1><%= t('access.title') %></h1>
+    <h1><%- include('../partials/icon', { name: 'user-plus', size: 22 }) %> <%= t('access.title') %></h1>
     <p class="lede"><%= t('access.lede') %></p>
 
     <% if (sent) { %>
