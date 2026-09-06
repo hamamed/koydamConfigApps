@@ -332,20 +332,26 @@ objet, the buyer and the reference stay as published, because that is how the
 avis is identified and a translated buyer name is not searchable against the
 portal.
 
-It goes to Claude (`claude-opus-5`) with the whole lot in one request rather
-than a line at a time: terminology stays consistent across an avis, and it is
-one round trip instead of seventy. The prompt says what the text is —
-procurement specifications, terse, French mixed with Arabic — and what must
-survive untouched: every number, dimension, reference, standard, brand and model.
-A general translator turns "beneview t 6" into prose.
+It uses the **Google Cloud Translation API** (v2, API-key auth — v3 needs a
+service account). Set `GOOGLE_TRANSLATE_API_KEY` in `.env`: enable *Cloud
+Translation API* in the Google Cloud console, create an API key, and restrict it
+to that API.
+
+Two details the API makes you handle:
+
+- **It returns HTML entities even with `format=text`.** An apostrophe comes back
+  as `&#39;`, which is most of them in French; left alone they render literally.
+- **Segments are batched by count *and* by characters.** The API takes 128
+  segments a call, but a lot of seventy articles with long specifications
+  exceeds the body limit first.
 
 Each translation is stored per article and language, so it is paid for once.
 Re-reading the detail page replaces the articles and takes their translations
 with them, which is right: the source text moved.
 
-**With `ANTHROPIC_API_KEY` unset the button is not shown and the endpoint
-refuses** — the same shape as mail. A machine translation is offered as a
-reading aid and labelled as one; the published text is what counts.
+**Without a key the buttons are still shown, disabled, saying why** — and the
+endpoint refuses independently, so a disabled attribute is never the control.
+A machine translation is a reading aid; the published text is what counts.
 
 ### Crawler health
 

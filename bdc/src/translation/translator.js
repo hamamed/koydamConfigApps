@@ -1,62 +1,42 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { z } from 'zod'
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { config } from '../config/index.js'
 import { logger } from '../utils/logger.js'
 
 const log = logger.child('[translate]')
 
+const ENDPOINT = 'https://translation.googleapis.com/language/translate/v2'
+
 /**
- * Translates the article breakdown of an avis.
+ * Translates the article breakdown of an avis, via the Google Cloud Translation
+ * API (v2, API-key auth — v3 needs a service account and OAuth).
  *
- * These are procurement specifications — "Rame de 500 feuilles", "Barrière
- * galvanisé 1er choix", unit names, marques and models — published in French
- * and occasionally Arabic. A general-purpose translator mangles them: the terms
- * are trade-specific and the numbers, references and model names inside them
- * must survive untouched or the line no longer describes what is being bought.
- * So the model gets told what the text is and what not to touch.
+ * Two segments per article, designation and description, sent together. The API
+ * takes an array and answers in the same order, so a whole lot is one request
+ * rather than one per line.
  */
-const LANGUAGE_NAMES = { fr: 'French', en: 'English', ar: 'Arabic' }
+const LANGUAGES = new Set(['fr', 'en', 'ar'])
 
 /**
- * Articles are sent together rather than one per request. Terminology stays
- * consistent across a lot when the model sees the whole list, and it is one
- * round trip instead of seventy.
+ * Batch limits. The API accepts 128 segments per call; the practical ceiling is
+ * the request body, so segments are also capped by total characters — a lot of
+ * seventy articles with long specifications would otherwise exceed it.
  */
-const BATCH_SIZE = 25
+const MAX_SEGMENTS = 100
+const MAX_CHARS = 8000
 
-const TranslationSchema = z.object({
-  translations: z.array(
-    z.object({
-      id: z.number(),
-      designation: z.string(),
-      description: z.string(),
-    }),
-  ),
-})
-
-const systemPrompt = (target) => `You translate Moroccan public-procurement notices into ${LANGUAGE_NAMES[target]}.
-
-The text is the article breakdown of a purchase-order notice: what a public body
-wants to buy, line by line. It is written by procurement officers, mixes French
-and Arabic, and is often terse and abbreviated.
-
-Rules:
-- Translate into ${LANGUAGE_NAMES[target]} only. Text already in that language is returned unchanged.
-- Keep every number, quantity, dimension, reference, standard, brand and model exactly as written. "beneview t 6", "NAVIGATOR", "1er choix", "220V" and "A4" are not translated.
-- Keep units of measure recognisable; expand an abbreviation only when it is unambiguous.
-- Preserve the register. These are specifications, not prose: do not add words, explanations, marketing or pleasantries.
-- If a line is meaningless or empty, return it unchanged rather than inventing content.
-- Return a translation for every id you are given, and no others.`
+/**
+ * Google returns HTML entities even with `format=text` — an apostrophe comes
+ * back as `&#39;`, which is most of them in French. Left alone they render as
+ * literal `&#39;` in the table.
+ */
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' }
+const decodeEntities = (text) =>
+  String(text ?? '')
+    .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, (entity) => ENTITIES[entity])
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
 
 export function createTranslator(options = {}) {
   const settings = { ...config.translation, ...options }
-  let client = null
-
-  const getClient = () => {
-    if (!client) client = new Anthropic({ apiKey: settings.apiKey })
-    return client
-  }
+  const fetchImpl = settings.fetchImpl ?? globalThis.fetch
 
   /**
    * @param {Array<{id: number, designation: string, description: string|null}>} articles
@@ -65,54 +45,84 @@ export function createTranslator(options = {}) {
    */
   async function translate(articles, target) {
     if (!settings.enabled) throw new Error('Translation is not configured')
-    if (!LANGUAGE_NAMES[target]) throw new Error(`Unsupported language: ${target}`)
+    if (!LANGUAGES.has(target)) throw new Error(`Unsupported language: ${target}`)
 
-    const translations = []
-    for (let start = 0; start < articles.length; start += BATCH_SIZE) {
-      const batch = articles.slice(start, start + BATCH_SIZE)
-      translations.push(...(await translateBatch(batch, target)))
+    // Two segments per article, kept in a flat list so one response maps back
+    // by position. Empty strings are not sent — the API bills per character and
+    // would return an empty string anyway.
+    const segments = []
+    for (const article of articles) {
+      for (const field of ['designation', 'description']) {
+        const text = String(article[field] ?? '').trim()
+        if (text) segments.push({ id: article.id, field, text })
+      }
     }
-    return { translations, model: settings.model }
+
+    const translated = new Map()
+    for (const batch of batches(segments)) {
+      const results = await translateBatch(batch.map((segment) => segment.text), target)
+      batch.forEach((segment, index) => {
+        translated.set(`${segment.id}:${segment.field}`, results[index] ?? segment.text)
+      })
+    }
+
+    return {
+      model: `google-translate-v2:${target}`,
+      translations: articles.map((article) => ({
+        id: article.id,
+        designation: translated.get(`${article.id}:designation`) ?? article.designation ?? '',
+        description: translated.get(`${article.id}:description`) ?? article.description ?? '',
+      })),
+    }
   }
 
-  async function translateBatch(batch, target) {
-    const payload = batch.map((article) => ({
-      id: article.id,
-      designation: article.designation ?? '',
-      description: article.description ?? '',
-    }))
-
-    const response = await getClient().messages.parse({
-      model: settings.model,
-      max_tokens: 16000,
-      system: systemPrompt(target),
-      messages: [
-        {
-          role: 'user',
-          content: `Translate these ${payload.length} article(s):\n\n${JSON.stringify(payload, null, 2)}`,
-        },
-      ],
-      output_config: { format: zodOutputFormat(TranslationSchema) },
-    })
-
-    // A refusal or a schema miss leaves parsed_output null; treat it as a
-    // failure rather than storing an empty translation over readable French.
-    if (response.stop_reason === 'refusal') {
-      throw new Error(`Translation declined: ${response.stop_details?.category ?? 'unknown'}`)
+  /** Splits by both segment count and total characters. */
+  function* batches(segments) {
+    let current = []
+    let chars = 0
+    for (const segment of segments) {
+      if (current.length > 0 && (current.length >= MAX_SEGMENTS || chars + segment.text.length > MAX_CHARS)) {
+        yield current
+        current = []
+        chars = 0
+      }
+      current.push(segment)
+      chars += segment.text.length
     }
-    if (!response.parsed_output) throw new Error('Translation returned nothing usable')
-
-    const byId = new Map(payload.map((article) => [article.id, article]))
-    const usable = response.parsed_output.translations.filter((row) => byId.has(row.id))
-    log.info('batch translated', {
-      target,
-      asked: payload.length,
-      got: usable.length,
-      inputTokens: response.usage?.input_tokens,
-      outputTokens: response.usage?.output_tokens,
-    })
-    return usable
+    if (current.length > 0) yield current
   }
 
-  return { translate, isConfigured: () => settings.enabled, model: settings.model }
+  async function translateBatch(texts, target) {
+    const response = await fetchImpl(`${ENDPOINT}?key=${encodeURIComponent(settings.apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: texts, target, format: 'text' }),
+    })
+
+    if (!response.ok) {
+      // The API puts the useful part in the body, not the status line.
+      const detail = await response.text().catch(() => '')
+      const message = safeParse(detail)?.error?.message ?? `HTTP ${response.status}`
+      throw new Error(`Google Translate refused the request: ${message}`)
+    }
+
+    const payload = await response.json()
+    const rows = payload?.data?.translations
+    if (!Array.isArray(rows) || rows.length !== texts.length) {
+      throw new Error('Google Translate returned an unexpected number of segments')
+    }
+
+    log.info('batch translated', { target, segments: texts.length, chars: texts.join('').length })
+    return rows.map((row) => decodeEntities(row.translatedText))
+  }
+
+  const safeParse = (value) => {
+    try {
+      return JSON.parse(value)
+    } catch {
+      return null
+    }
+  }
+
+  return { translate, isConfigured: () => settings.enabled, model: 'google-translate-v2' }
 }

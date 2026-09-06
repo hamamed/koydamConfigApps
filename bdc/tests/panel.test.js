@@ -841,10 +841,10 @@ test('articles can be translated, and a translation is paid for once', async (t)
   )
 })
 
-test('the translate button is only offered when translation is configured', async (t) => {
+test('the translate buttons are shown disabled, not hidden, when unconfigured', async (t) => {
   const { createTestContainer: fresh } = await import('./helpers.js')
   const { createHttpClient } = await import('../src/scraper/httpClient.js')
-  const stub = (enabled) => ({ isConfigured: () => enabled, model: 'claude-opus-5', translate: async () => ({}) })
+  const stub = (enabled) => ({ isConfigured: () => enabled, model: 'google-translate-v2', translate: async () => ({}) })
 
   const build = async (enabled) => {
     const container = await fresh({
@@ -877,17 +877,21 @@ test('the translate button is only offered when translation is configured', asyn
 
   const on = await build(true)
   t.after(() => on.server.close())
-  assert.match(on.html, /class="secondary translate-btn"/)
-  // One button per language, so the reader picks rather than getting the UI's.
-  // Counted on the element, not the class name — the script mentions it too.
-  assert.equal((on.html.match(/<button[^>]*class="secondary translate-btn"/g) ?? []).length, 3)
+  const enabled = on.html.match(/<button[^>]*class="secondary translate-btn"[^>]*>/g) ?? []
+  assert.equal(enabled.length, 3, 'one button per language')
+  assert.ok(enabled.every((button) => !button.includes('disabled')))
   for (const language of ['Français', 'English', 'العربية']) assert.ok(on.html.includes(language))
 
+  // Hiding the control entirely reads as a missing feature rather than one
+  // waiting on a key, so it stays on the page and says why it cannot run.
   const off = await build(false)
   t.after(() => off.server.close())
-  assert.doesNotMatch(off.html, /translate-btn/, 'not offered when it cannot work')
+  const shown = off.html.match(/<button[^>]*class="secondary translate-btn"[^>]*>/g) ?? []
+  assert.equal(shown.length, 3, 'still shown')
+  assert.ok(shown.every((button) => button.includes('disabled')), 'but not clickable')
+  assert.match(off.html, /not configured|n’est pas configurée/)
 
-  // And the endpoint refuses too, rather than relying on the hidden button.
+  // And the endpoint refuses too, rather than relying on a disabled attribute.
   const refused = await fetch(`${off.server.base}/api/consultations/${off.id}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', cookie: off.cookie },
@@ -895,6 +899,63 @@ test('the translate button is only offered when translation is configured', asyn
   })
   assert.equal(refused.status, 400)
   assert.match((await refused.json()).error, /not configured/)
+})
+
+test('the translator talks to Google the way its API expects', async () => {
+  const { createTranslator } = await import('../src/translation/translator.js')
+  const requests = []
+
+  const translator = createTranslator({
+    apiKey: 'test-key',
+    enabled: true,
+    fetchImpl: async (url, init) => {
+      const body = JSON.parse(init.body)
+      requests.push({ url: String(url), body })
+      return {
+        ok: true,
+        json: async () => ({
+          // Google returns HTML entities even with format=text — an apostrophe
+          // comes back as &#39;, which is most of them in French.
+          data: { translations: body.q.map((text) => ({ translatedText: `EN(${text})&#39;s` })) },
+        }),
+      }
+    },
+  })
+
+  const { translations, model } = await translator.translate(
+    [
+      { id: 1, designation: 'Rame de papier', description: 'Format A4' },
+      { id: 2, designation: 'Onduleur', description: null },
+    ],
+    'en',
+  )
+
+  assert.equal(requests.length, 1, 'one request for the whole lot')
+  assert.match(requests[0].url, /translation\.googleapis\.com.*key=test-key/)
+  assert.equal(requests[0].body.target, 'en')
+  assert.equal(requests[0].body.format, 'text')
+  // Three segments, not four: an empty description is not sent, and the API
+  // bills per character.
+  assert.deepEqual(requests[0].body.q, ['Rame de papier', 'Format A4', 'Onduleur'])
+
+  assert.equal(translations[0].designation, "EN(Rame de papier)'s", 'entities decoded')
+  assert.equal(translations[1].description, '', 'an empty field stays empty')
+  assert.match(model, /^google-translate-v2/)
+
+  // A refusal carries the reason from the body, not just a status code.
+  const failing = createTranslator({
+    apiKey: 'bad',
+    enabled: true,
+    fetchImpl: async () => ({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify({ error: { message: 'API key not valid' } }),
+    }),
+  })
+  await assert.rejects(() => failing.translate([{ id: 1, designation: 'x' }], 'en'), /API key not valid/)
+
+  const unset = createTranslator({ apiKey: '', enabled: false })
+  await assert.rejects(() => unset.translate([], 'en'), /not configured/)
 })
 
 test('the signed-out pages carry a background pattern', async (t) => {

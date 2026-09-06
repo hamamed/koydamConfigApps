@@ -121,14 +121,14 @@ export const config = Object.freeze({
   }),
 
   /**
-   * Article translation. With no key configured the button is not offered —
-   * the same shape as mail: the feature says it is off rather than appearing to
-   * work and returning nothing.
+   * Article translation, via the Google Cloud Translation API.
+   *
+   * Without a key the control is still shown but disabled, with the reason —
+   * hiding it entirely just looks like a missing feature.
    */
   translation: Object.freeze({
-    apiKey: process.env.ANTHROPIC_API_KEY || '',
-    model: process.env.TRANSLATION_MODEL || 'claude-opus-5',
-    enabled: Boolean(process.env.ANTHROPIC_API_KEY),
+    apiKey: process.env.GOOGLE_TRANSLATE_API_KEY || '',
+    enabled: Boolean(process.env.GOOGLE_TRANSLATE_API_KEY),
   }),
 
   company: Object.freeze({

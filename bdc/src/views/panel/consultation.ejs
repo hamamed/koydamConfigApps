@@ -81,12 +81,20 @@
 <div class="card" style="padding-bottom:6px">
   <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px">
     <h2 style="margin:0"><%- include('../partials/icon', { name: 'package', size: 15 }) %><%= t('detail.articles') %> (<span class="ltr"><%= consultation.articles.length %></span>)</h2>
-    <% if (canTranslate && consultation.articles.length > 0) { %>
+    <% if (consultation.articles.length > 0) { %>
       <span style="margin-inline-start:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap">
         <span id="translate-status" class="muted" style="font-size:12px"></span>
+        <% if (!canTranslate) { %>
+          <%/* Shown disabled rather than hidden: a control that vanishes reads
+               as a missing feature, not as one waiting on a key. */%>
+          <span class="pill warn" title="<%= t('translate.notConfigured') %>">
+            <%- include('../partials/icon', { name: 'languages', size: 13 }) %><%= t('translate.notConfigured') %>
+          </span>
+        <% } %>
         <% locales.forEach(function (l) { %>
           <button type="button" class="secondary translate-btn" data-locale="<%= l.code %>"
-                  title="<%= t('translate.to', { language: l.label }) %>">
+                  <%= canTranslate ? '' : 'disabled' %>
+                  title="<%= canTranslate ? t('translate.to', { language: l.label }) : t('translate.notConfigured') %>">
             <%- include('../partials/icon', { name: 'languages', size: 14 }) %><%= l.label %>
           </button>
         <% }) %>
