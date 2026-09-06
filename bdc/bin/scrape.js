@@ -9,6 +9,7 @@
  *   npm run scrape -- --since=7               only avis published in the last week
  *   npm run scrape -- --page-size=50          fewer, larger pages
  *   npm run scrape -- --source=exclusions     the official exclusion list
+ *   npm run scrape -- --source=archive        the next slice of the award archive
  *   npm run scrape -- --backfill              only the detail backlog
  *   npm run scrape -- --backfill --refresh-all  re-read every detail page
  *   npm run scrape -- --backfill --limit=500  a bounded sitting of it

@@ -64,6 +64,11 @@ export const CATALOGUE = Object.freeze([
   { key: 'scraper.dailySinceDays', group: 'scraper', ...number(1, 60), fallback: () => 7 },
   // Likewise display only, mirroring bdc-alerts.timer.
   { key: 'alerts.dailyRunAt', group: 'scraper', type: 'string', fallback: () => '06:30' },
+  // Where the archival pass over the award history has got to. Kept as a
+  // setting rather than a file so it survives a redeploy, is visible in the
+  // panel, and can be wound back by hand to re-read a stretch of the archive.
+  { key: 'scraper.archiveNextPage', group: 'scraper', ...number(1, 20000), fallback: () => 1 },
+  { key: 'scraper.archivePagesPerRun', group: 'scraper', ...number(10, 2000), fallback: () => 200 },
 
   // Without a host the alert pipeline still runs end to end and writes what it
   // would have sent to the log, so this can be filled in later without anything

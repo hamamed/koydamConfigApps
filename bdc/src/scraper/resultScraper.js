@@ -6,6 +6,9 @@ import { logger } from '../utils/logger.js'
 
 const log = logger.child('[scraper:results]')
 
+/** In a row, not in total: this many means the portal is down, not merely flaky. */
+const MAX_CONSECUTIVE_FAILURES = 5
+
 /**
  * Crawls the awards listing at `/bdc/entreprise/consultation/resultat`.
  *
@@ -23,6 +26,9 @@ export function createResultScraper({ http, results, settings }) {
       maxPages = runtime.maxPages,
       fetchDetails = runtime.fetchDetails,
       pageSize = runtime.pageSize,
+      // Archival passes step over a page that will not load; a daily crawl
+      // fails loudly instead, because there the missing page is the news.
+      skipFailedPages = false,
       // Where to begin. A deep archival pass over six thousand pages will meet a
       // dropped connection eventually, and without this the only way to continue
       // was to re-crawl every page already read — 290 of them, the first time it
@@ -39,6 +45,7 @@ export function createResultScraper({ http, results, settings }) {
       itemsUpdated: 0,
       itemsUnchanged: 0,
       lotsSaved: 0,
+      pagesFailed: [],
       errors: [],
     }
 
@@ -46,9 +53,30 @@ export function createResultScraper({ http, results, settings }) {
     let totalPages = page
     const lastPage = page + maxPages - 1
 
+    let consecutiveFailures = 0
+
     while (page <= Math.min(totalPages, lastPage)) {
       const query = buildSearchQuery('results', filters, { page, pageSize })
-      const { html, url } = await http.getHtml(config.scraper.resultsPath, query)
+
+      let html
+      let url
+      try {
+        ;({ html, url } = await http.getHtml(config.scraper.resultsPath, query))
+        consecutiveFailures = 0
+      } catch (error) {
+        // A single page that will not load must not end a pass over thousands.
+        // The archive crawl met exactly this at page 292 of 1500 and threw away
+        // 290 pages of work; the portal was answering again minutes later.
+        // Failures in a row are different — that is the portal down or refusing
+        // us, and hammering it further is neither useful nor polite.
+        consecutiveFailures += 1
+        stats.pagesFailed.push(page)
+        log.warn('page failed, continuing', { page, consecutiveFailures, reason: error.message })
+        if (!skipFailedPages || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) throw error
+        page += 1
+        continue
+      }
+
       const parsed = parseResultList(html, url)
 
       totalPages = Math.max(totalPages, parsed.totalPages)

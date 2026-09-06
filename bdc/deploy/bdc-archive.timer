@@ -1,0 +1,15 @@
+[Unit]
+Description=Marches publics — award archive, one slice an hour
+Documentation=man:systemd.timer(7)
+
+[Timer]
+# Every hour except 05 and 06, which belong to the daily crawl and the alerts.
+# A slice of 200 pages takes roughly fifty minutes at the pace this crawler
+# keeps, so the hours do not overlap and the guard is never the thing that
+# decides what runs.
+OnCalendar=*-*-* 00,01,02,03,04,07,08,09,10,11,12,13,14,15,16,17,18,19,20,21,22,23:20:00
+Persistent=false
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

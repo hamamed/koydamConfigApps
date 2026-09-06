@@ -1,0 +1,34 @@
+[Unit]
+Description=Marches publics — one slice of the award archive
+Documentation=man:systemd.service(5)
+After=network-online.target bdc.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+
+# The award history is about 6,300 pages at fifty rows — some 316,000 awards.
+# That is roughly a day of continuous crawling, which is too long for one run
+# for two reasons: a single dropped connection would end it, and while it ran
+# it would hold the concurrency guard closed against the daily crawl, so open
+# avis would go stale for a day.
+#
+# So it goes in slices. Each run reads scraper.archiveNextPage, crawls
+# scraper.archivePagesPerRun pages from there, and writes back where to start
+# next time — which means it survives a reboot, a redeploy and a failure, and
+# can be wound back by hand from the panel to re-read a stretch.
+ExecStart=/usr/bin/node bin/scrape.js --source=archive
+
+# A slice is bounded; if one is still going after this, something is wrong.
+TimeoutStartSec=5400
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+SyslogIdentifier=bdc-archive

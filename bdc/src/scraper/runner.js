@@ -11,7 +11,7 @@ const log = logger.child('[scraper:runner]')
 // 'exclusions' is deliberately outside 'all': it is a small, near-static list
 // on a different portal, and re-reading it on every daily crawl would spend
 // requests on a page that changes a few times a year.
-export const SOURCES = Object.freeze(['consultations', 'results', 'exclusions', 'all'])
+export const SOURCES = Object.freeze(['consultations', 'results', 'exclusions', 'archive', 'all'])
 
 /** An ISO date N days back, the format the portal's date filters require. */
 function daysAgo(days) {
@@ -93,6 +93,22 @@ export function createScraperRunner({ db, consultations, articles, documents, re
       if (source === 'results' || source === 'all') {
         detail.results = await resultScraper.scrape({ filters, maxPages, startPage, fetchDetails, pageSize })
         accumulate(totals, detail.results)
+      }
+
+      // A bounded, resumable slice of the award archive. It records where it
+      // got to, so the next run continues rather than starting over — 6,336
+      // pages is far too long for one sitting, and a single pass would also
+      // hold the concurrency guard closed against the daily crawl.
+      if (source === 'archive') {
+        const from = Number(await settings.get('scraper.archiveNextPage')) || 1
+        const size = Number(await settings.get('scraper.archivePagesPerRun')) || 200
+        detail.archive = await resultScraper.scrape({
+          startPage: from, maxPages: size, pageSize: 50, fetchDetails: false, skipFailedPages: true,
+        })
+        detail.archive.fromPage = from
+        detail.archive.nextPage = from + size
+        await settings.update({ 'scraper.archiveNextPage': detail.archive.nextPage })
+        accumulate(totals, detail.archive)
       }
 
       if (source === 'exclusions') {

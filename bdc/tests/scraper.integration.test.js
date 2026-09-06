@@ -268,3 +268,54 @@ test('a detail re-read reaches rows scraped before a field existed', async () =>
   assert.equal(refreshed.stats.consultationsProcessed, 10)
   assert.equal(await repositories.documents.countAll(), before)
 })
+
+test('an archival pass steps over a page that will not load, and resumes where it stopped', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  // Page 2 refuses however many times it is retried; the pass must not end
+  // there. The live archive crawl met exactly this at page 292 of 1,500 and
+  // threw away 290 pages of work, and the portal was answering minutes later.
+  let served = 0
+  const http = createHttpClient({
+    delayMs: 0,
+    maxRetries: 1,
+    fetchImpl: async (url) => {
+      const page = Number(new URL(url).searchParams.get('page') ?? 1)
+      served += 1
+      if (page === 2) throw new Error('socket hang up')
+      return {
+        ok: true, status: 200, url: String(url),
+        headers: { getSetCookie: () => [] },
+        text: async () => fixture('live-results-matching.html'),
+      }
+    },
+  })
+
+  const { createResultScraper } = await import('../src/scraper/resultScraper.js')
+  const scraper = createResultScraper({ http, results: container.repositories.results })
+  const stats = await scraper.scrape({ startPage: 1, maxPages: 3, skipFailedPages: true, fetchDetails: false })
+
+  assert.deepEqual(stats.pagesFailed, [2], 'the bad page is recorded, not swallowed')
+  assert.equal(stats.pagesScraped, 2, 'the other two are read')
+  assert.ok(stats.itemsFound > 0)
+  assert.ok(served >= 3, 'and it really did try page 2')
+})
+
+test('a daily crawl still fails loudly on a page it cannot read', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const http = createHttpClient({
+    delayMs: 0,
+    maxRetries: 1,
+    fetchImpl: async () => { throw new Error('socket hang up') },
+  })
+  const { createResultScraper } = await import('../src/scraper/resultScraper.js')
+  const scraper = createResultScraper({ http, results: container.repositories.results })
+
+  // Skipping is for archival passes. On the daily crawl a page that will not
+  // load is the news, and swallowing it would be the silent failure this
+  // project keeps being bitten by.
+  await assert.rejects(() => scraper.scrape({ maxPages: 2, fetchDetails: false }), /Failed to fetch/)
+})
