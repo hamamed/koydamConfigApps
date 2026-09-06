@@ -65,7 +65,9 @@
   <% } %>
 </div>
 
-<div style="display:flex; gap:8px">
+<div style="display:flex; gap:8px; align-items:center">
+  <a class="btn secondary" href="/api/export/awards.csv?<%= new URLSearchParams(Object.assign({}, query, { lang: undefined, page: undefined })).toString() %>"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('export.csv') %></a>
+  <span style="margin-inline-start:auto"></span>
   <% if (pagination.page > 1) { %>
     <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
   <% } %>

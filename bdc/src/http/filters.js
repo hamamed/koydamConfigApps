@@ -89,6 +89,22 @@ export function parseFilters(query = {}) {
     }
   }
 
+  // "Closing within N days" — the question a bidder actually asks. Resolved to
+  // a deadline range so it reuses the indexed date columns.
+  const closingWithin = readValue(query, ['closingWithin', 'closing_within'])
+  if (closingWithin !== null) {
+    const days = Number.parseInt(closingWithin, 10)
+    if (!Number.isInteger(days) || days < 0 || days > 365) {
+      problems.push('closingWithin must be a whole number of days between 0 and 365')
+    } else {
+      const today = new Date()
+      const until = new Date(today)
+      until.setUTCDate(until.getUTCDate() + days)
+      filters.dateLimiteStart = today.toISOString().slice(0, 10)
+      filters.dateLimiteEnd = until.toISOString().slice(0, 10)
+    }
+  }
+
   const hasResult = readValue(query, ['hasResult', 'has_result', 'avecResultat'])
   if (hasResult !== null) filters.hasResult = ['1', 'true', 'yes'].includes(hasResult.toLowerCase())
 

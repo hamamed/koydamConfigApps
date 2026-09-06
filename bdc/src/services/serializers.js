@@ -1,4 +1,5 @@
 import { fromCentimes } from '../utils/money.js'
+import { deadlineStatus } from '../utils/deadline.js'
 
 /**
  * Internal-only columns that never leave the API.
@@ -27,6 +28,8 @@ export function serializeRow(row, { keepRaw = false } = {}) {
   }
   if ('has_result' in output) output.has_result = Boolean(output.has_result)
   if ('is_cancelled' in output) output.is_cancelled = Boolean(output.is_cancelled)
+  // How long is left to bid — the most useful thing to show next to a project.
+  if ('date_limite' in output) output.deadline = deadlineStatus(output.date_limite)
   if ('is_active' in output) output.is_active = Boolean(output.is_active)
   if (keepRaw && row.raw_json) output.raw = safeParse(row.raw_json)
   return output

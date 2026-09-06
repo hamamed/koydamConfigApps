@@ -32,7 +32,7 @@
           <p class="muted" style="margin:0; display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px">
             <span><%- include('../partials/icon', { name: 'building-2', size: 14 }) %> <%= row.acheteur || '—' %></span>
             <span><%- include('../partials/icon', { name: 'map-pin', size: 14 }) %> <%= row.lieu_execution || '—' %></span>
-            <span><%- include('../partials/icon', { name: 'calendar', size: 14 }) %> <span class="ltr"><%= row.date_limite || '—' %></span></span>
+            <span><%- include('../partials/icon', { name: 'calendar', size: 14 }) %> <%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></span>
             <span><%- include('../partials/icon', { name: 'package', size: 14 }) %> <span class="ltr"><%= row.lots_count %></span></span>
             <span class="muted"><%= t('favorites.savedOn') %> <span class="ltr"><%= (row.favorite.favorited_at || '').slice(0, 10) %></span></span>
           </p>

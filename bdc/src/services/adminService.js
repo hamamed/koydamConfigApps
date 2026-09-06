@@ -9,7 +9,7 @@ const log = logger.child('[admin]')
  * Admin-panel operations: dashboard counters, manual scrape triggers and CRUD
  * over the scraped records.
  */
-export function createAdminService({ consultations, articles, documents, results, invoices, users, jobs, runner, settings }) {
+export function createAdminService({ consultations, articles, documents, results, invoices, users, jobs, runner, settings, health }) {
   /** Counters and recent activity for the dashboard. */
   async function dashboard() {
     const [
@@ -57,6 +57,7 @@ export function createAdminService({ consultations, articles, documents, results
         ambiguousResults: ambiguous,
         pendingDetails,
       },
+      health: await health.check(),
       lastRun: describeRun(lastRun),
       schedule: { runAt, sinceDays, nextRunAt: nextRunAfter(runAt) },
       matchRate: resultCount > 0 ? Number((((resultCount - unmatched) / resultCount) * 100).toFixed(1)) : null,

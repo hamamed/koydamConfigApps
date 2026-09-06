@@ -521,3 +521,134 @@ test('the dashboard reports what the last crawl brought in, and when the next on
   assert.match(html, /Next crawl|Prochaine collecte/)
   assert.match(html, /Cancelled projects|Projets annulés/)
 })
+
+test('a deadline is shown as time remaining, not just a date', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const { deadlineStatus, SOON_DAYS } = await import('../src/utils/deadline.js')
+  const now = new Date('2026-09-06T10:00:00Z')
+  assert.deepEqual(deadlineStatus('2026-09-06', now), { days: 0, urgency: 'today' })
+  assert.deepEqual(deadlineStatus('2026-09-04', now), { days: -2, urgency: 'passed' })
+  assert.equal(deadlineStatus(`2026-09-0${6 + SOON_DAYS}`, now).urgency, 'soon')
+  assert.equal(deadlineStatus('2026-12-01', now).urgency, 'open')
+  assert.equal(deadlineStatus(null), null)
+  assert.equal(deadlineStatus('not a date'), null)
+
+  // It reaches the API and the page.
+  const { data } = await (await fetch(`${api.base}/api/consultations?perPage=3`, {
+    headers: { cookie: api.staff },
+  })).json()
+  assert.ok(data[0].deadline, 'every row carries its remaining time')
+  assert.equal(typeof data[0].deadline.days, 'number')
+
+  const html = await (await api.page('/panel', api.staff)).text()
+  assert.match(html, /class="pill[^"]*"/)
+})
+
+test('closing-within narrows to a deadline window', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const all = (await (await fetch(`${api.base}/api/consultations?perPage=50`, { headers: { cookie: api.staff } })).json())
+    .meta.total
+
+  const soon = await (await fetch(`${api.base}/api/consultations?perPage=50&closingWithin=7`, {
+    headers: { cookie: api.staff },
+  })).json()
+
+  assert.ok(soon.meta.total <= all)
+  const today = new Date().toISOString().slice(0, 10)
+  for (const row of soon.data) {
+    assert.ok(row.date_limite >= today, `${row.reference} has not already closed`)
+    assert.ok(row.deadline.days <= 7)
+  }
+
+  const bad = await fetch(`${api.base}/api/consultations?closingWithin=999`, { headers: { cookie: api.staff } })
+  assert.equal(bad.status, 400)
+})
+
+test('CSV export is safe to open in a spreadsheet', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const { toCsv } = await import('../src/utils/csv.js')
+
+  // A cell beginning =, +, - or @ is a formula to Excel, and this data is
+  // scraped from a third party. Prefixing with a tab makes it text.
+  const csv = toCsv(
+    [
+      { key: 'a', label: 'A' },
+      { key: 'b', label: 'B' },
+    ],
+    [{ a: '=1+1', b: 'quote " and, comma' }, { a: '@SUM(A1)', b: null }],
+  )
+  assert.match(csv, /\t=1\+1/)
+  assert.match(csv, /\t@SUM\(A1\)/)
+  assert.match(csv, /"quote "" and, comma"/, 'quotes are doubled')
+  assert.ok(csv.startsWith('﻿'), 'a BOM, or Excel mangles the Arabic and the accents')
+
+  const anonymous = await fetch(`${api.base}/api/export/consultations.csv`)
+  assert.equal(anonymous.status, 401, 'signed in only')
+
+  const response = await fetch(`${api.base}/api/export/consultations.csv?closingWithin=30`, {
+    headers: { cookie: api.staff },
+  })
+  assert.equal(response.status, 200)
+  assert.match(response.headers.get('content-type'), /text\/csv/)
+  assert.match(response.headers.get('content-disposition'), /projets-\d{4}-\d{2}-\d{2}\.csv/)
+
+  const body = await response.text()
+  assert.match(body.split('\r\n')[0], /Référence,Objet,Acheteur/)
+
+  const awards = await fetch(`${api.base}/api/export/awards.csv`, { headers: { cookie: api.staff } })
+  assert.match((await awards.text()).split('\r\n')[0], /Attributaire/)
+})
+
+test('the canary notices the failures this crawler actually has', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const healthy = await api.container.services.health.check()
+  assert.equal(healthy.severity, 'ok')
+  assert.ok(healthy.checks.find((c) => c.id === 'freshness'))
+
+  // Every real failure here has been silent: the job finishes and reports
+  // success while the data quietly stops arriving. So a crawl that found
+  // nothing, against a non-empty catalogue, is a failure whatever it claimed.
+  const empty = await api.container.repositories.jobs.start({ source: 'all', triggeredBy: 'test' })
+  await api.container.repositories.jobs.finish(empty.id, { status: 'success', stats: { itemsFound: 0 } })
+
+  const starved = await api.container.services.health.check()
+  assert.equal(starved.severity, 'fail')
+  assert.match(starved.checks.find((c) => c.id === 'yield').detail, /found nothing at all/)
+
+  // A field that stops parsing means the portal's labels moved again.
+  await api.container.db.run('UPDATE consultations SET acheteur = NULL')
+  const blind = await api.container.services.health.check()
+  const buyer = blind.checks.find((c) => c.id === 'fieldAcheteur')
+  assert.equal(buyer.severity, 'warn')
+  assert.match(buyer.detail, /0% of/)
+
+  // And it surfaces where someone will see it.
+  const html = await (await api.page('/panel/dashboard', api.admin)).text()
+  assert.match(html, /Crawler health|Santé du collecteur/)
+})
+
+test('the canary flags a schedule that has stopped firing', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const [recent] = await api.container.repositories.jobs.listRecent(1)
+  const threeDaysAgo = new Date(Date.now() - 72 * 3600 * 1000).toISOString()
+  await api.container.db.run('UPDATE scrape_jobs SET finished_at = ?, started_at = ? WHERE id = ?', [
+    threeDaysAgo,
+    threeDaysAgo,
+    recent.id,
+  ])
+
+  const stale = await api.container.services.health.check()
+  const freshness = stale.checks.find((c) => c.id === 'freshness')
+  assert.equal(freshness.severity, 'fail', 'a daily job silent for three days is broken')
+  assert.match(freshness.detail, /7[0-9]h ago/)
+})

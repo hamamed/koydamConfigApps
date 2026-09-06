@@ -22,7 +22,7 @@
     <div><label><%= t('detail.nature') %></label><%= consultation.nature_prestation || '—' %></div>
     <div><label><%- include('../partials/icon', { name: 'map-pin', size: 13 }) %> <%= t('detail.place') %></label><%= consultation.lieu_execution || '—' %></div>
     <div><label><%= t('detail.published') %></label><span class="ltr"><%= consultation.date_publication || '—' %></span></div>
-    <div><label><%- include('../partials/icon', { name: 'calendar', size: 13 }) %> <%= t('detail.deadline') %></label><span class="ltr"><%= consultation.date_limite || '—' %><%= consultation.heure_limite ? ' ' + consultation.heure_limite : '' %></span></div>
+    <div><label><%- include('../partials/icon', { name: 'calendar', size: 13 }) %> <%= t('detail.deadline') %></label><%- include('../partials/deadline', { deadline: consultation.deadline, date: (consultation.date_limite || '') + (consultation.heure_limite ? ' ' + consultation.heure_limite : '') }) %></div>
     <div><label><%= t('detail.portalId') %></label><span class="ltr"><%= consultation.source_id %></span></div>
   </div>
 

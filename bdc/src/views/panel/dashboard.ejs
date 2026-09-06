@@ -15,6 +15,27 @@
   <div class="stat"><b class="ltr"><%= dashboard.counts.users %></b><span><%- include('../partials/icon', { name: 'users', size: 13 }) %><%= t('stats.users') %></span></div>
 </div>
 
+<% const health = dashboard.health %>
+<div class="card" style="border-inline-start:4px solid <%= health.severity === 'fail' ? '#a4262c' : health.severity === 'warn' ? 'var(--warn)' : 'var(--ok)' %>">
+  <h2>
+    <%- include('../partials/icon', { name: health.severity === 'ok' ? 'circle-check' : 'circle-x', size: 15 }) %>
+    <%= t('health.title') %>
+    <span class="pill <%= health.severity === 'ok' ? 'ok' : 'warn' %>"><%= t('health.' + health.severity) %></span>
+  </h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
+    <% health.checks.forEach(function (c) { %>
+      <div>
+        <label>
+          <%- include('../partials/icon', { name: c.severity === 'ok' ? 'circle-check' : 'circle-x', size: 12 }) %>
+          <%= t('health.check.' + c.id) %>
+        </label>
+        <span class="<%= c.severity === 'ok' ? 'muted' : '' %>" style="<%= c.severity === 'ok' ? '' : 'color:var(--warn); font-weight:600' %>"><%= c.detail %></span>
+      </div>
+    <% }) %>
+  </div>
+  <p class="muted" style="margin:12px 0 0; font-size:11.5px"><%= t('health.why') %></p>
+</div>
+
 <div class="card">
   <h2><%- include('../partials/icon', { name: 'refresh-cw', size: 15 }) %><%= t('run.title') %></h2>
   <% const run = dashboard.lastRun %>

@@ -15,6 +15,15 @@
     <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
     <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
     <div>
+      <label for="closingWithin"><%= t('filters.closingWithin') %></label>
+      <select id="closingWithin" name="closingWithin">
+        <option value=""><%= t('filters.closingWithin.any') %></option>
+        <% [3, 7, 14, 30].forEach(function (d) { %>
+          <option value="<%= d %>" <%= String(query.closingWithin || '') === String(d) ? 'selected' : '' %>><%= t('filters.closingWithin.days', { days: d }) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
       <label for="status"><%= t('filters.status') %></label>
       <select id="status" name="status">
         <% [['all','filters.status.all'],['open','status.open'],['closed','status.closed'],['awarded','status.awarded'],['annule','status.annule']].forEach(function (o) { %>
@@ -58,7 +67,7 @@
             <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a></td>
             <td><%= row.acheteur || '—' %></td>
             <td><%= row.categorie || '—' %></td>
-            <td class="ltr"><%= row.date_limite || '—' %></td>
+            <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></td>
             <td class="ltr"><%= row.lots_count %></td>
             <td>
               <% if (row.result) { %>
@@ -72,7 +81,9 @@
   <% } %>
 </div>
 
-<div style="display:flex; gap:8px">
+<div style="display:flex; gap:8px; align-items:center">
+  <a class="btn secondary" href="/api/export/consultations.csv?<%= new URLSearchParams(Object.assign({}, query, { lang: undefined, page: undefined })).toString() %>"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('export.csv') %></a>
+  <span style="margin-inline-start:auto"></span>
   <% if (pagination.page > 1) { %>
     <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
   <% } %>

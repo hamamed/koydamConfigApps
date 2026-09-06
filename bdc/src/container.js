@@ -9,6 +9,7 @@ import { createUserRepository } from './repositories/userRepository.js'
 import { createScrapeJobRepository } from './repositories/scrapeJobRepository.js'
 import { createSettingsRepository } from './repositories/settingsRepository.js'
 import { createScraperRunner } from './scraper/runner.js'
+import { createHealthService } from './scraper/health.js'
 import { createConsultationService } from './services/consultationService.js'
 import { createFavoriteService } from './services/favoriteService.js'
 import { createInvoiceService } from './services/invoiceService.js'
@@ -47,7 +48,8 @@ export function createContainer(db = getDb(), { http } = {}) {
     auth,
     users: createUserService({ ...repositories, auth }),
     settings,
-    admin: createAdminService({ ...repositories, runner, settings }),
+    health: createHealthService({ ...repositories, db }),
+    admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
   }
 
   return { db, repositories, services, runner, settings }
