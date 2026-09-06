@@ -32,6 +32,8 @@ import { createTranslator } from './translation/translator.js'
 import { createMailer } from './notifications/mailer.js'
 import { createSystemInspector } from './system/inspector.js'
 import { createPublicService } from './services/publicService.js'
+import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
+import { createAccessRequestService } from './services/accessRequestService.js'
 
 /**
  * Composition root. Every dependency is injected explicitly so services and
@@ -55,6 +57,7 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
     notifications: createNotificationRepository(db),
     passwordResets: createPasswordResetRepository(db),
     translations: createTranslationRepository(db),
+    accessRequests: createAccessRequestRepository(db),
   }
 
   const settings = createSettingsService(repositories)
@@ -99,6 +102,7 @@ export function createContainer(db = getDb(), { http, mailer: injectedMailer, tr
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
     mailer,
     public: createPublicService(repositories),
+    accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
   }
   services.system = createSystemInspector({
     settings,

@@ -1,0 +1,82 @@
+<%- include('../partials/public-open', { pageTitle: t('access.title'), pageDescription: t('access.lede') }) %>
+
+<section>
+  <div class="wrap" style="max-width:660px">
+    <h1><%= t('access.title') %></h1>
+    <p class="lede"><%= t('access.lede') %></p>
+
+    <% if (sent) { %>
+      <div class="card" style="border-inline-start:4px solid var(--ok)">
+        <h3 style="display:flex; align-items:center; gap:8px; color:var(--ok); margin-bottom:6px">
+          <%- include('../partials/icon', { name: 'circle-check', size: 17 }) %><%= t('access.sentTitle') %>
+        </h3>
+        <p class="muted" style="margin:0"><%= t('access.sentBody') %></p>
+      </div>
+    <% } else { %>
+      <% if (error) { %>
+        <div class="card" style="border-inline-start:4px solid var(--warn); margin-bottom:16px">
+          <p class="muted" style="margin:0; color:var(--warn)"><%= error %></p>
+        </div>
+      <% } %>
+      <form method="post" action="/request-access?lang=<%= locale %>" class="card" style="display:grid; gap:14px">
+        <%# The honeypot. Hidden from a person, filled in by a bot that fills in
+            everything. A tripped trap is accepted and dropped rather than
+            refused, so nothing teaches the bot the shape of the trap. %>
+        <div style="position:absolute; left:-9999px" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="fullName"><%= t('access.fullName') %> *</label>
+          <input id="fullName" name="fullName" required maxlength="200" value="<%= form.fullName || '' %>">
+        </div>
+        <div class="field">
+          <label for="email"><%= t('access.email') %> *</label>
+          <input id="email" name="email" type="email" required maxlength="200" dir="ltr" value="<%= form.email || '' %>">
+        </div>
+        <div style="display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+          <div class="field">
+            <label for="company"><%= t('access.company') %></label>
+            <input id="company" name="company" maxlength="200" value="<%= form.company || '' %>">
+          </div>
+          <div class="field">
+            <label for="ice"><%= t('access.ice') %></label>
+            <input id="ice" name="ice" maxlength="40" dir="ltr" value="<%= form.ice || '' %>">
+          </div>
+          <div class="field">
+            <label for="phone"><%= t('access.phone') %></label>
+            <input id="phone" name="phone" maxlength="40" dir="ltr" value="<%= form.phone || '' %>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="reason"><%= t('access.reason') %></label>
+          <textarea id="reason" name="reason" rows="4" maxlength="1000"><%= form.reason || '' %></textarea>
+        </div>
+        <p class="muted" style="font-size:12.5px; margin:0">
+          <%= t('access.privacyNote') %>
+          <a href="/privacy?lang=<%= locale %>"><%= t('public.nav.privacy') %></a>
+        </p>
+        <div>
+          <button type="submit" class="submit"><%= t('access.submit') %></button>
+        </div>
+      </form>
+    <% } %>
+  </div>
+</section>
+
+<style>
+  .field label { display:block; font-size:12.5px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+  .field input, .field textarea {
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px;
+    font:inherit; font-size:14px; color:var(--text); background:#fff;
+  }
+  .field input:focus, .field textarea:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+  .submit {
+    background:var(--ink); color:#fff; border:0; padding:10px 20px; border-radius:8px;
+    font:inherit; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  .submit:hover { background:var(--accent); }
+</style>
+
+<%- include('../partials/public-close') %>

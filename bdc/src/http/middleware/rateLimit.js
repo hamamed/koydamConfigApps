@@ -24,6 +24,22 @@ export const createLoginLimiter = () =>
 export const createApiLimiter = () =>
   rateLimit({ windowMs: API_WINDOW_MS, limit: API_MAX_REQUESTS, standardHeaders: true, legacyHeaders: false })
 
+/**
+ * The public access-request form.
+ *
+ * Far tighter than the API limiter: a person fills this in once. The window is
+ * long because the abuse it guards against is a script working through a list
+ * of addresses, not somebody mistyping their own.
+ */
+export const createAccessRequestLimiter = () =>
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, data: null, error: 'Too many requests from this address, please retry later' },
+  })
+
 const COOKIE_MAX_AGE_MS = 12 * 60 * 60 * 1000
 
 /** Session cookie settings shared by the JSON API and the admin panel. */

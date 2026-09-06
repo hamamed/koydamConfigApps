@@ -10,6 +10,11 @@ export function createUserRepository(db = getDb()) {
   const findByEmailWithSecret = (email) =>
     db.get(`SELECT * FROM ${TABLE} WHERE email = ?`, [String(email).toLowerCase().trim()])
 
+  /** Existence and display, without the hash. Anything that is not signing
+   *  somebody in wants this one. */
+  const findByEmail = (email) =>
+    db.get(`SELECT ${PUBLIC_COLUMNS} FROM ${TABLE} WHERE email = ?`, [String(email).toLowerCase().trim()])
+
   const findById = (id) => db.get(`SELECT ${PUBLIC_COLUMNS} FROM ${TABLE} WHERE id = ?`, [id])
 
   const listAll = () => db.all(`SELECT ${PUBLIC_COLUMNS} FROM ${TABLE} ORDER BY created_at DESC`)
@@ -46,5 +51,5 @@ export function createUserRepository(db = getDb()) {
   const countByRole = async (role) =>
     Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE role = ? AND is_active = 1`, [role])).total)
 
-  return { findById, findByEmailWithSecret, listAll, create, touchLogin, update, remove, countAll, countByRole }
+  return { findById, findByEmail, findByEmailWithSecret, listAll, create, touchLogin, update, remove, countAll, countByRole }
 }

@@ -30,6 +30,10 @@
   .side nav a { display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:8px; color:var(--sidebar-muted); font-size:13.5px; }
   .side nav a:hover { background:rgba(255,255,255,.08); color:#fff; text-decoration:none; }
   .side nav a.on { background:#fff; color:var(--sidebar); font-weight:600; }
+  /* A count on a nav item, for a queue that needs working. */
+  .side nav .badge { margin-inline-start:auto; background:#fff; color:var(--sidebar);
+                     border-radius:999px; padding:0 7px; font-size:11px; font-weight:700; }
+  .side nav a.on .badge { background:var(--accent); color:#fff; }
   .side .help { display:flex; align-items:center; gap:8px; color:var(--sidebar-muted); font-size:12.5px; padding:4px 0 8px; }
   .side .help:hover { color:#fff; text-decoration:none; }
   .side nav .sep { margin:12px 11px 6px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:#5f7c9c; }
@@ -145,6 +149,7 @@
         <div class="sep"><%= t('nav.administration') %></div>
         <a href="/panel/dashboard" class="<%= active === 'dashboard' ? 'on' : '' %>"><%- include('icon', { name: 'layout-dashboard' }) %><%= t('nav.dashboard') %></a>
         <a href="/panel/system" class="<%= active === 'system' ? 'on' : '' %>"><%- include('icon', { name: 'server' }) %><%= t('nav.system') %></a>
+        <a href="/panel/requests" class="<%= active === 'requests' ? 'on' : '' %>"><%- include('icon', { name: 'user-plus' }) %><%= t('nav.requests') %><% if (pendingRequests > 0) { %><span class="badge ltr"><%= pendingRequests %></span><% } %></a>
         <a href="/panel/users" class="<%= active === 'users' ? 'on' : '' %>"><%- include('icon', { name: 'users' }) %><%= t('nav.users') %></a>
         <a href="/panel/settings" class="<%= active === 'settings' ? 'on' : '' %>"><%- include('icon', { name: 'settings' }) %><%= t('nav.settings') %></a>
       <% } %>

@@ -19,10 +19,7 @@
         <a class="cta" href="/panel?lang=<%= locale %>"><%- include('../partials/icon', { name: 'layout-dashboard', size: 15 }) %><%= content.landing.ctaPanel %></a>
       <% } else { %>
         <a class="cta" href="/login?lang=<%= locale %>"><%- include('../partials/icon', { name: 'key-round', size: 15 }) %><%= content.landing.ctaSignIn %></a>
-        <% if (contactEmail) { %>
-          <a href="mailto:<%= contactEmail %>?subject=<%= encodeURIComponent(content.landing.ctaRequest) %>"
-             style="color:#c9dcf2; padding:8px 4px"><%= content.landing.ctaRequest %></a>
-        <% } %>
+        <a href="/request-access?lang=<%= locale %>" style="color:#c9dcf2; padding:8px 4px"><%= content.landing.ctaRequest %></a>
       <% } %>
     </p>
     <p class="muted" style="color:#9dbde0; font-size:12.5px; margin:0"><%= content.landing.accessNote %></p>

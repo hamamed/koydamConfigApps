@@ -6,6 +6,7 @@ import { cookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
 import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
+import { translator } from '../../i18n/index.js'
 
 /**
  * The panel.
@@ -25,6 +26,8 @@ export function panelRoutes({ services }) {
   const shell = async (req, extra = {}) => ({
     user: req.user,
     siteName: await services.settings.get('site.name'),
+    // Counted for the sidebar badge, and only for the people who can act on it.
+    pendingRequests: req.user?.role === 'admin' ? await services.accessRequests.countPending() : 0,
     ...extra,
   })
 
@@ -304,6 +307,59 @@ export function panelRoutes({ services }) {
       res.render('panel/buyer', await shell(req, { active: 'projects', buyer }))
     }),
   )
+
+  /** The queue behind the public access-request form. */
+  router.get(
+    '/panel/requests',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/requests', await shell(req, {
+        active: 'requests',
+        pending: await services.accessRequests.pending(),
+        history: await services.accessRequests.recent(20),
+        notice: null,
+        error: null,
+      }))
+    }),
+  )
+
+  const reviewRequest = (action, handler) =>
+    router.post(
+      `/panel/requests/:id/${action}`,
+      adminOnly,
+      asyncHandler(async (req, res) => {
+        let notice = null
+        let error = null
+        try {
+          notice = await handler(Number(req.params.id), req)
+        } catch (failure) {
+          error = failure.message
+        }
+        res.status(error ? 400 : 200).render('panel/requests', await shell(req, {
+          active: 'requests',
+          pending: await services.accessRequests.pending(),
+          history: await services.accessRequests.recent(20),
+          notice,
+          error,
+        }))
+      }),
+    )
+
+  reviewRequest('approve', async (id, req) => {
+    const result = await services.accessRequests.approve(id, req.user)
+    // The generated password is shown here once and never again: it is not
+    // stored in readable form anywhere, only its bcrypt hash.
+    return {
+      message: translator(req.locale)('requests.created', { email: result.user.email }),
+      password: result.password,
+      delivered: result.delivered,
+    }
+  })
+
+  reviewRequest('reject', async (id, req) => {
+    await services.accessRequests.reject(id, req.user, req.body.note)
+    return { message: translator(req.locale)('requests.rejected'), password: null, delivered: false }
+  })
 
   router.get(
     '/panel/system',

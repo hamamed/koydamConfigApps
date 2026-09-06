@@ -53,7 +53,7 @@ test('the public pages exist in all three languages, and mirror for Arabic', asy
   const api = await site()
   t.after(() => api.close())
 
-  for (const path of ['/', '/guide', '/privacy', '/terms']) {
+  for (const path of ['/', '/guide', '/privacy', '/terms', '/request-access']) {
     for (const locale of CONTENT_LOCALES) {
       const response = await get(api.base, `${path}?lang=${locale}`)
       assert.equal(response.status, 200, `${path} ${locale}`)
@@ -119,7 +119,7 @@ test('robots and the sitemap point at the public pages and away from the panel',
 
   const sitemap = await (await get(api.base, '/sitemap.xml')).text()
   assert.match(sitemap, /^<\?xml/)
-  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 12, 'four pages in three languages')
+  assert.equal((sitemap.match(/<loc>/g) ?? []).length, 15, 'five pages in three languages')
   assert.ok(!sitemap.includes('/panel'), 'the panel is not advertised')
 })
 

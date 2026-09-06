@@ -189,6 +189,29 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL
     )`,
 
+    // Somebody asking for an account. Access is by invitation — there is no
+    // self-service registration — so without this the only way in was an e-mail
+    // address on a landing page, which nothing tracked and nobody could audit.
+    `CREATE TABLE IF NOT EXISTS access_requests (
+      ${id},
+      full_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      company TEXT,
+      ice TEXT,
+      phone TEXT,
+      reason TEXT,
+      -- 'pending' | 'approved' | 'rejected'
+      status TEXT NOT NULL DEFAULT 'pending',
+      -- Kept for abuse triage: a burst from one address is the thing this table
+      -- will see first. Not shown outside the admin screen.
+      source_ip TEXT,
+      review_note TEXT,
+      reviewed_at TEXT,
+      reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL
+    )`,
+
     `CREATE TABLE IF NOT EXISTS saved_searches (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -315,6 +338,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches (user_id, is_active)',
     'CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets (user_id, expires_at)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
@@ -346,4 +370,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.010'
+export const SCHEMA_VERSION = '2026-09-07.011'

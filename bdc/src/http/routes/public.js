@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { optionalAuth } from '../middleware/auth.js'
+import { createAccessRequestLimiter } from '../middleware/rateLimit.js'
 import { contentFor } from '../../content/index.js'
 
 /**
@@ -14,6 +15,7 @@ import { contentFor } from '../../content/index.js'
  */
 export function publicRoutes({ services }) {
   const router = Router()
+  const accessRequestLimiter = createAccessRequestLimiter()
   const withUser = optionalAuth(services.auth)
 
   /** Locals every public page needs. */
@@ -37,6 +39,39 @@ export function publicRoutes({ services }) {
         // cheap COUNT(*)s against indexed tables.
         stats: await services.public.stats(),
       })
+    }),
+  )
+
+  /**
+   * Asking for an account. Two pages rather than a mailto: the request lands in
+   * a queue the administrator can work, with the fields they would otherwise
+   * have to ask for in a reply.
+   */
+  router.get(
+    '/request-access',
+    withUser,
+    asyncHandler(async (req, res) => {
+      res.render('public/request-access', { ...(await shell(req)), sent: false, error: null, form: {} })
+    }),
+  )
+
+  router.post(
+    '/request-access',
+    accessRequestLimiter,
+    withUser,
+    asyncHandler(async (req, res) => {
+      const locals = await shell(req)
+      try {
+        await services.accessRequests.submit(req.body, {
+          ip: req.ip,
+          trap: req.body.website,
+        })
+        res.render('public/request-access', { ...locals, sent: true, error: null, form: {} })
+      } catch (error) {
+        res.status(error.statusCode ?? 400).render('public/request-access', {
+          ...locals, sent: false, error: error.message, form: req.body,
+        })
+      }
     }),
   )
 
@@ -67,6 +102,7 @@ export function publicRoutes({ services }) {
         'Allow: /guide',
         'Allow: /privacy',
         'Allow: /terms',
+        'Allow: /request-access',
         'Disallow: /panel',
         'Disallow: /admin',
         'Disallow: /api',
@@ -83,7 +119,7 @@ export function publicRoutes({ services }) {
   /** Four public pages in three languages. Small enough to build per request. */
   router.get('/sitemap.xml', (req, res) => {
     const base = baseUrl(req)
-    const urls = ['', '/guide', '/privacy', '/terms'].flatMap((path) =>
+    const urls = ['', '/guide', '/privacy', '/terms', '/request-access'].flatMap((path) =>
       ['fr', 'en', 'ar'].map((lang) => `${base}${path || '/'}?lang=${lang}`),
     )
     res.type('application/xml').send(
