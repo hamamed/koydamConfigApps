@@ -11,6 +11,7 @@ import { createSettingsRepository } from './repositories/settingsRepository.js'
 import { createAnalyticsRepository } from './repositories/analyticsRepository.js'
 import { createSavedSearchRepository } from './repositories/savedSearchRepository.js'
 import { createNotificationRepository } from './repositories/notificationRepository.js'
+import { createPasswordResetRepository } from './repositories/passwordResetRepository.js'
 import { createScraperRunner } from './scraper/runner.js'
 import { createHealthService } from './scraper/health.js'
 import { createConsultationService } from './services/consultationService.js'
@@ -23,6 +24,7 @@ import { createUserService } from './services/userService.js'
 import { createAnalyticsService } from './services/analyticsService.js'
 import { createAlertService } from './notifications/alertService.js'
 import { createSavedSearchService } from './services/savedSearchService.js'
+import { createPasswordResetService } from './services/passwordResetService.js'
 import { createMailer } from './notifications/mailer.js'
 
 /**
@@ -45,12 +47,14 @@ export function createContainer(db = getDb(), { http, mailer = createMailer() } 
     analytics: createAnalyticsRepository(db),
     savedSearches: createSavedSearchRepository(db),
     notifications: createNotificationRepository(db),
+    passwordResets: createPasswordResetRepository(db),
   }
 
   const settings = createSettingsService(repositories)
   const runner = createScraperRunner({ db, ...repositories, settings, ...(http ? { http } : {}) })
 
   const auth = createAuthService(repositories)
+  const baseUrl = process.env.PUBLIC_URL || 'https://bdc.civictrust.ma'
   const services = {
     consultations: createConsultationService({ ...repositories, matcher: runner.matcher }),
     favorites: createFavoriteService(repositories),
@@ -63,8 +67,9 @@ export function createContainer(db = getDb(), { http, mailer = createMailer() } 
     alerts: createAlertService({
       ...repositories,
       mailer,
-      baseUrl: process.env.PUBLIC_URL || 'https://bdc.civictrust.ma',
+      baseUrl,
     }),
+    passwordReset: createPasswordResetService({ ...repositories, auth, mailer, baseUrl }),
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
   }

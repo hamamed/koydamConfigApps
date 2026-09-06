@@ -164,6 +164,18 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (user_id, consultation_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS password_resets (
+      ${id},
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      -- The token is stored hashed. A reset link is a bearer credential; a
+      -- database copy, a backup or a log line of the raw value would be enough
+      -- to take over the account.
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    )`,
+
     `CREATE TABLE IF NOT EXISTS saved_searches (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -287,6 +299,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices (user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items (invoice_id)',
     'CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches (user_id, is_active)',
+    'CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets (user_id, expires_at)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
@@ -319,4 +332,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.008'
+export const SCHEMA_VERSION = '2026-09-06.009'

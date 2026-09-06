@@ -865,3 +865,81 @@ test('an alert is recorded before it is delivered, so a broken mailer loses noth
   const pending = await container.repositories.notifications.listPending()
   assert.equal(pending.length, 0, 'a failed alert is not retried in a tight loop')
 })
+
+test('a forgotten password can be reset, without revealing who has an account', async (t) => {
+  const sent = []
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const container = await fresh({
+    mailer: { isConfigured: () => true, send: async (message) => void sent.push(message) },
+  })
+  await container.services.auth.register({ email: 'real@test.ma', password: 'the-original-password' })
+  const server = await startTestServer(createApp(container))
+  t.after(() => server.close())
+
+  const form = (path, body) =>
+    fetch(`${server.base}${path}`, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(body),
+    })
+
+  // Both answers are identical. Anything else turns this into a way to ask who
+  // has an account — on a procurement tool, who is bidding is worth knowing.
+  const known = await (await form('/forgot', { email: 'real@test.ma' })).text()
+  const unknown = await (await form('/forgot', { email: 'nobody@test.ma' })).text()
+  assert.equal(known, unknown)
+  assert.match(known, /If an account exists|Si un compte existe/)
+  assert.equal(sent.length, 1, 'and only the real address is mailed')
+
+  const link = sent[0].text.match(/\/reset\?token=([^\s&]+)/)
+  assert.ok(link, 'the email carries a link')
+  const token = decodeURIComponent(link[1])
+
+  // The token is stored hashed: a database copy is not a login.
+  const [stored] = await container.db.all('SELECT token_hash FROM password_resets')
+  assert.notEqual(stored.token_hash, token)
+  assert.equal(stored.token_hash.length, 64, 'sha256')
+
+  // A rejected password does not burn the link.
+  const short = await form('/reset', { token, password: 'short', confirm: 'short' })
+  assert.match(await short.text(), /at least 12|12 caractères/)
+  assert.ok(await container.services.passwordReset.isValid(token), 'still usable')
+
+  const mismatch = await form('/reset', { token, password: 'a-long-enough-password', confirm: 'something-else' })
+  assert.match(await mismatch.text(), /do not match|ne correspondent pas/)
+
+  const done = await form('/reset', { token, password: 'a-brand-new-password', confirm: 'a-brand-new-password' })
+  assert.match(await done.text(), /Password changed|Mot de passe modifié/)
+
+  // Single use, and the new password is the one that works.
+  assert.equal(await container.services.passwordReset.isValid(token), false)
+  const reused = await form('/reset', { token, password: 'yet-another-password', confirm: 'yet-another-password' })
+  assert.match(await reused.text(), /no longer valid|plus valable/)
+
+  await assert.rejects(() => container.services.auth.login('real@test.ma', 'the-original-password'))
+  const signedIn = await container.services.auth.login('real@test.ma', 'a-brand-new-password')
+  assert.ok(signedIn.token)
+})
+
+test('an expired reset link stops working', async (t) => {
+  const container = await (await import('./helpers.js')).createTestContainer({
+    mailer: { isConfigured: () => false, send: async () => ({ delivered: true, channel: 'log' }) },
+  })
+  t.after(() => {})
+  await container.services.auth.register({ email: 'x@test.ma', password: 'the-original-password' })
+  const user = await container.repositories.users.findByEmailWithSecret('x@test.ma')
+
+  const { token } = await container.repositories.passwordResets.issue(user.id)
+  assert.ok(await container.services.passwordReset.isValid(token))
+
+  await container.db.run('UPDATE password_resets SET expires_at = ?', [new Date(Date.now() - 1000).toISOString()])
+  assert.equal(await container.services.passwordReset.isValid(token), false)
+
+  // Asking again invalidates whatever was sent before, including to an address
+  // the person may no longer control.
+  const first = await container.repositories.passwordResets.issue(user.id)
+  const second = await container.repositories.passwordResets.issue(user.id)
+  assert.equal(await container.services.passwordReset.isValid(first.token), false)
+  assert.ok(await container.services.passwordReset.isValid(second.token))
+})

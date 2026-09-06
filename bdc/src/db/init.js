@@ -65,6 +65,7 @@ export async function dropDatabase(db = getDb()) {
   const tables = [
     'notifications',
     'saved_searches',
+    'password_resets',
     'invoice_items',
     'invoices',
     'favorites',

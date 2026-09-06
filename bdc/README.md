@@ -256,6 +256,12 @@ Signed-in callers get an extra `isFavorite` flag on listing rows.
 `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` ·
 `POST /api/auth/password` · `POST /api/auth/users` (admin only).
 
+Forgotten passwords: `/forgot` → emailed link → `/reset`. The request endpoint
+**answers identically whether or not the address is known** — anything else turns
+it into a way to ask who has an account, and on a procurement tool who is
+bidding is itself worth knowing. Tokens are stored **hashed**, expire in an
+hour, are single use, and asking for a new link invalidates the previous one.
+
 JWT is returned in the body **and** set as an httpOnly cookie. Login is
 rate-limited and returns an identical error for unknown accounts, wrong
 passwords and deactivated accounts, so it cannot be used to enumerate users.

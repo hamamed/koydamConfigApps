@@ -60,6 +60,58 @@ export function panelRoutes({ services }) {
     }),
   )
 
+  router.get(
+    '/forgot',
+    asyncHandler(async (req, res) => {
+      res.render('panel/forgot', { siteName: await services.settings.get('site.name'), done: false, error: null })
+    }),
+  )
+
+  router.post(
+    '/forgot',
+    loginLimiter,
+    asyncHandler(async (req, res) => {
+      await services.passwordReset.request(req.body.email, { locale: req.locale })
+      // Always the same answer, so this cannot be used to find out who has an
+      // account. On a procurement tool, who is bidding is itself worth knowing.
+      res.render('panel/forgot', { siteName: await services.settings.get('site.name'), done: true, error: null })
+    }),
+  )
+
+  router.get(
+    '/reset',
+    asyncHandler(async (req, res) => {
+      const valid = await services.passwordReset.isValid(req.query.token)
+      res.render('panel/reset', {
+        siteName: await services.settings.get('site.name'),
+        token: req.query.token ?? '',
+        valid,
+        done: false,
+        error: valid ? null : 'invalid',
+      })
+    }),
+  )
+
+  router.post(
+    '/reset',
+    loginLimiter,
+    asyncHandler(async (req, res) => {
+      const siteName = await services.settings.get('site.name')
+      const render = (extra) => res.render('panel/reset', { siteName, token: req.body.token ?? '', ...extra })
+
+      if (req.body.password !== req.body.confirm) {
+        return render({ valid: true, done: false, error: 'mismatch' })
+      }
+      try {
+        const result = await services.passwordReset.complete(req.body.token, req.body.password)
+        if (!result.ok) return render({ valid: false, done: false, error: 'invalid' })
+        return render({ valid: false, done: true, error: null })
+      } catch (error) {
+        return render({ valid: true, done: false, error: error.message })
+      }
+    }),
+  )
+
   router.post('/logout', (req, res) => {
     res.clearCookie(config.auth.cookieName, { ...cookieOptions, maxAge: undefined })
     res.redirect('/login')
