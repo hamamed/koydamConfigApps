@@ -317,13 +317,17 @@ reorder `6/2026` into `2026/6`.
 `/admin/login` → `/admin`. Server-rendered (EJS), admin role required; the HTML
 routes redirect to the login page instead of returning a JSON 401.
 
-- **Dashboard** — record counters, match rate, unmatched awards, recent jobs.
+- **Dashboard** — record counters, match rate, unmatched and ambiguous awards,
+  how many detail pages are still unread, recent jobs.
 - **Manual scrape** — pick a source, page cap, optional buyer filter, detail
   fetching on/off. Long crawls run in the background and are polled through
   `/admin/api/jobs`; a second run of the same source is refused while one is
   still running.
 - **Records** — filterable consultation table with per-row *refresh detail page*
-  and *delete*.
+  and *delete*. Clicking a row opens the consultation, which shows every article
+  read from its detail page — number, designation, specifications, quantity,
+  unit, VAT and required warranties — alongside the matched award and a link
+  back to the avis on the portal.
 
 JSON API under `/admin/api`: `dashboard`, `jobs`, `scrape`, `rematch`, and CRUD
 on `consultations` / `results`.

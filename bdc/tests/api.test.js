@@ -383,3 +383,32 @@ test('renders the admin panel right-to-left in Arabic', async (t) => {
   const english = await fetch(`${api.base}/admin/login?lang=en`)
   assert.match(await english.text(), /Sign in/)
 })
+
+test('the panel shows every article of a consultation', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const login = await fetch(`${api.base}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'admin@test.ma', password: 'a-very-long-test-password' }),
+  })
+  const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0]
+
+  const page = await fetch(`${api.base}/admin/consultations/${api.consultationId}`, { headers: { cookie } })
+  const html = await page.text()
+
+  assert.equal(page.status, 200)
+  assert.match(html, /CÂBLE PNI avec brassard/, 'the article breakdown is on the page')
+  assert.match(html, /Caractéristiques et spécifications/)
+  assert.match(html, /CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA/)
+  assert.match(html, /375169/, 'the portal id is shown, so a row can be traced back')
+  // 19 articles plus the header row.
+  assert.equal((html.match(/<tr>/g) ?? []).length, 20)
+
+  const arabic = await fetch(`${api.base}/admin/consultations/${api.consultationId}?lang=ar`, { headers: { cookie } })
+  const arabicHtml = await arabic.text()
+  assert.match(arabicHtml, /<html lang="ar" dir="rtl">/)
+  assert.match(arabicHtml, /وحدة القياس/, 'article table headers are translated')
+  assert.match(arabicHtml, /CÂBLE PNI avec brassard/, 'but scraped content is left as published')
+})

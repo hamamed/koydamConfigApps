@@ -30,8 +30,8 @@
           <% if (rows.length === 0) { %><tr><td colspan="8" class="muted"><%= t('table.empty') %></td></tr><% } %>
           <% rows.forEach(function (row) { %>
             <tr data-id="<%= row.id %>">
-              <td><code><%= row.reference %></code></td>
-              <td style="max-width:320px"><%= row.objet || '—' %></td>
+              <td><a href="/admin/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
+              <td style="max-width:320px"><a href="/admin/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a></td>
               <td><%= row.acheteur || '—' %></td>
               <td><%= row.categorie || '—' %></td>
               <td class="ltr"><%= row.date_limite || '—' %></td>

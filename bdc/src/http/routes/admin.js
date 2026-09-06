@@ -71,6 +71,16 @@ export function adminRoutes({ services }) {
     }),
   )
 
+  /** One consultation with every article read from its detail page. */
+  router.get(
+    '/consultations/:id',
+    requireAdminPage(services.auth),
+    asyncHandler(async (req, res) => {
+      const consultation = await services.consultations.getById(Number(req.params.id))
+      res.render('admin/consultation', { user: req.user, consultation })
+    }),
+  )
+
   // --------------------------------------------------------------- JSON API
   const api = Router()
   api.use(requireAdmin(services.auth))
