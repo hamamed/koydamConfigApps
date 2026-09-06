@@ -23,6 +23,12 @@ export function createResultScraper({ http, results, settings }) {
       maxPages = runtime.maxPages,
       fetchDetails = runtime.fetchDetails,
       pageSize = runtime.pageSize,
+      // Where to begin. A deep archival pass over six thousand pages will meet a
+      // dropped connection eventually, and without this the only way to continue
+      // was to re-crawl every page already read — 290 of them, the first time it
+      // happened. The listing is newest-first and stable enough for this: a page
+      // number means the same rows on the next run.
+      startPage = 1,
       onProgress = () => {},
     } = options
 
@@ -36,10 +42,11 @@ export function createResultScraper({ http, results, settings }) {
       errors: [],
     }
 
-    let page = 1
-    let totalPages = 1
+    let page = Math.max(1, startPage)
+    let totalPages = page
+    const lastPage = page + maxPages - 1
 
-    while (page <= Math.min(totalPages, maxPages)) {
+    while (page <= Math.min(totalPages, lastPage)) {
       const query = buildSearchQuery('results', filters, { page, pageSize })
       const { html, url } = await http.getHtml(config.scraper.resultsPath, query)
       const parsed = parseResultList(html, url)

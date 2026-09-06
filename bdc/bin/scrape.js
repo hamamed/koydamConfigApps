@@ -3,6 +3,7 @@
  * CLI entry point for the scraper — the same code path the admin panel triggers.
  *
  *   npm run scrape -- --source=consultations --max-pages=3
+ *   npm run scrape -- --source=results --start-page=292 --max-pages=1200  resume a deep pass
  *   npm run scrape -- --source=results --filter.acheteur=ANCFCC
  *   npm run scrape -- --no-details
  *   npm run scrape -- --since=7               only avis published in the last week
@@ -27,6 +28,8 @@ function parseArgs(argv) {
       options.source = rawValue
     } else if (rawKey === 'max-pages') {
       options.maxPages = Number.parseInt(rawValue, 10)
+    } else if (rawKey === 'start-page') {
+      options.startPage = Number.parseInt(rawValue, 10)
     } else if (rawKey === 'no-details') {
       options.fetchDetails = false
     } else if (rawKey === 'since') {

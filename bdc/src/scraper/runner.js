@@ -38,6 +38,7 @@ export function createScraperRunner({ db, consultations, articles, documents, re
    * @param {'consultations'|'results'|'all'} [options.source]
    * @param {object} [options.filters] portal search filters.
    * @param {number} [options.maxPages]
+   * @param {number} [options.startPage] resume a deep pass where one stopped
    * @param {boolean} [options.fetchDetails]
    * @param {boolean} [options.backfillDetails] after crawling, read the detail
    *   page of every consultation that has never had one read.
@@ -52,6 +53,7 @@ export function createScraperRunner({ db, consultations, articles, documents, re
     const {
       source = 'all',
       maxPages,
+      startPage,
       fetchDetails,
       backfillDetails = false,
       backfillLimit,
@@ -84,7 +86,7 @@ export function createScraperRunner({ db, consultations, articles, documents, re
         accumulate(totals, detail.consultations)
       }
       if (source === 'results' || source === 'all') {
-        detail.results = await resultScraper.scrape({ filters, maxPages, fetchDetails, pageSize })
+        detail.results = await resultScraper.scrape({ filters, maxPages, startPage, fetchDetails, pageSize })
         accumulate(totals, detail.results)
       }
 
