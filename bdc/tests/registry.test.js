@@ -143,3 +143,16 @@ test('a token entered in the panel works on the next lookup, not the next restar
   assert.equal(await lookup.isConfigured(), true)
   assert.equal((await lookup.search('X')).configured, true)
 })
+
+test('a record whose fields were all cleared reads as no record', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  await container.services.companyRecords.save(COMPANY, { city: 'Agadir' }, null)
+  assert.equal((await container.services.companyRecords.find(COMPANY)).city, 'Agadir')
+
+  // An all-empty row still carries a "verified" timestamp, which would claim
+  // somebody checked something that is not there.
+  await container.services.companyRecords.save(COMPANY, {}, null)
+  assert.equal(await container.services.companyRecords.find(COMPANY), null)
+})

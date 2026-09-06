@@ -25,7 +25,7 @@ Runs on **SQLite** out of the box (via Node's built-in `node:sqlite` — no nati
 build step). Switch to PostgreSQL with `DB_CLIENT=postgres` + `DATABASE_URL`.
 
 ```bash
-npm test              # 109 tests, no network access required
+npm test              # 116 tests, no network access required
 npm run test:coverage # ~90% line coverage
 ```
 
@@ -371,6 +371,40 @@ wins, from how many buyers, the spread, and how contested it was. Only the award
 side exists for a company — an avis names its buyer and never who might bid on
 it — which is why there is no equivalent of the buyer's "how much do they
 publish".
+
+### Company identity, and why it is a store rather than a feed
+
+The portal publishes no ICE, no address and no registry number for a winning
+company — **0 of 21,748 award rows carry one** — so anything of the kind has to
+come from outside. It was worth checking what "outside" actually offers before
+building against it:
+
+| Source | What it is | Usable by a program? |
+|---|---|---|
+| **OMPIC** (`ompic.ma`) | The commercial register itself | No — refuses connections on 443 from two separate networks |
+| **DirectInfo** | OMPIC's *own* paid channel (`crc@ompic.ma`) | No — subscription, JS app, no API, no stated redistribution terms |
+| **OpenCorporates** | Indexes the OMPIC jurisdiction | API only — `robots.txt` disallows `/search` and `/officers`; the API needs a token |
+| **ice.gov.ma** | Where a business *declares* its own ICE | No — WAF 403, and it is not a lookup by name |
+| **data.gov.ma** | Morocco's open data portal | No — aggregate statistics only, no per-company records |
+
+So `company_records` is a store, not a mirror. Every field is typed or confirmed
+by an administrator, and each row carries its `source` and whether a person has
+checked it; the profile labels an unverified row as unverified, and a row whose
+fields were all cleared reads as no row rather than an empty "verified" one.
+
+An ICE is checked for fifteen digits before it is stored. A wrong ICE on a
+profile is worse than an empty one — it is the number somebody would copy onto
+an invoice.
+
+`enrichment/openCorporates.js` is the one lawful automated route, gated behind
+`registry.openCorporatesToken` exactly as translation is gated behind the Google
+key. **It proposes and never writes.** Matching five thousand Moroccan company
+names to a register by name alone is a guess, and the award data carries no ICE
+to join on, so a lookup returns candidates for a person to choose between.
+
+**What is not available at all: owners.** Beneficial ownership is not public in
+Morocco, and directors' names would be personal data about third parties — a
+different processing question from anything this application does today.
 
 ### Search that ranks
 

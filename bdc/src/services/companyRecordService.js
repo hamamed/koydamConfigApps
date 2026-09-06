@@ -2,6 +2,7 @@ import { serializeRow } from './serializers.js'
 import { ValidationError } from '../utils/errors.js'
 import { clean } from '../utils/text.js'
 
+const FIELDS = ['ice', 'registry_number', 'legal_form', 'address', 'city', 'phone', 'website', 'notes']
 const MAX = { ice: 40, registry_number: 60, legal_form: 80, address: 300, city: 80, phone: 40, website: 200, notes: 1000 }
 /** Morocco's ICE is fifteen digits. Anything else is a typo worth catching. */
 const ICE = /^\d{15}$/
@@ -16,7 +17,13 @@ const ICE = /^\d{15}$/
  * the difference.
  */
 export function createCompanyRecordService({ companyRecords, companyLookup }) {
-  const find = async (name) => serializeRow(await companyRecords.findByName(name))
+  /** The stored fields, or null when every one of them was cleared — an empty
+   *  row labelled "verified" says something was checked when nothing is there. */
+  async function find(name) {
+    const row = serializeRow(await companyRecords.findByName(name))
+    if (!row) return null
+    return FIELDS.some((key) => row[key]) ? row : null
+  }
 
   async function save(name, input, reviewer) {
     const patch = {

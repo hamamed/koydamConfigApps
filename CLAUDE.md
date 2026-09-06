@@ -36,7 +36,7 @@ npm run dev
 
 `bdc` has none — it uses Node's built-in `node:sqlite`, so there is nothing to
 rebuild after a Node upgrade. It needs Node >= 22.5.0 for that. Its own
-`npm test` runs 109 tests against pages captured from the live portal and needs
+`npm test` runs 116 tests against pages captured from the live portal and needs
 no network.
 
 `minebox` reads inside every uploaded `.mcaddon`/`.mcworld` and draws its own
