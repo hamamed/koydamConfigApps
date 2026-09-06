@@ -55,7 +55,7 @@
           secondary: null },
         { key: 'buyers', title: 'insights.buyers', head: 'insights.buyer', hint: null,
           count: 'awards', countLabel: 'insights.count', extra: 'total',
-          primary: function (v) { return { href: link('/panel/awards', 'acheteur', v), title: t('insights.seeBuyerAwards') } },
+          primary: function (v) { return { href: '/panel/buyers/' + encodeURIComponent(v) + '?lang=' + locale, title: t('buyer.profile') } },
           secondary: function (v) { return { href: link('/panel', 'acheteur', v), title: t('insights.seeProjects'), icon: 'search' } } },
         { key: 'categories', title: 'insights.categories', head: 'insights.category', hint: 'insights.categoriesHint',
           count: 'projects', countLabel: 'insights.projects', extra: 'openProjects',

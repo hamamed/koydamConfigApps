@@ -169,6 +169,37 @@ export default {
   'settings.secretsNote': 'تبقى الأسرار (JWT_SECRET وبيانات قاعدة البيانات) في ملف ‎.env على الخادم.',
 
 
+  // ---- Repeat purchases ----
+  'precedent.title': 'سبق لهذا المشتري نشر هذه الصفقة',
+  'precedent.hint': 'نفس المشتري، نفس الموضوع، مرجع مختلف: سبق طرح هذه الصفقة. محاولة سابقة دون عروض صالحة توضّح السبب؛ ومحاولة مُرساة تعطي سعرًا مرجعيًا من المشتري نفسه.',
+
+  // ---- Buyer profile ----
+  'buyer.since': 'أول إعلان مسجَّل',
+  'buyer.avis': 'الإعلانات المنشورة',
+  'buyer.open': 'ما زالت مفتوحة',
+  'buyer.cancelled': 'ملغاة',
+  'buyer.awards': 'النتائج',
+  'buyer.median': 'المبلغ الوسيط',
+  'buyer.bids': 'متوسط العروض',
+  'buyer.unsuccessful': 'دون فائز',
+  'buyer.suppliers': 'الموردون المعتمدون',
+  'buyer.topWinners': 'من يفوز بأعمالهم',
+  'buyer.recentAvis': 'أحدث الإعلانات',
+  'buyer.recentAwards': 'أحدث النتائج',
+  'buyer.allAvis': 'كل إعلاناتهم',
+  'buyer.note': 'مبني على ما نشره هذا البوابة تحت هذا الاسم بالضبط: مديريتان لوزارة واحدة تنشران بشكل منفصل تبقيان مشتريَين اثنين.',
+  'buyer.profile': 'بطاقة المشتري',
+
+  // ---- Price benchmark ----
+  'benchmark.title': 'كم تُرسى أعمال كهذه',
+  'benchmark.median': 'المبلغ الوسيط',
+  'benchmark.range': 'المجال المعتاد',
+  'benchmark.bids': 'متوسط العروض المستلمة',
+  'benchmark.unsuccessful': 'تنتهي دون فائز',
+  'benchmark.basis': 'محسوب من {awarded} إرساءً ضمن {sample} إعلانًا موصوفة بـ:',
+  'benchmark.examples': 'عرض الإعلانات المقارَنة',
+  'benchmark.tooFew': 'عدد الإرساءات المقارِنة قليل جدًا ({count}) لتقدير مبلغ.',
+
   // ---- System screen, mail settings ----
   'nav.system': 'النظام',
   'system.title': 'النظام',

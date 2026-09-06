@@ -20,13 +20,15 @@ ExecStart=/usr/bin/node bin/scrape.js --source=consultations --page-size=50 --ma
 
 # Awards are capped deliberately. The portal advertises ~6,300 pages of award
 # history at fifty a page — the whole archive is roughly 300,000 rows and days of
-# polite crawling. The cap is what makes the initial load finish in an evening.
+# polite crawling at the delay this crawler keeps.
 #
-# The deeper history is worth having: it is what the price medians and the
-# competitor picture on the Insights screen are built from, and they get sharper
-# with every year of it. Raise this and re-run when there is time for it; the
-# crawl is resumable and upserts, so a partial pass is never wasted.
-ExecStart=/usr/bin/node bin/scrape.js --source=results --page-size=50 --max-pages=200 --no-details
+# 1500 pages is about a year: the first 200 pages held seven weeks, so the rate
+# is roughly 1,400 awards a week. A year is the span that makes a price median
+# mean something — the seven-week slice the panel started with was a snapshot
+# being read as a trend. The listing is newest-first, so a shallower run is
+# always a prefix of a deeper one; this upserts and is resumable, and re-running
+# it costs time rather than correctness.
+ExecStart=/usr/bin/node bin/scrape.js --source=results --page-size=50 --max-pages=1500 --no-details
 
 # Then the detail page of every consultation that has none. This is the long
 # part, and it is resumable: it picks up wherever the backlog stands.

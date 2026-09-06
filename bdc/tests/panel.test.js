@@ -753,8 +753,10 @@ test('every insights ranking opens the rows behind it', async (t) => {
   const winner = overview.winners[0].label
   assert.ok(page.includes(href('/panel/awards', 'attributaire', winner)), 'the winner opens their awards')
 
+  // A buyer opens their whole record — what they publish, how often they
+  // withdraw it, what it settles for — rather than one filtered list.
   const buyer = overview.buyers[0].label
-  assert.ok(page.includes(href('/panel/awards', 'acheteur', buyer)), 'the buyer opens what they awarded')
+  assert.ok(page.includes(`/panel/buyers/${encodeURIComponent(buyer)}?lang=fr`), 'the buyer opens their profile')
   assert.ok(page.includes(href('/panel', 'acheteur', buyer)), 'and what they have open')
 
   const category = overview.categories[0].label

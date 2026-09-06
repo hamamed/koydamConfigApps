@@ -17,7 +17,7 @@
   </p>
 
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(215px,1fr))">
-    <div><label><%- include('../partials/icon', { name: 'building-2', size: 13 }) %> <%= t('detail.buyer') %></label><%= consultation.acheteur || '—' %></div>
+    <div><label><%- include('../partials/icon', { name: 'building-2', size: 13 }) %> <%= t('detail.buyer') %></label><% if (consultation.acheteur) { %><a href="/panel/buyers/<%= encodeURIComponent(consultation.acheteur) %>?lang=<%= locale %>" title="<%= t('buyer.profile') %>"><%= consultation.acheteur %></a><% } else { %>—<% } %></div>
     <div><label><%= t('detail.category') %></label><%= consultation.categorie || '—' %></div>
     <div><label><%= t('detail.nature') %></label><%= consultation.nature_prestation || '—' %></div>
     <div><label><%- include('../partials/icon', { name: 'map-pin', size: 13 }) %> <%= t('detail.place') %></label><%= consultation.lieu_execution || '—' %></div>
@@ -58,6 +58,90 @@
       <div style="flex:1"><input name="note" value="<%= favorite && favorite.note ? favorite.note : '' %>" placeholder="<%= t('favorites.notePlaceholder') %>"></div>
       <button class="secondary" type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('favorites.saveNote') %></button>
     </form>
+  </div>
+<% } %>
+
+<%# The same buyer, the same purchase, already published once. %>
+<% if (precedents && precedents.length > 0) { %>
+  <div class="card" style="border-inline-start:4px solid var(--accent)">
+    <h2><%- include('../partials/icon', { name: 'rotate-ccw', size: 15 }) %><%= t('precedent.title') %></h2>
+    <p class="muted" style="margin:-6px 0 12px; font-size:12px"><%= t('precedent.hint') %></p>
+    <table>
+      <thead><tr>
+        <th><%= t('table.reference') %></th><th><%= t('jobs.status') %></th>
+        <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
+        <th><%= t('awards.bids') %></th><th><%= t('awards.publishedOn') %></th>
+      </tr></thead>
+      <tbody>
+        <% precedents.forEach(function (row) { %>
+          <tr>
+            <td><code><%= row.reference %></code></td>
+            <td>
+              <span class="pill <%= row.result_status === 'attribue' ? 'ok' : 'warn' %>">
+                <%= t('status.' + (row.result_status || 'awarded')) %>
+              </span>
+            </td>
+            <td><%= row.attributaire || '—' %></td>
+            <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue + ' ' + row.currency %></td>
+            <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
+            <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<%# What work described this way has gone for. Shown above the documents
+    because it is the question someone opening an avis is actually holding. %>
+<% if (benchmark && benchmark.terms.length > 0) { %>
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'award', size: 15 }) %><%= t('benchmark.title') %></h2>
+    <% if (!benchmark.enough) { %>
+      <p class="empty"><%= t('benchmark.tooFew', { count: benchmark.awarded }) %></p>
+    <% } else { %>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+        <div>
+          <label><%= t('benchmark.median') %></label>
+          <b class="ltr" style="font-size:19px"><%= benchmark.median %> <%= benchmark.currency %></b>
+        </div>
+        <div>
+          <label><%= t('benchmark.range') %></label>
+          <span class="ltr"><%= benchmark.low %> – <%= benchmark.high %></span>
+        </div>
+        <div>
+          <label><%= t('benchmark.bids') %></label>
+          <span class="ltr"><%= benchmark.avgBids === null ? '—' : benchmark.avgBids %></span>
+        </div>
+        <div>
+          <label><%= t('benchmark.unsuccessful') %></label>
+          <span class="ltr"><%= benchmark.unsuccessfulRate === null ? '—' : benchmark.unsuccessfulRate + ' %' %></span>
+        </div>
+      </div>
+      <p class="muted" style="margin:12px 0 6px; font-size:12px">
+        <%= t('benchmark.basis', { awarded: benchmark.awarded, sample: benchmark.sampleSize }) %>
+        <% benchmark.terms.forEach(function (term) { %><span class="pill" style="margin-inline-start:5px"><%= term %></span><% }) %>
+      </p>
+      <details style="margin-top:8px">
+        <summary class="muted" style="cursor:pointer; font-size:12px"><%= t('benchmark.examples') %></summary>
+        <table style="margin-top:10px">
+          <thead><tr>
+            <th><%= t('table.objet') %></th><th><%= t('awards.winner') %></th>
+            <th><%= t('awards.amount') %></th><th><%= t('awards.bids') %></th>
+          </tr></thead>
+          <tbody>
+            <% benchmark.examples.forEach(function (row) { %>
+              <tr>
+                <td style="max-width:340px"><%= row.objet || '—' %><span class="cancel-note muted" style="color:var(--muted)"><%= row.acheteur || '' %></span></td>
+                <td><%= row.attributaire || '—' %></td>
+                <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+                <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </details>
+    <% } %>
   </div>
 <% } %>
 

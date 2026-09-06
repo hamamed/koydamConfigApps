@@ -62,6 +62,136 @@ export function createAnalyticsRepository(db = getDb()) {
     }
   }
 
+  /**
+   * Awards for work described in the same words as `terms`.
+   *
+   * Unsuccessful and cancelled results are deliberately *included* here, unlike
+   * every other read model in this file: how often work like this ends with
+   * nobody awarded is half of what the caller wants to know, and filtering it
+   * out would quietly answer a different question.
+   *
+   * Matched against `objet` and not `search_text`: that column also holds the
+   * buyer's name, so a term like "hospitalier" would pull in everything one
+   * hospital has ever bought and call it comparable work.
+   *
+   * The scan is linear — `LIKE '%term%'` cannot use an index — which is why the
+   * caller gets a bounded sample rather than the whole match set.
+   *
+   * @param {string[]} terms significant words from the avis being priced.
+   * @param {{limit?: number, minMatches?: number}} [options]
+   */
+  async function comparables(terms, { limit = 400, minMatches = 2 } = {}) {
+    if (terms.length === 0) return []
+    const patterns = terms.map((term) => `%${term}%`)
+    const score = terms.map(() => 'CASE WHEN objet LIKE ? THEN 1 ELSE 0 END').join(' + ')
+    const any = terms.map(() => 'objet LIKE ?').join(' OR ')
+
+    return db.all(
+      `SELECT * FROM (
+         SELECT id, reference, objet, acheteur, attributaire, montant_attribue_cents, nombre_offres,
+                date_publication_resultat, result_status, currency, (${score}) AS score
+         FROM consultation_results
+         WHERE ${any}
+       ) matches
+       WHERE score >= ?
+       ORDER BY score DESC, date_publication_resultat DESC, id DESC
+       LIMIT ?`,
+      [...patterns, ...patterns, Math.min(minMatches, terms.length), limit],
+    )
+  }
+
+  /**
+   * Times this buyer has already put this exact purchase out.
+   *
+   * Not a match — that is the point. 119 award/avis pairs in this database share
+   * a buyer and a word-for-word identical objet, and in every one of them the
+   * references disagree, always with the award's the lower of the two. They are
+   * not two views of one avis; they are the same purchase published twice. And
+   * 38% of them were unsuccessful against a 16.6% baseline, so the common story
+   * is a first attempt that drew no valid offer and was relaunched.
+   *
+   * Linking these, which is what a fuzzy matcher would do, would state that an
+   * open avis had already been awarded. Showing them as precedent states what
+   * actually happened and is far more use to somebody about to bid.
+   */
+  async function precedents({ acheteur, objet, terms = [], excludeConsultationId = null, limit = 5 }) {
+    if (!acheteur || !objet) return []
+    const patterns = terms.map((term) => `%${term}%`)
+    const score = terms.length
+      ? terms.map(() => 'CASE WHEN objet LIKE ? THEN 1 ELSE 0 END').join(' + ')
+      : '0'
+    // All but one term, so a relaunch that reworded a single word still shows.
+    const threshold = Math.max(2, terms.length - 1)
+
+    return db.all(
+      `SELECT id, reference, objet, attributaire, montant_attribue_cents, nombre_offres,
+              date_publication_resultat, result_status, currency
+       FROM consultation_results
+       WHERE acheteur = ?
+         AND (lower(trim(objet)) = lower(trim(?)) OR (${score}) >= ?)
+         AND (consultation_id IS NULL OR consultation_id <> ?)
+       ORDER BY date_publication_resultat DESC, id DESC
+       LIMIT ?`,
+      [acheteur, objet, ...patterns, threshold, excludeConsultationId ?? -1, limit],
+    )
+  }
+
+  /**
+   * One buyer's record, from both halves of the data.
+   *
+   * Matched on the exact name the portal prints, because that is the only
+   * identifier a buyer has here — there is no buyer id anywhere in the portal's
+   * markup, and normalising the name would silently merge two directions of the
+   * same ministry that publish separately.
+   *
+   * The cancellation rate is the reason this exists: a buyer who withdraws one
+   * avis in six is a different proposition from one who never does, and nothing
+   * else in the application would ever show you that.
+   */
+  async function buyerProfile(name) {
+    const [avis, awards] = await Promise.all([
+      db.get(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN status = 'annule' THEN 1 ELSE 0 END) AS cancelled,
+                SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) AS open,
+                MIN(date_publication) AS first_seen, MAX(date_publication) AS last_seen,
+                COUNT(DISTINCT categorie) AS categories
+         FROM consultations WHERE acheteur = ?`,
+        [name],
+      ),
+      db.get(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN result_status = 'infructueux' THEN 1 ELSE 0 END) AS unsuccessful,
+                SUM(CASE WHEN ${AWARDED} THEN montant_attribue_cents ELSE 0 END) AS total_cents,
+                AVG(nombre_offres) AS avg_bids,
+                COUNT(DISTINCT attributaire) AS winners
+         FROM consultation_results WHERE acheteur = ?`,
+        [name],
+      ),
+    ])
+
+    const priced = buildWhere([[AWARDED], ['acheteur = ?', name]])
+    return {
+      name,
+      avis: {
+        total: Number(avis.total ?? 0),
+        cancelled: Number(avis.cancelled ?? 0),
+        open: Number(avis.open ?? 0),
+        categories: Number(avis.categories ?? 0),
+        firstSeen: avis.first_seen ?? null,
+        lastSeen: avis.last_seen ?? null,
+      },
+      awards: {
+        total: Number(awards.total ?? 0),
+        unsuccessful: Number(awards.unsuccessful ?? 0),
+        totalCents: Number(awards.total_cents ?? 0),
+        medianCents: await medianCents(priced.sql, priced.params),
+        avgBids: awards.avg_bids === null ? null : Number(awards.avg_bids),
+        winners: Number(awards.winners ?? 0),
+      },
+    }
+  }
+
   /** Generic "top N by group", used for winners, buyers and categories. */
   const topBy = (column) => async (filters = {}, limit = 12) => {
     const { sql, params } = scope(filters)
@@ -118,6 +248,9 @@ export function createAnalyticsRepository(db = getDb()) {
 
   return {
     summary,
+    comparables,
+    precedents,
+    buyerProfile,
     topWinners: topBy('attributaire'),
     topBuyers: topBy('acheteur'),
     topCategories,

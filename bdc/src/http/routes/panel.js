@@ -5,6 +5,7 @@ import { requireAdminPage, requireUserPage } from '../middleware/auth.js'
 import { cookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
 import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
+import { NotFoundError } from '../../utils/errors.js'
 
 /**
  * The panel.
@@ -145,6 +146,8 @@ export function panelRoutes({ services }) {
         active: 'projects',
         consultation,
         favorite,
+        benchmark: await services.analytics.benchmark(consultation),
+        precedents: await services.analytics.precedents(consultation),
         canTranslate: await services.translation.isConfigured(),
       }))
     }),
@@ -284,6 +287,21 @@ export function panelRoutes({ services }) {
     adminOnly,
     asyncHandler(async (req, res) => {
       res.render('panel/dashboard', await shell(req, { active: 'dashboard', dashboard: await services.admin.dashboard() }))
+    }),
+  )
+
+  /**
+   * One buyer's record. Addressed by the name the portal prints, which is the
+   * only identifier a buyer has anywhere in its markup.
+   */
+  router.get(
+    '/panel/buyers/:name',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const buyer = await services.analytics.buyer(name, services.consultations)
+      if (buyer.avis.total === 0 && buyer.awards.total === 0) throw new NotFoundError(`Buyer ${name}`)
+      res.render('panel/buyer', await shell(req, { active: 'projects', buyer }))
     }),
   )
 

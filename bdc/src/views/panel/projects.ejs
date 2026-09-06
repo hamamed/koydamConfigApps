@@ -65,7 +65,7 @@
             </td>
             <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
             <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></td>
-            <td><%= row.acheteur || '—' %></td>
+            <td><% if (row.acheteur) { %><a href="/panel/buyers/<%= encodeURIComponent(row.acheteur) %>?lang=<%= locale %>" title="<%= t('buyer.profile') %>"><%= row.acheteur %></a><% } else { %>—<% } %></td>
             <td><%= row.categorie || '—' %></td>
             <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></td>
             <td class="ltr"><%= row.lots_count %></td>

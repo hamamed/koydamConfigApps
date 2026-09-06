@@ -73,6 +73,18 @@ export function consultationRoutes({ services }) {
   )
 
   /**
+   * What comparable work has been awarded for. Public alongside the avis it
+   * describes: it is derived entirely from results the portal already publishes.
+   */
+  router.get(
+    '/:id/benchmark',
+    asyncHandler(async (req, res) => {
+      const consultation = await services.consultations.getById(Number(req.params.id))
+      res.json(ok(await services.analytics.benchmark(consultation)))
+    }),
+  )
+
+  /**
    * Translates this avis's articles into the requested language, cached.
    * Signed in only: it spends money per uncached article.
    */

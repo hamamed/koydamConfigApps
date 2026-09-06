@@ -169,6 +169,37 @@ export default {
   'settings.secretsNote': 'Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.',
 
 
+  // ---- Repeat purchases ----
+  'precedent.title': 'Cet acheteur a déjà publié cet achat',
+  'precedent.hint': 'Même acheteur, même objet, référence différente : l’achat a déjà été lancé une fois. Un avis précédent resté infructueux dit pourquoi personne n’a répondu ; un avis attribué donne un prix de référence du même acheteur.',
+
+  // ---- Buyer profile ----
+  'buyer.since': 'Premier avis vu le',
+  'buyer.avis': 'Avis publiés',
+  'buyer.open': 'Encore ouverts',
+  'buyer.cancelled': 'Annulés',
+  'buyer.awards': 'Résultats',
+  'buyer.median': 'Montant médian',
+  'buyer.bids': 'Devis reçus en moyenne',
+  'buyer.unsuccessful': 'Sans attributaire',
+  'buyer.suppliers': 'Fournisseurs retenus',
+  'buyer.topWinners': 'Qui remporte leurs marchés',
+  'buyer.recentAvis': 'Avis récents',
+  'buyer.recentAwards': 'Résultats récents',
+  'buyer.allAvis': 'Tous leurs avis',
+  'buyer.note': 'Établi à partir de ce que ce portail a publié sous ce nom exact : deux directions d’un même ministère qui publient séparément restent deux acheteurs.',
+  'buyer.profile': 'Fiche de l’acheteur',
+
+  // ---- Price benchmark ----
+  'benchmark.title': 'Ce que ce type de travail rapporte',
+  'benchmark.median': 'Montant médian',
+  'benchmark.range': 'Fourchette habituelle',
+  'benchmark.bids': 'Devis reçus en moyenne',
+  'benchmark.unsuccessful': 'Terminés sans attributaire',
+  'benchmark.basis': 'Calculé sur {awarded} attributions parmi {sample} avis décrits par :',
+  'benchmark.examples': 'Voir les avis comparés',
+  'benchmark.tooFew': 'Trop peu d’attributions comparables ({count}) pour avancer un montant.',
+
   // ---- System screen, mail settings ----
   'nav.system': 'Système',
   'system.title': 'Système',

@@ -169,6 +169,37 @@ export default {
   'settings.secretsNote': 'Secrets (JWT_SECRET, database credentials) stay in the server\u2019s .env file.',
 
 
+  // ---- Repeat purchases ----
+  'precedent.title': 'This buyer has published this purchase before',
+  'precedent.hint': 'Same buyer, same objet, a different reference: this purchase has been put out before. A previous attempt that drew no valid offer tells you why; one that was awarded gives a price precedent from this very buyer.',
+
+  // ---- Buyer profile ----
+  'buyer.since': 'First avis seen',
+  'buyer.avis': 'Avis published',
+  'buyer.open': 'Still open',
+  'buyer.cancelled': 'Cancelled',
+  'buyer.awards': 'Results',
+  'buyer.median': 'Median amount',
+  'buyer.bids': 'Average bids',
+  'buyer.unsuccessful': 'No winner',
+  'buyer.suppliers': 'Suppliers used',
+  'buyer.topWinners': 'Who wins their work',
+  'buyer.recentAvis': 'Recent avis',
+  'buyer.recentAwards': 'Recent results',
+  'buyer.allAvis': 'All their avis',
+  'buyer.note': 'Built from what this portal published under this exact name: two directorates of one ministry that publish separately stay two buyers.',
+  'buyer.profile': 'Buyer profile',
+
+  // ---- Price benchmark ----
+  'benchmark.title': 'What work like this goes for',
+  'benchmark.median': 'Median amount',
+  'benchmark.range': 'Usual range',
+  'benchmark.bids': 'Average bids received',
+  'benchmark.unsuccessful': 'Ending with no winner',
+  'benchmark.basis': 'From {awarded} awards among {sample} avis described by:',
+  'benchmark.examples': 'See the compared avis',
+  'benchmark.tooFew': 'Too few comparable awards ({count}) to put a figure on this.',
+
   // ---- System screen, mail settings ----
   'nav.system': 'System',
   'system.title': 'System',
