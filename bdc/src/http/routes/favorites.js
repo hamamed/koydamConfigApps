@@ -54,5 +54,29 @@ export function favoriteRoutes({ services }) {
     }),
   )
 
+  // Saved searches live alongside favourites: both are "what this user is
+  // watching", and both are per account.
+  router.get(
+    '/searches',
+    asyncHandler(async (req, res) => res.json(ok(await services.savedSearches.list(req.user.id)))),
+  )
+
+  router.post(
+    '/searches',
+    asyncHandler(async (req, res) => res.status(201).json(ok(await services.savedSearches.create(req.user.id, req.body)))),
+  )
+
+  router.patch(
+    '/searches/:id/active',
+    asyncHandler(async (req, res) =>
+      res.json(ok(await services.savedSearches.setActive(Number(req.params.id), req.user.id, req.body.isActive === true))),
+    ),
+  )
+
+  router.delete(
+    '/searches/:id',
+    asyncHandler(async (req, res) => res.json(ok(await services.savedSearches.remove(Number(req.params.id), req.user.id)))),
+  )
+
   return router
 }

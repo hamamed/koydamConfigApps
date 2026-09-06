@@ -1,0 +1,23 @@
+[Unit]
+Description=Marches publics — saved-search and deadline alerts
+After=network-online.target bdc.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+# Runs after the daily crawl, so an alert about a new project goes out the same
+# morning it appears. Safe to run repeatedly: each saved search remembers where
+# it got to, so a second run in the same hour sends nothing new.
+ExecStart=/usr/bin/node bin/alerts.js
+TimeoutStartSec=900
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+SyslogIdentifier=bdc-alerts

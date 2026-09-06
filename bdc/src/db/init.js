@@ -63,6 +63,8 @@ export async function initDatabase(db = getDb()) {
 /** Drops every table — used by the test suite, never in production code paths. */
 export async function dropDatabase(db = getDb()) {
   const tables = [
+    'notifications',
+    'saved_searches',
     'invoice_items',
     'invoices',
     'favorites',

@@ -105,6 +105,21 @@ export const config = Object.freeze({
     storageDir: resolvePath(process.env.INVOICE_STORAGE_DIR, './storage/invoices'),
   }),
 
+  /**
+   * Outbound notification. With no SMTP host configured, mail is written to the
+   * log instead of sent — the alert pipeline still runs end to end, so nothing
+   * silently stops working while credentials are being arranged.
+   */
+  mail: Object.freeze({
+    host: process.env.SMTP_HOST || '',
+    port: int(process.env.SMTP_PORT, 587),
+    secure: bool(process.env.SMTP_SECURE, false),
+    user: process.env.SMTP_USER || '',
+    password: process.env.SMTP_PASSWORD || '',
+    from: process.env.MAIL_FROM || 'bdc@civictrust.ma',
+    enabled: Boolean(process.env.SMTP_HOST),
+  }),
+
   company: Object.freeze({
     name: process.env.COMPANY_NAME || 'Ma Societe',
     ice: process.env.COMPANY_ICE || '',

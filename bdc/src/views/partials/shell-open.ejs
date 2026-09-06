@@ -120,6 +120,7 @@
       <a href="/panel/awards" class="<%= active === 'awards' ? 'on' : '' %>"><%- include('icon', { name: 'file-text' }) %><%= t('nav.awards') %></a>
       <a href="/panel/insights" class="<%= active === 'insights' ? 'on' : '' %>"><%- include('icon', { name: 'award' }) %><%= t('nav.insights') %></a>
       <a href="/panel/invoices" class="<%= active === 'invoices' ? 'on' : '' %>"><%- include('icon', { name: 'file-text' }) %><%= t('nav.invoices') %></a>
+      <a href="/panel/alerts" class="<%= active === 'alerts' ? 'on' : '' %>"><%- include('icon', { name: 'bell' }) %><%= t('nav.alerts') %></a>
       <a href="/panel/favorites" class="<%= active === 'favorites' ? 'on' : '' %>"><%- include('icon', { name: 'star', fill: active === 'favorites' ? 'currentColor' : 'none' }) %><%= t('nav.favorites') %></a>
 
       <% if (user.role === 'admin') { %>

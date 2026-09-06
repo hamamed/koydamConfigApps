@@ -102,6 +102,8 @@ install -m 644 "$APP_DIR/deploy/bdc.service"        /etc/systemd/system/bdc.serv
 install -m 644 "$APP_DIR/deploy/bdc-scrape.service"   /etc/systemd/system/bdc-scrape.service
 install -m 644 "$APP_DIR/deploy/bdc-scrape.timer"     /etc/systemd/system/bdc-scrape.timer
 install -m 644 "$APP_DIR/deploy/bdc-backfill.service" /etc/systemd/system/bdc-backfill.service
+install -m 644 "$APP_DIR/deploy/bdc-alerts.service"   /etc/systemd/system/bdc-alerts.service
+install -m 644 "$APP_DIR/deploy/bdc-alerts.timer"     /etc/systemd/system/bdc-alerts.timer
 systemctl daemon-reload
 systemctl enable --quiet "$SERVICE"
 

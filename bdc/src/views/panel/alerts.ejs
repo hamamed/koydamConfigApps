@@ -1,0 +1,122 @@
+<%- include('../partials/shell-open', { title: t('alerts.title') }) %>
+
+<div class="page-head"><h1><%- include('../partials/icon', { name: 'bell', size: 19 }) %> <%= t('alerts.title') %></h1></div>
+
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<% if (!mailConfigured) { %>
+  <p class="notice" style="background:var(--warn-soft); color:var(--warn)">
+    <%- include('../partials/icon', { name: 'bell-off', size: 15 }) %> <%= t('alerts.noMail') %>
+  </p>
+<% } %>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('alerts.criteria') %></h2>
+  <p class="muted" style="margin-top:0"><%= t('alerts.intro') %></p>
+  <form method="post" action="/panel/alerts?lang=<%= locale %>" class="filters">
+    <div><label for="name"><%= t('alerts.name') %></label><input id="name" name="name" required placeholder="<%= t('alerts.namePlaceholder') %>"></div>
+    <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q"></div>
+    <div><label for="categorie"><%= t('filters.categorie') %></label><input id="categorie" name="categorie"></div>
+    <div><label for="acheteur"><%= t('filters.acheteur') %></label><input id="acheteur" name="acheteur"></div>
+    <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution"></div>
+    <div>
+      <label><%= t('alerts.notifyNew') %></label>
+      <label style="display:flex; gap:7px; align-items:center; font-size:13px; color:var(--text)">
+        <input type="checkbox" name="notifyNew" checked style="width:auto"> <%= t('alerts.notifyNew') %>
+      </label>
+      <label style="display:flex; gap:7px; align-items:center; font-size:13px; color:var(--text)">
+        <input type="checkbox" name="notifyAwards" style="width:auto"> <%= t('alerts.notifyAwards') %>
+      </label>
+    </div>
+    <div><button type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('alerts.save') %></button></div>
+  </form>
+</div>
+
+<div class="card" style="padding-bottom:8px">
+  <h2><%= t('alerts.saved') %></h2>
+  <% if (searches.length === 0) { %>
+    <p class="empty"><%= t('alerts.none') %></p>
+  <% } else { %>
+    <table>
+      <thead><tr>
+        <th><%= t('alerts.name') %></th><th><%= t('alerts.criteria') %></th>
+        <th><%= t('alerts.notifyNew') %></th><th><%= t('invoices.status') %></th>
+        <th><%= t('alerts.lastNotified') %></th><th></th>
+      </tr></thead>
+      <tbody>
+        <% searches.forEach(function (s) { %>
+          <tr data-id="<%= s.id %>">
+            <td><strong><%= s.name %></strong></td>
+            <td class="muted" style="max-width:280px">
+              <% const entries = Object.entries(s.filters) %>
+              <% if (entries.length === 0) { %>—<% } else { %>
+                <% entries.forEach(function (e) { %><span class="pill"><%= e[0] %>: <%= e[1] %></span> <% }) %>
+              <% } %>
+            </td>
+            <td>
+              <% if (s.notify_new) { %><span class="pill"><%= t('alerts.notifyNew') %></span><% } %>
+              <% if (s.notify_awards) { %><span class="pill"><%= t('alerts.notifyAwards') %></span><% } %>
+            </td>
+            <td>
+              <span class="pill <%= s.is_active ? 'ok' : 'warn' %>"><%= s.is_active ? t('alerts.active') : t('alerts.paused') %></span>
+            </td>
+            <td class="muted ltr"><%= s.last_notified_at ? s.last_notified_at.replace('T', ' ').slice(0, 16) : '—' %></td>
+            <td><div class="row-actions">
+              <button class="secondary icon toggle" type="button" data-id="<%= s.id %>" data-active="<%= s.is_active ? '1' : '0' %>"
+                      title="<%= s.is_active ? t('alerts.pause') : t('alerts.resume') %>">
+                <%- include('../partials/icon', { name: s.is_active ? 'bell-off' : 'bell', size: 15 }) %>
+              </button>
+              <button class="danger icon remove" type="button" data-id="<%= s.id %>" title="<%= t('alerts.delete') %>">
+                <%- include('../partials/icon', { name: 'trash-2', size: 15 }) %>
+              </button>
+            </div></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<div class="card" style="padding-bottom:8px">
+  <h2><%= t('alerts.history') %></h2>
+  <% if (history.length === 0) { %>
+    <p class="empty"><%= t('alerts.historyEmpty') %></p>
+  <% } else { %>
+    <table>
+      <thead><tr><th><%= t('jobs.startedAt') %></th><th><%= t('alerts.criteria') %></th><th><%= t('invoices.status') %></th></tr></thead>
+      <tbody>
+        <% history.forEach(function (n) { %>
+          <tr>
+            <td class="muted ltr"><%= (n.created_at || '').replace('T', ' ').slice(0, 16) %></td>
+            <td><span class="pill"><%= t('alerts.kind.' + n.kind) %></span> <%= n.subject %></td>
+            <td><span class="pill <%= n.status === 'sent' ? 'ok' : n.status === 'failed' ? 'warn' : '' %>"><%= t('alerts.status.' + n.status) %></span></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</div>
+
+<script>
+  const CONFIRM = <%- JSON.stringify(t('alerts.confirmDelete')) %>
+  const call = async (method, url, body) => {
+    const response = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'same-origin',
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    if (response.ok) window.location.reload()
+    else alert((await response.json()).error)
+  }
+
+  document.querySelectorAll('.toggle').forEach((button) =>
+    button.addEventListener('click', () =>
+      call('PATCH', '/api/favorites/searches/' + button.dataset.id + '/active', { isActive: button.dataset.active !== '1' })))
+
+  document.querySelectorAll('.remove').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (confirm(CONFIRM)) call('DELETE', '/api/favorites/searches/' + button.dataset.id)
+    }))
+</script>
+
+<%- include('../partials/shell-close') %>

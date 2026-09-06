@@ -19,7 +19,8 @@
     "test:coverage": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --experimental-test-coverage \"tests/*.test.js\"",
     "test:watch": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --watch \"tests/*.test.js\"",
     "stats": "node bin/stats.js",
-    "scrape:backfill": "node bin/scrape.js --backfill"
+    "scrape:backfill": "node bin/scrape.js --backfill",
+    "alerts": "node bin/alerts.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -33,6 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "pdfkit": "^0.15.2",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "nodemailer": "^6.9.16"
   }
 }

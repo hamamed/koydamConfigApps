@@ -22,6 +22,11 @@ export function consultationClauses(filters = {}, alias = 'c') {
     filters.dateLimiteEnd && [`${alias}.date_limite <= ?`, filters.dateLimiteEnd],
     filters.status && [`${alias}.status = ?`, filters.status],
     filters.hasResult !== undefined && [`${alias}.has_result = ?`, filters.hasResult ? 1 : 0],
+    // Used by the alert engine: rows this instance first saw after a saved
+    // search last looked. A high-water mark, not a time window — a window
+    // double-sends when a run is late and skips when one is missed.
+    filters.firstSeenAfter && [`${alias}.first_seen_at > ?`, filters.firstSeenAfter],
+    filters.firstSeenBefore && [`${alias}.first_seen_at <= ?`, filters.firstSeenBefore],
   ]
 }
 
@@ -38,5 +43,7 @@ export function resultClauses(filters = {}, alias = 'r') {
     filters.datePublicationStart && [`${alias}.date_publication_resultat >= ?`, filters.datePublicationStart],
     filters.datePublicationEnd && [`${alias}.date_publication_resultat <= ?`, filters.datePublicationEnd],
     filters.status && [`${alias}.result_status = ?`, filters.status],
+    filters.firstSeenAfter && [`${alias}.first_seen_at > ?`, filters.firstSeenAfter],
+    filters.firstSeenBefore && [`${alias}.first_seen_at <= ?`, filters.firstSeenBefore],
   ]
 }

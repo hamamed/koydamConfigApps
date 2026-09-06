@@ -164,6 +164,38 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (user_id, consultation_id)
     )`,
+    `CREATE TABLE IF NOT EXISTS saved_searches (
+      ${id},
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      filters_json TEXT NOT NULL,
+      -- What this search watches for: new projects matching it, awards matching
+      -- it, or deadlines approaching on what the user already tracks.
+      notify_new INTEGER NOT NULL DEFAULT 1,
+      notify_awards INTEGER NOT NULL DEFAULT 0,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      last_notified_at TEXT,
+      -- The high-water mark: rows first seen after this have not been sent yet.
+      last_seen_cursor TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
+
+    `CREATE TABLE IF NOT EXISTS notifications (
+      ${id},
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      saved_search_id INTEGER REFERENCES saved_searches(id) ON DELETE SET NULL,
+      kind TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      payload_json TEXT,
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      error_message TEXT,
+      sent_at TEXT,
+      created_at TEXT NOT NULL
+    )`,
+
     `CREATE TABLE IF NOT EXISTS invoices (
       ${id},
       invoice_number TEXT NOT NULL UNIQUE,
@@ -254,6 +286,9 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_invoices_consultation ON invoices (consultation_id)',
     'CREATE INDEX IF NOT EXISTS idx_invoices_user ON invoices (user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items (invoice_id)',
+    'CREATE INDEX IF NOT EXISTS idx_saved_searches_user ON saved_searches (user_id, is_active)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
 }
@@ -284,4 +319,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.007'
+export const SCHEMA_VERSION = '2026-09-06.008'

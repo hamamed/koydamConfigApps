@@ -108,6 +108,46 @@ export function panelRoutes({ services }) {
   )
 
   router.get(
+    '/panel/alerts',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      res.render('panel/alerts', await shell(req, {
+        active: 'alerts',
+        searches: await services.savedSearches.list(req.user.id),
+        history: await services.savedSearches.history(req.user.id, 25),
+        mailConfigured: config.mail.enabled,
+        error: null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/alerts',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      try {
+        // The filters are parsed from the same query vocabulary the listings
+        // use, so a search saved from a screen reproduces what was on it.
+        await services.savedSearches.create(req.user.id, {
+          name: req.body.name,
+          filters: parseFilters(req.body),
+          notifyNew: req.body.notifyNew === 'on' || req.body.notifyNew === 'true',
+          notifyAwards: req.body.notifyAwards === 'on' || req.body.notifyAwards === 'true',
+        })
+        res.redirect(`/panel/alerts?lang=${req.locale}`)
+      } catch (error) {
+        res.status(error.statusCode ?? 400).render('panel/alerts', await shell(req, {
+          active: 'alerts',
+          searches: await services.savedSearches.list(req.user.id),
+          history: await services.savedSearches.history(req.user.id, 25),
+          mailConfigured: config.mail.enabled,
+          error: error.message,
+        }))
+      }
+    }),
+  )
+
+  router.get(
     '/panel/invoices',
     anyUser,
     asyncHandler(async (req, res) => {

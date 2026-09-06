@@ -179,6 +179,7 @@ Seven days of overlap covers a missed run and anything published mid-crawl.
 | Unit | What it does |
 | --- | --- |
 | `bdc-scrape.timer` | daily at 05:30 (jittered): the last 7 days, **10 pages per source at 50 rows**, then the detail backlog |
+| `bdc-alerts.timer` | daily at 06:30: saved searches, deadline reminders, delivery |
 | `bdc-backfill.service` | started by hand: every page of both listings, then every unread detail page |
 
 The dashboard shows what the last run brought in — new projects, new awards,
@@ -290,6 +291,33 @@ was not an identity at all.
   excludes unsuccessful and cancelled notices from every amount, since they have
   no price.
 
+### Alerts
+
+A saved search is a set of filters plus what to be told about: new projects
+matching it, new awards matching it, or both. Projects you track also produce a
+reminder as their deadline approaches — deadlines here are commonly one to three
+weeks, and a tracked project that closes unnoticed is the failure that costs
+money.
+
+```bash
+node bin/alerts.js          # or the bdc-alerts.timer, an hour after the crawl
+```
+
+Two decisions worth knowing:
+
+- **A high-water mark, not a time window.** Each search records the instant it
+  was last considered and reports only rows first seen after it. A window
+  ("everything from the last 24 hours") double-sends when a run is late and skips
+  entirely when one is missed — and this schedule is not guaranteed.
+- **Recorded before delivered.** The notification row is written first and
+  delivery is a status on it, so a mail server that is down loses nothing.
+
+**With `SMTP_HOST` unset, alerts are still generated, recorded and marked sent —
+written to the log instead of emailed.** The whole pipeline runs and can be
+verified before any credentials exist. Set the SMTP variables in `.env` and the
+same alerts start arriving by mail. The Alerts screen says plainly which mode it
+is in.
+
 ### Crawler health
 
 Every failure this scraper has had was silent: the job finished, reported
@@ -369,6 +397,7 @@ first paint.
 | Projects (`/panel`) — filterable list, star to track | any signed-in account |
 | Awards (`/panel/awards`) — winners, amounts, link to the consultation | any signed-in account |
 | Insights (`/panel/insights`) — median prices, top winners and buyers | any signed-in account |
+| Alerts (`/panel/alerts`) — saved searches and deadline reminders | any signed-in account |
 | Invoices (`/panel/invoices`) — build one from a project's articles, download the PDF | any signed-in account |
 | Project detail — every article, the award, a private note | any signed-in account |
 | Favorites (`/panel/favorites`) — what you track, with notes | any signed-in account |

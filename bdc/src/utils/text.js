@@ -74,3 +74,15 @@ export function matchKey(reference, acheteur) {
   const buyer = normalize(acheteur).replace(/[^a-z0-9]+/g, '')
   return ref && buyer ? `${ref}|${buyer}` : null
 }
+
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+
+/**
+ * Escapes text for interpolation into an HTML email.
+ *
+ * Everything here is scraped from a third party, and an objet or a buyer name
+ * containing a stray angle bracket must not become markup in someone's inbox.
+ */
+export function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => HTML_ESCAPES[character])
+}

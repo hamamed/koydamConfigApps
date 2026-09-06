@@ -751,3 +751,117 @@ test('an invoice can be built from a project in the panel', async (t) => {
   const others = await (await fetch(`${api.base}/api/invoices`, { headers: { cookie: api.admin } })).json()
   assert.equal(others.data.length, 0)
 })
+
+test('a saved search alerts on what arrives after it was saved', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const created = await fetch(`${api.base}/api/favorites/searches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie: api.staff },
+    body: JSON.stringify({ name: 'Fournitures', filters: { categorie: 'Fournitures' }, notifyNew: true }),
+  })
+  assert.equal(created.status, 201)
+
+  // Nothing yet: a new search starts from now, so it does not fire a digest
+  // about the entire back catalogue on the day it is created.
+  const first = await api.container.services.alerts.run()
+  assert.equal(first.searches, 1)
+  assert.equal(first.alerts, 0)
+
+  // Time passes, then something matching arrives. The wait is the point: the
+  // window is half-open on the left, so a row must be strictly newer than the
+  // cursor to be reported, and the clock has millisecond resolution.
+  await new Promise((resolve) => setTimeout(resolve, 5))
+  await api.container.repositories.consultations.upsert({
+    source_id: '999001',
+    reference: 'NEW/2026',
+    match_key: 'NEW/2026|acheteurtest',
+    objet: 'Achat de fournitures de bureau',
+    acheteur: 'ACHETEUR TEST',
+    categorie: 'Fournitures',
+    search_text: 'achat de fournitures de bureau acheteur test fournitures',
+    first_seen_at: new Date().toISOString(),
+    last_seen_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+
+  const second = await api.container.services.alerts.run()
+  assert.equal(second.alerts, 1, 'the new project is reported')
+  assert.equal(second.delivered, 1)
+
+  const history = await api.container.services.savedSearches.history(
+    (await api.container.repositories.users.findByEmailWithSecret('staff@test.ma')).id,
+  )
+  assert.equal(history[0].kind, 'new_projects')
+  assert.equal(history[0].status, 'sent')
+  assert.match(history[0].body, /NEW\/2026/)
+
+  // A high-water mark, not a time window: running again sends nothing, however
+  // often it runs and however late a previous run was.
+  const third = await api.container.services.alerts.run()
+  assert.equal(third.alerts, 0)
+})
+
+test('tracked projects closing soon produce one reminder a day', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const staff = await api.container.repositories.users.findByEmailWithSecret('staff@test.ma')
+  await api.container.services.favorites.add(staff.id, api.consultationId)
+
+  // Two days out — inside the window a bidder needs to act on.
+  const soon = new Date()
+  soon.setUTCDate(soon.getUTCDate() + 2)
+  await api.container.repositories.consultations.update(api.consultationId, {
+    date_limite: soon.toISOString().slice(0, 10),
+  })
+
+  const run = await api.container.services.alerts.run()
+  assert.equal(run.alerts, 1)
+
+  const history = await api.container.services.savedSearches.history(staff.id)
+  assert.equal(history[0].kind, 'deadline')
+  assert.match(history[0].subject, /échéance/)
+  assert.match(history[0].body, /53\/2026/)
+
+  // Not again the same day, however many times the job runs.
+  const again = await api.container.services.alerts.run()
+  assert.equal(again.alerts, 0)
+})
+
+test('an alert is recorded before it is delivered, so a broken mailer loses nothing', async (t) => {
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const failing = {
+    isConfigured: () => true,
+    send: async () => {
+      throw new Error('smtp unreachable')
+    },
+  }
+  const container = await fresh({ mailer: failing })
+  await container.services.auth.register({ email: 'x@test.ma', password: 'a-very-long-password' })
+  const user = await container.repositories.users.findByEmailWithSecret('x@test.ma')
+
+  await container.repositories.notifications.create({
+    user_id: user.id,
+    saved_search_id: null,
+    kind: 'deadline',
+    subject: 'test',
+    body: 'test',
+    payload_json: JSON.stringify({ to: 'x@test.ma' }),
+    channel: 'email',
+  })
+
+  const stats = await container.services.alerts.run()
+  assert.equal(stats.failed, 1)
+
+  // The alert is still on record, marked failed with the reason, ready to be
+  // retried — not lost because a mail server was down.
+  const [row] = await container.repositories.notifications.listForUser(user.id)
+  assert.equal(row.status, 'failed')
+  assert.match(row.error_message, /smtp unreachable/)
+
+  const pending = await container.repositories.notifications.listPending()
+  assert.equal(pending.length, 0, 'a failed alert is not retried in a tight loop')
+})

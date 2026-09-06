@@ -1,0 +1,11 @@
+[Unit]
+Description=Send saved-search and deadline alerts
+
+[Timer]
+# An hour after the crawl, so the morning's new projects are already in.
+OnCalendar=*-*-* 06:30:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
