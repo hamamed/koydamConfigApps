@@ -12,6 +12,7 @@ import { createAnalyticsRepository } from './repositories/analyticsRepository.js
 import { createSavedSearchRepository } from './repositories/savedSearchRepository.js'
 import { createNotificationRepository } from './repositories/notificationRepository.js'
 import { createPasswordResetRepository } from './repositories/passwordResetRepository.js'
+import { createTranslationRepository } from './repositories/translationRepository.js'
 import { createScraperRunner } from './scraper/runner.js'
 import { createHealthService } from './scraper/health.js'
 import { createConsultationService } from './services/consultationService.js'
@@ -25,6 +26,8 @@ import { createAnalyticsService } from './services/analyticsService.js'
 import { createAlertService } from './notifications/alertService.js'
 import { createSavedSearchService } from './services/savedSearchService.js'
 import { createPasswordResetService } from './services/passwordResetService.js'
+import { createTranslationService } from './services/translationService.js'
+import { createTranslator } from './translation/translator.js'
 import { createMailer } from './notifications/mailer.js'
 
 /**
@@ -33,7 +36,7 @@ import { createMailer } from './notifications/mailer.js'
  * @param {object} [db] database driver.
  * @param {{http?: object}} [overrides] e.g. a stubbed HTTP client for tests.
  */
-export function createContainer(db = getDb(), { http, mailer = createMailer() } = {}) {
+export function createContainer(db = getDb(), { http, mailer = createMailer(), translator = createTranslator() } = {}) {
   const repositories = {
     consultations: createConsultationRepository(db),
     articles: createArticleRepository(db),
@@ -48,6 +51,7 @@ export function createContainer(db = getDb(), { http, mailer = createMailer() } 
     savedSearches: createSavedSearchRepository(db),
     notifications: createNotificationRepository(db),
     passwordResets: createPasswordResetRepository(db),
+    translations: createTranslationRepository(db),
   }
 
   const settings = createSettingsService(repositories)
@@ -70,6 +74,7 @@ export function createContainer(db = getDb(), { http, mailer = createMailer() } 
       baseUrl,
     }),
     passwordReset: createPasswordResetService({ ...repositories, auth, mailer, baseUrl }),
+    translation: createTranslationService({ ...repositories, translator }),
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
   }

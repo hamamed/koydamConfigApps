@@ -403,8 +403,8 @@ test('the panel shows every article of a consultation', async (t) => {
   assert.match(html, /Caractéristiques et spécifications/)
   assert.match(html, /CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA/)
   assert.match(html, /375169/, 'the portal id is shown, so a row can be traced back')
-  // 19 articles plus the header row.
-  assert.ok((html.match(/<tr>/g) ?? []).length >= 20)
+  // One row per article, counted by the id each carries rather than by tag.
+  assert.equal((html.match(/<tr data-article="\d+">/g) ?? []).length, 19)
 
   const arabic = await fetch(`${api.base}/panel/consultations/${api.consultationId}?lang=ar`, { headers: { cookie } })
   const arabicHtml = await arabic.text()

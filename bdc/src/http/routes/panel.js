@@ -141,7 +141,12 @@ export function panelRoutes({ services }) {
       const favorite = consultation.isFavorite
         ? await services.favorites.find(req.user.id, consultation.id)
         : null
-      res.render('panel/consultation', await shell(req, { active: 'projects', consultation, favorite }))
+      res.render('panel/consultation', await shell(req, {
+        active: 'projects',
+        consultation,
+        favorite,
+        canTranslate: services.translation.isConfigured(),
+      }))
     }),
   )
 

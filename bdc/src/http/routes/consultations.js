@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler.js'
-import { optionalAuth } from '../middleware/auth.js'
+import { optionalAuth, requireAuth } from '../middleware/auth.js'
 import { parseFilters } from '../filters.js'
 import { ok, paginated, parsePagination } from '../../utils/pagination.js'
 
@@ -69,6 +69,19 @@ export function consultationRoutes({ services }) {
     '/:id/result',
     asyncHandler(async (req, res) => {
       res.json(ok(await services.consultations.getResultForConsultation(Number(req.params.id))))
+    }),
+  )
+
+  /**
+   * Translates this avis's articles into the requested language, cached.
+   * Signed in only: it spends money per uncached article.
+   */
+  router.post(
+    '/:id/translate',
+    requireAuth(services.auth),
+    asyncHandler(async (req, res) => {
+      const locale = req.body.locale ?? req.locale
+      res.json(ok(await services.translation.translateConsultation(Number(req.params.id), locale)))
     }),
   )
 

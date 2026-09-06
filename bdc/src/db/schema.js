@@ -95,6 +95,19 @@ export function tableStatements(dialect) {
       updated_at TEXT NOT NULL,
       UNIQUE (consultation_id, lot_number, article_number, designation)
     )`,
+    `CREATE TABLE IF NOT EXISTS article_translations (
+      ${id},
+      article_id INTEGER NOT NULL REFERENCES consultation_articles(id) ON DELETE CASCADE,
+      locale TEXT NOT NULL,
+      designation TEXT,
+      description TEXT,
+      -- Which model produced it, so a later upgrade can be told apart from a
+      -- cached answer and re-run if it is ever worth re-translating.
+      model TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE (article_id, locale)
+    )`,
+
     `CREATE TABLE IF NOT EXISTS consultation_documents (
       ${id},
       consultation_id INTEGER NOT NULL REFERENCES consultations(id) ON DELETE CASCADE,
@@ -286,6 +299,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_consultations_status ON consultations (status)',
     'CREATE INDEX IF NOT EXISTS idx_articles_consultation ON consultation_articles (consultation_id)',
     'CREATE INDEX IF NOT EXISTS idx_documents_consultation ON consultation_documents (consultation_id)',
+    'CREATE INDEX IF NOT EXISTS idx_translations_article ON article_translations (article_id, locale)',
     'CREATE INDEX IF NOT EXISTS idx_results_reference ON consultation_results (reference)',
     'CREATE INDEX IF NOT EXISTS idx_results_match_key ON consultation_results (match_key)',
     'CREATE INDEX IF NOT EXISTS idx_results_consultation ON consultation_results (consultation_id)',
@@ -332,4 +346,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-06.009'
+export const SCHEMA_VERSION = '2026-09-06.010'

@@ -771,3 +771,147 @@ test('categories are counted where the data actually is', async (t) => {
   )
   assert.equal(categories[0].projects, Number(stored.total))
 })
+
+test('articles can be translated, and a translation is paid for once', async (t) => {
+  const calls = []
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const { createHttpClient } = await import('../src/scraper/httpClient.js')
+
+  // A stub in the translator's shape. The real one calls Claude; what matters
+  // here is that the service asks once and then serves from the database.
+  const translator = {
+    isConfigured: () => true,
+    model: 'claude-opus-5',
+    translate: async (articles, target) => {
+      calls.push({ count: articles.length, target })
+      return {
+        model: 'claude-opus-5',
+        translations: articles.map((a) => ({
+          id: a.id,
+          designation: `[${target}] ${a.designation}`,
+          description: a.description ? `[${target}] ${a.description}` : '',
+        })),
+      }
+    },
+  }
+
+  const container = await fresh({
+    translator,
+    http: createHttpClient({
+      fetchImpl: createFetchStub([
+        [/consultation\/show\//, fixture('live-consultation-detail.html')],
+        [/consultation\/resultat/, fixture('live-results-matching.html')],
+        [/page=2/, fixture('live-consultations-empty.html')],
+        [/consultation\//, fixture('live-consultations.html')],
+      ]),
+      delayMs: 0,
+    }),
+  })
+  await container.runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+  const consultation = await container.repositories.consultations.findBySourceId('375169')
+  await container.runner.consultationScraper.scrapeDetail(consultation)
+
+  const first = await container.services.translation.translateConsultation(consultation.id, 'en')
+  assert.equal(first.translated, 19)
+  assert.equal(first.cached, 0)
+  assert.match(first.articles[0].designation, /^\[en\] CÂBLE PNI/)
+  assert.equal(calls.length, 1)
+
+  // Asking again costs nothing: the source text does not change.
+  const second = await container.services.translation.translateConsultation(consultation.id, 'en')
+  assert.equal(second.translated, 0)
+  assert.equal(second.cached, 19)
+  assert.equal(calls.length, 1, 'the model was not called a second time')
+  assert.deepEqual(second.articles, first.articles)
+
+  // A different language is a different translation.
+  const arabic = await container.services.translation.translateConsultation(consultation.id, 'ar')
+  assert.equal(arabic.translated, 19)
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].target, 'ar')
+
+  // Re-reading the detail page replaces the articles, and the translations go
+  // with them through the foreign key — which is right: the source text moved.
+  await container.runner.consultationScraper.scrapeDetail(consultation)
+  assert.equal(await container.repositories.translations.countAll(), 0)
+
+  await assert.rejects(
+    () => container.services.translation.translateConsultation(consultation.id, 'de'),
+    /Unsupported language/,
+  )
+})
+
+test('the translate button is only offered when translation is configured', async (t) => {
+  const { createTestContainer: fresh } = await import('./helpers.js')
+  const { createHttpClient } = await import('../src/scraper/httpClient.js')
+  const stub = (enabled) => ({ isConfigured: () => enabled, model: 'claude-opus-5', translate: async () => ({}) })
+
+  const build = async (enabled) => {
+    const container = await fresh({
+      translator: stub(enabled),
+      http: createHttpClient({
+        fetchImpl: createFetchStub([
+          [/consultation\/show\//, fixture('live-consultation-detail.html')],
+          [/consultation\/resultat/, fixture('live-results-matching.html')],
+          [/page=2/, fixture('live-consultations-empty.html')],
+          [/consultation\//, fixture('live-consultations.html')],
+        ]),
+        delayMs: 0,
+      }),
+    })
+    await container.runner.run({ source: 'consultations', maxPages: 1, fetchDetails: false })
+    const row = await container.repositories.consultations.findBySourceId('375169')
+    await container.runner.consultationScraper.scrapeDetail(row)
+    await container.services.auth.register({ email: 'u@test.ma', password: 'a-very-long-password' })
+
+    const server = await startTestServer(createApp(container))
+    const login = await fetch(`${server.base}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'u@test.ma', password: 'a-very-long-password' }),
+    })
+    const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0]
+    const html = await (await fetch(`${server.base}/panel/consultations/${row.id}`, { headers: { cookie } })).text()
+    return { server, html, container, cookie, id: row.id }
+  }
+
+  const on = await build(true)
+  t.after(() => on.server.close())
+  assert.match(on.html, /class="secondary translate-btn"/)
+  // One button per language, so the reader picks rather than getting the UI's.
+  // Counted on the element, not the class name — the script mentions it too.
+  assert.equal((on.html.match(/<button[^>]*class="secondary translate-btn"/g) ?? []).length, 3)
+  for (const language of ['Français', 'English', 'العربية']) assert.ok(on.html.includes(language))
+
+  const off = await build(false)
+  t.after(() => off.server.close())
+  assert.doesNotMatch(off.html, /translate-btn/, 'not offered when it cannot work')
+
+  // And the endpoint refuses too, rather than relying on the hidden button.
+  const refused = await fetch(`${off.server.base}/api/consultations/${off.id}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', cookie: off.cookie },
+    body: JSON.stringify({ locale: 'en' }),
+  })
+  assert.equal(refused.status, 400)
+  assert.match((await refused.json()).error, /not configured/)
+})
+
+test('the signed-out pages carry a background pattern', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  for (const path of ['/login', '/forgot']) {
+    const html = await (await fetch(`${api.base}${path}`)).text()
+    assert.match(html, /body::before/, `${path} has the backdrop`)
+    assert.match(html, /repeating-linear-gradient/, 'the hairlines')
+    assert.match(html, /radial-gradient\(circle at center/, 'the dot grid')
+    // Drawn in CSS, so it costs no extra request and scales to any screen.
+    assert.doesNotMatch(html, /<img|url\(['"]?http/, 'no image asset')
+  }
+
+  // The diagonals lean the other way on an RTL page, so it reads as one design.
+  const arabic = await (await fetch(`${api.base}/login?lang=ar`)).text()
+  assert.match(arabic, /body\[dir="rtl"\]::before/)
+  assert.match(arabic, /repeating-linear-gradient\(45deg/)
+})

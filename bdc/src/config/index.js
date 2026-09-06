@@ -120,6 +120,17 @@ export const config = Object.freeze({
     enabled: Boolean(process.env.SMTP_HOST),
   }),
 
+  /**
+   * Article translation. With no key configured the button is not offered —
+   * the same shape as mail: the feature says it is off rather than appearing to
+   * work and returning nothing.
+   */
+  translation: Object.freeze({
+    apiKey: process.env.ANTHROPIC_API_KEY || '',
+    model: process.env.TRANSLATION_MODEL || 'claude-opus-5',
+    enabled: Boolean(process.env.ANTHROPIC_API_KEY),
+  }),
+
   company: Object.freeze({
     name: process.env.COMPANY_NAME || 'Ma Societe',
     ice: process.env.COMPANY_ICE || '',

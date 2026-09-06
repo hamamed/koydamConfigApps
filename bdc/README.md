@@ -324,6 +324,29 @@ verified before any credentials exist. Set the SMTP variables in `.env` and the
 same alerts start arriving by mail. The Alerts screen says plainly which mode it
 is in.
 
+### Article translation
+
+A project page can translate its article breakdown into French, English or
+Arabic, in place, with a button to put the original back. Articles only — the
+objet, the buyer and the reference stay as published, because that is how the
+avis is identified and a translated buyer name is not searchable against the
+portal.
+
+It goes to Claude (`claude-opus-5`) with the whole lot in one request rather
+than a line at a time: terminology stays consistent across an avis, and it is
+one round trip instead of seventy. The prompt says what the text is —
+procurement specifications, terse, French mixed with Arabic — and what must
+survive untouched: every number, dimension, reference, standard, brand and model.
+A general translator turns "beneview t 6" into prose.
+
+Each translation is stored per article and language, so it is paid for once.
+Re-reading the detail page replaces the articles and takes their translations
+with them, which is right: the source text moved.
+
+**With `ANTHROPIC_API_KEY` unset the button is not shown and the endpoint
+refuses** — the same shape as mail. A machine translation is offered as a
+reading aid and labelled as one; the published text is what counts.
+
 ### Crawler health
 
 Every failure this scraper has had was silent: the job finished, reported
