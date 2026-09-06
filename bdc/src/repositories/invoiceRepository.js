@@ -59,18 +59,23 @@ export function createInvoiceRepository(db = getDb()) {
   const remove = (id) => db.run(`DELETE FROM ${TABLE} WHERE id = ?`, [id])
 
   async function list(filters = {}, { limit, offset, sort } = {}) {
+    // Qualified with the table on both sides: this joins consultations to show
+    // the reference, and rewriting an unqualified clause with a regex afterwards
+    // is how the favorites listing ended up throwing on an ambiguous column.
     const where = buildWhere([
-      filters.userId && ['user_id = ?', filters.userId],
-      filters.consultationId && ['consultation_id = ?', filters.consultationId],
-      filters.status && ['status = ?', filters.status],
+      filters.userId && ['i.user_id = ?', filters.userId],
+      filters.consultationId && ['i.consultation_id = ?', filters.consultationId],
+      filters.status && ['i.status = ?', filters.status],
     ])
-    const order = buildOrderBy(sort, SORTABLE.invoices, 'issue_date')
-    const rows = await db.all(`SELECT * FROM ${TABLE}${where.sql}${order} LIMIT ? OFFSET ?`, [
-      ...where.params,
-      limit,
-      offset,
-    ])
-    const { total } = await db.get(`SELECT COUNT(*) AS total FROM ${TABLE}${where.sql}`, where.params)
+    const order = buildOrderBy(sort, SORTABLE.invoices, 'issue_date', { table: 'i' })
+
+    const rows = await db.all(
+      `SELECT i.*, c.reference AS consultation_reference
+       FROM ${TABLE} i LEFT JOIN consultations c ON c.id = i.consultation_id
+       ${where.sql}${order} LIMIT ? OFFSET ?`,
+      [...where.params, limit, offset],
+    )
+    const { total } = await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} i${where.sql}`, where.params)
     return { rows, total: Number(total) }
   }
 

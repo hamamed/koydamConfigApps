@@ -692,3 +692,62 @@ test('award analysis answers what work like this goes for', async (t) => {
   assert.match(html, /Award analysis|Analyse des attributions/)
   assert.match(html, /href="\/panel\/insights"/, 'and it is a tab for everyone')
 })
+
+test('an invoice can be built from a project in the panel', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  // The generator, the totals and the PDF all existed and were tested — but
+  // only reachable with an API client. The project page now offers a way in.
+  const project = await (await api.page(`/panel/consultations/${api.consultationId}`, api.staff)).text()
+  assert.match(project, new RegExp(`/panel/consultations/${api.consultationId}/invoice`))
+
+  const form = await (await api.page(`/panel/consultations/${api.consultationId}/invoice`, api.staff)).text()
+  assert.match(form, /CÂBLE PNI avec brassard/, 'the articles are listed to pick from')
+  assert.match(form, /name="unitPrice"/, 'with a price to fill in — the portal publishes none')
+
+  const articles = await api.container.repositories.articles.findByConsultationId(api.consultationId)
+  const body = new URLSearchParams()
+  body.set('clientName', 'CENTRE HOSPITALIER PROVINCIAL DE KHENIFRA')
+  body.set('taxRate', '20')
+  for (const article of articles.slice(0, 3)) {
+    body.append('articleId', String(article.id))
+    body.append('quantity', '2')
+    body.append('unitPrice', '150')
+  }
+  // Only the first two are ticked; the third is left out.
+  body.append('include', String(articles[0].id))
+  body.append('include', String(articles[1].id))
+
+  const created = await fetch(`${api.base}/panel/consultations/${api.consultationId}/invoice`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { cookie: api.staff, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+  assert.equal(created.status, 302)
+  assert.match(created.headers.get('location'), /^\/panel\/invoices\?created=/)
+
+  const { data } = await (await fetch(`${api.base}/api/invoices`, { headers: { cookie: api.staff } })).json()
+  assert.equal(data.length, 1)
+  // A listing does not load line items, and says so by omitting the key rather
+  // than returning an empty array that looks like an invoice with no lines.
+  assert.equal(data[0].items, undefined)
+  assert.equal(data[0].subtotal, 600, '2 x 150 x 2 lines')
+  assert.equal(data[0].tax, 120)
+  assert.equal(data[0].total, 720)
+  assert.equal(data[0].consultation_id, api.consultationId)
+
+  const full = await (await fetch(`${api.base}/api/invoices/${data[0].id}`, { headers: { cookie: api.staff } })).json()
+  assert.equal(full.data.items.length, 2, 'only the ticked lines are invoiced')
+
+  // The list shows it, with the project it settles and a PDF link.
+  const list = await (await api.page('/panel/invoices', api.staff)).text()
+  assert.match(list, /FCT-\d{4}-0001/)
+  assert.match(list, /53\/2026/, 'linked back to the project')
+  assert.match(list, new RegExp(`/api/invoices/${data[0].id}/pdf`))
+
+  // Invoices are per account, like favourites.
+  const others = await (await fetch(`${api.base}/api/invoices`, { headers: { cookie: api.admin } })).json()
+  assert.equal(others.data.length, 0)
+})

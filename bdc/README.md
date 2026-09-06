@@ -273,6 +273,31 @@ the UI can reuse its filter component inside the sub-tab. A favourite points at 
 consultation id — it used to store the reference, which looked more durable but
 was not an identity at all.
 
+### Deadlines, exports and analysis
+
+- Every row carries **how long is left to bid**, badged red inside three days,
+  with a *closing within* filter. Deadlines here are commonly one to three weeks,
+  so a bare date is not the useful thing.
+- **CSV export** of any filtered list, at `/api/export/{consultations,awards,favorites}.csv`.
+  Cells beginning `=`, `+`, `-` or `@` are prefixed with a tab — a spreadsheet
+  treats them as formulas and this text is scraped from a third party — and the
+  file carries a BOM, without which Excel mangles every Arabic and accented
+  French character.
+- **Insights** reads the award history for the questions a bidder has: what work
+  like this goes for, who keeps winning it, which buyers publish it, and how
+  often an avis ends unawarded. It reports the **median, not the mean** — a few
+  very large contracts pull an average far above a typical bon de commande — and
+  excludes unsuccessful and cancelled notices from every amount, since they have
+  no price.
+
+### Crawler health
+
+Every failure this scraper has had was silent: the job finished, reported
+success, and the data quietly stopped arriving. The dashboard therefore judges
+health on what a run *produced* — did it find anything, did the yield collapse
+against recent runs, are the buyer, deadline and winner fields still parsing, is
+the detail backlog growing, has the schedule stopped firing.
+
 ### Invoice generator
 
 ```http
@@ -343,6 +368,8 @@ first paint.
 | --- | --- |
 | Projects (`/panel`) — filterable list, star to track | any signed-in account |
 | Awards (`/panel/awards`) — winners, amounts, link to the consultation | any signed-in account |
+| Insights (`/panel/insights`) — median prices, top winners and buyers | any signed-in account |
+| Invoices (`/panel/invoices`) — build one from a project's articles, download the PDF | any signed-in account |
 | Project detail — every article, the award, a private note | any signed-in account |
 | Favorites (`/panel/favorites`) — what you track, with notes | any signed-in account |
 | Dashboard (`/panel/dashboard`) — counters, manual crawls | **admin** |

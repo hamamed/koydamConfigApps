@@ -1,0 +1,81 @@
+<%- include('../partials/shell-open', { title: t('invoices.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'file-text', size: 19 }) %> <%= t('invoices.title') %></h1>
+  <span class="muted spacer"><%= total %></span>
+</div>
+
+<% if (notice === 'created') { %><p class="notice"><%- include('../partials/icon', { name: 'circle-check', size: 15 }) %> <%= t('invoices.created') %></p><% } %>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (rows.length === 0) { %>
+    <p class="empty"><%= t('invoices.empty') %><br>
+      <a href="/panel?lang=<%= locale %>" style="font-size:13px"><%= t('nav.projects') %></a></p>
+  <% } else { %>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th><%= t('invoices.number') %></th><th><%= t('invoices.client') %></th>
+          <th><%= t('table.reference') %></th><th><%= t('invoices.issueDate') %></th>
+          <th><%= t('invoices.subtotal') %></th><th><%= t('invoices.tax') %></th><th><%= t('invoices.total') %></th>
+          <th><%= t('invoices.status') %></th><th></th>
+        </tr></thead>
+        <tbody>
+          <% rows.forEach(function (row) { %>
+            <tr data-id="<%= row.id %>">
+              <td><code><%= row.invoice_number %></code></td>
+              <td><%= row.client_name %></td>
+              <td>
+                <% if (row.consultation_id) { %>
+                  <a href="/panel/consultations/<%= row.consultation_id %>?lang=<%= locale %>"><%= row.consultation_reference || row.consultation_id %></a>
+                <% } else { %>—<% } %>
+              </td>
+              <td class="ltr"><%= row.issue_date %></td>
+              <td class="ltr"><%= row.subtotal.toLocaleString('fr-MA') %></td>
+              <td class="ltr"><%= row.tax.toLocaleString('fr-MA') %></td>
+              <td class="ltr"><strong><%= row.total.toLocaleString('fr-MA') %> <%= row.currency %></strong></td>
+              <td>
+                <select class="status" data-id="<%= row.id %>" style="width:auto">
+                  <% ['draft','issued','paid','cancelled'].forEach(function (s) { %>
+                    <option value="<%= s %>" <%= row.status === s ? 'selected' : '' %>><%= t('invoices.status.' + s) %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td style="white-space:nowrap"><div class="row-actions">
+                <a class="btn secondary" href="/api/invoices/<%= row.id %>/pdf"><%- include('../partials/icon', { name: 'file-text', size: 14 }) %><%= t('invoices.pdf') %></a>
+                <button class="danger icon remove" type="button" data-id="<%= row.id %>" title="<%= t('invoices.delete') %>">
+                  <%- include('../partials/icon', { name: 'trash-2', size: 14 }) %>
+                </button>
+              </div></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<script>
+  const CONFIRM = <%- JSON.stringify(t('invoices.confirmDelete')) %>
+  const call = async (method, url, body) => {
+    const response = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'same-origin',
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    if (response.ok) window.location.reload()
+    else alert((await response.json()).error)
+  }
+
+  document.querySelectorAll('.status').forEach((select) =>
+    select.addEventListener('change', () =>
+      call('PATCH', '/api/invoices/' + select.dataset.id + '/status', { status: select.value })))
+
+  document.querySelectorAll('.remove').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (confirm(CONFIRM)) call('DELETE', '/api/invoices/' + button.dataset.id)
+    }))
+</script>
+
+<%- include('../partials/shell-close') %>

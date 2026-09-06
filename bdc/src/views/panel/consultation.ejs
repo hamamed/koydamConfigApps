@@ -42,6 +42,9 @@
     <% if (consultation.detail_url) { %>
       <a class="btn secondary" href="<%= consultation.detail_url %>" target="_blank" rel="noopener noreferrer"><%- include('../partials/icon', { name: 'external-link', size: 15 }) %><%= t('detail.openOnPortal') %></a>
     <% } %>
+    <% if (consultation.articles.length > 0) { %>
+      <a class="btn secondary" href="/panel/consultations/<%= consultation.id %>/invoice?lang=<%= locale %>"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('invoices.fromProject') %></a>
+    <% } %>
     <% if (user.role === 'admin') { %>
       <button class="secondary" type="button" id="refresh" data-id="<%= consultation.id %>"><%- include('../partials/icon', { name: 'refresh-cw', size: 15 }) %><%= t('detail.fetchDetails') %></button>
     <% } %>

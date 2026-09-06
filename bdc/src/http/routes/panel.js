@@ -108,6 +108,53 @@ export function panelRoutes({ services }) {
   )
 
   router.get(
+    '/panel/invoices',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const pagination = parsePagination(req.query)
+      const scope = req.user.role === 'admin' && req.query.all === 'true' ? {} : { userId: req.user.id }
+      const { data, total } = await services.invoices.list(scope, { ...pagination, sort: req.query.sort })
+      res.render('panel/invoices', await shell(req, {
+        active: 'invoices',
+        rows: data,
+        total,
+        pagination,
+        query: req.query,
+        notice: req.query.created ? 'created' : null,
+      }))
+    }),
+  )
+
+  /** Builds an invoice from a project's articles. */
+  router.get(
+    '/panel/consultations/:id/invoice',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const consultation = await services.consultations.getById(Number(req.params.id), req.user.id)
+      res.render('panel/invoice-new', await shell(req, { active: 'invoices', consultation, error: null }))
+    }),
+  )
+
+  router.post(
+    '/panel/consultations/:id/invoice',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const id = Number(req.params.id)
+      try {
+        const invoice = await services.invoices.create(req.user.id, buildInvoicePayload(id, req.body))
+        res.redirect(`/panel/invoices?created=${invoice.id}&lang=${req.locale}`)
+      } catch (error) {
+        const consultation = await services.consultations.getById(id, req.user.id)
+        res.status(error.statusCode ?? 400).render('panel/invoice-new', await shell(req, {
+          active: 'invoices',
+          consultation,
+          error: [error.message, ...(error.details ?? [])].join(' — '),
+        }))
+      }
+    }),
+  )
+
+  router.get(
     '/panel/insights',
     anyUser,
     asyncHandler(async (req, res) => {
@@ -215,6 +262,37 @@ export function panelRoutes({ services }) {
   router.get('/', (_req, res) => res.redirect('/panel'))
 
   return router
+}
+
+/**
+ * Turns the invoice form into the payload the service expects.
+ *
+ * The form posts parallel arrays — one entry per article, ticked or not —
+ * because that is what a checkbox table submits. Only ticked lines with a price
+ * become items; the portal publishes no prices, so a blank one is a line the
+ * user chose not to quote yet, not an error.
+ */
+function buildInvoicePayload(consultationId, body) {
+  const asArray = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value])
+  const included = new Set(asArray(body.include).map(String))
+
+  const items = asArray(body.articleId)
+    .map((articleId, index) => ({
+      articleId: Number(articleId),
+      quantity: Number(asArray(body.quantity)[index]),
+      unitPrice: asArray(body.unitPrice)[index],
+    }))
+    .filter((item) => included.has(String(item.articleId)) && String(item.unitPrice ?? '').trim() !== '')
+
+  return {
+    consultationId,
+    client: { name: body.clientName, ice: body.clientIce, address: body.clientAddress },
+    items,
+    taxRate: body.taxRate === '' ? undefined : Number(body.taxRate),
+    issueDate: body.issueDate || undefined,
+    dueDate: body.dueDate || undefined,
+    notes: body.notes,
+  }
 }
 
 /** Prevents open redirects through the `next` parameter. */

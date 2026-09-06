@@ -48,8 +48,15 @@ export function serializeConsultation(consultation, { articles = [], documents =
   }
 }
 
+/**
+ * `items` is present only when they were loaded. A listing does not fetch them,
+ * and returning `[]` there would be indistinguishable from an invoice with no
+ * lines — which is not a thing this application can create.
+ */
 export function serializeInvoice(invoice) {
-  return { ...serializeRow(invoice), items: serializeRows(invoice.items ?? []) }
+  const payload = serializeRow(invoice)
+  if (Array.isArray(invoice.items)) payload.items = serializeRows(invoice.items)
+  return payload
 }
 
 function safeParse(value) {
