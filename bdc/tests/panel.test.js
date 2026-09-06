@@ -652,3 +652,43 @@ test('the canary flags a schedule that has stopped firing', async (t) => {
   assert.equal(freshness.severity, 'fail', 'a daily job silent for three days is broken')
   assert.match(freshness.detail, /7[0-9]h ago/)
 })
+
+test('award analysis answers what work like this goes for', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const overview = await api.container.services.analytics.overview({})
+
+  assert.ok(overview.summary.awards > 0)
+  assert.ok(overview.summary.median > 0, 'a median amount to price against')
+  assert.ok(overview.summary.max >= overview.summary.median)
+  assert.ok(overview.winners.length > 0 && overview.winners[0].label)
+  assert.ok(overview.buyers.length > 0)
+
+  // An unsuccessful avis has no price. Counting it would drag every median
+  // toward zero and quietly understate what the work is worth.
+  const unsuccessful = await api.container.repositories.results.findByReference('37/2026')
+  assert.equal(unsuccessful[0].result_status, 'infructueux')
+  assert.equal(unsuccessful[0].montant_attribue_cents, null)
+  const winnerNames = overview.winners.map((w) => w.label)
+  assert.ok(!winnerNames.includes(null) && !winnerNames.includes(''))
+
+  // But it still counts toward the risk of bidding at all.
+  assert.ok(overview.summary.unsuccessfulRate > 0, 'the unsuccessful rate sees it')
+
+  // The median is the median, not the mean.
+  const amounts = (await api.container.db.all(
+    "SELECT montant_attribue_cents AS c FROM consultation_results WHERE result_status = 'attribue' AND montant_attribue_cents > 0 ORDER BY montant_attribue_cents",
+  )).map((r) => Number(r.c))
+  const mid = amounts.length % 2 ? amounts[(amounts.length - 1) / 2]
+    : (amounts[amounts.length / 2 - 1] + amounts[amounts.length / 2]) / 2
+  assert.equal(Math.round(overview.summary.median * 100), Math.round(mid))
+
+  // And it narrows with the same filters the awards list uses.
+  const narrowed = await api.container.services.analytics.overview({ acheteur: 'MAGHRAOUA' })
+  assert.ok(narrowed.summary.awards < overview.summary.awards)
+
+  const html = await (await api.page('/panel/insights', api.staff)).text()
+  assert.match(html, /Award analysis|Analyse des attributions/)
+  assert.match(html, /href="\/panel\/insights"/, 'and it is a tab for everyone')
+})

@@ -8,6 +8,7 @@ import { createInvoiceRepository } from './repositories/invoiceRepository.js'
 import { createUserRepository } from './repositories/userRepository.js'
 import { createScrapeJobRepository } from './repositories/scrapeJobRepository.js'
 import { createSettingsRepository } from './repositories/settingsRepository.js'
+import { createAnalyticsRepository } from './repositories/analyticsRepository.js'
 import { createScraperRunner } from './scraper/runner.js'
 import { createHealthService } from './scraper/health.js'
 import { createConsultationService } from './services/consultationService.js'
@@ -17,6 +18,7 @@ import { createAuthService } from './services/authService.js'
 import { createAdminService } from './services/adminService.js'
 import { createSettingsService } from './settings/service.js'
 import { createUserService } from './services/userService.js'
+import { createAnalyticsService } from './services/analyticsService.js'
 
 /**
  * Composition root. Every dependency is injected explicitly so services and
@@ -35,6 +37,7 @@ export function createContainer(db = getDb(), { http } = {}) {
     users: createUserRepository(db),
     jobs: createScrapeJobRepository(db),
     settings: createSettingsRepository(db),
+    analytics: createAnalyticsRepository(db),
   }
 
   const settings = createSettingsService(repositories)
@@ -48,6 +51,7 @@ export function createContainer(db = getDb(), { http } = {}) {
     auth,
     users: createUserService({ ...repositories, auth }),
     settings,
+    analytics: createAnalyticsService(repositories),
     health: createHealthService({ ...repositories, db }),
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
   }

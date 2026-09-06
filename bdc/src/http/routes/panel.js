@@ -108,6 +108,19 @@ export function panelRoutes({ services }) {
   )
 
   router.get(
+    '/panel/insights',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      res.render('panel/insights', await shell(req, {
+        active: 'insights',
+        insights: await services.analytics.overview(filters),
+        query: req.query,
+      }))
+    }),
+  )
+
+  router.get(
     '/panel/favorites',
     anyUser,
     asyncHandler(async (req, res) => {
