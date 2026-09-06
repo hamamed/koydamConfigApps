@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'تبقى الأسرار (JWT_SECRET وبيانات قاعدة البيانات) في ملف ‎.env على الخادم.',
 
 
+  // ---- Search ----
+  'sort.relevance': 'الصلة',
+
+  // ---- Company profile ----
+  'company.profile': 'بطاقة الشركة',
+  'company.awards': 'صفقات مُرساة',
+  'company.buyers': 'مشترون تعاملوا معها',
+  'company.total': 'المجموع المُرسى',
+  'company.median': 'المبلغ الوسيط',
+  'company.smallest': 'الأصغر',
+  'company.largest': 'الأكبر',
+  'company.bids': 'متوسط المنافسين',
+  'company.topBuyers': 'لدى من يفوزون',
+  'company.recentAwards': 'أحدث الصفقات',
+  'company.allAwards': 'كل صفقاتهم',
+  'company.note': 'مبني على النتائج المنشورة تحت هذا الاسم بالضبط. ولا يسمّي أي إعلان من قد يتقدّم إليه: فلا يوجد للشركة سوى جانب الإرساء.',
+
   // ---- Access requests ----
   'access.title': 'طلب حساب',
   'access.lede': 'تُنشأ الحسابات من طرف مدير النظام. أخبرنا من أنت وفيمَ ستستعمل الخدمة، وسنعود إليك عبر البريد الإلكتروني.',

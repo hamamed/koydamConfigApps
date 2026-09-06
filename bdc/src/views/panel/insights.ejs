@@ -51,8 +51,8 @@
       const blocks = [
         { key: 'winners', title: 'insights.winners', head: 'insights.company', hint: null,
           count: 'awards', countLabel: 'insights.count', extra: 'total',
-          primary: function (v) { return { href: link('/panel/awards', 'attributaire', v), title: t('insights.seeAwards') } },
-          secondary: null },
+          primary: function (v) { return { href: '/panel/companies/' + encodeURIComponent(v) + '?lang=' + locale, title: t('company.profile') } },
+          secondary: function (v) { return { href: link('/panel/awards', 'attributaire', v), title: t('insights.seeAwards'), icon: 'file-text' } } },
         { key: 'buyers', title: 'insights.buyers', head: 'insights.buyer', hint: null,
           count: 'awards', countLabel: 'insights.count', extra: 'total',
           primary: function (v) { return { href: '/panel/buyers/' + encodeURIComponent(v) + '?lang=' + locale, title: t('buyer.profile') } },

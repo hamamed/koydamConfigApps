@@ -38,7 +38,7 @@
         <tbody>
           <% buyer.winners.forEach(function (row) { %>
             <tr>
-              <td style="max-width:220px"><a href="/panel/awards?<%= new URLSearchParams({ attributaire: row.label, lang: locale }).toString() %>"><%= row.label %></a></td>
+              <td style="max-width:220px"><a href="/panel/companies/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>" title="<%= t('company.profile') %>"><%= row.label %></a></td>
               <td class="ltr"><%= row.awards %></td>
               <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
             </tr>

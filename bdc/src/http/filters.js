@@ -121,10 +121,16 @@ export function parseFilters(query = {}) {
   return filters
 }
 
-/** Sortable columns exposed to API clients, per resource. */
+/**
+ * Sortable columns exposed to API clients, per resource.
+ *
+ * `relevance` is not a column: it is handled in the repository and only means
+ * anything alongside `q`. It is listed so the allow-list accepts it; asked for
+ * without a query it falls through to the default order.
+ */
 export const SORTABLE = Object.freeze({
-  consultations: ['date_publication', 'date_limite', 'acheteur', 'reference', 'estimation_cents', 'updated_at'],
-  results: ['date_publication_resultat', 'date_attribution', 'montant_attribue_cents', 'acheteur', 'reference'],
+  consultations: ['relevance', 'date_publication', 'date_limite', 'acheteur', 'reference', 'estimation_cents', 'updated_at'],
+  results: ['relevance', 'date_publication_resultat', 'date_attribution', 'montant_attribue_cents', 'acheteur', 'reference'],
   favorites: ['created_at', 'consultation_id'],
   invoices: ['issue_date', 'total_cents', 'invoice_number', 'created_at'],
 })

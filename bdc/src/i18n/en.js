@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'Secrets (JWT_SECRET, database credentials) stay in the server\u2019s .env file.',
 
 
+  // ---- Search ----
+  'sort.relevance': 'Relevance',
+
+  // ---- Company profile ----
+  'company.profile': 'Company profile',
+  'company.awards': 'Awards won',
+  'company.buyers': 'Buyers served',
+  'company.total': 'Total won',
+  'company.median': 'Median amount',
+  'company.smallest': 'Smallest',
+  'company.largest': 'Largest',
+  'company.bids': 'Average competitors',
+  'company.topBuyers': 'Who they win from',
+  'company.recentAwards': 'Recent awards',
+  'company.allAwards': 'All their awards',
+  'company.note': 'Built from results published under this exact name. An avis never names who might bid on it, so only the award side exists for a company.',
+
   // ---- Access requests ----
   'access.title': 'Request access',
   'access.lede': 'Accounts are created by an administrator. Tell us who you are and what you would use the service for, and we will come back to you by email.',

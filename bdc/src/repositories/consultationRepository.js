@@ -1,6 +1,7 @@
 import { getDb } from '../db/index.js'
 import { buildInsert, buildOrderBy, buildUpdate, buildWhere } from '../db/sql.js'
 import { consultationClauses } from './filterClauses.js'
+import { columnSort, relevanceOrder } from './search.js'
 import { CONSULTATION_HASH_COLUMNS, hashColumns, mergeScraped } from './scrapedRecord.js'
 import { SORTABLE } from '../http/filters.js'
 import { nowIso } from '../utils/dates.js'
@@ -87,15 +88,20 @@ export function createConsultationRepository(db = getDb()) {
   async function search(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere(consultationClauses(filters, 'c'))
     // Default: furthest deadline first — the order the portal itself uses, so
-    // our first row is the portal's first row.
-    const order = buildOrderBy(sort, SORTABLE.consultations, 'date_limite', { table: 'c' })
+    // our first row is the portal's first row. `relevance` is offered only when
+    // there is a query to be relevant to; asked for without one it falls back,
+    // rather than silently returning an arbitrary order.
+    const ranked = sort === 'relevance'
+      ? relevanceOrder(filters.q, { objet: 'c.objet', tiebreak: 'c.date_limite DESC, c.id DESC' })
+      : { sql: '', params: [] }
+    const order = ranked.sql || buildOrderBy(columnSort(sort), SORTABLE.consultations, 'date_limite', { table: 'c' })
 
     const rows = await db.all(
       `SELECT c.*, r.attributaire, r.montant_attribue_cents, r.date_attribution, r.result_status
        FROM ${TABLE} c
        LEFT JOIN consultation_results r ON r.consultation_id = c.id
        ${where.sql}${order} LIMIT ? OFFSET ?`,
-      [...where.params, limit, offset],
+      [...where.params, ...ranked.params, limit, offset],
     )
     const { total } = await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} c${where.sql}`, where.params)
     return { rows, total: Number(total) }

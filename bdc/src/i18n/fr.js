@@ -169,6 +169,23 @@ export default {
   'settings.secretsNote': 'Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.',
 
 
+  // ---- Search ----
+  'sort.relevance': 'Pertinence',
+
+  // ---- Company profile ----
+  'company.profile': 'Fiche de l’entreprise',
+  'company.awards': 'Marchés remportés',
+  'company.buyers': 'Acheteurs servis',
+  'company.total': 'Total remporté',
+  'company.median': 'Montant médian',
+  'company.smallest': 'Plus petit',
+  'company.largest': 'Plus grand',
+  'company.bids': 'Concurrents en moyenne',
+  'company.topBuyers': 'Chez qui ils gagnent',
+  'company.recentAwards': 'Marchés récents',
+  'company.allAwards': 'Tous leurs marchés',
+  'company.note': 'Établi à partir des résultats publiés sous ce nom exact. Un avis ne nomme jamais qui pourrait y répondre : seul le côté attribution existe pour une entreprise.',
+
   // ---- Access requests ----
   'access.title': 'Demander un accès',
   'access.lede': 'Les comptes sont créés par un administrateur. Dites-nous qui vous êtes et à quoi le service vous servira ; nous revenons vers vous par e-mail.',

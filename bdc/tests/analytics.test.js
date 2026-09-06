@@ -194,3 +194,59 @@ test('a user with no saved search is offered one that needs no filters', async (
   assert.deepEqual(saved.filters, {}, 'no filters at all is a valid alert')
   assert.equal(saved.notify_new, true)
 })
+
+test('a two-word search finds rows whose words are not adjacent, and ranks them', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const rows = [
+    ['1/2026', 'Achat de produits de nettoyage et d’entretien'],   // both words, not adjacent
+    ['2/2026', 'Fourniture de produits alimentaires'],              // one word only
+    ['3/2026', 'produits nettoyage'],                               // the exact phrase
+    ['4/2026', 'Travaux de peinture'],                              // neither
+  ]
+  for (const [reference, objet] of rows) {
+    await consultation(container, { sourceId: reference, reference, objet })
+  }
+
+  // Every term must match, so the alimentaires row and the peinture row are out
+  // — the old single-substring LIKE found none of these at all.
+  const found = await container.services.consultations.search(
+    { q: 'produits nettoyage' }, { limit: 10, offset: 0, sort: 'relevance' },
+  )
+  assert.deepEqual(found.data.map((row) => row.reference), ['3/2026', '1/2026'])
+
+  // Accents are folded the way the scraper folded them when it wrote search_text.
+  const accented = await container.services.consultations.search(
+    { q: 'ENTRETIEN' }, { limit: 10, offset: 0 },
+  )
+  assert.deepEqual(accented.data.map((row) => row.reference), ['1/2026'])
+
+  // Relevance asked for with nothing to be relevant to falls back to the
+  // default order rather than returning rows in an arbitrary one.
+  const unranked = await container.services.consultations.search(
+    {}, { limit: 10, offset: 0, sort: 'relevance' },
+  )
+  assert.equal(unranked.data.length, 4)
+})
+
+test('a company profile answers what they win and from whom', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  await award(container, 1, { objet: 'Achat A', cents: 100000, bids: 6 })
+  await award(container, 2, { objet: 'Achat B', cents: 300000, bids: 10 })
+  await award(container, 3, { objet: 'Achat C', cents: 500000, acheteur: 'AUTRE ACHETEUR' })
+  await award(container, 4, { objet: 'Achat D', cents: 900000, attributaire: 'CONCURRENT SARL' })
+
+  const profile = await container.services.analytics.company('STE EXEMPLE', container.services.consultations)
+
+  assert.equal(profile.awards, 3, 'only what they won')
+  assert.equal(profile.buyers, 2, 'across two buyers')
+  assert.equal(profile.median, 3000)
+  assert.equal(profile.min, 1000)
+  assert.equal(profile.max, 5000)
+  assert.equal(profile.totalAmount, 9000)
+  assert.ok(profile.topBuyers.some((row) => row.label === BUYER))
+  assert.ok(!profile.recentAwards.some((row) => row.attributaire === 'CONCURRENT SARL'))
+})

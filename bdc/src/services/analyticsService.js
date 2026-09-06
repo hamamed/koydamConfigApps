@@ -186,7 +186,37 @@ export function createAnalyticsService({ analytics }) {
     }))
   }
 
-  return { overview, benchmark, buyer, precedents }
+  /**
+   * What one company wins, from whom, and how hard it was.
+   *
+   * @param {string} name the company exactly as the portal prints it.
+   * @param {object} listings the consultation read model, for the awards table.
+   */
+  async function company(name, listings) {
+    const filters = { attributaire: name }
+    const [profile, buyers, recentAwards] = await Promise.all([
+      analytics.companyProfile(name),
+      analytics.topBuyers(filters, 8),
+      listings.searchResults(filters, { limit: 12, offset: 0 }),
+    ])
+
+    return {
+      name,
+      awards: profile.awards,
+      buyers: profile.buyers,
+      firstSeen: profile.firstSeen,
+      lastSeen: profile.lastSeen,
+      totalAmount: amount(profile.totalCents),
+      median: amount(profile.medianCents),
+      min: amount(profile.minCents),
+      max: amount(profile.maxCents),
+      avgBids: profile.avgBids === null ? null : Math.round(profile.avgBids * 10) / 10,
+      topBuyers: group(buyers),
+      recentAwards: recentAwards.data,
+    }
+  }
+
+  return { overview, benchmark, buyer, company, precedents }
 }
 
 /** Below this many priced comparables, the spread is noise and is not shown. */

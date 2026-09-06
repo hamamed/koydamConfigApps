@@ -197,6 +197,45 @@ export function createAnalyticsRepository(db = getDb()) {
     }
   }
 
+  /**
+   * One company's record.
+   *
+   * Only the award side exists for a company: an avis names its buyer, never
+   * who might bid on it, so there is no equivalent of the buyer's "how much do
+   * they publish". What can be answered is what they win, from whom, and how
+   * contested it was.
+   */
+  async function companyProfile(name) {
+    const scoped = buildWhere([[AWARDED], ['attributaire = ?', name]])
+    const [totals, span] = await Promise.all([
+      db.get(
+        `SELECT COUNT(*) AS awards, SUM(montant_attribue_cents) AS total_cents,
+                MIN(montant_attribue_cents) AS min_cents, MAX(montant_attribue_cents) AS max_cents,
+                AVG(nombre_offres) AS avg_bids, COUNT(DISTINCT acheteur) AS buyers
+         FROM consultation_results${scoped.sql}`,
+        scoped.params,
+      ),
+      db.get(
+        `SELECT MIN(date_publication_resultat) AS first_seen, MAX(date_publication_resultat) AS last_seen
+         FROM consultation_results WHERE attributaire = ?`,
+        [name],
+      ),
+    ])
+
+    return {
+      name,
+      awards: Number(totals.awards ?? 0),
+      totalCents: Number(totals.total_cents ?? 0),
+      minCents: totals.min_cents === null ? null : Number(totals.min_cents),
+      maxCents: totals.max_cents === null ? null : Number(totals.max_cents),
+      medianCents: await medianCents(scoped.sql, scoped.params),
+      avgBids: totals.avg_bids === null ? null : Number(totals.avg_bids),
+      buyers: Number(totals.buyers ?? 0),
+      firstSeen: span.first_seen ?? null,
+      lastSeen: span.last_seen ?? null,
+    }
+  }
+
   /** Generic "top N by group", used for winners, buyers and categories. */
   const topBy = (column) => async (filters = {}, limit = 12) => {
     const { sql, params } = scope(filters)
@@ -256,6 +295,7 @@ export function createAnalyticsRepository(db = getDb()) {
     comparables,
     precedents,
     buyerProfile,
+    companyProfile,
     topWinners: topBy('attributaire'),
     topBuyers: topBy('acheteur'),
     topCategories,

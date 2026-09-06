@@ -34,7 +34,7 @@
     <div>
       <label for="sort"><%= t('sort.label') %></label>
       <select id="sort" name="sort">
-        <% [['date_limite:desc','sort.deadlineDesc'],['date_limite:asc','sort.deadlineAsc'],['date_publication:desc','sort.publishedDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>
+        <% [['relevance','sort.relevance'],['date_limite:desc','sort.deadlineDesc'],['date_limite:asc','sort.deadlineAsc'],['date_publication:desc','sort.publishedDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>
           <option value="<%= o[0] %>" <%= (query.sort || 'date_limite:desc') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
         <% }) %>
       </select>

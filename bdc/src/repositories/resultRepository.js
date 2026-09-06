@@ -1,6 +1,7 @@
 import { getDb } from '../db/index.js'
 import { buildInsert, buildOrderBy, buildUpdate, buildUpsert, buildWhere } from '../db/sql.js'
 import { resultClauses } from './filterClauses.js'
+import { columnSort, relevanceOrder } from './search.js'
 import { RESULT_HASH_COLUMNS, hashColumns, mergeScraped } from './scrapedRecord.js'
 import { SORTABLE } from '../http/filters.js'
 import { nowIso } from '../utils/dates.js'
@@ -78,13 +79,16 @@ export function createResultRepository(db = getDb()) {
 
   async function search(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere(resultClauses(filters, 'r'))
-    const order = buildOrderBy(sort, SORTABLE.results, 'date_publication_resultat', { table: 'r' })
+    const ranked = sort === 'relevance'
+      ? relevanceOrder(filters.q, { objet: 'r.objet', tiebreak: 'r.date_publication_resultat DESC, r.id DESC' })
+      : { sql: '', params: [] }
+    const order = ranked.sql || buildOrderBy(columnSort(sort), SORTABLE.results, 'date_publication_resultat', { table: 'r' })
     const rows = await db.all(
       `SELECT r.*, c.id AS consultation_row_id, c.objet AS consultation_objet, c.date_limite
        FROM ${TABLE} r
        LEFT JOIN consultations c ON c.id = r.consultation_id
        ${where.sql}${order} LIMIT ? OFFSET ?`,
-      [...where.params, limit, offset],
+      [...where.params, ...ranked.params, limit, offset],
     )
     const { total } = await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} r${where.sql}`, where.params)
     return { rows, total: Number(total) }

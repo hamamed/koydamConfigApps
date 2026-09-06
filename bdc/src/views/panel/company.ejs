@@ -1,0 +1,73 @@
+<%- include('../partials/shell-open', { title: company.name }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'award', size: 19 }) %> <%= company.name %></h1>
+  <span class="muted spacer">
+    <% if (company.firstSeen) { %>
+      <span class="ltr"><%= company.firstSeen %></span> — <span class="ltr"><%= company.lastSeen %></span>
+    <% } %>
+  </span>
+</div>
+
+<div class="grid" style="margin-bottom:14px">
+  <div class="stat"><b class="ltr"><%= company.awards %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('company.awards') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.buyers %></b><span><%- include('../partials/icon', { name: 'building-2', size: 13 }) %><%= t('company.buyers') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.totalAmount === null ? '—' : company.totalAmount %></b><span><%= t('company.total') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.median === null ? '—' : company.median %></b><span><%= t('company.median') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.min === null ? '—' : company.min %></b><span><%= t('company.smallest') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.max === null ? '—' : company.max %></b><span><%= t('company.largest') %></span></div>
+  <div class="stat"><b class="ltr"><%= company.avgBids === null ? '—' : company.avgBids %></b><span><%= t('company.bids') %></span></div>
+</div>
+
+<p class="muted" style="margin:-4px 0 16px; font-size:11.5px"><%= t('company.note') %></p>
+
+<div class="grid cols-2" style="align-items:start">
+  <div class="card" style="padding-bottom:8px">
+    <h2><%- include('../partials/icon', { name: 'building-2', size: 15 }) %><%= t('company.topBuyers') %></h2>
+    <% if (company.topBuyers.length === 0) { %>
+      <p class="empty"><%= t('insights.empty') %></p>
+    <% } else { %>
+      <table>
+        <thead><tr><th><%= t('insights.buyer') %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
+        <tbody>
+          <% company.topBuyers.forEach(function (row) { %>
+            <tr>
+              <td style="max-width:220px"><a href="/panel/buyers/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>"><%= row.label %></a></td>
+              <td class="ltr"><%= row.awards %></td>
+              <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+
+  <div class="card" style="padding-bottom:8px">
+    <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('company.recentAwards') %></h2>
+    <% if (company.recentAwards.length === 0) { %>
+      <p class="empty"><%= t('awards.empty') %></p>
+    <% } else { %>
+      <table>
+        <thead><tr>
+          <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
+          <th><%= t('awards.amount') %></th><th><%= t('awards.bids') %></th>
+        </tr></thead>
+        <tbody>
+          <% company.recentAwards.forEach(function (row) { %>
+            <tr>
+              <td><code><%= row.reference %></code></td>
+              <td style="max-width:260px"><%= row.objet || '—' %></td>
+              <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+              <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <p style="margin:10px 0 4px">
+        <a class="btn secondary" href="/panel/awards?<%= new URLSearchParams({ attributaire: company.name, lang: locale }).toString() %>"><%= t('company.allAwards') %></a>
+      </p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/shell-close') %>

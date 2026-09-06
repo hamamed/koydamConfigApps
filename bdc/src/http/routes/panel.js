@@ -361,6 +361,18 @@ export function panelRoutes({ services }) {
     return { message: translator(req.locale)('requests.rejected'), password: null, delivered: false }
   })
 
+  /** One company's record — the award side of a buyer profile. */
+  router.get(
+    '/panel/companies/:name',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const company = await services.analytics.company(name, services.consultations)
+      if (company.awards === 0) throw new NotFoundError(`Company ${name}`)
+      res.render('panel/company', await shell(req, { active: 'awards', company }))
+    }),
+  )
+
   router.get(
     '/panel/system',
     adminOnly,

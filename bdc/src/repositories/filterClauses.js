@@ -1,3 +1,5 @@
+import { searchClauses } from './search.js'
+
 /**
  * Translates canonical filters (see http/filters.js) into parameterised SQL
  * fragments. Every value is bound, never interpolated.
@@ -15,7 +17,7 @@ export function consultationClauses(filters = {}, alias = 'c') {
     filters.acheteur && like(`${alias}.acheteur`, filters.acheteur),
     filters.lieuExecution && like(`${alias}.lieu_execution`, filters.lieuExecution),
     filters.procedureType && like(`${alias}.procedure_type`, filters.procedureType),
-    filters.q && [`${alias}.search_text LIKE ?`, `%${filters.q}%`],
+    ...searchClauses(filters.q, `${alias}.search_text`),
     filters.datePublicationStart && [`${alias}.date_publication >= ?`, filters.datePublicationStart],
     filters.datePublicationEnd && [`${alias}.date_publication <= ?`, filters.datePublicationEnd],
     filters.dateLimiteStart && [`${alias}.date_limite >= ?`, filters.dateLimiteStart],
@@ -39,7 +41,7 @@ export function resultClauses(filters = {}, alias = 'r') {
     filters.acheteur && like(`${alias}.acheteur`, filters.acheteur),
     filters.lieuExecution && like(`${alias}.lieu_execution`, filters.lieuExecution),
     filters.attributaire && like(`${alias}.attributaire`, filters.attributaire),
-    filters.q && [`${alias}.search_text LIKE ?`, `%${filters.q}%`],
+    ...searchClauses(filters.q, `${alias}.search_text`),
     filters.datePublicationStart && [`${alias}.date_publication_resultat >= ?`, filters.datePublicationStart],
     filters.datePublicationEnd && [`${alias}.date_publication_resultat <= ?`, filters.datePublicationEnd],
     filters.status && [`${alias}.result_status = ?`, filters.status],
