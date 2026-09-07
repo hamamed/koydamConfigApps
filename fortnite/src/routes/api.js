@@ -175,31 +175,24 @@ apiRouter.get('/cosmetics/top-reacted', (req, res) => {
   const limit = clamp(req.query.limit, 12, 40);
   const days = clamp(req.query.days, 7, 365);
 
+  // The whole cosmetic, in the shape every other cosmetic endpoint returns.
+  //
+  // The app draws these with the same card as the rest of the catalogue, and a
+  // trimmed bespoke shape would mean a second card that only looks the same
+  // until one of them is changed.
   const rows = db
     .prepare(
-      `SELECT r.item_id AS id, COUNT(*) AS total,
-              SUM(r.kind IN ('fire', 'love', 'cool')) AS positive,
-              c.name, c.type_name, c.rarity, c.series, c.icon_url, c.featured_url
+      `SELECT c.*
          FROM reactions r
          JOIN cosmetics c ON c.id = r.item_id
         WHERE r.updated_at > datetime('now', @window)
-        GROUP BY r.item_id
-        ORDER BY positive DESC, total DESC
+        GROUP BY c.id
+        ORDER BY SUM(r.kind IN ('fire', 'love', 'cool')) DESC, COUNT(*) DESC
         LIMIT @limit`,
     )
     .all({ limit, window: `-${days} days` });
 
-  const origin = `${req.protocol}://${req.get('host')}`;
-  return ok(res, rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    typeName: r.type_name,
-    rarity: r.rarity,
-    series: r.series,
-    icon: proxied(r.featured_url || r.icon_url, origin),
-    reactions: r.total,
-    positive: r.positive,
-  })));
+  return ok(res, rows.map(toApiShape));
 });
 
 apiRouter.get('/cosmetics/:id', (req, res) => {
