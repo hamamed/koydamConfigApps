@@ -665,6 +665,7 @@ export default {
 
   // ---- Reference price (article 44 of décret n° 2-22-431) -----------------
   'nav.referencePrice': 'Reference price',
+  'referencePrice.scope': 'Applies to appels d’offres (marchés). Purchases on bon de commande fall under article 91 of the same decree: no commission, no bid-opening session and no reference price — so the avis listed in this panel are not concerned.',
   'referencePrice.title': 'Reference price',
   'referencePrice.intro': 'The reference price of article 44 of décret n° 2-22-431: the commission discards excessive and abnormally low offers, averages the buyer’s estimate with the mean of what is left, then takes the offer closest below that price. The cheapest bid does not win.',
   'referencePrice.market': 'The market',
@@ -718,5 +719,4 @@ export default {
   'referencePrice.error.estimate': 'Enter the buyer’s estimate: it must be greater than zero.',
   'referencePrice.error.kind': 'Choose the nature of the market.',
   'referencePrice.error.offers': 'Enter at least one competing offer.',
-  'detail.referencePrice': 'Calculate the reference price',
 }

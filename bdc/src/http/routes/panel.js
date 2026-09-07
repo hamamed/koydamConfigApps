@@ -8,7 +8,7 @@ import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { translator } from '../../i18n/index.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
-import { MARKET_KINDS, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
+import { MARKET_KINDS, computeReferencePrice } from '../../utils/referencePrice.js'
 
 /**
  * The panel.
@@ -315,25 +315,20 @@ export function panelRoutes({ services }) {
   /**
    * The reference price of article 44 of décret n° 2-22-431, as a calculator.
    *
-   * Free for every signed-in user: it needs nothing this panel does not already
-   * have, and the rule it implements is the one that decides who wins — the
-   * winner is the offer closest *under* the reference price, so the cheapest
-   * bid loses. Anyone bidding without running this number is guessing.
+   * Standalone on purpose. Article 44 sits in the appel d'offres chapter: the
+   * commission, the séance d'ouverture des plis and the prix de référence are
+   * that procedure's machinery. Bons de commande — everything this panel
+   * crawls — are article 91, where competitors drop off a devis and none of
+   * that applies. So the page is a tool the same contractors can use for their
+   * marchés, and it is deliberately not wired to any avis in this database.
    */
   router.get(
     '/panel/reference-price',
     anyUser,
     asyncHandler(async (req, res) => {
-      // `?from=<id>` arrives from a project page, which already knows the
-      // buyer's estimate and the nature of the market.
-      const source = req.query.from
-        ? await services.consultations.getById(Number(req.query.from), req.user.id)
-        : null
-
       res.render('panel/reference-price', await shell(req, {
         active: 'referencePrice',
-        form: source ? prefillFromConsultation(source) : blankReferenceForm(),
-        source,
+        form: blankReferenceForm(),
         result: null,
         error: null,
       }))
@@ -345,12 +340,6 @@ export function panelRoutes({ services }) {
     anyUser,
     asyncHandler(async (req, res) => {
       const form = readReferenceForm(req.body)
-      // Only the "from this project" banner depends on this lookup, so a
-      // project that has since been removed must not take the calculation with
-      // it — the numbers were posted in the form, not read back from the row.
-      const source = form.sourceId
-        ? await services.consultations.getById(form.sourceId, req.user.id).catch(() => null)
-        : null
 
       let result = null
       let error = null
@@ -360,13 +349,7 @@ export function panelRoutes({ services }) {
         error = failure.message
       }
 
-      res.render('panel/reference-price', await shell(req, {
-        active: 'referencePrice',
-        form,
-        source,
-        result,
-        error,
-      }))
+      res.render('panel/reference-price', await shell(req, { active: 'referencePrice', form, result, error }))
     }),
   )
 
@@ -688,29 +671,7 @@ const padRows = (offers) => [
   ...Array.from({ length: Math.max(0, OFFER_ROWS - offers.length) }, () => ({ name: '', amount: '' })),
 ]
 
-const blankReferenceForm = () => ({ estimate: '', kind: '', sourceId: null, offers: padRows([]) })
-
-/**
- * Fills the form from a project the panel already holds.
- *
- * `categorie` first, not `nature_prestation`: the portal's "Catégorie
- * principale" is the one that reads "Fournitures", while "Nature de prestation"
- * is a free-text description of the goods — "Achat de pièces de rechange pour
- * matériel technique et informatique" classifies to nothing at all. Both are
- * classified rather than trusted, and when neither resolves the user picks,
- * because guessing between travaux and fournitures moves the floor five points.
- *
- * Most bons de commande publish no estimate, so an empty field here is the
- * normal case and not a failure — the user reads it off the dossier.
- */
-function prefillFromConsultation(consultation) {
-  return {
-    estimate: consultation.estimation === null || consultation.estimation === undefined ? '' : String(consultation.estimation),
-    kind: classifyKind(consultation.categorie) ?? classifyKind(consultation.nature_prestation) ?? '',
-    sourceId: consultation.id,
-    offers: padRows([]),
-  }
-}
+const blankReferenceForm = () => ({ estimate: '', kind: '', offers: padRows([]) })
 
 /** Reads the posted form back, keeping the raw strings so a rejected submission re-renders as typed. */
 function readReferenceForm(body = {}) {
@@ -720,12 +681,10 @@ function readReferenceForm(body = {}) {
     name: String(names[index] ?? ''),
     amount: String(amount ?? ''),
   }))
-  const sourceId = Number(body.sourceId)
 
   return {
     estimate: String(body.estimate ?? ''),
     kind: String(body.kind ?? ''),
-    sourceId: Number.isInteger(sourceId) && sourceId > 0 ? sourceId : null,
     offers: padRows(offers),
   }
 }

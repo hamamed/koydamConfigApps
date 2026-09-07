@@ -665,6 +665,7 @@ export default {
 
   // ---- Prix de référence (article 44 du décret n° 2-22-431) ----------------
   'nav.referencePrice': 'Prix de référence',
+  'referencePrice.scope': 'S’applique aux appels d’offres (marchés). Les achats sur bon de commande relèvent de l’article 91 du même décret : ni commission, ni séance d’ouverture des plis, ni prix de référence — les avis listés dans ce panneau ne sont donc pas concernés.',
   'referencePrice.title': 'Prix de référence',
   'referencePrice.intro': 'Le prix de référence de l’article 44 du décret n° 2-22-431 : la commission écarte les offres excessives et anormalement basses, fait la moyenne entre l’estimation du maître d’ouvrage et la moyenne des offres retenues, puis retient l’offre la plus proche de ce prix par défaut. L’offre la moins chère ne gagne pas.',
   'referencePrice.market': 'Le marché',
@@ -718,5 +719,4 @@ export default {
   'referencePrice.error.estimate': 'Renseignez l’estimation du maître d’ouvrage : elle doit être supérieure à zéro.',
   'referencePrice.error.kind': 'Choisissez la nature du marché.',
   'referencePrice.error.offers': 'Saisissez au moins une offre de concurrent.',
-  'detail.referencePrice': 'Calculer le prix de référence',
 }

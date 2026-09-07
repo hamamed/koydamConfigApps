@@ -1425,14 +1425,3 @@ test('the form refuses a submission it cannot evaluate, in the reader’s langua
   assert.match(noOffers, /au moins une offre/)
 })
 
-test('a project carries its own estimate and nature into the calculator', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const detail = await (await api.page(`/panel/consultations/${api.consultationId}`, api.staff)).text()
-  assert.match(detail, /\/panel\/reference-price\?from=/, 'the project page offers the calculator')
-
-  const html = await (await api.page(`/panel/reference-price?from=${api.consultationId}`, api.staff)).text()
-  // The fixture is a Fournitures avis, so the 25% floor is the one that applies.
-  assert.match(html, /<option value="fournitures" selected>/)
-})

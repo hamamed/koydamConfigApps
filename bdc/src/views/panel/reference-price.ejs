@@ -28,7 +28,8 @@
 </div>
 
 <div class="card">
-  <p class="muted" style="margin:0; font-size:12.5px"><%= t('referencePrice.intro') %></p>
+  <p class="muted" style="margin:0 0 8px; font-size:12.5px"><%= t('referencePrice.intro') %></p>
+  <p style="margin:0; font-size:12.5px; color:var(--warn)"><%= t('referencePrice.scope') %></p>
 </div>
 
 <% if (error) { %><div class="error"><%= t(error) %></div><% } %>
@@ -138,17 +139,9 @@
 <% } %>
 
 <form method="post" action="/panel/reference-price?lang=<%= locale %>">
-  <input type="hidden" name="sourceId" value="<%= form.sourceId === null ? '' : form.sourceId %>">
-
   <div class="card">
     <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('referencePrice.market') %></h2>
 
-    <% if (source) { %>
-      <p class="muted" style="margin:-4px 0 14px; font-size:12.5px">
-        <%= t('referencePrice.from') %>
-        <a href="/panel/consultations/<%= source.id %>?lang=<%= locale %>"><%= source.objet || source.reference %></a>
-      </p>
-    <% } %>
 
     <div class="cols-2">
       <div>
