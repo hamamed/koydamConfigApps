@@ -361,6 +361,29 @@ export function panelRoutes({ services }) {
     return { message: translator(req.locale)('requests.rejected'), password: null, delivered: false }
   })
 
+  /**
+   * Every company that has won public work, and how much is known about each.
+   * Administrator-only: it exists to review the coverage of the identity
+   * registers, which is an operational question rather than a bidder's one.
+   */
+  router.get(
+    '/panel/companies',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const directory = await services.companyDirectory.list({
+        q: typeof req.query.q === 'string' ? req.query.q : '',
+        filter: typeof req.query.filter === 'string' ? req.query.filter : '',
+        page: Number.parseInt(req.query.page, 10) || 1,
+      })
+      res.render('panel/companies', await shell(req, {
+        active: 'companies',
+        ...directory,
+        query: req.query,
+        filters: { q: req.query.q ?? '', filter: req.query.filter ?? '' },
+      }))
+    }),
+  )
+
   /** One company's record — the award side of a buyer profile. */
   router.get(
     '/panel/companies/:name',

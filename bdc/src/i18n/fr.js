@@ -192,6 +192,31 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Pertinence',
 
+  // ---- Company directory ----
+  'companies.title': 'Entreprises attributaires',
+  'companies.total': 'Entreprises',
+  'companies.known': 'Avec adresse',
+  'companies.unknown': 'Nom seul',
+  'companies.excluded': 'Exclues',
+  'companies.search': 'Rechercher',
+  'companies.searchPlaceholder': 'Nom de l’entreprise',
+  'companies.filter': 'Ce que l’on sait',
+  'companies.filter.all': 'Toutes',
+  'companies.filter.known': 'Avec adresse',
+  'companies.filter.unknown': 'Nom seul',
+  'companies.filter.qualified': 'Qualifiées BTP',
+  'companies.filter.excluded': 'Exclues des marchés',
+  'companies.identity': 'Identité',
+  'companies.none': 'Aucune entreprise ne correspond.',
+  'companies.badge.qualified': 'Registre BTP',
+  'companies.badge.qualifiedHint': 'Adresse, ville et registre de commerce depuis le registre du ministère de l’Équipement.',
+  'companies.badge.recorded': 'Fiche saisie',
+  'companies.badge.recordedHint': 'Renseignée et vérifiée par un administrateur.',
+  'companies.badge.excluded': 'Exclue',
+  'companies.badge.excludedHint': 'Figure sur la liste officielle des sociétés exclues des marchés publics.',
+  'companies.badge.nameOnly': 'Nom seul',
+  'nav.companies': 'Entreprises',
+
   // ---- BTP qualification register ----
   'btp.title': 'Qualification BTP (ministère de l’Équipement)',
   'btp.code': 'Code',

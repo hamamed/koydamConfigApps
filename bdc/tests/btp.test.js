@@ -117,3 +117,57 @@ test('a company is found under the spelling the other registers use', async (t) 
   assert.equal((await container.repositories.btp.findForCompany('KHALIJ NEKOR')).length, 2)
   assert.equal(await container.repositories.btp.countAll(), 2)
 })
+
+test('the companies screen shows which companies we know anything about', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const award = (index, attributaire, cents) =>
+    container.repositories.results.upsert({
+      result_key: `k${index}`, reference: `${index}/2026`, reference_raw: `${index}/2026`,
+      match_key: `${index}|x`, objet: 'Achat', acheteur: `COMMUNE ${index}`, attributaire,
+      montant_attribue_cents: cents, currency: 'MAD', nombre_offres: 4, result_status: 'attribue',
+      date_publication_resultat: '2026-08-01', search_text: 'achat',
+      first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+    })
+
+  await award(1, 'SOCIETE KHALIJ NEKOR SARL', 100000)
+  await award(2, 'SOCIETE KHALIJ NEKOR SARL', 300000)
+  await award(3, 'ENTREPRISE INCONNUE', 50000)
+  await award(4, 'STE BANNIE', 70000)
+
+  // One is in the BTP register, one is excluded, one is nothing but a name.
+  await container.repositories.btp.upsert({
+    raison_sociale: 'KHALIJ NEKOR', registre_commerce: '289', ville: 'AL HOCEIMA', adresse: 'RUE X',
+  })
+  await container.repositories.exclusions.upsert({
+    raison_sociale: 'BANNIE', entite_publique: 'ONEE', date_debut: '2026-01-01',
+  })
+
+  const all = await container.services.companyDirectory.list({})
+  assert.equal(all.summary.companies, 3, 'one row per company, not per award')
+  assert.equal(all.summary.known, 1, 'only the one with an address counts as known')
+  assert.equal(all.summary.excluded, 1)
+
+  const khalij = all.rows.find((r) => r.name.startsWith('SOCIETE KHALIJ'))
+  assert.equal(khalij.awards, 2, 'its two awards are counted together')
+  assert.equal(khalij.total, 4000)
+  assert.equal(khalij.qualified, true)
+  assert.equal(khalij.known, true)
+
+  // The registers are matched on the normalised name, so "SOCIETE … SARL" finds
+  // the register's "KHALIJ NEKOR" and "STE BANNIE" finds "BANNIE".
+  assert.equal(all.rows.find((r) => r.name === 'STE BANNIE').excluded, true)
+  assert.equal(all.rows.find((r) => r.name === 'ENTREPRISE INCONNUE').known, false)
+
+  // The filters answer the question the screen exists for.
+  assert.deepEqual((await container.services.companyDirectory.list({ filter: 'unknown' }))
+    .rows.map((r) => r.name).sort(), ['ENTREPRISE INCONNUE', 'STE BANNIE'])
+  assert.deepEqual((await container.services.companyDirectory.list({ filter: 'excluded' }))
+    .rows.map((r) => r.name), ['STE BANNIE'])
+
+  // And search narrows without needing the exact spelling.
+  const found = await container.services.companyDirectory.list({ q: 'khalij' })
+  assert.equal(found.total, 1)
+  assert.equal(found.rows[0].name, 'SOCIETE KHALIJ NEKOR SARL')
+})

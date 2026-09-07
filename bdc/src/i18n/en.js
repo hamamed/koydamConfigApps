@@ -192,6 +192,31 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Relevance',
 
+  // ---- Company directory ----
+  'companies.title': 'Award-winning companies',
+  'companies.total': 'Companies',
+  'companies.known': 'With an address',
+  'companies.unknown': 'Name only',
+  'companies.excluded': 'Excluded',
+  'companies.search': 'Search',
+  'companies.searchPlaceholder': 'Company name',
+  'companies.filter': 'What we know',
+  'companies.filter.all': 'All',
+  'companies.filter.known': 'With an address',
+  'companies.filter.unknown': 'Name only',
+  'companies.filter.qualified': 'BTP qualified',
+  'companies.filter.excluded': 'Excluded from procurement',
+  'companies.identity': 'Identity',
+  'companies.none': 'No company matches.',
+  'companies.badge.qualified': 'BTP register',
+  'companies.badge.qualifiedHint': 'Address, city and trade register from the Ministry of Equipment register.',
+  'companies.badge.recorded': 'Recorded',
+  'companies.badge.recordedHint': 'Entered and verified by an administrator.',
+  'companies.badge.excluded': 'Excluded',
+  'companies.badge.excludedHint': 'On the official list of companies excluded from public procurement.',
+  'companies.badge.nameOnly': 'Name only',
+  'nav.companies': 'Companies',
+
   // ---- BTP qualification register ----
   'btp.title': 'BTP qualification (Ministry of Equipment)',
   'btp.code': 'Code',

@@ -236,6 +236,27 @@ export function createAnalyticsRepository(db = getDb()) {
     }
   }
 
+  /**
+   * Every company that has won something, with what it has won.
+   *
+   * Returned whole rather than paged: there are some nine thousand of them, and
+   * the screen has to answer "which of these do we know anything about" — a
+   * question that cannot be paged, because the identity registers are keyed on
+   * a normalised name that only exists in JavaScript. Grouping in SQL and
+   * joining in memory is the honest trade.
+   */
+  const companyDirectory = () =>
+    db.all(
+      `SELECT attributaire AS name,
+              COUNT(*) AS awards,
+              SUM(CASE WHEN ${AWARDED} THEN montant_attribue_cents ELSE 0 END) AS total_cents,
+              MAX(date_publication_resultat) AS last_award,
+              COUNT(DISTINCT acheteur) AS buyers
+       FROM consultation_results
+       WHERE attributaire IS NOT NULL AND attributaire <> ''
+       GROUP BY attributaire`,
+    )
+
   /** Generic "top N by group", used for winners, buyers and categories. */
   const topBy = (column) => async (filters = {}, limit = 12) => {
     const { sql, params } = scope(filters)
@@ -294,6 +315,7 @@ export function createAnalyticsRepository(db = getDb()) {
     summary,
     comparables,
     precedents,
+    companyDirectory,
     buyerProfile,
     companyProfile,
     topWinners: topBy('attributaire'),

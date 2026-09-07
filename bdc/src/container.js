@@ -39,6 +39,7 @@ import { createCompanyRecordRepository } from './repositories/companyRecordRepos
 import { createExclusionRepository } from './repositories/exclusionRepository.js'
 import { createBtpRepository } from './repositories/btpRepository.js'
 import { createCompanyRecordService } from './services/companyRecordService.js'
+import { createCompanyDirectoryService } from './services/companyDirectoryService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
 
 /**
@@ -131,6 +132,7 @@ export function createContainer(db = getDb(), options = {}) {
     },
     accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
     companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
+    companyDirectory: createCompanyDirectoryService(repositories),
   }
   services.system = createSystemInspector({
     settings,

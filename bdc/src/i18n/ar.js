@@ -192,6 +192,31 @@ export default {
   // ---- Search ----
   'sort.relevance': 'الصلة',
 
+  // ---- Company directory ----
+  'companies.title': 'الشركات الفائزة',
+  'companies.total': 'الشركات',
+  'companies.known': 'لها عنوان',
+  'companies.unknown': 'الاسم فقط',
+  'companies.excluded': 'مُقصاة',
+  'companies.search': 'بحث',
+  'companies.searchPlaceholder': 'اسم الشركة',
+  'companies.filter': 'ما نعرفه',
+  'companies.filter.all': 'الكل',
+  'companies.filter.known': 'لها عنوان',
+  'companies.filter.unknown': 'الاسم فقط',
+  'companies.filter.qualified': 'مؤهَّلة في البناء',
+  'companies.filter.excluded': 'مُقصاة من الصفقات',
+  'companies.identity': 'الهوية',
+  'companies.none': 'لا توجد شركة مطابقة.',
+  'companies.badge.qualified': 'سجل البناء',
+  'companies.badge.qualifiedHint': 'العنوان والمدينة والسجل التجاري من سجل وزارة التجهيز.',
+  'companies.badge.recorded': 'بطاقة مسجَّلة',
+  'companies.badge.recordedHint': 'مُدخلة ومتحقَّق منها من طرف مدير النظام.',
+  'companies.badge.excluded': 'مُقصاة',
+  'companies.badge.excludedHint': 'مدرجة في اللائحة الرسمية للشركات المُقصاة من الصفقات العمومية.',
+  'companies.badge.nameOnly': 'الاسم فقط',
+  'nav.companies': 'الشركات',
+
   // ---- BTP qualification register ----
   'btp.title': 'التأهيل في البناء والأشغال العمومية (وزارة التجهيز)',
   'btp.code': 'الرمز',

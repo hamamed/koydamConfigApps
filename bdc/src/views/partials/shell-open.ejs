@@ -224,6 +224,7 @@
       <% if (user.role === 'admin') { %>
         <div class="sep"><%= t('nav.administration') %></div>
         <a href="/panel/dashboard" class="<%= active === 'dashboard' ? 'on' : '' %>"><%- include('icon', { name: 'layout-dashboard' }) %><%= t('nav.dashboard') %></a>
+        <a href="/panel/companies" class="<%= active === 'companies' ? 'on' : '' %>"><%- include('icon', { name: 'building-2' }) %><%= t('nav.companies') %></a>
         <a href="/panel/system" class="<%= active === 'system' ? 'on' : '' %>"><%- include('icon', { name: 'server' }) %><%= t('nav.system') %></a>
         <%# `inbox`, not `user-plus`: this sits directly above Users, whose icon is the
     same two figures, and at sidebar size the pair was indistinguishable. %>
