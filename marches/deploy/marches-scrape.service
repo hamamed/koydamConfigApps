@@ -1,0 +1,42 @@
+[Unit]
+Description=Marches publics — daily incremental crawl
+After=network-online.target marches.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/marches
+EnvironmentFile=/opt/marches/.env
+# Only what the portal published in the last week, at 50 rows a page.
+#
+# Not "the first N pages": both listings are ordered by deadline, not by
+# publication date, so a newly published avis does not appear near page 1 and a
+# page-capped crawl would miss most of them. A publication-date floor asks for
+# exactly what is new. The overlap of several days covers a missed run and any
+# avis published while a crawl was mid-flight.
+#
+# The two sources are crawled separately because they need different things.
+#
+# The open listing is finite — about 16 pages at 50 rows — and it is ordered by
+# deadline descending, so its LAST pages are the avis closing within a day. A
+# 10-page cap stopped at row 500, which is precisely where every remaining avis
+# closes tomorrow: roughly 200 a day were never recorded at all, and they were
+# the most urgent ones to bid on and the next ones to become awards. So this
+# takes the whole listing; the crawl stops on its own at the first empty page,
+# and the cap is a guard rather than a target.
+# One crawl, two halves. The listing pass walks the open window — the portal
+# orders it by closing date descending, so stopping at a page count would drop
+# the marchés closing soonest, which are the only ones anyone can still bid on.
+# The detail pass then reads the estimate off each consultation's own page,
+# which is the one number article 44 computes every threshold from.
+ExecStart=/usr/bin/node bin/scrape.js --source=marches --max-pages=20
+TimeoutStartSec=5400
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/marches/data /opt/marches/storage
+SyslogIdentifier=marches-scrape

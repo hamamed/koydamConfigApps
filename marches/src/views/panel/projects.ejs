@@ -1,0 +1,109 @@
+<%- include('../partials/shell-open', { title: t('projects.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'search', size: 19 }) %> <%= t('projects.title') %></h1>
+  <span class="muted spacer"><%= t('table.count', { count: total, page: pagination.page }) %></span>
+</div>
+
+<div class="card">
+  <form class="filters" method="get">
+    <input type="hidden" name="lang" value="<%= locale %>">
+    <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q" value="<%= query.q || '' %>"></div>
+    <div><label for="reference"><%= t('filters.reference') %></label><input id="reference" name="reference" value="<%= query.reference || '' %>" dir="ltr"></div>
+    <div><label for="acheteur"><%= t('filters.acheteur') %></label><input id="acheteur" name="acheteur" value="<%= query.acheteur || '' %>"></div>
+    <div><label for="categorie"><%= t('filters.categorie') %></label><input id="categorie" name="categorie" value="<%= query.categorie || '' %>"></div>
+    <div><label for="lieuExecution"><%= t('filters.lieuExecution') %></label><input id="lieuExecution" name="lieuExecution" value="<%= query.lieuExecution || '' %>"></div>
+    <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
+    <div>
+      <label for="closingWithin"><%= t('filters.closingWithin') %></label>
+      <select id="closingWithin" name="closingWithin">
+        <option value=""><%= t('filters.closingWithin.any') %></option>
+        <% [3, 7, 14, 30].forEach(function (d) { %>
+          <option value="<%= d %>" <%= String(query.closingWithin || '') === String(d) ? 'selected' : '' %>><%= t('filters.closingWithin.days', { days: d }) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label for="status"><%= t('filters.status') %></label>
+      <select id="status" name="status">
+        <% [['all','filters.status.all'],['open','status.open'],['closed','status.closed'],['awarded','status.awarded'],['annule','status.annule']].forEach(function (o) { %>
+          <option value="<%= o[0] %>" <%= (query.status || 'all') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label for="sort"><%= t('sort.label') %></label>
+      <select id="sort" name="sort">
+        <% [['relevance','sort.relevance'],['date_limite:desc','sort.deadlineDesc'],['date_limite:asc','sort.deadlineAsc'],['date_publication:desc','sort.publishedDesc'],['acheteur:asc','sort.buyer']].forEach(function (o) { %>
+          <option value="<%= o[0] %>" <%= (query.sort || 'date_limite:desc') === o[0] ? 'selected' : '' %>><%= t(o[1]) %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
+  </form>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (rows.length === 0) { %>
+    <p class="empty"><%= t('table.empty') %></p>
+  <% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th style="width:38px"></th>
+        <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
+        <th><%= t('table.categorie') %></th><th><%= t('table.deadline') %></th>
+        <th><%= t('table.articles') %></th><th><%= t('table.result') %></th>
+      </tr></thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <td>
+              <button class="star-btn" type="button" data-id="<%= row.id %>" aria-pressed="<%= row.isFavorite ? 'true' : 'false' %>"
+                      title="<%= row.isFavorite ? t('projects.untrack') : t('projects.track') %>">
+                <%- include('../partials/icon', { name: 'star', size: 17 }) %>
+              </button>
+            </td>
+            <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
+            <td style="max-width:320px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></td>
+            <td><% if (row.acheteur) { %><a href="/panel/buyers/<%= encodeURIComponent(row.acheteur) %>?lang=<%= locale %>" title="<%= t('buyer.profile') %>"><%= row.acheteur %></a><% } else { %>—<% } %></td>
+            <td><%= row.categorie || '—' %></td>
+            <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></td>
+            <td class="ltr"><%= row.lots_count %></td>
+            <td><%- include('../partials/status-pill', { row: row }) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<div style="display:flex; gap:8px; align-items:center">
+  <a class="btn secondary" href="/api/export/consultations.csv?<%= new URLSearchParams(Object.assign({}, query, { lang: undefined, page: undefined })).toString() %>"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('export.csv') %></a>
+  <span style="margin-inline-start:auto"></span>
+  <% if (pagination.page > 1) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
+  <% } %>
+  <% if (pagination.page * pagination.perPage < total) { %>
+    <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15, cls: 'flip-rtl' }) %></a>
+  <% } %>
+</div>
+
+<script>
+  document.querySelectorAll('.star-btn').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const on = button.getAttribute('aria-pressed') === 'true'
+      button.disabled = true
+      const response = await fetch(on ? '/api/favorites/' + button.dataset.id : '/api/favorites', {
+        method: on ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: on ? undefined : JSON.stringify({ consultationId: Number(button.dataset.id) }),
+      })
+      button.disabled = false
+      if (response.ok) button.setAttribute('aria-pressed', on ? 'false' : 'true')
+      else alert((await response.json()).error)
+    })
+  })
+</script>
+
+<%- include('../partials/shell-close') %>

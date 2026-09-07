@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily incremental crawl of marchespublics.gov.ma
+
+[Timer]
+OnCalendar=*-*-* 05:30:00
+# Jittered so an unattended crawl never hits the portal at a predictable second.
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

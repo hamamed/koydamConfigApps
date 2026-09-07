@@ -1,0 +1,37 @@
+<%- include('../partials/public-open', { pageTitle: t('status.title'), pageDescription: t('status.lede') }) %>
+
+<section>
+  <div class="wrap" style="max-width:720px">
+    <h1><%- include('../partials/icon', { name: 'refresh-cw', size: 22 }) %> <%= t('status.title') %></h1>
+    <p class="lede"><%= t('status.lede') %></p>
+
+    <div class="card" style="border-inline-start:4px solid <%= status.fresh ? 'var(--ok)' : 'var(--warn)' %>">
+      <h3 style="display:flex; align-items:center; gap:8px; color:<%= status.fresh ? 'var(--ok)' : 'var(--warn)' %>; margin-bottom:8px">
+        <%- include('../partials/icon', { name: status.fresh ? 'circle-check' : 'triangle-alert', size: 17 }) %>
+        <%= status.fresh ? t('status.fresh') : t('status.stale') %>
+      </h3>
+      <p class="muted" style="margin:0">
+        <% if (status.lastCrawlAt) { %>
+          <%= t('status.lastCrawl') %>
+          <span class="ltr"><%= status.lastCrawlAt.slice(0, 16).replace('T', ' ') %></span>
+          (<span class="ltr"><%= status.ageHours %> h</span>)
+        <% } else { %>
+          <%= t('status.never') %>
+        <% } %>
+      </p>
+    </div>
+
+    <div class="grid cols-4" style="margin-top:18px">
+      <% status.counts.forEach(function (stat) { %>
+        <div class="card">
+          <b class="ltr" style="display:block; font-size:22px; font-weight:650"><%= stat.value %></b>
+          <span class="muted" style="font-size:11.5px; text-transform:uppercase; letter-spacing:.05em"><%= t(stat.label) %></span>
+        </div>
+      <% }) %>
+    </div>
+
+    <p class="muted" style="font-size:12.5px; margin-top:16px"><%= t('status.note') %></p>
+  </div>
+</section>
+
+<%- include('../partials/public-close') %>

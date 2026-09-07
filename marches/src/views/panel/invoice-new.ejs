@@ -1,0 +1,99 @@
+<%- include('../partials/shell-open', { title: t('invoices.new') }) %>
+
+<div class="page-head">
+  <a class="btn secondary" href="/panel/consultations/<%= consultation.id %>?lang=<%= locale %>"><%- include('../partials/icon', { name: 'arrow-left', size: 15, cls: 'flip-rtl' }) %><%= t('detail.back') %></a>
+  <h1 style="font-size:17px"><%- include('../partials/icon', { name: 'receipt', size: 17 }) %> <%= t('invoices.new') %></h1>
+</div>
+
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+
+<form method="post" action="/panel/consultations/<%= consultation.id %>/invoice?lang=<%= locale %>">
+  <div class="card">
+    <p class="muted" style="margin-top:0"><code><%= consultation.reference %></code> — <%= consultation.objet || '' %></p>
+    <div class="filters">
+      <div><label for="clientName"><%= t('invoices.client') %></label><input id="clientName" name="clientName" required value="<%= consultation.acheteur || '' %>"></div>
+      <div><label for="clientIce"><%= t('invoices.clientIce') %></label><input id="clientIce" name="clientIce" dir="ltr"></div>
+      <div><label for="clientAddress"><%= t('invoices.clientAddress') %></label><input id="clientAddress" name="clientAddress" value="<%= consultation.lieu_execution || '' %>"></div>
+      <div><label for="issueDate"><%= t('invoices.issueDate') %></label><input id="issueDate" name="issueDate" type="date" dir="ltr"></div>
+      <div><label for="dueDate"><%= t('invoices.dueDate') %></label><input id="dueDate" name="dueDate" type="date" dir="ltr"></div>
+      <div><label for="taxRate"><%= t('invoices.taxRate') %></label><input id="taxRate" name="taxRate" type="number" min="0" max="100" step="0.1" dir="ltr"></div>
+    </div>
+  </div>
+
+  <div class="card" style="padding-bottom:8px">
+    <h2><%- include('../partials/icon', { name: 'package', size: 15 }) %><%= t('detail.articles') %></h2>
+    <p class="muted" style="margin-top:0"><%= t('invoices.pickArticles') %> <%= t('invoices.noPriceHint') %></p>
+
+    <% if (consultation.articles.length === 0) { %>
+      <p class="empty"><%= t('invoices.noArticles') %></p>
+    <% } else { %>
+      <div style="overflow-x:auto">
+        <div class="table-wrap"><table>
+          <thead><tr>
+            <th style="width:38px"><%= t('invoices.include') %></th>
+            <th><%= t('article.number') %></th><th><%= t('article.designation') %></th>
+            <th><%= t('article.quantity') %></th><th><%= t('article.unit') %></th>
+            <th style="width:170px"><%= t('invoices.unitPrice') %></th>
+            <th><%= t('invoices.lineTotal') %></th>
+          </tr></thead>
+          <tbody>
+            <% consultation.articles.forEach(function (a) { %>
+              <tr>
+                <td>
+                  <input type="hidden" name="articleId" value="<%= a.id %>">
+                  <input type="checkbox" name="include" value="<%= a.id %>" style="width:auto" checked>
+                </td>
+                <td class="ltr"><%= a.article_number || '—' %></td>
+                <td style="max-width:280px"><%= a.designation %></td>
+                <td><input name="quantity" type="number" step="0.01" min="0.01" value="<%= a.quantity === null ? 1 : a.quantity %>" dir="ltr" style="width:90px"></td>
+                <td><%= a.unit || '—' %></td>
+                <td><input name="unitPrice" type="number" step="0.01" min="0" placeholder="0.00" dir="ltr" class="price"></td>
+                <td class="ltr line-total muted">—</td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table></div>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <div><label for="notes"><%= t('invoices.notes') %></label><input id="notes" name="notes"></div>
+    <p style="margin:16px 0 0; display:flex; gap:14px; align-items:center; flex-wrap:wrap">
+      <button type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('invoices.create') %></button>
+      <span class="muted"><%= t('invoices.subtotal') %> : <b class="ltr" id="running-total">0.00</b></span>
+    </p>
+  </div>
+</form>
+
+<script>
+  // A running subtotal while typing. The server recomputes everything from the
+  // articles and prices it is given; this is only so the number is not a
+  // surprise after submitting.
+  const recompute = () => {
+    let subtotal = 0
+    document.querySelectorAll('tbody tr').forEach((row) => {
+      const included = row.querySelector('input[name="include"]').checked
+      const quantity = Number(row.querySelector('input[name="quantity"]').value)
+      const price = Number(row.querySelector('input[name="unitPrice"]').value)
+      const cell = row.querySelector('.line-total')
+      if (!included || !Number.isFinite(quantity) || !Number.isFinite(price) || !price) {
+        cell.textContent = '—'
+        return
+      }
+      const line = Math.round(quantity * price * 100) / 100
+      cell.textContent = line.toLocaleString('fr-MA', { minimumFractionDigits: 2 })
+      subtotal += line
+    })
+    document.getElementById('running-total').textContent =
+      subtotal.toLocaleString('fr-MA', { minimumFractionDigits: 2 })
+  }
+
+  document.querySelectorAll('tbody input').forEach((input) => {
+    input.addEventListener('input', recompute)
+    input.addEventListener('change', recompute)
+  })
+  recompute()
+</script>
+
+<%- include('../partials/shell-close') %>

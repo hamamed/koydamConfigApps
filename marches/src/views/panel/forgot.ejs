@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="<%= locale %>" dir="<%= dir %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= t('reset.requestTitle') %> · <%= siteName %></title>
+<style>
+  :root { --accent:#0b5394; --line:#e5e9f0; --muted:#6b7280; --ok:#116b3a; --ok-soft:#e7f5ec; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:linear-gradient(160deg,#0f2c4d,#0b5394); font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; color:#111827; }
+  body[dir="rtl"] { font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic","Geeza Pro",sans-serif; }
+  /*
+    The signed-out pages get a background rather than a flat gradient.
+
+    Drawn in CSS, not an image: it is a few hundred bytes inside the document,
+    so it paints with the first frame and needs no second request — and it
+    scales to any screen without a set of raster assets.
+
+    Three layers over the base gradient: a soft off-centre glow for depth, a
+    fine dot grid, and widely spaced diagonal hairlines. Everything is very low
+    contrast; this sits behind a white card and must not compete with it.
+  */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 22% 12%, rgba(120,190,255,.22), transparent 60%),
+      radial-gradient(ellipse 70% 55% at 85% 90%, rgba(70,150,235,.18), transparent 62%),
+      radial-gradient(circle at center, rgba(255,255,255,.10) 1px, transparent 1.4px),
+      repeating-linear-gradient(135deg, rgba(255,255,255,.045) 0 1px, transparent 1px 22px);
+    background-size: 100% 100%, 100% 100%, 26px 26px, 100% 100%;
+  }
+  /* On an RTL page the diagonals lean the other way, so the whole thing reads
+     as one design rather than a mirrored afterthought. */
+  body[dir="rtl"]::before {
+    background-image:
+      radial-gradient(ellipse 80% 60% at 78% 12%, rgba(120,190,255,.22), transparent 60%),
+      radial-gradient(ellipse 70% 55% at 15% 90%, rgba(70,150,235,.18), transparent 62%),
+      radial-gradient(circle at center, rgba(255,255,255,.10) 1px, transparent 1.4px),
+      repeating-linear-gradient(45deg, rgba(255,255,255,.045) 0 1px, transparent 1px 22px);
+    background-size: 100% 100%, 100% 100%, 26px 26px, 100% 100%;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .box { animation: rise .4s cubic-bezier(.2,.7,.3,1) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  }
+  .box { position: relative; }
+  .box { background:#fff; border-radius:14px; padding:30px 28px; width:min(94vw,400px); box-shadow:0 18px 50px rgba(6,25,48,.32); }
+  h1 { margin:0 0 6px; font-size:18px; }
+  p.sub { margin:0 0 18px; color:var(--muted); font-size:13px; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  input { width:100%; padding:9px 11px; border:1px solid #d6dde7; border-radius:8px; font:inherit; }
+  button { width:100%; margin-top:12px; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:10px; font:inherit; font-size:14px; cursor:pointer; }
+  .notice { background:var(--ok-soft); color:var(--ok); padding:11px 13px; border-radius:8px; font-size:13px; }
+  a.back { display:block; text-align:center; margin-top:16px; font-size:12.5px; color:var(--muted); }
+</style>
+</head>
+<body dir="<%= dir %>">
+  <div class="box">
+    <h1><%- include('../partials/icon', { name: 'key-round', size: 20 }) %><%= t('reset.requestTitle') %></h1>
+    <% if (done) { %>
+      <p class="notice"><%= t('reset.requestDone') %></p>
+    <% } else { %>
+      <p class="sub"><%= t('reset.requestIntro') %></p>
+      <form method="post" action="/forgot?lang=<%= locale %>">
+        <label for="email"><%= t('login.email') %></label>
+        <input id="email" name="email" type="email" required autocomplete="username" dir="ltr">
+        <button type="submit"><%= t('reset.requestSubmit') %></button>
+      </form>
+    <% } %>
+    <a class="back" href="/login?lang=<%= locale %>"><%= t('reset.backToLogin') %></a>
+  </div>
+</body>
+</html>

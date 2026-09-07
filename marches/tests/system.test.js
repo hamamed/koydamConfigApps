@@ -1,0 +1,175 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import { createSystemInspector } from '../src/system/inspector.js'
+import { createMailer } from '../src/notifications/mailer.js'
+
+/** A manifest in the shape backup.sh writes, aged by `hours`. */
+async function manifest({ hours = 2, contents = ['sqlite/marches', 'postgres/brawl'] } = {}) {
+  const dir = await mkdtemp(path.join(tmpdir(), 'marches-system-'))
+  const file = path.join(dir, 'inventory.json')
+  const at = new Date(Date.now() - hours * 3_600_000).toISOString()
+  await writeFile(file, JSON.stringify({
+    generatedAt: at,
+    archives: [{ name: `hamaprojects-${hours}.tar.gz`, sizeBytes: 921332928, at }],
+    contents: contents.map((name) => ({ name, files: 1 })),
+  }))
+  return file
+}
+
+const inspector = (options) => createSystemInspector({ appVersion: '9.9.9', ...options })
+const check = (report, id) => report.checks.find((entry) => entry.id === id)
+
+test('the system screen reads the backup manifest rather than the archives', async () => {
+  const report = await inspector({ manifestPath: await manifest({ hours: 3 }) }).report()
+
+  assert.equal(check(report, 'backup').severity, 'ok')
+  assert.match(check(report, 'backup').detail, /3h ago/)
+  assert.equal(report.backup.latest.sizeBytes, 921332928)
+  assert.equal(report.backup.includesDatabase, true)
+})
+
+test('an archive that does not contain this database is a failure, not a pass', async () => {
+  // The bug this check exists for: bdc was absent from backup.sh for its whole
+  // first month and every nightly archive still looked perfectly healthy.
+  const report = await inspector({
+    manifestPath: await manifest({ contents: ['postgres/brawl', 'sqlite/minebox'] }),
+  }).report()
+
+  assert.equal(check(report, 'backup').severity, 'ok', 'a backup did run')
+  assert.equal(check(report, 'backupCoverage').severity, 'fail', 'but not of this database')
+  assert.equal(report.severity, 'fail', 'and the page says so at the top')
+})
+
+test('a backup that stopped running is reported, and an absent one does not crash', async () => {
+  const stale = await inspector({ manifestPath: await manifest({ hours: 40 }) }).report()
+  assert.equal(check(stale, 'backup').severity, 'warn')
+
+  const dead = await inspector({ manifestPath: await manifest({ hours: 100 }) }).report()
+  assert.equal(check(dead, 'backup').severity, 'fail')
+
+  const missing = await inspector({ manifestPath: '/nonexistent/inventory.json' }).report()
+  assert.equal(check(missing, 'backup').severity, 'fail')
+  assert.match(missing.backup.error, /no backup manifest/)
+  assert.ok(missing.disk, 'the rest of the page is still reported')
+})
+
+test('an unconfigured integration reads as unconfigured', async () => {
+  // `Boolean(somethingAsync())` is true for every promise, so an async
+  // isConfigured() checked without awaiting reports every integration as ready.
+  const report = await inspector({
+    manifestPath: await manifest(),
+    mailer: createMailer({ resolve: async () => ({ host: '' }) }),
+    translation: { isConfigured: async () => false },
+  }).report()
+
+  assert.equal(report.integrations.mail, false)
+  assert.equal(report.integrations.translation, false)
+  assert.equal(check(report, 'mail').severity, 'warn')
+  assert.match(check(report, 'mail').detail, /not emailed/)
+})
+
+test('an SMTP server entered in the panel is used on the next send, not the next restart', async () => {
+  let host = ''
+  const mailer = createMailer({ resolve: async () => ({ host, port: 2525, from: 'marches@civictrust.ma' }) })
+
+  assert.equal(await mailer.isConfigured(), false)
+  const logged = await mailer.send({ to: 'a@b.ma', subject: 'x', text: 'y' })
+  assert.equal(logged.channel, 'log', 'with no server the pipeline still completes end to end')
+
+  host = 'smtp.example.ma'
+  assert.equal(await mailer.isConfigured(), true, 'the panel value takes effect without a rebuild')
+
+  // A settings read that throws must not stop an alert from being recorded:
+  // losing the notification would be worse than sending it to the log.
+  const broken = createMailer({ resolve: async () => { throw new Error('database is locked') } })
+  assert.equal(await broken.isConfigured(), false)
+  assert.equal((await broken.send({ to: 'a@b.ma', subject: 'x', text: 'y' })).channel, 'log')
+})
+
+test('the archive check reads as healthy while a slice is running', async () => {
+  const { createSystemInspector } = await import('../src/system/inspector.js')
+  const at = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString()
+
+  const build = (recent, nextPage = 1492) =>
+    createSystemInspector({
+      manifestPath: '/nonexistent',
+      settings: { get: async (key) => (key === 'scraper.archiveNextPage' ? nextPage : null) },
+      jobs: { listRecent: async () => recent },
+      results: { countAll: async () => 75_000 },
+    })
+
+  const check = async (inspector) => (await inspector.report()).checks.find((c) => c.id === 'archive')
+  const finished = (hours) => ({
+    source: 'archive', status: 'success', finished_at: at(hours),
+    detail_json: JSON.stringify({ archive: { totalPages: 6336 } }),
+  })
+
+  // Running right now is the healthy case, and it must not read as stalled.
+  const running = await check(build([{ source: 'archive', status: 'running' }, finished(1)]))
+  assert.equal(running.severity, 'ok')
+  assert.match(running.detail, /page 1492 of 6336, a slice is running/)
+
+  // Before the first slice finishes the portal has not said how many pages
+  // there are, so the denominator is left out rather than printed as "null".
+  const fresh = await check(build([]))
+  assert.equal(fresh.severity, 'ok')
+  assert.equal(fresh.detail, 'page 1492, no slice has finished yet')
+  assert.doesNotMatch(fresh.detail, /null|Infinity/)
+
+  // Slices run hourly, so a long gap with nothing running has stopped.
+  const stalled = await check(build([finished(9)]))
+  assert.equal(stalled.severity, 'warn')
+  assert.match(stalled.detail, /last slice 9h ago/)
+
+  assert.equal((await check(build([finished(9)], 7000))).detail, 'the award history is complete')
+})
+
+test('the alert pipeline runs end to end and only the sending is missing', async (t) => {
+  const { createTestContainer } = await import('./helpers.js')
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const sent = []
+  container.services.mailer.send = async (message) => {
+    sent.push(message)
+    return { delivered: true, channel: 'email' }
+  }
+
+  const user = await container.services.auth.register({
+    email: 'bidder@test.ma', password: 'a-very-long-password', role: 'user',
+  })
+  const id = user.user?.id ?? user.id
+  const search = await container.services.savedSearches.create(id, {
+    name: 'Everything', filters: {}, notifyNew: true, notifyAwards: false,
+  })
+  // A search made yesterday, which is what one looks like by the time a crawl
+  // finds anything. The alert window is half-open — strictly after the last
+  // mark, up to the moment the run started — so a search and an avis stamped in
+  // the same millisecond match nothing, and that is deliberate.
+  await container.db.run('UPDATE saved_searches SET created_at = ?, last_seen_cursor = ? WHERE id = ?', [
+    new Date(Date.now() - 86_400_000).toISOString(), new Date(Date.now() - 86_400_000).toISOString(), search.id,
+  ])
+
+  await container.repositories.consultations.upsert({
+    source_id: '1', reference: '1/2026', reference_raw: '1/2026', match_key: '1/2026|x',
+    objet: 'Achat de fournitures', acheteur: 'COMMUNE TEST', status: 'open',
+    date_publication: '2026-09-01', date_limite: '2026-12-01', heure_limite: '12:00',
+    search_text: 'achat de fournitures',
+    first_seen_at: new Date().toISOString(),
+    last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+  })
+
+  const stats = await container.services.alerts.run()
+
+  // Matching, recording and delivery all work; what is missing on the server is
+  // only a mail server, and without one the pipeline still completes and writes
+  // what it would have sent to the log. That is deliberate: the alternative is
+  // a feature that looks like it works and delivers nothing.
+  assert.ok(stats.alerts >= 1, 'the saved search matched the new avis')
+  assert.equal(sent.length, 1, 'and a message was handed to the mailer')
+  assert.match(sent[0].to, /bidder@test\.ma/)
+  assert.ok(sent[0].subject)
+})

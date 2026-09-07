@@ -1,0 +1,37 @@
+{
+  "name": "marches-publics-api",
+  "version": "1.0.0",
+  "description": "Backend for the appel d'offres side of marchespublics.gov.ma — crawler, reference price (article 44), analysis.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:init": "node bin/db-init.js",
+    "db:seed": "node bin/db-seed.js",
+    "scrape": "node bin/scrape.js --source=marches",
+    "test": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --test-force-exit \"tests/*.test.js\"",
+    "test:coverage": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --test-force-exit --experimental-test-coverage \"tests/*.test.js\"",
+    "test:watch": "NODE_ENV=test SQLITE_FILE=:memory: JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --watch \"tests/*.test.js\"",
+    "stats": "node bin/stats.js",
+    "alerts": "node bin/alerts.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.15.2",
+    "pg": "^8.13.1"
+  }
+}

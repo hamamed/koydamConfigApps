@@ -1,0 +1,108 @@
+<%- include('../partials/shell-open', { title: t('users.title') }) %>
+
+<div class="page-head"><h1><%- include('../partials/icon', { name: 'users', size: 19 }) %> <%= t('users.title') %></h1></div>
+
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+<% if (notice === 'created') { %><p class="notice"><%- include('../partials/icon', { name: 'circle-check', size: 15 }) %> <%= t('users.created') %></p><% } %>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'user-plus', size: 15 }) %><%= t('users.add') %></h2>
+  <form method="post" action="/panel/users?lang=<%= locale %>" class="filters">
+    <div><label for="email"><%= t('users.email') %></label><input id="email" name="email" type="email" required dir="ltr"></div>
+    <div><label for="fullName"><%= t('users.fullName') %></label><input id="fullName" name="fullName"></div>
+    <div><label for="password"><%= t('users.password') %></label><input id="password" name="password" type="password" minlength="12" required dir="ltr"></div>
+    <div>
+      <label for="role"><%= t('users.role') %></label>
+      <select id="role" name="role">
+        <option value="user"><%= t('users.role.user') %></option>
+        <option value="admin"><%= t('users.role.admin') %></option>
+      </select>
+    </div>
+    <div><button type="submit"><%- include('../partials/icon', { name: 'user-plus', size: 15 }) %><%= t('users.add') %></button></div>
+  </form>
+  <p class="muted" style="margin:12px 0 0; font-size:12.5px"><%= t('users.roleHint') %> <%= t('users.passwordHint') %></p>
+</div>
+
+<div class="card" style="padding-bottom:6px">
+  <div style="overflow-x:auto">
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th><%= t('users.email') %></th><th><%= t('users.fullName') %></th><th><%= t('users.role') %></th>
+        <th><%= t('users.status') %></th><th><%= t('users.favorites') %></th><th><%= t('users.lastLogin') %></th><th></th>
+      </tr></thead>
+      <tbody>
+        <% users.forEach(function (row) { %>
+          <tr data-id="<%= row.id %>">
+            <td><span class="ltr"><%= row.email %></span><% if (row.id === user.id) { %> <span class="pill"><%= t('users.you') %></span><% } %></td>
+            <td><%= row.full_name || '—' %></td>
+            <td>
+              <select class="role" data-id="<%= row.id %>" <%= row.id === user.id ? 'disabled' : '' %> style="width:auto">
+                <option value="user" <%= row.role === 'user' ? 'selected' : '' %>><%= t('users.role.user') %></option>
+                <option value="admin" <%= row.role === 'admin' ? 'selected' : '' %>><%= t('users.role.admin') %></option>
+              </select>
+            </td>
+            <td>
+              <% if (row.is_active) { %><span class="pill ok"><%- include('../partials/icon', { name: 'circle-check', size: 13 }) %><%= t('users.active') %></span>
+              <% } else { %><span class="pill warn"><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('users.inactive') %></span><% } %>
+            </td>
+            <td class="ltr"><%= row.favoriteCount %></td>
+            <td class="muted ltr"><%= row.last_login_at ? row.last_login_at.replace('T', ' ').slice(0, 16) : '—' %></td>
+            <td style="white-space:nowrap"><div class="row-actions">
+              <% if (row.id !== user.id) { %>
+                <button class="secondary icon toggle" type="button" data-id="<%= row.id %>" data-active="<%= row.is_active ? '1' : '0' %>"
+                        title="<%= row.is_active ? t('users.deactivate') : t('users.activate') %>">
+                  <%- include('../partials/icon', { name: row.is_active ? 'circle-x' : 'circle-check', size: 15 }) %>
+                </button>
+              <% } %>
+              <button class="secondary icon reset" type="button" data-id="<%= row.id %>" title="<%= t('users.resetPassword') %>">
+                <%- include('../partials/icon', { name: 'key-round', size: 15 }) %>
+              </button>
+              <% if (row.id !== user.id) { %>
+                <button class="danger icon remove" type="button" data-id="<%= row.id %>" title="<%= t('users.delete') %>">
+                  <%- include('../partials/icon', { name: 'trash-2', size: 15 }) %>
+                </button>
+              <% } %>
+            </div></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+  const CONFIRM_DELETE = <%- JSON.stringify(t('users.confirmDelete')) %>
+  const ASK_PASSWORD = <%- JSON.stringify(t('users.newPassword')) %>
+
+  const send = async (method, url, body) => {
+    const response = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      credentials: 'same-origin',
+      body: body ? JSON.stringify(body) : undefined,
+    })
+    if (response.ok) window.location.reload()
+    else alert((await response.json()).error)
+  }
+
+  document.querySelectorAll('.role').forEach((select) =>
+    select.addEventListener('change', () =>
+      send('PATCH', '/admin/api/users/' + select.dataset.id + '/role', { role: select.value })))
+
+  document.querySelectorAll('.toggle').forEach((button) =>
+    button.addEventListener('click', () =>
+      send('PATCH', '/admin/api/users/' + button.dataset.id + '/active', { isActive: button.dataset.active !== '1' })))
+
+  document.querySelectorAll('.reset').forEach((button) =>
+    button.addEventListener('click', () => {
+      const password = prompt(ASK_PASSWORD)
+      if (password) send('POST', '/admin/api/users/' + button.dataset.id + '/password', { password })
+    }))
+
+  document.querySelectorAll('.remove').forEach((button) =>
+    button.addEventListener('click', () => {
+      if (confirm(CONFIRM_DELETE)) send('DELETE', '/admin/api/users/' + button.dataset.id)
+    }))
+</script>
+
+<%- include('../partials/shell-close') %>

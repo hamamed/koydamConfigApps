@@ -1,0 +1,83 @@
+<%- include('../partials/shell-open', { title: t('requests.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'user-plus', size: 19 }) %> <%= t('requests.title') %></h1>
+  <span class="muted spacer"><%= t('requests.pending') %>: <span class="ltr"><%= pending.length %></span></span>
+</div>
+
+<% if (notice) { %>
+  <div class="notice">
+    <p style="margin:0 0 6px"><%= notice.message %></p>
+    <% if (notice.password) { %>
+      <p style="margin:0 0 4px"><code class="ltr" style="font-size:14px"><%= notice.password %></code></p>
+      <p class="muted" style="margin:0; font-size:12px">
+        <%= t('requests.passwordOnce') %>
+        <%= notice.delivered ? t('requests.mailed') : t('requests.notMailed') %>
+      </p>
+    <% } %>
+  </div>
+<% } %>
+<% if (error) { %><p class="error"><%= error %></p><% } %>
+
+<div class="card" style="padding:0; overflow:hidden">
+  <% if (pending.length === 0) { %>
+    <p class="empty"><%= t('requests.none') %></p>
+  <% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th><%= t('access.fullName') %></th><th><%= t('access.email') %></th>
+        <th><%= t('access.company') %></th><th><%= t('access.reason') %></th>
+        <th><%= t('requests.requestedOn') %></th><th></th>
+      </tr></thead>
+      <tbody>
+        <% pending.forEach(function (row) { %>
+          <tr>
+            <td><%= row.full_name %></td>
+            <td class="ltr"><%= row.email %></td>
+            <td>
+              <%= row.company || '—' %>
+              <% if (row.ice) { %><br><span class="muted ltr" style="font-size:11.5px">ICE <%= row.ice %></span><% } %>
+              <% if (row.phone) { %><br><span class="muted ltr" style="font-size:11.5px"><%= row.phone %></span><% } %>
+            </td>
+            <td style="max-width:280px"><%= row.reason || '—' %></td>
+            <td class="ltr"><%= (row.created_at || '').slice(0, 10) %></td>
+            <td>
+              <div class="row-actions">
+                <form method="post" action="/panel/requests/<%= row.id %>/approve?lang=<%= locale %>">
+                  <button type="submit"><%- include('../partials/icon', { name: 'circle-check', size: 14 }) %><%= t('requests.approve') %></button>
+                </form>
+                <form method="post" action="/panel/requests/<%= row.id %>/reject?lang=<%= locale %>">
+                  <button type="submit" class="secondary"><%- include('../partials/icon', { name: 'circle-x', size: 14 }) %><%= t('requests.reject') %></button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div>
+
+<% if (history.length > 0) { %>
+  <div class="card" style="padding:0; overflow:hidden; margin-top:18px">
+    <h2 style="padding:16px 16px 0"><%- include('../partials/icon', { name: 'history', size: 15 }) %><%= t('requests.history') %></h2>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th><%= t('access.fullName') %></th><th><%= t('access.email') %></th>
+        <th><%= t('jobs.status') %></th><th><%= t('requests.requestedOn') %></th>
+      </tr></thead>
+      <tbody>
+        <% history.forEach(function (row) { %>
+          <tr>
+            <td><%= row.full_name %></td>
+            <td class="ltr"><%= row.email %></td>
+            <td><span class="pill <%= row.status === 'approved' ? 'ok' : 'warn' %>"><%= t('requests.status.' + row.status) %></span></td>
+            <td class="ltr"><%= (row.reviewed_at || '').slice(0, 10) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table></div>
+  </div>
+<% } %>
+
+<%- include('../partials/shell-close') %>

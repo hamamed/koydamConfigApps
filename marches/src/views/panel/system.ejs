@@ -1,0 +1,121 @@
+<%- include('../partials/shell-open', { title: t('system.title') }) %>
+
+<%
+  /* Sizes are formatted here rather than in the inspector: the inspector reports
+     bytes, which is what a check compares and what an API client wants. */
+  const UNITS = ['B', 'kB', 'MB', 'GB', 'TB']
+  function size(bytes) {
+    if (bytes === null || bytes === undefined) return '—'
+    let value = Number(bytes)
+    let unit = 0
+    while (value >= 1024 && unit < UNITS.length - 1) { value /= 1024; unit += 1 }
+    return (unit === 0 ? value : value.toFixed(value < 10 ? 1 : 0)) + ' ' + UNITS[unit]
+  }
+  function duration(seconds) {
+    if (!seconds && seconds !== 0) return '—'
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return days > 0 ? days + 'd ' + hours + 'h' : hours > 0 ? hours + 'h ' + minutes + 'm' : minutes + 'm'
+  }
+%>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'server', size: 19 }) %> <%= t('system.title') %></h1>
+  <span class="muted spacer"><%= t('system.subtitle') %></span>
+</div>
+
+<%- include('../partials/checks', { report: system, title: t('system.checks'), note: t('system.why') }) %>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'archive-restore', size: 15 }) %><%= t('system.backup') %></h2>
+    <% if (system.backup.error) { %>
+      <p class="error"><%= system.backup.error %></p>
+    <% } else if (!system.backup.latest) { %>
+      <p class="empty"><%= t('system.backup.none') %></p>
+    <% } else { %>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div><label><%= t('system.backup.latest') %></label><span class="ltr"><%= (system.backup.latest.at || '').slice(0, 16).replace('T', ' ') %></span></div>
+        <div><label><%= t('system.backup.age') %></label><span class="ltr"><%= system.backup.ageHours === null ? '—' : Math.round(system.backup.ageHours) + ' h' %></span></div>
+        <div><label><%= t('system.backup.size') %></label><span class="ltr"><%= size(system.backup.latest.sizeBytes) %></span></div>
+        <div><label><%= t('system.backup.kept') %></label><span class="ltr"><%= system.backup.archives.length %></span></div>
+      </div>
+      <p style="margin:12px 0 0">
+        <span class="pill <%= system.backup.includesDatabase ? 'ok' : 'warn' %>">
+          <%- include('../partials/icon', { name: system.backup.includesDatabase ? 'circle-check' : 'circle-x', size: 13 }) %>
+          <%= system.backup.includesDatabase ? t('system.backup.covered') : t('system.backup.uncovered') %>
+        </span>
+      </p>
+      <p class="muted" style="margin:10px 0 0; font-size:11.5px"><%= t('system.backup.note') %></p>
+    <% } %>
+  </div>
+
+  <% if (system.archive) { %>
+    <div class="card">
+      <h2><%- include('../partials/icon', { name: 'archive-restore', size: 15 }) %><%= t('system.archive') %></h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div><label><%= t('system.archive.progress') %></label><span class="ltr"><%= system.archive.percent === null ? '—' : system.archive.percent + ' %' %></span></div>
+        <div><label><%= t('system.archive.page') %></label><span class="ltr"><%= system.archive.nextPage %><%= system.archive.totalPages ? ' / ' + system.archive.totalPages : '' %></span></div>
+        <div><label><%= t('system.archive.awards') %></label><span class="ltr"><%= system.archive.awards === null ? '—' : system.archive.awards %></span></div>
+        <div><label><%= t('system.archive.lastSlice') %></label><span class="ltr"><%= system.archive.lastSliceAt ? system.archive.lastSliceAt.slice(0, 16).replace('T', ' ') : '—' %></span></div>
+      </div>
+      <% if (system.archive.percent !== null) { %>
+        <div class="meter" style="margin-top:12px">
+          <span style="width:<%= system.archive.percent %>%; background:<%= system.archive.complete ? 'var(--ok)' : 'var(--accent)' %>"></span>
+        </div>
+      <% } %>
+      <p class="muted" style="margin:10px 0 0; font-size:11.5px"><%= t('system.archive.note') %></p>
+    </div>
+  <% } %>
+
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'hard-drive', size: 15 }) %><%= t('system.storage') %></h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div><label><%= t('system.storage.database') %></label><span class="ltr"><%= size(system.database.sizeBytes) %></span></div>
+      <div><label><%= t('system.storage.dialect') %></label><span class="ltr"><%= system.database.dialect %></span></div>
+      <div><label><%= t('system.storage.schema') %></label><span class="ltr"><%= system.database.schemaVersion %></span></div>
+      <div><label><%= t('system.storage.free') %></label><span class="ltr"><%= system.disk.error ? '—' : size(system.disk.freeBytes) %></span></div>
+    </div>
+    <% if (!system.disk.error) { %>
+      <div class="meter" style="margin-top:12px" title="<%= system.disk.usedPercent %>%">
+        <span style="width:<%= Math.min(100, system.disk.usedPercent) %>%; background:<%= system.disk.usedPercent >= 94 ? '#a4262c' : system.disk.usedPercent >= 85 ? 'var(--warn)' : 'var(--ok)' %>"></span>
+      </div>
+      <p class="muted" style="margin:8px 0 0; font-size:11.5px">
+        <span class="ltr"><%= size(system.disk.usedBytes) %> / <%= size(system.disk.totalBytes) %></span>
+        · <%= system.disk.usedPercent %>%
+      </p>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'server', size: 15 }) %><%= t('system.runtime') %></h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div><label><%= t('system.runtime.version') %></label><span class="ltr"><%= system.runtime.appVersion || '—' %></span></div>
+      <div><label><%= t('system.runtime.node') %></label><span class="ltr"><%= system.runtime.node %></span></div>
+      <div><label><%= t('system.runtime.uptime') %></label><span class="ltr"><%= duration(system.runtime.uptimeSeconds) %></span></div>
+      <div><label><%= t('system.runtime.memory') %></label><span class="ltr"><%= size(system.runtime.rssBytes) %></span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'bell', size: 15 }) %><%= t('system.delivery') %></h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      <div>
+        <label><%= t('system.delivery.mail') %></label>
+        <span class="pill <%= system.integrations.mail ? 'ok' : 'warn' %>"><%= system.integrations.mail ? t('system.on') : t('system.off') %></span>
+      </div>
+      <div>
+        <label><%= t('system.delivery.translation') %></label>
+        <span class="pill <%= system.integrations.translation ? 'ok' : 'warn' %>"><%= system.integrations.translation ? t('system.on') : t('system.off') %></span>
+      </div>
+      <div><label><%= t('system.delivery.crawlAt') %></label><span class="ltr"><%= system.schedule.crawlAt || '—' %></span></div>
+      <div><label><%= t('system.delivery.alertsAt') %></label><span class="ltr"><%= system.schedule.alertsAt || '—' %></span></div>
+    </div>
+    <p style="margin:12px 0 0">
+      <a class="btn secondary" href="/panel/settings?lang=<%= locale %>"><%- include('../partials/icon', { name: 'settings', size: 15 }) %><%= t('system.configure') %></a>
+    </p>
+  </div>
+</div>
+
+<%- include('../partials/shell-close') %>

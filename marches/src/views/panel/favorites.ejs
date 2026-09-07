@@ -1,0 +1,88 @@
+<%- include('../partials/shell-open', { title: t('favorites.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'star', size: 19, fill: 'currentColor', cls: 'gold' }) %> <%= t('favorites.title') %></h1>
+  <span class="muted spacer"><%= t('favorites.count', { count: total }) %></span>
+</div>
+<style>.gold { color:var(--star); }</style>
+
+<% if (total === 0) { %>
+  <div class="card"><p class="empty"><%= t('favorites.empty') %></p>
+    <p style="text-align:center"><a class="btn" href="/panel?lang=<%= locale %>"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('nav.projects') %></a></p>
+  </div>
+<% } else { %>
+  <div class="card">
+    <form class="filters" method="get">
+      <input type="hidden" name="lang" value="<%= locale %>">
+      <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q" value="<%= query.q || '' %>"></div>
+      <div><label for="acheteur"><%= t('filters.acheteur') %></label><input id="acheteur" name="acheteur" value="<%= query.acheteur || '' %>"></div>
+      <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
+    </form>
+  </div>
+
+  <% rows.forEach(function (row) { %>
+    <div class="card" data-id="<%= row.id %>">
+      <div style="display:flex; gap:12px; align-items:flex-start">
+        <div style="flex:1; min-width:0">
+          <p style="margin:0 0 4px"><code><%= row.reference %></code>
+            <%- include('../partials/status-pill', { row: row }) %>
+          </p>
+          <p style="margin:0 0 8px; font-weight:600"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></p>
+          <p class="muted" style="margin:0; display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px">
+            <span><%- include('../partials/icon', { name: 'building-2', size: 14 }) %> <%= row.acheteur || '—' %></span>
+            <span><%- include('../partials/icon', { name: 'map-pin', size: 14 }) %> <%= row.lieu_execution || '—' %></span>
+            <span><%- include('../partials/icon', { name: 'calendar', size: 14 }) %> <%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></span>
+            <span><%- include('../partials/icon', { name: 'package', size: 14 }) %> <span class="ltr"><%= row.lots_count %></span></span>
+            <span class="muted"><%= t('favorites.savedOn') %> <span class="ltr"><%= (row.favorite.favorited_at || '').slice(0, 10) %></span></span>
+          </p>
+        </div>
+        <button class="star-btn" type="button" aria-pressed="true" data-id="<%= row.id %>" title="<%= t('projects.untrack') %>">
+          <%- include('../partials/icon', { name: 'star', size: 19, fill: 'currentColor' }) %>
+        </button>
+      </div>
+
+      <form class="note-form" data-id="<%= row.id %>" style="margin-top:12px; display:flex; gap:8px; align-items:flex-end">
+        <div style="flex:1"><label for="note-<%= row.id %>"><%= t('favorites.note') %></label>
+          <input id="note-<%= row.id %>" name="note" value="<%= row.favorite.note || '' %>" placeholder="<%= t('favorites.notePlaceholder') %>"></div>
+        <button class="secondary" type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('favorites.saveNote') %></button>
+      </form>
+    </div>
+  <% }) %>
+
+  <div style="display:flex; gap:8px">
+    <% if (pagination.page > 1) { %>
+      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page - 1, lang: locale })).toString() %>"><%- include('../partials/icon', { name: 'chevron-left', size: 15, cls: 'flip-rtl' }) %><%= t('table.previous') %></a>
+    <% } %>
+    <% if (pagination.page * pagination.perPage < total) { %>
+      <a class="btn secondary" href="?<%= new URLSearchParams(Object.assign({}, query, { page: pagination.page + 1, lang: locale })).toString() %>"><%= t('table.next') %><%- include('../partials/icon', { name: 'chevron-right', size: 15, cls: 'flip-rtl' }) %></a>
+    <% } %>
+  </div>
+<% } %>
+
+<script>
+  document.querySelectorAll('.star-btn').forEach((button) =>
+    button.addEventListener('click', async () => {
+      button.disabled = true
+      const response = await fetch('/api/favorites/' + button.dataset.id, { method: 'DELETE', credentials: 'same-origin' })
+      if (response.ok) window.location.reload()
+      else { button.disabled = false; alert((await response.json()).error) }
+    }))
+
+  document.querySelectorAll('.note-form').forEach((form) =>
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault()
+      const button = form.querySelector('button')
+      button.disabled = true
+      // Re-adding an existing favourite updates its note rather than failing.
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ consultationId: Number(form.dataset.id), note: form.querySelector('input').value }),
+      })
+      button.disabled = false
+      if (!response.ok) alert((await response.json()).error)
+    }))
+</script>
+
+<%- include('../partials/shell-close') %>

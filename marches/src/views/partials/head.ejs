@@ -1,0 +1,42 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= title %> · <%= t('app.name') %></title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --line:#e4e7eb; --text:#1f2933; --muted:#7b8794; --accent:#0b5394; --ok:#1a7f37; --warn:#b54708; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  /* Arabic renders in a face that carries the script; the Latin stack has no Arabic glyphs. */
+  body[dir="rtl"] { font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", "Geeza Pro", sans-serif; }
+  a { color: var(--accent); }
+  header.top { background:var(--accent); color:#fff; padding:12px 24px; display:flex; align-items:center; gap:24px; }
+  header.top a { color:#fff; text-decoration:none; opacity:.85; }
+  header.top a:hover, header.top a.active { opacity:1; text-decoration:underline; }
+  /* margin-inline-start rather than margin-left, so the layout mirrors itself in RTL. */
+  header.top .spacer { margin-inline-start:auto; }
+  main { max-width:1180px; margin:24px auto; padding:0 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:20px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  .stat b { display:block; font-size:26px; }
+  .stat span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:start; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:#f0f4f8; font-weight:600; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#e7f0fb; color:var(--accent); }
+  .pill.ok { background:#e6f4ea; color:var(--ok); }
+  .pill.warn { background:#fdf2e6; color:var(--warn); }
+  button, .btn { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:8px 14px; font-size:13px; cursor:pointer; }
+  button.secondary { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+  button:disabled { opacity:.55; cursor:progress; }
+  input, select { padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; width:100%; }
+  form.filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; align-items:end; }
+  label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .error { background:#fde8e8; color:#a4262c; padding:10px 12px; border-radius:6px; margin-bottom:14px; }
+  .muted { color:var(--muted); }
+  .lang { display:flex; gap:6px; align-items:center; font-size:12px; }
+  .lang a { padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,.35); }
+  .lang a.on { background:#fff; color:var(--accent); border-color:#fff; }
+  /* References and dates stay left-to-right even on an RTL page: "6/2026"
+     reordered by the bidi algorithm reads as "2026/6". */
+  code, .ltr { direction:ltr; unicode-bidi:isolate; display:inline-block; }
+</style>

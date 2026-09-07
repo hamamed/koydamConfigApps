@@ -1,0 +1,93 @@
+<%- include('../partials/public-open', { pageTitle: content.landing.tagline, pageDescription: content.landing.lede }) %>
+
+<section style="background:linear-gradient(160deg,#0f2c4d,#0b5394); color:#fff; position:relative; overflow:hidden">
+  <%# The same drawn-in-CSS backdrop as the signed-out pages, so the front door
+      and the sign-in page look like one product. A few hundred bytes inside the
+      document: it paints with the first frame and needs no second request. %>
+  <div style="position:absolute; inset:0; pointer-events:none;
+              background-image:
+                radial-gradient(ellipse 80% 60% at 22% 12%, rgba(120,190,255,.22), transparent 60%),
+                radial-gradient(ellipse 70% 55% at 85% 90%, rgba(70,150,235,.18), transparent 62%),
+                radial-gradient(circle at center, rgba(255,255,255,.10) 1px, transparent 1.4px),
+                repeating-linear-gradient(135deg, rgba(255,255,255,.045) 0 1px, transparent 1px 22px);
+              background-size: 100% 100%, 100% 100%, 26px 26px, 100% 100%"></div>
+  <div class="wrap" style="position:relative; padding-top:26px; padding-bottom:34px">
+    <h1><%= content.landing.tagline %></h1>
+    <p class="lede" style="color:#d7e6f7"><%= content.landing.lede %></p>
+    <p style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:22px">
+      <% if (user) { %>
+        <a class="cta" href="/panel?lang=<%= locale %>"><%- include('../partials/icon', { name: 'layout-dashboard', size: 15 }) %><%= content.landing.ctaPanel %></a>
+      <% } else { %>
+        <a class="cta" href="/login?lang=<%= locale %>"><%- include('../partials/icon', { name: 'key-round', size: 15 }) %><%= content.landing.ctaSignIn %></a>
+        <a href="/request-access?lang=<%= locale %>" style="color:#c9dcf2; padding:8px 4px"><%= content.landing.ctaRequest %></a>
+      <% } %>
+    </p>
+    <p class="muted" style="color:#9dbde0; font-size:12.5px; margin:0"><%= content.landing.accessNote %></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2><%- include('../partials/icon', { name: 'layout-dashboard', size: 17 }) %><%= content.landing.statsTitle %></h2>
+    <div class="grid cols-4">
+      <% stats.forEach(function (stat) { %>
+        <div class="card">
+          <b class="ltr" style="display:block; font-size:26px; font-weight:650; letter-spacing:-.01em"><%= stat.value %></b>
+          <span class="muted" style="font-size:11.5px; text-transform:uppercase; letter-spacing:.05em"><%= t(stat.label) %></span>
+        </div>
+      <% }) %>
+    </div>
+    <p class="muted" style="font-size:12px; margin-top:12px"><%= content.landing.statsNote %></p>
+  </div>
+</section>
+
+<section style="background:#fff; border-block:1px solid var(--line)">
+  <div class="wrap">
+    <h2><%- include('../partials/icon', { name: 'star', size: 17 }) %><%= content.landing.featuresTitle %></h2>
+    <div class="grid cols-3">
+      <% content.landing.features.forEach(function (feature) { %>
+        <div>
+          <h3 style="display:flex; align-items:center; gap:8px; color:var(--accent)">
+            <%- include('../partials/icon', { name: feature.icon, size: 16 }) %><%= feature.title %>
+          </h3>
+          <p class="muted" style="font-size:14px"><%= feature.body %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap" style="display:grid; gap:26px; grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+    <div>
+      <h2><%- include('../partials/icon', { name: 'refresh-cw', size: 17 }) %><%= content.landing.howTitle %></h2>
+      <% content.landing.how.forEach(function (paragraph) { %>
+        <p class="muted" style="font-size:14px"><%= paragraph %></p>
+      <% }) %>
+    </div>
+    <div class="card" style="border-inline-start:4px solid var(--warn); align-self:start">
+      <h3 style="display:flex; align-items:center; gap:8px; color:var(--warn)">
+        <%- include('../partials/icon', { name: 'triangle-alert', size: 16 }) %><%= content.landing.disclaimerTitle %>
+      </h3>
+      <p class="muted" style="font-size:14px; margin:0"><%= content.landing.disclaimer %></p>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff; border-block:1px solid var(--line)">
+  <div class="wrap">
+    <h2><%- include('../partials/icon', { name: 'archive-restore', size: 17 }) %><%= content.landing.roadmapTitle %></h2>
+    <p class="muted" style="margin-top:-8px; font-size:13px"><%= content.landing.roadmapIntro %></p>
+    <div class="grid cols-3" style="margin-top:18px">
+      <% content.landing.roadmap.forEach(function (item) { %>
+        <div class="card">
+          <span class="pill <%= item.status === 'now' ? 'ok' : item.status === 'next' ? '' : 'warn' %>"><%= t('public.roadmap.' + item.status) %></span>
+          <h3 style="margin-top:10px"><%= item.title %></h3>
+          <p class="muted" style="font-size:13.5px; margin:0"><%= item.body %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/public-close') %>

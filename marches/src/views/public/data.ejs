@@ -1,0 +1,50 @@
+<%- include('../partials/public-open', { pageTitle: t('data.title'), pageDescription: t('data.lede') }) %>
+
+<section>
+  <div class="wrap" style="max-width:820px">
+    <h1><%- include('../partials/icon', { name: 'database', size: 22 }) %> <%= t('data.title') %></h1>
+    <p class="lede"><%= t('data.lede') %></p>
+
+    <div class="grid cols-4">
+      <% stats.forEach(function (stat) { %>
+        <div class="card">
+          <b class="ltr" style="display:block; font-size:21px; font-weight:650"><%= stat.value %></b>
+          <span class="muted" style="font-size:11px; text-transform:uppercase; letter-spacing:.05em"><%= t(stat.label) %></span>
+        </div>
+      <% }) %>
+    </div>
+
+    <h2 style="margin-top:32px"><%- include('../partials/icon', { name: 'search', size: 17 }) %><%= t('data.browse') %></h2>
+    <div class="grid cols-3">
+      <a class="card" href="/awards?lang=<%= locale %>" style="color:inherit">
+        <h3 style="color:var(--accent)"><%- include('../partials/icon', { name: 'award', size: 16 }) %> <%= t('awards.title') %></h3>
+        <p class="muted" style="margin:0; font-size:13.5px"><%= t('data.awardsLede') %></p>
+      </a>
+      <a class="card" href="/status?lang=<%= locale %>" style="color:inherit">
+        <h3 style="color:var(--accent)"><%- include('../partials/icon', { name: 'refresh-cw', size: 16 }) %> <%= t('status.title') %></h3>
+        <p class="muted" style="margin:0; font-size:13.5px"><%= t('status.lede') %></p>
+      </a>
+    </div>
+
+    <h2 style="margin-top:32px"><%- include('../partials/icon', { name: 'file-text', size: 17 }) %><%= t('data.download') %></h2>
+    <div class="card">
+      <p class="muted" style="font-size:14px"><%= t('data.downloadNote') %></p>
+      <p style="display:flex; gap:12px; flex-wrap:wrap; margin:0">
+        <a class="submit" href="/data/awards.csv"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %> awards.csv</a>
+        <a class="submit" href="/data/notices.csv"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %> notices.csv</a>
+      </p>
+    </div>
+
+    <h2 style="margin-top:32px"><%- include('../partials/icon', { name: 'shield-check', size: 17 }) %><%= t('data.licenceTitle') %></h2>
+    <p class="muted" style="font-size:14px"><%= t('data.licence') %></p>
+  </div>
+</section>
+
+<style>
+  a.card:hover { text-decoration:none; border-color:var(--accent); }
+  .submit { display:inline-flex; align-items:center; gap:8px; background:var(--ink); color:#fff;
+            padding:9px 16px; border-radius:8px; font-weight:600; font-size:13.5px; }
+  .submit:hover { background:var(--accent); text-decoration:none; }
+</style>
+
+<%- include('../partials/public-close') %>

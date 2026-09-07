@@ -1,0 +1,34 @@
+<%
+  /*
+    The language picker, as a menu rather than a row of codes.
+
+    Built from <details>/<summary>, so it opens, closes on Escape and on a click
+    outside, and is reachable from the keyboard with no JavaScript at all. The
+    panel runs under a CSP; a scripted dropdown would be one more thing to allow
+    and one more thing to break when it is not allowed.
+
+    `variant` is 'dark' inside the panel's sidebar and 'light' on the public
+    header, which are different surfaces rather than different components.
+  */
+  const current = locales.find(function (l) { return l.code === locale }) || locales[0]
+%>
+<details class="lang lang-<%= variant %>">
+  <summary aria-label="<%= t('lang.change') %>" title="<%= t('lang.change') %>">
+    <%- include('icon', { name: 'languages', size: 15 }) %>
+    <span><%= current.label %></span>
+    <svg class="ic caret" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+  </summary>
+  <div class="lang-list">
+    <% locales.forEach(function (l) { %>
+      <a href="<%= langUrl(l.code) %>" hreflang="<%= l.code %>" lang="<%= l.code %>"
+         class="<%= l.code === locale ? 'on' : '' %>"
+         <%# Unescaped on purpose: this emits a real attribute. The escaping
+             tag would turn its quotes into &quot; and leave the whole thing as
+             inert text sitting on the element. %>
+         <%- l.code === locale ? 'aria-current="true"' : '' %>>
+        <span class="code"><%= l.code.toUpperCase() %></span><%= l.label %>
+      </a>
+    <% }) %>
+  </div>
+</details>

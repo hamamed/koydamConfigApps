@@ -1,0 +1,779 @@
+import { Router } from 'express'
+import { config } from '../../config/index.js'
+import { asyncHandler } from '../middleware/asyncHandler.js'
+import { requireAdminPage, requireUserPage } from '../middleware/auth.js'
+import { cookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
+import { parseFilters } from '../filters.js'
+import { parsePagination } from '../../utils/pagination.js'
+import { NotFoundError } from '../../utils/errors.js'
+import { translator } from '../../i18n/index.js'
+import { parseAmountToCentimes } from '../../utils/money.js'
+import { MARKET_KINDS, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
+
+/**
+ * The panel.
+ *
+ * Two tiers, because they are not the same job:
+ *   - anyone signed in browses projects and keeps their own favourites;
+ *   - an administrator additionally sees the dashboard, account management and
+ *     the settings, all of which change how the site behaves for everyone or
+ *     send traffic at a public government service.
+ */
+export function panelRoutes({ services }) {
+  const router = Router()
+  const anyUser = requireUserPage(services.auth)
+  const adminOnly = requireAdminPage(services.auth)
+  const loginLimiter = createLoginLimiter()
+
+  const shell = async (req, extra = {}) => ({
+    user: req.user,
+    siteName: await services.settings.get('site.name'),
+    // Counted for the sidebar badge, and only for the people who can act on it.
+    pendingRequests: req.user?.role === 'admin' ? await services.accessRequests.countPending() : 0,
+    ...extra,
+  })
+
+  // ------------------------------------------------------------------ session
+  router.get(
+    '/login',
+    asyncHandler(async (req, res) => {
+      res.render('panel/login', {
+        error: null,
+        next: safeRedirect(req.query.next),
+        email: '',
+        siteName: await services.settings.get('site.name'),
+      })
+    }),
+  )
+
+  router.post(
+    '/login',
+    loginLimiter,
+    asyncHandler(async (req, res) => {
+      const target = safeRedirect(req.body.next)
+      try {
+        const { token } = await services.auth.login(req.body.email, req.body.password)
+        res.cookie(config.auth.cookieName, token, cookieOptions)
+        res.redirect(target)
+      } catch (error) {
+        res.status(401).render('panel/login', {
+          error: error.message,
+          next: target,
+          email: req.body.email ?? '',
+          siteName: await services.settings.get('site.name'),
+        })
+      }
+    }),
+  )
+
+  router.get(
+    '/forgot',
+    asyncHandler(async (req, res) => {
+      res.render('panel/forgot', { siteName: await services.settings.get('site.name'), done: false, error: null })
+    }),
+  )
+
+  router.post(
+    '/forgot',
+    loginLimiter,
+    asyncHandler(async (req, res) => {
+      await services.passwordReset.request(req.body.email, { locale: req.locale })
+      // Always the same answer, so this cannot be used to find out who has an
+      // account. On a procurement tool, who is bidding is itself worth knowing.
+      res.render('panel/forgot', { siteName: await services.settings.get('site.name'), done: true, error: null })
+    }),
+  )
+
+  router.get(
+    '/reset',
+    asyncHandler(async (req, res) => {
+      const valid = await services.passwordReset.isValid(req.query.token)
+      res.render('panel/reset', {
+        siteName: await services.settings.get('site.name'),
+        token: req.query.token ?? '',
+        valid,
+        done: false,
+        error: valid ? null : 'invalid',
+      })
+    }),
+  )
+
+  router.post(
+    '/reset',
+    loginLimiter,
+    asyncHandler(async (req, res) => {
+      const siteName = await services.settings.get('site.name')
+      const render = (extra) => res.render('panel/reset', { siteName, token: req.body.token ?? '', ...extra })
+
+      if (req.body.password !== req.body.confirm) {
+        return render({ valid: true, done: false, error: 'mismatch' })
+      }
+      try {
+        const result = await services.passwordReset.complete(req.body.token, req.body.password)
+        if (!result.ok) return render({ valid: false, done: false, error: 'invalid' })
+        return render({ valid: false, done: true, error: null })
+      } catch (error) {
+        return render({ valid: true, done: false, error: error.message })
+      }
+    }),
+  )
+
+  router.post('/logout', (req, res) => {
+    res.clearCookie(config.auth.cookieName, { ...cookieOptions, maxAge: undefined })
+    res.redirect('/login')
+  })
+
+  // ------------------------------------------------------- everyone signed in
+  /**
+   * The home screen: what has changed since you looked, and what runs out next.
+   * The listing answers "what exists"; this answers the two questions that
+   * decide whether somebody bids in time.
+   */
+  router.get(
+    '/panel/today',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      res.render('panel/today', await shell(req, {
+        active: 'today',
+        today: await services.today.forUser(req.user),
+      }))
+    }),
+  )
+
+  /** The one-question setup a new account is offered instead of 700 rows. */
+  router.post(
+    '/panel/today/setup',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = {}
+      if (typeof req.body.categorie === 'string' && req.body.categorie.trim()) filters.categorie = req.body.categorie.trim()
+      if (typeof req.body.lieuExecution === 'string' && req.body.lieuExecution.trim()) {
+        filters.lieuExecution = req.body.lieuExecution.trim()
+      }
+      try {
+        await services.savedSearches.create(req.user.id, {
+          name: translator(req.locale)('today.setupName'),
+          filters,
+          notifyNew: true,
+          notifyAwards: true,
+        })
+      } catch {
+        // A setup that fails must not block the screen it is offered on.
+      }
+      res.redirect(`/panel/today?lang=${req.locale}`)
+    }),
+  )
+
+  router.get(
+    '/panel',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      const pagination = parsePagination(req.query)
+      const { data, total } = await services.consultations.search(
+        filters,
+        { ...pagination, sort: req.query.sort },
+        req.user.id,
+      )
+      res.render('panel/projects', await shell(req, { active: 'projects', rows: data, total, pagination, query: req.query }))
+    }),
+  )
+
+  router.get(
+    '/panel/consultations/:id',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const consultation = await services.consultations.getById(Number(req.params.id), req.user.id)
+      const favorite = consultation.isFavorite
+        ? await services.favorites.find(req.user.id, consultation.id)
+        : null
+      res.render('panel/consultation', await shell(req, {
+        active: 'projects',
+        consultation,
+        favorite,
+        benchmark: await services.analytics.benchmark(consultation),
+        precedents: await services.analytics.precedents(consultation),
+        canTranslate: await services.translation.isConfigured(),
+      }))
+    }),
+  )
+
+  router.get(
+    '/panel/awards',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      const pagination = parsePagination(req.query)
+      const { data, total } = await services.consultations.searchResults(filters, {
+        ...pagination,
+        sort: req.query.sort,
+      })
+      res.render('panel/awards', await shell(req, { active: 'awards', rows: data, total, pagination, query: req.query }))
+    }),
+  )
+
+  router.get(
+    '/panel/alerts',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      res.render('panel/alerts', await shell(req, {
+        active: 'alerts',
+        searches: await services.savedSearches.list(req.user.id),
+        history: await services.savedSearches.history(req.user.id, 25),
+        mailConfigured: await services.mailer.isConfigured(),
+        error: null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/alerts',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      try {
+        // The filters are parsed from the same query vocabulary the listings
+        // use, so a search saved from a screen reproduces what was on it.
+        await services.savedSearches.create(req.user.id, {
+          name: req.body.name,
+          filters: parseFilters(req.body),
+          notifyNew: req.body.notifyNew === 'on' || req.body.notifyNew === 'true',
+          notifyAwards: req.body.notifyAwards === 'on' || req.body.notifyAwards === 'true',
+        })
+        res.redirect(`/panel/alerts?lang=${req.locale}`)
+      } catch (error) {
+        res.status(error.statusCode ?? 400).render('panel/alerts', await shell(req, {
+          active: 'alerts',
+          searches: await services.savedSearches.list(req.user.id),
+          history: await services.savedSearches.history(req.user.id, 25),
+          mailConfigured: await services.mailer.isConfigured(),
+          error: error.message,
+        }))
+      }
+    }),
+  )
+
+  router.get(
+    '/panel/invoices',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const pagination = parsePagination(req.query)
+      const scope = req.user.role === 'admin' && req.query.all === 'true' ? {} : { userId: req.user.id }
+      const { data, total } = await services.invoices.list(scope, { ...pagination, sort: req.query.sort })
+      res.render('panel/invoices', await shell(req, {
+        active: 'invoices',
+        rows: data,
+        total,
+        pagination,
+        query: req.query,
+        notice: req.query.created ? 'created' : null,
+      }))
+    }),
+  )
+
+  /** Builds an invoice from a project's articles. */
+  router.get(
+    '/panel/consultations/:id/invoice',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const consultation = await services.consultations.getById(Number(req.params.id), req.user.id)
+      res.render('panel/invoice-new', await shell(req, { active: 'invoices', consultation, error: null }))
+    }),
+  )
+
+  router.post(
+    '/panel/consultations/:id/invoice',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const id = Number(req.params.id)
+      try {
+        const invoice = await services.invoices.create(req.user.id, buildInvoicePayload(id, req.body))
+        res.redirect(`/panel/invoices?created=${invoice.id}&lang=${req.locale}`)
+      } catch (error) {
+        const consultation = await services.consultations.getById(id, req.user.id)
+        res.status(error.statusCode ?? 400).render('panel/invoice-new', await shell(req, {
+          active: 'invoices',
+          consultation,
+          error: [error.message, ...(error.details ?? [])].join(' — '),
+        }))
+      }
+    }),
+  )
+
+  router.get(
+    '/panel/insights',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      res.render('panel/insights', await shell(req, {
+        active: 'insights',
+        insights: await services.analytics.overview(filters),
+        query: req.query,
+      }))
+    }),
+  )
+
+  /**
+   * The reference price of article 44 of décret n° 2-22-431, as a calculator.
+   *
+   * Standalone on purpose. Article 44 sits in the appel d'offres chapter: the
+   * commission, the séance d'ouverture des plis and the prix de référence are
+   * that procedure's machinery. Bons de commande — everything this panel
+   * crawls — are article 91, where competitors drop off a devis and none of
+   * that applies. So the page is a tool the same contractors can use for their
+   * marchés, and it is deliberately not wired to any avis in this database.
+   */
+  router.get(
+    '/panel/reference-price',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      // `?from=<id>` is what makes this automatic. The listing does not carry
+      // the estimate, so the crawler reads it off each consultation's own
+      // detail page — by the time anyone opens this form, the number article 44
+      // computes every threshold from is already in the database.
+      const source = req.query.from
+        ? await services.consultations.getById(Number(req.query.from), req.user.id)
+        : null
+
+      res.render('panel/reference-price', await shell(req, {
+        active: 'referencePrice',
+        form: source ? prefillFromConsultation(source) : blankReferenceForm(),
+        source,
+        result: null,
+        error: null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/reference-price',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const form = readReferenceForm(req.body)
+      // Only the banner naming the marché depends on this; a consultation that
+      // has since gone must not take the calculation down with it.
+      const source = form.sourceId
+        ? await services.consultations.getById(form.sourceId, req.user.id).catch(() => null)
+        : null
+
+      let result = null
+      let error = null
+      try {
+        result = evaluateReferenceForm(form)
+      } catch (failure) {
+        error = failure.message
+      }
+
+      res.render('panel/reference-price', await shell(req, { active: 'referencePrice', form, source, result, error }))
+    }),
+  )
+
+  router.get(
+    '/panel/favorites',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = parseFilters(req.query)
+      const pagination = parsePagination(req.query)
+      const { data, total } = await services.favorites.list(req.user.id, filters, {
+        ...pagination,
+        sort: req.query.sort,
+      })
+      res.render('panel/favorites', await shell(req, { active: 'favorites', rows: data, total, pagination, query: req.query }))
+    }),
+  )
+
+  // ------------------------------------------------------------- admin only
+  router.get(
+    '/panel/dashboard',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/dashboard', await shell(req, { active: 'dashboard', dashboard: await services.admin.dashboard() }))
+    }),
+  )
+
+  /**
+   * One buyer's record. Addressed by the name the portal prints, which is the
+   * only identifier a buyer has anywhere in its markup.
+   */
+  router.get(
+    '/panel/buyers/:name',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const buyer = await services.analytics.buyer(name, services.consultations)
+      if (buyer.avis.total === 0 && buyer.awards.total === 0) throw new NotFoundError(`Buyer ${name}`)
+      res.render('panel/buyer', await shell(req, { active: 'projects', buyer }))
+    }),
+  )
+
+  /** The queue behind the public access-request form. */
+  router.get(
+    '/panel/requests',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/requests', await shell(req, {
+        active: 'requests',
+        pending: await services.accessRequests.pending(),
+        history: await services.accessRequests.recent(20),
+        notice: null,
+        error: null,
+      }))
+    }),
+  )
+
+  const reviewRequest = (action, handler) =>
+    router.post(
+      `/panel/requests/:id/${action}`,
+      adminOnly,
+      asyncHandler(async (req, res) => {
+        let notice = null
+        let error = null
+        try {
+          notice = await handler(Number(req.params.id), req)
+        } catch (failure) {
+          error = failure.message
+        }
+        res.status(error ? 400 : 200).render('panel/requests', await shell(req, {
+          active: 'requests',
+          pending: await services.accessRequests.pending(),
+          history: await services.accessRequests.recent(20),
+          notice,
+          error,
+        }))
+      }),
+    )
+
+  reviewRequest('approve', async (id, req) => {
+    const result = await services.accessRequests.approve(id, req.user)
+    // The generated password is shown here once and never again: it is not
+    // stored in readable form anywhere, only its bcrypt hash.
+    return {
+      message: translator(req.locale)('requests.created', { email: result.user.email }),
+      password: result.password,
+      delivered: result.delivered,
+    }
+  })
+
+  reviewRequest('reject', async (id, req) => {
+    await services.accessRequests.reject(id, req.user, req.body.note)
+    return { message: translator(req.locale)('requests.rejected'), password: null, delivered: false }
+  })
+
+  /**
+   * Every company that has won public work, and how much is known about each.
+   * Administrator-only: it exists to review the coverage of the identity
+   * registers, which is an operational question rather than a bidder's one.
+   */
+  router.get(
+    '/panel/companies',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const directory = await services.companyDirectory.list({
+        q: typeof req.query.q === 'string' ? req.query.q : '',
+        filter: typeof req.query.filter === 'string' ? req.query.filter : '',
+        city: typeof req.query.city === 'string' ? req.query.city : '',
+        page: Number.parseInt(req.query.page, 10) || 1,
+      })
+      res.render('panel/companies', await shell(req, {
+        active: 'companies',
+        ...directory,
+        query: req.query,
+        filters: { q: req.query.q ?? '', filter: req.query.filter ?? '', city: req.query.city ?? '' },
+      }))
+    }),
+  )
+
+  /** One company's record — the award side of a buyer profile. */
+  router.get(
+    '/panel/companies/:name',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const company = await services.analytics.company(name, services.consultations)
+      if (company.awards === 0) throw new NotFoundError(`Company ${name}`)
+      res.render('panel/company', await shell(req, {
+        active: 'awards',
+        company,
+        record: await services.companyRecords.find(name),
+        exclusions: await services.companyRecords.exclusionsFor(name),
+      qualifications: await services.companyRecords.qualificationsFor(name),
+        qualifications: await services.companyRecords.qualificationsFor(name),
+        canLookup: await services.companyRecords.lookupConfigured(),
+        candidates: null,
+        notice: null,
+        error: null,
+      }))
+    }),
+  )
+
+  /**
+   * Recording what is known about a company, and asking the public register
+   * for candidates. Both are administrator actions: the register is matched by
+   * name alone, so a match is a proposal for a person to accept, never a write.
+   */
+  const companyScreen = async (req, extra) => {
+    const name = decodeURIComponent(req.params.name)
+    return {
+      active: 'awards',
+      company: await services.analytics.company(name, services.consultations),
+      record: await services.companyRecords.find(name),
+      exclusions: await services.companyRecords.exclusionsFor(name),
+      qualifications: await services.companyRecords.qualificationsFor(name),
+      canLookup: await services.companyRecords.lookupConfigured(),
+      candidates: null,
+      notice: null,
+      error: null,
+      ...extra,
+    }
+  }
+
+  router.post(
+    '/panel/companies/:name/record',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      let extra = {}
+      try {
+        await services.companyRecords.save(name, req.body, req.user)
+        extra = { notice: translator(req.locale)('registry.saved') }
+      } catch (error) {
+        extra = { error: error.message }
+      }
+      res.status(extra.error ? 400 : 200).render('panel/company', await shell(req, await companyScreen(req, extra)))
+    }),
+  )
+
+  router.post(
+    '/panel/companies/:name/lookup',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      const name = decodeURIComponent(req.params.name)
+      const result = await services.companyRecords.lookup(name)
+      res.render('panel/company', await shell(req, await companyScreen(req, {
+        candidates: result.candidates,
+        error: result.error,
+        notice: result.configured ? null : translator(req.locale)('registry.notConfigured'),
+      })))
+    }),
+  )
+
+  /** The official exclusion list as a browsable table. */
+  router.get(
+    '/panel/exclusions',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = {
+        q: typeof req.query.q === 'string' ? req.query.q : '',
+        entite: typeof req.query.entite === 'string' ? req.query.entite : '',
+        // Anything other than the two known values means "no filter", rather
+        // than an error: this is a link somebody may have edited by hand.
+        statut: ['active', 'expired'].includes(req.query.statut) ? req.query.statut : '',
+      }
+      res.render('panel/exclusions', await shell(req, {
+        active: 'exclusions',
+        rows: await services.exclusions.search(filters),
+        entities: await services.exclusions.entities(),
+        total: await services.exclusions.countAll(),
+        query: req.query,
+        filters,
+      }))
+    }),
+  )
+
+  router.get(
+    '/panel/system',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/system', await shell(req, { active: 'system', system: await services.system.report() }))
+    }),
+  )
+
+  router.get(
+    '/panel/users',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/users', await shell(req, {
+        active: 'users',
+        users: await services.users.list(),
+        error: null,
+        notice: req.query.created ? 'created' : null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/users',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      try {
+        await services.users.create({
+          email: req.body.email,
+          password: req.body.password,
+          fullName: req.body.fullName,
+          role: req.body.role,
+        })
+        res.redirect(`/panel/users?created=1&lang=${req.locale}`)
+      } catch (error) {
+        res.status(error.statusCode ?? 400).render('panel/users', await shell(req, {
+          active: 'users',
+          users: await services.users.list(),
+          error: error.message,
+          notice: null,
+        }))
+      }
+    }),
+  )
+
+  router.get(
+    '/panel/settings',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      res.render('panel/settings', await shell(req, {
+        active: 'settings',
+        groups: await services.settings.describe(),
+        error: null,
+        notice: req.query.saved ? 'saved' : null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/settings',
+    adminOnly,
+    asyncHandler(async (req, res) => {
+      try {
+        // `clear` carries the keys whose "erase" box was ticked; a checkbox
+        // group arrives as a string when one is ticked and an array when more.
+        const { clear, ...values } = req.body
+        const cleared = clear === undefined ? [] : Array.isArray(clear) ? clear : [clear]
+        await services.settings.update(values, req.user.id, { clear: cleared })
+        res.redirect(`/panel/settings?saved=1&lang=${req.locale}`)
+      } catch (error) {
+        res.status(400).render('panel/settings', await shell(req, {
+          active: 'settings',
+          groups: await services.settings.describe(),
+          error: [error.message, ...(error.details ?? [])].join(' — '),
+          notice: null,
+        }))
+      }
+    }),
+  )
+
+  // `/` is the public landing page now, served by routes/public.js, which is
+  // mounted ahead of this router. The redirect that used to live here would
+  // never fire, and leaving it would suggest the front door still bounces
+  // straight into the panel.
+
+  return router
+}
+
+
+/* ---------------------------------------------------------------- article 44 */
+
+/**
+ * Competitor rows rendered on an empty form. Eight is the number of bidders a
+ * bon de commande usually draws; the page can add more without a round trip,
+ * and the form keeps whatever was submitted.
+ */
+const OFFER_ROWS = 8
+const MARKET_KIND_VALUES = new Set(Object.values(MARKET_KINDS))
+
+const asArray = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value])
+
+/** Pads a set of competitor rows out to the number the form displays. */
+const padRows = (offers) => [
+  ...offers,
+  ...Array.from({ length: Math.max(0, OFFER_ROWS - offers.length) }, () => ({ name: '', amount: '' })),
+]
+
+const blankReferenceForm = () => ({ estimate: '', kind: '', sourceId: null, offers: padRows([]) })
+
+/**
+ * Fills the form from a marché the crawler has already read.
+ *
+ * `categorie` is the portal's own "Travaux / Fournitures / Services", which is
+ * exactly the distinction article 44 draws — it decides whether the floor is
+ * 20% or 25%. It is still classified rather than trusted, and when it resolves
+ * to nothing the user picks.
+ */
+function prefillFromConsultation(consultation) {
+  return {
+    estimate: consultation.estimation === null || consultation.estimation === undefined ? '' : String(consultation.estimation),
+    kind: classifyKind(consultation.categorie) ?? classifyKind(consultation.procedure_type) ?? '',
+    sourceId: consultation.id,
+    offers: padRows([]),
+  }
+}
+
+/** Reads the posted form back, keeping the raw strings so a rejected submission re-renders as typed. */
+function readReferenceForm(body = {}) {
+  const sourceId = Number(body.sourceId)
+  const names = asArray(body.name)
+  const amounts = asArray(body.amount)
+  const offers = amounts.map((amount, index) => ({
+    name: String(names[index] ?? ''),
+    amount: String(amount ?? ''),
+  }))
+
+  return {
+    estimate: String(body.estimate ?? ''),
+    kind: String(body.kind ?? ''),
+    sourceId: Number.isInteger(sourceId) && sourceId > 0 ? sourceId : null,
+    offers: padRows(offers),
+  }
+}
+
+/**
+ * Validates the form and runs the article 44 evaluation.
+ *
+ * The errors are keys rather than sentences, because this page is rendered in
+ * three languages and the messages belong in the dictionaries.
+ * @throws {Error} with a translation key as its message.
+ */
+function evaluateReferenceForm(form) {
+  const estimateCentimes = parseAmountToCentimes(form.estimate)
+  if (estimateCentimes === null || estimateCentimes <= 0) throw new Error('referencePrice.error.estimate')
+  if (!MARKET_KIND_VALUES.has(form.kind)) throw new Error('referencePrice.error.kind')
+
+  const offers = form.offers
+    .map((offer) => ({ name: offer.name.trim(), amountCentimes: parseAmountToCentimes(offer.amount) }))
+    .filter((offer) => offer.amountCentimes !== null)
+
+  if (offers.length === 0) throw new Error('referencePrice.error.offers')
+
+  return computeReferencePrice({ estimateCentimes, kind: form.kind, offers })
+}
+
+/**
+ * Turns the invoice form into the payload the service expects.
+ *
+ * The form posts parallel arrays — one entry per article, ticked or not —
+ * because that is what a checkbox table submits. Only ticked lines with a price
+ * become items; the portal publishes no prices, so a blank one is a line the
+ * user chose not to quote yet, not an error.
+ */
+function buildInvoicePayload(consultationId, body) {
+  const asArray = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value])
+  const included = new Set(asArray(body.include).map(String))
+
+  const items = asArray(body.articleId)
+    .map((articleId, index) => ({
+      articleId: Number(articleId),
+      quantity: Number(asArray(body.quantity)[index]),
+      unitPrice: asArray(body.unitPrice)[index],
+    }))
+    .filter((item) => included.has(String(item.articleId)) && String(item.unitPrice ?? '').trim() !== '')
+
+  return {
+    consultationId,
+    client: { name: body.clientName, ice: body.clientIce, address: body.clientAddress },
+    items,
+    taxRate: body.taxRate === '' ? undefined : Number(body.taxRate),
+    issueDate: body.issueDate || undefined,
+    dueDate: body.dueDate || undefined,
+    notes: body.notes,
+  }
+}
+
+/** Prevents open redirects through the `next` parameter. */
+const safeRedirect = (value) =>
+  typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/panel/today'
