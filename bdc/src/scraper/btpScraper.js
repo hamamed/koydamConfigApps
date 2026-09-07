@@ -50,7 +50,20 @@ export function createBtpScraper({ http, btp, maxPages = 600 }) {
   async function scrape({ startPage = 1, pages = maxPages } = {}) {
     const stats = { pagesScraped: 0, itemsFound: 0, itemsCreated: 0, itemsUpdated: 0, itemsUnchanged: 0, errors: [] }
 
-    const form = await http.getHtml(BTP_HOST + BTP_PATH)
+    // The ministry filters some networks outright — from this project's server a
+    // TCP connection never completes, while an ordinary connection is answered
+    // in milliseconds. Say so once, plainly, rather than letting the retry loop
+    // grind: an unreachable host is a different problem from a changed page,
+    // and the export/import path in bin/ exists precisely for it.
+    let form
+    try {
+      form = await http.getHtml(BTP_HOST + BTP_PATH)
+    } catch (error) {
+      throw new Error(
+        `cannot reach ${BTP_HOST} — this host filters some networks; ` +
+          `export it from one that can reach it with bin/export-btp.js (${error.message})`,
+      )
+    }
     let response = await http.postForm(BTP_HOST + BTP_PATH, null, {
       ...aspNetState(form.html),
       __EVENTTARGET: '',
@@ -89,11 +102,15 @@ export function createBtpScraper({ http, btp, maxPages = 600 }) {
     return { ...stats, total, lastPage, nextPage: page + 1 }
   }
 
-  /** Follows the pager link labelled with the wanted page number. */
+  /**
+   * Turns to a page: by its number when the pager offers it, and otherwise
+   * through the "…" that advances to the next group of five, which lands on
+   * exactly the page after the group just left.
+   */
   async function turnTo(wanted, previous, parsed) {
-    const target = parsed.pager[String(wanted)]
+    const target = parsed.pager.pages[String(wanted)] ?? parsed.pager.more
     if (!target) {
-      log.warn('no pager link for that page', { wanted, offered: Object.keys(parsed.pager) })
+      log.warn('no way to reach that page', { wanted, offered: Object.keys(parsed.pager.pages) })
       return null
     }
     const response = await http.postForm(BTP_HOST + BTP_PATH, null, {

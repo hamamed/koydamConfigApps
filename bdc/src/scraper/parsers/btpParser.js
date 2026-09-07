@@ -45,7 +45,7 @@ export function parseBtpList(html, sourceUrl = '') {
     })
   })
 
-  return { items, total: readTotal($), pager: pagerTargets($), sourceUrl }
+  return { items, total: readTotal($), pager: readPager($), sourceUrl }
 }
 
 /**
@@ -68,20 +68,32 @@ function labelled(text, label) {
 }
 
 /**
- * The pager's postback targets, keyed by the page number they show.
+ * The pager, as the two things a caller needs: the page numbers on offer, and
+ * the way to reach the ones that are not.
  *
- * The window slides as you advance, so "the third link" means different pages
- * on different pages. Keying by the label is what a reader does, and it is the
- * only thing that stays true.
+ * The numbers are shown five at a time and the window slides, so "the third
+ * link" means different pages on different pages — they are keyed by their
+ * label, which is what a reader goes by. But the window only ever offers its
+ * own group: standing on page 5 the links are 1–4, and page 6 is reachable only
+ * through the "…" that advances to the next group. Dropping that link, which an
+ * earlier version did by keeping only numeric labels, stopped the crawl dead at
+ * the first group boundary — after fifty of 4,911 companies.
  */
-function pagerTargets($) {
-  const targets = {}
+function readPager($) {
+  const pages = {}
+  let more = null
+
   $('a[href*="__doPostBack"]').each((_index, element) => {
     const label = clean($(element).text())
     const match = ($(element).attr('href') ?? '').match(/__doPostBack\('([^']+)'/)
-    if (match && /^\d+$/.test(label)) targets[label] = match[1].replace(/&#39;/g, "'")
+    if (!match) return
+    const target = match[1].replace(/&#39;/g, "'")
+    if (/^\d+$/.test(label)) pages[label] = target
+    // The ellipsis renders as "..." or "…" depending on the page.
+    else if (/^[.…]{1,3}$/.test(label)) more = target
   })
-  return targets
+
+  return { pages, more }
 }
 
 function readTotal($) {

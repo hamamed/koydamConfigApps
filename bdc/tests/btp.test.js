@@ -29,8 +29,12 @@ test('the BTP register yields the fields an award row never carries', () => {
 
   // The pager is keyed by the page number it shows, because the window of
   // numbers slides as you advance and "the third link" stops meaning page 3.
-  assert.deepEqual(Object.keys(pager).sort(), ['2', '3', '4', '5'])
-  assert.match(pager['2'], /DataPager1/)
+  assert.deepEqual(Object.keys(pager.pages).sort(), ['2', '3', '4', '5'])
+  assert.match(pager.pages['2'], /DataPager1/)
+  // And the "…" that reaches the next group. Without it the crawl stops at the
+  // first group boundary, having collected fifty of 4,911 companies.
+  assert.ok(pager.more, 'the next-group link is kept')
+  assert.match(pager.more, /DataPager1/)
 })
 
 test('the search posts click coordinates, because the button is an image', async (t) => {
@@ -170,4 +174,25 @@ test('the companies screen shows which companies we know anything about', async 
   const found = await container.services.companyDirectory.list({ q: 'khalij' })
   assert.equal(found.total, 1)
   assert.equal(found.rows[0].name, 'SOCIETE KHALIJ NEKOR SARL')
+})
+
+test('an unreachable ministry is reported as unreachable, not as an empty register', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  // The ministry filters this project's server at TCP level. Grinding through
+  // retries and then reporting nothing would look exactly like "the register is
+  // empty today", which is the silent failure this project keeps meeting.
+  const http = createHttpClient({
+    delayMs: 0, maxRetries: 1,
+    fetchImpl: async () => { throw new Error('connect ETIMEDOUT') },
+  })
+  const scraper = createBtpScraper({ http, btp: container.repositories.btp })
+
+  await assert.rejects(() => scraper.scrape({ pages: 1 }), (error) => {
+    assert.match(error.message, /cannot reach https:\/\/www\.equipement\.gov\.ma/)
+    assert.match(error.message, /export-btp/, 'and points at the way round it')
+    return true
+  })
+  assert.equal(await container.repositories.btp.countAll(), 0)
 })
