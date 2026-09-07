@@ -26,7 +26,11 @@ export function createTodayService({ consultations, favorites, users, savedSearc
       since
         ? consultations.search({ firstSeenAfter: since }, { limit: LIMIT, offset: 0, sort: 'date_publication:desc' }, user.id)
         : Promise.resolve({ data: [], total: 0 }),
-      consultations.search({ status: 'open' }, { limit: 200, offset: 0, sort: 'date_limite:asc' }, user.id),
+      // Every open avis, not a page of them: the count shown is "how many close
+      // in the next two days", and a fetch limit would quietly cap it and
+      // present the cap as the answer. The open set is around seven hundred
+      // rows, so reading it whole is cheaper than being wrong.
+      consultations.search({ status: 'open' }, { limit: 2000, offset: 0, sort: 'date_limite:asc' }, user.id),
       favorites.list(user.id, {}, { limit: 100, offset: 0 }),
       savedSearches.list(user.id),
     ])

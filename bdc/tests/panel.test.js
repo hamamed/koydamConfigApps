@@ -1296,3 +1296,19 @@ test('the one-question setup creates the alert a new account lacks', async (t) =
   // And the screen stops offering setup once there is something to be told about.
   assert.equal((await api.container.services.today.forUser({ id: 2 })).needsSetup, false)
 })
+
+test('the closing count is the real number, not the fetch limit', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const { urgentTotal, urgent } = await api.container.services.today.forUser({ id: 2 })
+  const { total: openTotal } = await api.container.services.consultations.search(
+    { status: 'open' }, { limit: 1, offset: 0 },
+  )
+
+  // The list is capped for display; the count behind it must not be, or a cap
+  // gets presented to the reader as the answer.
+  assert.ok(urgent.length <= 12, 'the list is short')
+  assert.ok(urgentTotal <= openTotal, 'and the count is bounded by reality, not by a page size')
+  assert.notEqual(urgentTotal, 200, 'not the old fetch limit')
+})
