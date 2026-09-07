@@ -161,6 +161,47 @@ apiRouter.get('/cosmetics', (req, res) => {
   });
 });
 
+// Above `/cosmetics/:id`, which matches any two-segment path — below it,
+// this route is read as a cosmetic whose id is "top-reacted" and answers
+// "Cosmetic not found".
+/**
+ * `GET /cosmetics/top-reacted` — what people actually like.
+ *
+ * Reactions were being collected and shown nowhere but the item that earned
+ * them. Aggregated, they are the one ranking of this catalogue that comes from
+ * its readers rather than from Epic.
+ */
+apiRouter.get('/cosmetics/top-reacted', (req, res) => {
+  const limit = clamp(req.query.limit, 12, 40);
+  const days = clamp(req.query.days, 7, 365);
+
+  const rows = db
+    .prepare(
+      `SELECT r.item_id AS id, COUNT(*) AS total,
+              SUM(r.kind IN ('fire', 'love', 'cool')) AS positive,
+              c.name, c.type_name, c.rarity, c.series, c.icon_url, c.featured_url
+         FROM reactions r
+         JOIN cosmetics c ON c.id = r.item_id
+        WHERE r.updated_at > datetime('now', @window)
+        GROUP BY r.item_id
+        ORDER BY positive DESC, total DESC
+        LIMIT @limit`,
+    )
+    .all({ limit, window: `-${days} days` });
+
+  const origin = `${req.protocol}://${req.get('host')}`;
+  return ok(res, rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    typeName: r.type_name,
+    rarity: r.rarity,
+    series: r.series,
+    icon: proxied(r.featured_url || r.icon_url, origin),
+    reactions: r.total,
+    positive: r.positive,
+  })));
+});
+
 apiRouter.get('/cosmetics/:id', (req, res) => {
   const row = db.prepare('SELECT * FROM cosmetics WHERE id = ?').get(req.params.id);
   if (!row) return res.status(404).json({ status: 'error', message: 'Cosmetic not found' });
@@ -509,44 +550,6 @@ apiRouter.get('/shop/returning', (req, res) => {
       daysAway: away,
     };
   }).sort((x, y) => (y.daysAway ?? 0) - (x.daysAway ?? 0)));
-});
-
-/**
- * `GET /cosmetics/top-reacted` — what people actually like.
- *
- * Reactions were being collected and shown nowhere but the item that earned
- * them. Aggregated, they are the one ranking of this catalogue that comes from
- * its readers rather than from Epic.
- */
-apiRouter.get('/cosmetics/top-reacted', (req, res) => {
-  const limit = clamp(req.query.limit, 12, 40);
-  const days = clamp(req.query.days, 7, 365);
-
-  const rows = db
-    .prepare(
-      `SELECT r.item_id AS id, COUNT(*) AS total,
-              SUM(r.kind IN ('fire', 'love', 'cool')) AS positive,
-              c.name, c.type_name, c.rarity, c.series, c.icon_url, c.featured_url
-         FROM reactions r
-         JOIN cosmetics c ON c.id = r.item_id
-        WHERE r.updated_at > datetime('now', @window)
-        GROUP BY r.item_id
-        ORDER BY positive DESC, total DESC
-        LIMIT @limit`,
-    )
-    .all({ limit, window: `-${days} days` });
-
-  const origin = `${req.protocol}://${req.get('host')}`;
-  return ok(res, rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    typeName: r.type_name,
-    rarity: r.rarity,
-    series: r.series,
-    icon: proxied(r.featured_url || r.icon_url, origin),
-    reactions: r.total,
-    positive: r.positive,
-  })));
 });
 
 /** The tags the catalogue actually uses, for the app's filter row. */
