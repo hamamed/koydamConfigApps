@@ -503,6 +503,9 @@ apiRouter.put('/items/:id/reactions', reactionLimiter, (req, res) => {
  */
 apiRouter.get('/shop/returning', (req, res) => {
   const limit = clamp(req.query.limit, 12, 40);
+  // An item that was here last week is not "back". Below this the rail fills
+  // with the ordinary rotation and the heading stops being true.
+  const minimumDaysAway = clamp(req.query.minDays, 30, 3650);
 
   const rows = db
     .prepare(
@@ -516,9 +519,11 @@ apiRouter.get('/shop/returning', (req, res) => {
           AND c.shop_appearances > 1
         GROUP BY c.id
         ORDER BY c.last_seen_in_shop ASC
-        LIMIT @limit`,
+        LIMIT @candidates`,
     )
-    .all({ limit });
+    // More rows than the rail needs, because the gap is computed per item below
+    // and most candidates will be filtered out by it.
+    .all({ candidates: limit * 8 });
 
   const today = new Date();
   return ok(res, rows.map((r) => {
@@ -549,7 +554,10 @@ apiRouter.get('/shop/returning', (req, res) => {
       lastSeen: previous,
       daysAway: away,
     };
-  }).sort((x, y) => (y.daysAway ?? 0) - (x.daysAway ?? 0)));
+  })
+    .filter((r) => (r.daysAway ?? 0) >= minimumDaysAway)
+    .sort((x, y) => (y.daysAway ?? 0) - (x.daysAway ?? 0))
+    .slice(0, limit));
 });
 
 /** The tags the catalogue actually uses, for the app's filter row. */
