@@ -217,6 +217,9 @@ export default {
   'deadline.closesAt': 'Clôture le',
 
   // ---- Company directory ----
+  'companies.city': 'Ville',
+  'companies.allCities': 'Toutes les villes',
+
   'companies.title': 'Entreprises attributaires',
   'companies.total': 'Entreprises',
   'companies.known': 'Avec adresse',

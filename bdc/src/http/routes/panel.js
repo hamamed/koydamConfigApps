@@ -413,13 +413,14 @@ export function panelRoutes({ services }) {
       const directory = await services.companyDirectory.list({
         q: typeof req.query.q === 'string' ? req.query.q : '',
         filter: typeof req.query.filter === 'string' ? req.query.filter : '',
+        city: typeof req.query.city === 'string' ? req.query.city : '',
         page: Number.parseInt(req.query.page, 10) || 1,
       })
       res.render('panel/companies', await shell(req, {
         active: 'companies',
         ...directory,
         query: req.query,
-        filters: { q: req.query.q ?? '', filter: req.query.filter ?? '' },
+        filters: { q: req.query.q ?? '', filter: req.query.filter ?? '', city: req.query.city ?? '' },
       }))
     }),
   )

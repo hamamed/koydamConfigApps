@@ -196,3 +196,43 @@ test('an unreachable ministry is reported as unreachable, not as an empty regist
   })
   assert.equal(await container.repositories.btp.countAll(), 0)
 })
+
+test('the companies screen carries each company’s town, and filters by it', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const award = (index, attributaire) =>
+    container.repositories.results.upsert({
+      result_key: `c${index}`, reference: `${index}/2026`, reference_raw: `${index}/2026`,
+      match_key: `${index}|x`, objet: 'Achat', acheteur: `COMMUNE ${index}`, attributaire,
+      montant_attribue_cents: 100000, currency: 'MAD', nombre_offres: 3, result_status: 'attribue',
+      date_publication_resultat: '2026-08-01', search_text: 'achat',
+      first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+    })
+
+  await award(1, 'STE ALPHA SARL')
+  await award(2, 'STE BETA SARL')
+  await award(3, 'STE GAMMA SARL')
+  await award(4, 'STE SANS REGISTRE')
+
+  for (const [name, rc, ville] of [['ALPHA', '1', 'CASABLANCA'], ['BETA', '2', 'CASABLANCA'], ['GAMMA', '3', 'FES']]) {
+    await container.repositories.btp.upsert({ raison_sociale: name, registre_commerce: rc, ville, adresse: 'RUE X' })
+  }
+
+  const all = await container.services.companyDirectory.list({})
+  const byName = Object.fromEntries(all.rows.map((row) => [row.name, row]))
+  assert.equal(byName['STE ALPHA SARL'].city, 'CASABLANCA', 'the town comes from the register')
+  assert.equal(byName['STE SANS REGISTRE'].city, null, 'and is null when there is no entry')
+
+  // The dropdown offers only towns these companies are actually in, commonest
+  // first — the register has 68 and most match nothing here.
+  assert.deepEqual(all.cities, [{ label: 'CASABLANCA', total: 2 }, { label: 'FES', total: 1 }])
+
+  const casa = await container.services.companyDirectory.list({ city: 'CASABLANCA' })
+  assert.deepEqual(casa.rows.map((row) => row.name).sort(), ['STE ALPHA SARL', 'STE BETA SARL'])
+  assert.equal(casa.total, 2)
+
+  // City combines with the other filters rather than replacing them.
+  assert.equal((await container.services.companyDirectory.list({ city: 'FES', q: 'gamma' })).total, 1)
+  assert.equal((await container.services.companyDirectory.list({ city: 'FES', q: 'alpha' })).total, 0)
+})

@@ -37,6 +37,15 @@
       <input id="q" name="q" value="<%= filters.q %>" placeholder="<%= t('companies.searchPlaceholder') %>">
     </div>
     <div>
+      <label for="city"><%= t('companies.city') %></label>
+      <select id="city" name="city">
+        <option value=""><%= t('companies.allCities') %></option>
+        <% cities.forEach(function (town) { %>
+          <option value="<%= town.label %>" <%= filters.city === town.label ? 'selected' : '' %>><%= town.label %> (<%= town.total %>)</option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
       <label for="filter"><%= t('companies.filter') %></label>
       <select id="filter" name="filter">
         <% [['', 'companies.filter.all'], ['known', 'companies.filter.known'], ['unknown', 'companies.filter.unknown'],
@@ -46,7 +55,7 @@
       </select>
     </div>
     <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
-    <% if (filters.q || filters.filter) { %>
+    <% if (filters.q || filters.filter || filters.city) { %>
       <div><a class="btn secondary" href="/panel/companies?lang=<%= locale %>"><%= t('exclusion.clear') %></a></div>
     <% } %>
   </form>
@@ -60,6 +69,7 @@
       <table>
         <thead><tr>
           <th><%= t('insights.company') %></th>
+          <th><%= t('companies.city') %></th>
           <th><%= t('company.awards') %></th>
           <th><%= t('company.total') %></th>
           <th><%= t('company.buyers') %></th>
@@ -70,6 +80,11 @@
             <tr>
               <td style="max-width:300px">
                 <a href="/panel/companies/<%= encodeURIComponent(row.name) %>?lang=<%= locale %>"><%= row.name %></a>
+              </td>
+              <td>
+                <% if (row.city) { %>
+                  <a href="?<%= new URLSearchParams(Object.assign({}, query, { city: row.city, page: 1, lang: locale })).toString() %>"><%= row.city %></a>
+                <% } else { %><span class="muted">—</span><% } %>
               </td>
               <td class="ltr"><%= row.awards %></td>
               <td class="ltr"><%= row.total %></td>

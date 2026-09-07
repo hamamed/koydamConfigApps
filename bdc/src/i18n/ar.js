@@ -217,6 +217,9 @@ export default {
   'deadline.closesAt': 'يُغلق في',
 
   // ---- Company directory ----
+  'companies.city': 'المدينة',
+  'companies.allCities': 'كل المدن',
+
   'companies.title': 'الشركات الفائزة',
   'companies.total': 'الشركات',
   'companies.known': 'لها عنوان',
