@@ -1187,3 +1187,25 @@ test('the panel collapses to a drawer on a phone, and its tables scroll inside t
   assert.ok(!nav.includes('/guide'), 'the guide link is gone from the sidebar')
   assert.ok(!html.includes('class="help"'))
 })
+
+test('a table is never forced wider than the card holding it', async () => {
+  // A blanket `min-width` on tables gave a scrollbar to every card too narrow
+  // to hold it — the Insights rankings sit in 330px grid columns and the buyer
+  // and company profiles in half-width ones, so all of them scrolled sideways
+  // to show three short columns. The wrapper still scrolls, but only when the
+  // content really is wider than its card.
+  const { readFile } = await import('node:fs/promises')
+
+  for (const shellName of ['shell-open', 'public-open']) {
+    const shell = await readFile(new URL(`../src/views/partials/${shellName}.ejs`, import.meta.url), 'utf8')
+
+    const tableRules = [...shell.matchAll(/^\s*[^@\n{]*\btable\b[^{\n]*\{([^}]*)\}/gm)].map((m) => m[0])
+    for (const rule of tableRules) {
+      assert.doesNotMatch(rule, /min-width\s*:\s*[1-9]/, `${shellName}: ${rule.trim()}`)
+    }
+
+    // The scroll container itself stays: without it a wide table takes the
+    // whole document sideways, sidebar and all.
+    assert.match(shell, /\.table-wrap \{[^}]*overflow-x\s*:\s*auto/)
+  }
+})

@@ -66,10 +66,16 @@
   .page-head .spacer { margin-inline-start:auto; }
 
   .card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; margin-bottom:18px; }
-  /* A wide table scrolls inside its own card. Without this the table pushes the
-     whole document sideways on a phone, which takes the sidebar and every other
-     card with it — the page ends up scrolling horizontally to read one column. */
-  .card table { min-width:520px; }
+  /* A wide table scrolls inside its own card rather than pushing the whole
+     document sideways — on a phone that takes the sidebar and every other card
+     with it, and reading one column means scrolling the page.
+
+     No min-width on the table: forcing one gave every narrow card a scrollbar
+     it had no use for, because the Insights rankings sit in 330px grid columns
+     and the profile cards in half-width ones. The table sizes itself, so the
+     wrapper scrolls only when the content really is wider than the card. Header
+     cells stay on one line, which is what pushes a genuinely wide table past a
+     phone's width in the first place — see `th` below, which already sets it. */
   .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .card > h2 { margin:0 0 14px; font-size:15px; font-weight:650; display:flex; align-items:center; gap:8px; }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }

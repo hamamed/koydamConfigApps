@@ -89,9 +89,11 @@
   footer .wrap { display:flex; gap:18px 26px; flex-wrap:wrap; align-items:baseline; }
   footer nav { display:flex; gap:18px; flex-wrap:wrap; }
 
-  /* Wide tables scroll inside their card rather than taking the page with them. */
-  .card table { min-width:520px; }
+  /* Wide tables scroll inside their card rather than taking the page with them.
+     No min-width — see the panel shell: it gave narrow cards a pointless
+     scrollbar. Headers on one line are what makes a wide table overflow. */
   .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  th { white-space:nowrap; }
 
   @media (max-width: 760px) {
     h1 { font-size:26px; }
