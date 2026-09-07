@@ -7,6 +7,8 @@ import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { translator } from '../../i18n/index.js'
+import { parseAmountToCentimes } from '../../utils/money.js'
+import { MARKET_KINDS, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
 
 /**
  * The panel.
@@ -310,6 +312,64 @@ export function panelRoutes({ services }) {
     }),
   )
 
+  /**
+   * The reference price of article 44 of décret n° 2-22-431, as a calculator.
+   *
+   * Free for every signed-in user: it needs nothing this panel does not already
+   * have, and the rule it implements is the one that decides who wins — the
+   * winner is the offer closest *under* the reference price, so the cheapest
+   * bid loses. Anyone bidding without running this number is guessing.
+   */
+  router.get(
+    '/panel/reference-price',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      // `?from=<id>` arrives from a project page, which already knows the
+      // buyer's estimate and the nature of the market.
+      const source = req.query.from
+        ? await services.consultations.getById(Number(req.query.from), req.user.id)
+        : null
+
+      res.render('panel/reference-price', await shell(req, {
+        active: 'referencePrice',
+        form: source ? prefillFromConsultation(source) : blankReferenceForm(),
+        source,
+        result: null,
+        error: null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/reference-price',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const form = readReferenceForm(req.body)
+      // Only the "from this project" banner depends on this lookup, so a
+      // project that has since been removed must not take the calculation with
+      // it — the numbers were posted in the form, not read back from the row.
+      const source = form.sourceId
+        ? await services.consultations.getById(form.sourceId, req.user.id).catch(() => null)
+        : null
+
+      let result = null
+      let error = null
+      try {
+        result = evaluateReferenceForm(form)
+      } catch (failure) {
+        error = failure.message
+      }
+
+      res.render('panel/reference-price', await shell(req, {
+        active: 'referencePrice',
+        form,
+        source,
+        result,
+        error,
+      }))
+    }),
+  )
+
   router.get(
     '/panel/favorites',
     anyUser,
@@ -607,6 +667,88 @@ export function panelRoutes({ services }) {
   // straight into the panel.
 
   return router
+}
+
+
+/* ---------------------------------------------------------------- article 44 */
+
+/**
+ * Competitor rows rendered on an empty form. Eight is the number of bidders a
+ * bon de commande usually draws; the page can add more without a round trip,
+ * and the form keeps whatever was submitted.
+ */
+const OFFER_ROWS = 8
+const MARKET_KIND_VALUES = new Set(Object.values(MARKET_KINDS))
+
+const asArray = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value])
+
+/** Pads a set of competitor rows out to the number the form displays. */
+const padRows = (offers) => [
+  ...offers,
+  ...Array.from({ length: Math.max(0, OFFER_ROWS - offers.length) }, () => ({ name: '', amount: '' })),
+]
+
+const blankReferenceForm = () => ({ estimate: '', kind: '', sourceId: null, offers: padRows([]) })
+
+/**
+ * Fills the form from a project the panel already holds.
+ *
+ * `categorie` first, not `nature_prestation`: the portal's "Catégorie
+ * principale" is the one that reads "Fournitures", while "Nature de prestation"
+ * is a free-text description of the goods — "Achat de pièces de rechange pour
+ * matériel technique et informatique" classifies to nothing at all. Both are
+ * classified rather than trusted, and when neither resolves the user picks,
+ * because guessing between travaux and fournitures moves the floor five points.
+ *
+ * Most bons de commande publish no estimate, so an empty field here is the
+ * normal case and not a failure — the user reads it off the dossier.
+ */
+function prefillFromConsultation(consultation) {
+  return {
+    estimate: consultation.estimation === null || consultation.estimation === undefined ? '' : String(consultation.estimation),
+    kind: classifyKind(consultation.categorie) ?? classifyKind(consultation.nature_prestation) ?? '',
+    sourceId: consultation.id,
+    offers: padRows([]),
+  }
+}
+
+/** Reads the posted form back, keeping the raw strings so a rejected submission re-renders as typed. */
+function readReferenceForm(body = {}) {
+  const names = asArray(body.name)
+  const amounts = asArray(body.amount)
+  const offers = amounts.map((amount, index) => ({
+    name: String(names[index] ?? ''),
+    amount: String(amount ?? ''),
+  }))
+  const sourceId = Number(body.sourceId)
+
+  return {
+    estimate: String(body.estimate ?? ''),
+    kind: String(body.kind ?? ''),
+    sourceId: Number.isInteger(sourceId) && sourceId > 0 ? sourceId : null,
+    offers: padRows(offers),
+  }
+}
+
+/**
+ * Validates the form and runs the article 44 evaluation.
+ *
+ * The errors are keys rather than sentences, because this page is rendered in
+ * three languages and the messages belong in the dictionaries.
+ * @throws {Error} with a translation key as its message.
+ */
+function evaluateReferenceForm(form) {
+  const estimateCentimes = parseAmountToCentimes(form.estimate)
+  if (estimateCentimes === null || estimateCentimes <= 0) throw new Error('referencePrice.error.estimate')
+  if (!MARKET_KIND_VALUES.has(form.kind)) throw new Error('referencePrice.error.kind')
+
+  const offers = form.offers
+    .map((offer) => ({ name: offer.name.trim(), amountCentimes: parseAmountToCentimes(offer.amount) }))
+    .filter((offer) => offer.amountCentimes !== null)
+
+  if (offers.length === 0) throw new Error('referencePrice.error.offers')
+
+  return computeReferencePrice({ estimateCentimes, kind: form.kind, offers })
 }
 
 /**
