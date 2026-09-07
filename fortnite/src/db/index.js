@@ -31,6 +31,12 @@ export function migrate() {
   ensureColumn('islands', 'metrics_misses', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('islands', 'image_url', 'TEXT');
   ensureColumn('creative_maps', 'adopt_misses', 'INTEGER NOT NULL DEFAULT 0');
+  // Both arrive from the same upstream, behind responseFlags — a showcase video
+  // for two thirds of outfits, and every date an item has been in the shop.
+  ensureColumn('cosmetics', 'showcase_video', 'TEXT');
+  ensureColumn('cosmetics', 'shop_history', 'TEXT');
+  ensureColumn('cosmetics', 'shop_appearances', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('cosmetics', 'last_seen_in_shop', 'TEXT');
 }
 
 /** Adds a column when it is missing. Safe to run on every boot. */

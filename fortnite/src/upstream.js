@@ -49,23 +49,31 @@ function record(feed, { count = 0, error = null } = {}) {
  */
 export async function syncCosmetics() {
   try {
-    const items = await get('/v2/cosmetics/br');
+    // responseFlags asks for the optional blocks: shopHistory and
+    // showcaseVideo. They roughly double the payload, which is why they are
+    // opt-in — but they are the only source for either, and both drive
+    // features the app could not otherwise have.
+    const items = await get('/v2/cosmetics/br?responseFlags=15');
     if (!Array.isArray(items) || !items.length) throw new Error('no cosmetics returned');
 
     const upsert = db.prepare(
       `INSERT INTO cosmetics (id, name, description, type, type_name, rarity, rarity_name,
                               series, set_name, introduction, season, icon_url, featured_url,
-                              small_icon_url, added_at, search_blob, synced_at)
+                              small_icon_url, added_at, search_blob, showcase_video,
+                              shop_history, shop_appearances, last_seen_in_shop, synced_at)
        VALUES (@id, @name, @description, @type, @type_name, @rarity, @rarity_name,
                @series, @set_name, @introduction, @season, @icon_url, @featured_url,
-               @small_icon_url, @added_at, @search_blob, datetime('now'))
+               @small_icon_url, @added_at, @search_blob, @showcase_video,
+               @shop_history, @shop_appearances, @last_seen_in_shop, datetime('now'))
        ON CONFLICT(id) DO UPDATE SET
          name=excluded.name, description=excluded.description, type=excluded.type,
          type_name=excluded.type_name, rarity=excluded.rarity, rarity_name=excluded.rarity_name,
          series=excluded.series, set_name=excluded.set_name, introduction=excluded.introduction,
          season=excluded.season, icon_url=excluded.icon_url, featured_url=excluded.featured_url,
          small_icon_url=excluded.small_icon_url, added_at=excluded.added_at,
-         search_blob=excluded.search_blob, synced_at=datetime('now')`,
+         search_blob=excluded.search_blob, showcase_video=excluded.showcase_video,
+         shop_history=excluded.shop_history, shop_appearances=excluded.shop_appearances,
+         last_seen_in_shop=excluded.last_seen_in_shop, synced_at=datetime('now')`,
     );
 
     transaction((rows) => {
@@ -82,6 +90,11 @@ export async function syncCosmetics() {
 
 function shapeCosmetic(item) {
   const name = item.name ?? '';
+  // Dates only, sorted oldest first. Upstream returns ISO timestamps in no
+  // guaranteed order, and every question asked of this is about days.
+  const history = [...new Set((item.shopHistory ?? []).map((d) => String(d).slice(0, 10)))]
+    .sort();
+
   const set = item.set?.value ?? null;
   return {
     id: item.id,
@@ -100,6 +113,18 @@ function shapeCosmetic(item) {
     small_icon_url: item.images?.smallIcon ?? null,
     added_at: item.added ?? null,
     search_blob: [name, set, item.type?.displayValue].filter(Boolean).join(' ').toLowerCase(),
+
+    // A YouTube id, not a URL — upstream gives the bare id and the app builds
+    // whatever embed it needs from it.
+    showcase_video: item.showcaseVideo ?? null,
+
+    // Sorted ascending and stored whole. The count and the newest date are
+    // derived here rather than in every query that wants to rank by them:
+    // "how long since this was in the shop" is the question the app asks, and
+    // parsing an eighty-entry JSON array to answer it per row would be silly.
+    shop_history: history.length ? JSON.stringify(history) : null,
+    shop_appearances: history.length,
+    last_seen_in_shop: history.length ? history[history.length - 1] : null,
   };
 }
 

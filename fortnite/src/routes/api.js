@@ -453,6 +453,102 @@ apiRouter.put('/items/:id/reactions', reactionLimiter, (req, res) => {
   return ok(res, reactionsFor(String(req.params.id), key));
 });
 
+/**
+ * `GET /shop/returning` — what is in the shop today after a long absence.
+ *
+ * The question the in-game shop cannot answer. Ranked by how long an item was
+ * gone rather than by how many times it has appeared: a skin back after two
+ * years is news, one that shows up monthly is not.
+ */
+apiRouter.get('/shop/returning', (req, res) => {
+  const limit = clamp(req.query.limit, 12, 40);
+
+  const rows = db
+    .prepare(
+      `SELECT c.id, c.name, c.type_name, c.rarity, c.series, c.icon_url, c.featured_url,
+              c.shop_appearances, c.last_seen_in_shop,
+              e.final_price, e.regular_price
+         FROM shop_entries e
+         JOIN json_each(e.items_json) j
+         JOIN cosmetics c ON c.id = json_extract(j.value, '$.id')
+        WHERE c.last_seen_in_shop IS NOT NULL
+          AND c.shop_appearances > 1
+        GROUP BY c.id
+        ORDER BY c.last_seen_in_shop ASC
+        LIMIT @limit`,
+    )
+    .all({ limit });
+
+  const today = new Date();
+  return ok(res, rows.map((r) => {
+    // The newest entry in the history is usually today's own appearance, so the
+    // gap that matters is to the one before it.
+    let previous = null;
+    try {
+      const days = JSON.parse(
+        db.prepare('SELECT shop_history FROM cosmetics WHERE id = ?').get(r.id)?.shop_history ?? '[]',
+      );
+      previous = days.length > 1 ? days[days.length - 2] : days[0] ?? null;
+    } catch { previous = r.last_seen_in_shop; }
+
+    const away = previous
+      ? Math.max(0, Math.round((today - Date.parse(previous)) / 86_400_000))
+      : null;
+
+    return {
+      id: r.id,
+      name: r.name,
+      typeName: r.type_name,
+      rarity: r.rarity,
+      series: r.series,
+      icon: proxied(r.featured_url || r.icon_url, `${req.protocol}://${req.get('host')}`),
+      finalPrice: r.final_price,
+      regularPrice: r.regular_price,
+      appearances: r.shop_appearances,
+      lastSeen: previous,
+      daysAway: away,
+    };
+  }).sort((x, y) => (y.daysAway ?? 0) - (x.daysAway ?? 0)));
+});
+
+/**
+ * `GET /cosmetics/top-reacted` — what people actually like.
+ *
+ * Reactions were being collected and shown nowhere but the item that earned
+ * them. Aggregated, they are the one ranking of this catalogue that comes from
+ * its readers rather than from Epic.
+ */
+apiRouter.get('/cosmetics/top-reacted', (req, res) => {
+  const limit = clamp(req.query.limit, 12, 40);
+  const days = clamp(req.query.days, 7, 365);
+
+  const rows = db
+    .prepare(
+      `SELECT r.item_id AS id, COUNT(*) AS total,
+              SUM(r.kind IN ('fire', 'love', 'cool')) AS positive,
+              c.name, c.type_name, c.rarity, c.series, c.icon_url, c.featured_url
+         FROM reactions r
+         JOIN cosmetics c ON c.id = r.item_id
+        WHERE r.updated_at > datetime('now', @window)
+        GROUP BY r.item_id
+        ORDER BY positive DESC, total DESC
+        LIMIT @limit`,
+    )
+    .all({ limit, window: `-${days} days` });
+
+  const origin = `${req.protocol}://${req.get('host')}`;
+  return ok(res, rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    typeName: r.type_name,
+    rarity: r.rarity,
+    series: r.series,
+    icon: proxied(r.featured_url || r.icon_url, origin),
+    reactions: r.total,
+    positive: r.positive,
+  })));
+});
+
 /** The tags the catalogue actually uses, for the app's filter row. */
 apiRouter.get('/island-tags', (_req, res) => {
   const counts = new Map();
@@ -532,5 +628,16 @@ function toApiShape(row) {
     featured: row.featured_url ?? null,
     smallIcon: row.small_icon_url ?? null,
     added: row.added_at ?? null,
+
+    // A bare YouTube id where upstream has one — two thirds of outfits do. The
+    // app builds whatever embed it wants from it rather than being handed a URL
+    // it would have to parse back apart.
+    showcaseVideo: row.showcase_video ?? null,
+
+    // How often it has been in the shop and when it was last there. The full
+    // list of dates is deliberately not sent: it runs to eighty entries for an
+    // old item, and no screen shows more than the most recent.
+    shopAppearances: row.shop_appearances ?? 0,
+    lastSeenInShop: row.last_seen_in_shop ?? null,
   };
 }
