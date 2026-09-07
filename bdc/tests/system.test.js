@@ -88,3 +88,41 @@ test('an SMTP server entered in the panel is used on the next send, not the next
   assert.equal(await broken.isConfigured(), false)
   assert.equal((await broken.send({ to: 'a@b.ma', subject: 'x', text: 'y' })).channel, 'log')
 })
+
+test('the archive check reads as healthy while a slice is running', async () => {
+  const { createSystemInspector } = await import('../src/system/inspector.js')
+  const at = (hours) => new Date(Date.now() - hours * 3_600_000).toISOString()
+
+  const build = (recent, nextPage = 1492) =>
+    createSystemInspector({
+      manifestPath: '/nonexistent',
+      settings: { get: async (key) => (key === 'scraper.archiveNextPage' ? nextPage : null) },
+      jobs: { listRecent: async () => recent },
+      results: { countAll: async () => 75_000 },
+    })
+
+  const check = async (inspector) => (await inspector.report()).checks.find((c) => c.id === 'archive')
+  const finished = (hours) => ({
+    source: 'archive', status: 'success', finished_at: at(hours),
+    detail_json: JSON.stringify({ archive: { totalPages: 6336 } }),
+  })
+
+  // Running right now is the healthy case, and it must not read as stalled.
+  const running = await check(build([{ source: 'archive', status: 'running' }, finished(1)]))
+  assert.equal(running.severity, 'ok')
+  assert.match(running.detail, /page 1492 of 6336, a slice is running/)
+
+  // Before the first slice finishes the portal has not said how many pages
+  // there are, so the denominator is left out rather than printed as "null".
+  const fresh = await check(build([]))
+  assert.equal(fresh.severity, 'ok')
+  assert.equal(fresh.detail, 'page 1492, no slice has finished yet')
+  assert.doesNotMatch(fresh.detail, /null|Infinity/)
+
+  // Slices run hourly, so a long gap with nothing running has stopped.
+  const stalled = await check(build([finished(9)]))
+  assert.equal(stalled.severity, 'warn')
+  assert.match(stalled.detail, /last slice 9h ago/)
+
+  assert.equal((await check(build([finished(9)], 7000))).detail, 'the award history is complete')
+})

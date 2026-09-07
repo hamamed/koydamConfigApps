@@ -88,18 +88,10 @@ export function createSystemInspector({
       translationReady ? 'article translation is available' : 'no translation key: the buttons are disabled')
 
     const archive = await readArchive()
-    if (archive) {
-      // A stalled archive is silent: the daily crawl keeps the freshness check
-      // green while the history stops growing. The only symptom is a page
-      // counter that does not move, so it is a check rather than a statistic.
-      add(
-        'archive',
-        archive.complete ? SEVERITY.OK : archive.stalledHours > 6 ? SEVERITY.WARN : SEVERITY.OK,
-        archive.complete
-          ? 'the award history is complete'
-          : `page ${archive.nextPage} of ${archive.totalPages}, last slice ${Math.round(archive.stalledHours)}h ago`,
-      )
-    }
+    // A stalled archive is silent: the daily crawl keeps the freshness check
+    // green while the history stops growing. The only symptom is a page counter
+    // that does not move, so it is a check rather than a statistic.
+    if (archive) add('archive', ...describeArchive(archive))
 
     return {
       severity: worst(checks),
@@ -145,7 +137,10 @@ export function createSystemInspector({
       complete: totalPages !== null && nextPage > totalPages,
       percent: totalPages ? Math.min(100, Math.round(((nextPage - 1) / totalPages) * 100)) : null,
       lastSliceAt: last?.finished_at ?? null,
-      stalledHours: last?.finished_at ? (now().getTime() - Date.parse(last.finished_at)) / 3_600_000 : Infinity,
+      // null, not Infinity: this is serialised to JSON and rendered, and
+      // Infinity becomes null there anyway — after printing "Infinityh ago".
+      stalledHours: last?.finished_at ? (now().getTime() - Date.parse(last.finished_at)) / 3_600_000 : null,
+      running: (recent ?? []).some((job) => job.source === 'archive' && job.status === 'running'),
       awards: await safely(() => results?.countAll(), null),
     }
   }
@@ -240,6 +235,25 @@ export function createSystemInspector({
 
   return { report }
 }
+
+/**
+ * How the archival pass is doing, in words.
+ *
+ * A slice running right now is the healthy case and must not read as stalled;
+ * and until the first slice finishes, the portal has not told us how many pages
+ * there are, so the denominator is left out rather than printed as "null".
+ */
+function describeArchive(archive) {
+  const at = archive.totalPages ? `page ${archive.nextPage} of ${archive.totalPages}` : `page ${archive.nextPage}`
+  if (archive.complete) return [SEVERITY.OK, 'the award history is complete']
+  if (archive.running) return [SEVERITY.OK, `${at}, a slice is running`]
+  if (archive.stalledHours === null) return [SEVERITY.OK, `${at}, no slice has finished yet`]
+  const hours = Math.round(archive.stalledHours)
+  return [archive.stalledHours > STALE_SLICE_HOURS ? SEVERITY.WARN : SEVERITY.OK, `${at}, last slice ${hours}h ago`]
+}
+
+/** Slices run hourly, so a gap this long means the pass has stopped. */
+const STALE_SLICE_HOURS = 6
 
 const RANK = { [SEVERITY.OK]: 0, [SEVERITY.WARN]: 1, [SEVERITY.FAIL]: 2 }
 
