@@ -155,13 +155,28 @@ export async function syncIslandMetrics({ batch = 120, exploreShare = 0.7, concu
 
     // Whatever exploration did not spend goes to refreshing, so a finished
     // sweep does not leave most of the budget idle.
+    //
+    // Whether today has already been recorded is the first thing asked, and it
+    // is the whole point of the ordering.
+    //
+    // Epic serves two days of metrics and nothing older, so a day this service
+    // does not record is a day that cannot be recovered — not now, not later.
+    // The previous order put `metrics_at` last, behind three keys that barely
+    // change, so the same eight hundred islands were re-asked every ten minutes
+    // while the rest waited: 66,637 islands, but only 11,196 asked in a day,
+    // and 4,707 island-days lost in three. Asking "does it have today yet"
+    // first means every island gets one sample before any gets a second, which
+    // is the only ordering that keeps a daily history complete.
     const refresh = db
       .prepare(
-        `SELECT code FROM islands
+        `SELECT code FROM islands i
           WHERE metrics_at IS NOT NULL
-          ORDER BY CASE WHEN peak_ccu IS NOT NULL THEN 0 ELSE 1 END,
+          ORDER BY EXISTS (
+                     SELECT 1 FROM island_metrics m
+                      WHERE m.code = i.code AND m.day = date('now')
+                   ),
+                   CASE WHEN peak_ccu IS NOT NULL THEN 0 ELSE 1 END,
                    metrics_misses ASC,
-                   peak_ccu DESC,
                    metrics_at ASC
           LIMIT ?`,
       )
