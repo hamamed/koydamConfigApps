@@ -9,6 +9,58 @@
     <div class="ad-content">
       <a class="btn btn-kd-ghost btn-sm mb-3" href="/admin/islands">&larr; All islands</a>
 
+      <%
+        const n = (v) => v == null ? '—' : Number(v).toLocaleString();
+        const compact = (v) => {
+          if (v == null) return '—';
+          const abs = Math.abs(v);
+          if (abs >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+          if (abs >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+          if (abs >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+          return Number(v).toLocaleString();
+        };
+      %>
+      <%# The headline numbers, each with where it stands and how it moved.
+          A figure on its own says nothing about whether it is good. %>
+      <div class="row g-2 mb-3">
+        <% headline.tiles.forEach((tile) => { %>
+          <div class="col-6 col-md-4 col-xl-3">
+            <div class="ad-card h-100">
+              <div class="ad-card-body py-3">
+                <div class="d-flex align-items-baseline gap-2">
+                  <span class="fs-4 fw-semibold"><%= compact(tile.value) %></span>
+                  <% if (tile.rank) { %><span class="kd-tag">#<%= tile.rank %></span><% } %>
+                </div>
+                <div class="kd-faint small"><%= tile.label %></div>
+                <% if (tile.change !== null) { %>
+                  <div class="small <%= tile.change >= 0 ? 'text-success' : 'text-danger' %>">
+                    <%= tile.change >= 0 ? '↑' : '↓' %> <%= Math.abs(tile.change) %>% vs previous week
+                  </div>
+                <% } else if (!tile.comparable) { %>
+                  <div class="kd-faint small">no week to compare yet</div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+        <% if (headline.record) { %>
+          <div class="col-6 col-md-4 col-xl-3">
+            <div class="ad-card h-100">
+              <div class="ad-card-body py-3">
+                <div class="fs-4 fw-semibold"><%= compact(headline.record.value) %></div>
+                <div class="kd-faint small">Peak CCU record</div>
+                <div class="kd-faint small"><%= headline.record.day %></div>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+      <p class="kd-faint small mb-3">
+        Ranks are against every measured island here. Records and week-on-week are this
+        service's own history — Epic serves two days, so nothing before
+        <%= headline.days %> days ago exists to compare against.
+      </p>
+
       <div class="row g-3 mb-3">
         <div class="col-lg-4">
           <div class="ad-card h-100">
@@ -45,8 +97,7 @@
           <div class="ad-card h-100">
             <div class="ad-card-body">
               <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                <% [['peak_ccu','Peak CCU'],['unique_players','Players'],['plays','Plays'],
-                    ['minutes_played','Minutes']].forEach(([key, label]) => { %>
+                <% metrics.forEach(({ key, label }) => { %>
                   <a class="btn btn-sm <%= metric === key ? 'btn-kd' : 'btn-kd-outline' %>"
                      href="/admin/islands/<%= island.code %>?metric=<%= key %>"><%= label %></a>
                 <% }) %>
@@ -75,10 +126,10 @@
               <thead>
                 <tr><th>Day</th><th class="text-end">Peak CCU</th><th class="text-end">Players</th>
                     <th class="text-end">Plays</th><th class="text-end">Minutes</th>
-                    <th class="text-end">Favorites</th><th class="text-end">Avg mins</th></tr>
+                    <th class="text-end">Favorites</th><th class="text-end">Recommends</th>
+                    <th class="text-end">Avg mins</th><th class="text-end">Retention</th></tr>
               </thead>
               <tbody>
-                <% const n = (v) => v == null ? '—' : Number(v).toLocaleString(); %>
                 <% [...days].reverse().forEach((d) => { %>
                   <tr>
                     <td class="font-monospace"><%= d.day %></td>
@@ -87,11 +138,13 @@
                     <td class="text-end"><%= n(d.plays) %></td>
                     <td class="text-end"><%= n(d.minutes_played) %></td>
                     <td class="text-end"><%= n(d.favorites) %></td>
+                    <td class="text-end"><%= n(d.recommendations) %></td>
                     <td class="text-end"><%= d.avg_minutes != null ? Number(d.avg_minutes).toFixed(1) : '—' %></td>
+                    <td class="text-end"><%= d.retention != null ? (d.retention * 100).toFixed(1) + '%' : '—' %></td>
                   </tr>
                 <% }) %>
                 <% if (!days.length) { %>
-                  <tr><td colspan="7" class="kd-faint text-center py-4">No metrics recorded yet.</td></tr>
+                  <tr><td colspan="9" class="kd-faint text-center py-4">No metrics recorded yet.</td></tr>
                 <% } %>
               </tbody>
             </table>

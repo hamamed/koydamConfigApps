@@ -686,21 +686,103 @@ adminRouter.get('/islands/:code', (req, res) => {
   // Oldest first: a chart reads left to right, and the table below reverses it.
   const days = db
     .prepare(
-      `SELECT day, peak_ccu, unique_players, plays, minutes_played, favorites, avg_minutes
+      `SELECT day, peak_ccu, unique_players, plays, minutes_played, favorites,
+              recommendations, avg_minutes, retention
          FROM island_metrics WHERE code = ? ORDER BY day ASC`,
     )
     .all(code);
 
-  const metric = ['peak_ccu', 'unique_players', 'plays', 'minutes_played'].includes(req.query.metric)
-    ? req.query.metric
-    : 'peak_ccu';
+  const metric = METRICS.some((m) => m.key === req.query.metric) ? req.query.metric : 'peak_ccu';
+
+  // The all-time peak is this service's all-time, not Epic's: Epic serves two
+  // days, so the record here is the highest day it happened to be watching.
+  const record = db
+    .prepare(
+      `SELECT day, peak_ccu FROM island_metrics
+        WHERE code = ? AND peak_ccu IS NOT NULL
+        ORDER BY peak_ccu DESC, day DESC LIMIT 1`,
+    )
+    .get(code);
 
   return res.render('island', {
     title: island.title || code,
     island,
     days,
     metric,
+    metrics: METRICS,
+    headline: headlineStats(island, days, record),
     chart: sparkline(days.map((d) => ({ day: d.day, value: d[metric] }))),
     retentionDays: config.refresh.retentionDays,
   });
 });
+
+/** The series an island can be charted and tabulated by. */
+const METRICS = [
+  { key: 'peak_ccu', label: 'Peak CCU' },
+  { key: 'unique_players', label: 'Players' },
+  { key: 'plays', label: 'Plays' },
+  { key: 'minutes_played', label: 'Minutes' },
+  { key: 'favorites', label: 'Favorites' },
+  { key: 'recommendations', label: 'Recommendations' },
+  { key: 'avg_minutes', label: 'Avg minutes' },
+];
+
+/**
+ * The numbers that go above the chart.
+ *
+ * Each carries where it stands against every other measured island, and how it
+ * moved against the period before it — a figure on its own says nothing about
+ * whether it is good or getting better.
+ *
+ * The comparison is week against previous week rather than day against day:
+ * play is strongly weekly, so yesterday against the day before mostly measures
+ * what day of the week it is.
+ */
+function headlineStats(island, days, record) {
+  const WINDOW = 7;
+  const recent = days.slice(-WINDOW);
+  const previous = days.slice(-WINDOW * 2, -WINDOW);
+
+  const mean = (rows, key) => {
+    const values = rows.map((row) => row[key]).filter((value) => value != null);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+  };
+
+  return {
+    record: record ? { value: record.peak_ccu, day: record.day } : null,
+    days: days.length,
+    tiles: METRICS.map(({ key, label }) => {
+      const now = mean(recent, key);
+      const before = mean(previous, key);
+      return {
+        key,
+        label,
+        value: island[key] ?? (now === null ? null : Math.round(now)),
+        rank: rankOf(key, island[key]),
+        // Only when there is a full previous window to compare against; a
+        // change measured off three days against seven is noise dressed up.
+        change: now !== null && before ? Math.round(((now - before) / before) * 1000) / 10 : null,
+        comparable: previous.length >= WINDOW,
+      };
+    }),
+  };
+}
+
+/**
+ * Where a value stands among measured islands, as "#n".
+ *
+ * Counting how many beat it is cheaper than ordering the catalogue, and it is
+ * the same answer. Null for an island that has no value for that series — it
+ * is unranked rather than last.
+ */
+function rankOf(key, value) {
+  if (value == null || !RANKABLE.has(key)) return null;
+  const { ahead } = db
+    .prepare(`SELECT COUNT(*) AS ahead FROM islands WHERE ${key} > ?`)
+    .get(value);
+  return ahead + 1;
+}
+
+/** Columns that exist on `islands` and so can be ranked without a join. */
+const RANKABLE = new Set(['peak_ccu', 'unique_players', 'plays', 'minutes_played',
+  'favorites', 'recommendations', 'avg_minutes']);
