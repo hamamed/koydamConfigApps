@@ -51,6 +51,24 @@
     <% } %>
   </div>
 
+  <% if (system.archive) { %>
+    <div class="card">
+      <h2><%- include('../partials/icon', { name: 'archive-restore', size: 15 }) %><%= t('system.archive') %></h2>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div><label><%= t('system.archive.progress') %></label><span class="ltr"><%= system.archive.percent === null ? '—' : system.archive.percent + ' %' %></span></div>
+        <div><label><%= t('system.archive.page') %></label><span class="ltr"><%= system.archive.nextPage %><%= system.archive.totalPages ? ' / ' + system.archive.totalPages : '' %></span></div>
+        <div><label><%= t('system.archive.awards') %></label><span class="ltr"><%= system.archive.awards === null ? '—' : system.archive.awards %></span></div>
+        <div><label><%= t('system.archive.lastSlice') %></label><span class="ltr"><%= system.archive.lastSliceAt ? system.archive.lastSliceAt.slice(0, 16).replace('T', ' ') : '—' %></span></div>
+      </div>
+      <% if (system.archive.percent !== null) { %>
+        <div class="meter" style="margin-top:12px">
+          <span style="width:<%= system.archive.percent %>%; background:<%= system.archive.complete ? 'var(--ok)' : 'var(--accent)' %>"></span>
+        </div>
+      <% } %>
+      <p class="muted" style="margin:10px 0 0; font-size:11.5px"><%= t('system.archive.note') %></p>
+    </div>
+  <% } %>
+
   <div class="card">
     <h2><%- include('../partials/icon', { name: 'hard-drive', size: 15 }) %><%= t('system.storage') %></h2>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">

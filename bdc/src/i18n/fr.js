@@ -348,6 +348,14 @@ export default {
   'benchmark.tooFew': 'Trop peu d’attributions comparables ({count}) pour avancer un montant.',
 
   // ---- System screen, mail settings ----
+  'system.archive': 'Archive des attributions',
+  'system.archive.progress': 'Avancement',
+  'system.archive.page': 'Page suivante',
+  'system.archive.awards': 'Attributions collectées',
+  'system.archive.lastSlice': 'Dernière tranche',
+  'system.archive.note': 'La reprise avance d’une tranche par heure, sauf pendant la collecte quotidienne. Un compteur qui n’avance plus est le seul symptôme d’une reprise bloquée.',
+  'health.check.archive': 'Archive des attributions',
+
   'nav.system': 'Système',
   'system.title': 'Système',
   'system.subtitle': 'Sauvegardes, stockage et livraison',

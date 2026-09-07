@@ -132,6 +132,8 @@ export function createContainer(db = getDb(), options = {}) {
   }
   services.system = createSystemInspector({
     settings,
+    jobs: repositories.jobs,
+    results: repositories.results,
     mailer,
     translation: services.translation,
     appVersion: APP_VERSION,

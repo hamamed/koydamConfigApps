@@ -348,6 +348,14 @@ export default {
   'benchmark.tooFew': 'عدد الإرساءات المقارِنة قليل جدًا ({count}) لتقدير مبلغ.',
 
   // ---- System screen, mail settings ----
+  'system.archive': 'أرشيف الإرساءات',
+  'system.archive.progress': 'التقدّم',
+  'system.archive.page': 'الصفحة التالية',
+  'system.archive.awards': 'الإرساءات المجمّعة',
+  'system.archive.lastSlice': 'آخر شريحة',
+  'system.archive.note': 'يتقدّم المرور شريحة كل ساعة، عدا أثناء الجمع اليومي. وتوقّف العدّاد هو العَرَض الوحيد لمرور متعطّل.',
+  'health.check.archive': 'أرشيف الإرساءات',
+
   'nav.system': 'النظام',
   'system.title': 'النظام',
   'system.subtitle': 'النسخ الاحتياطي والتخزين والإرسال',

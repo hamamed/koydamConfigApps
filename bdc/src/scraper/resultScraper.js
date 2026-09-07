@@ -80,6 +80,7 @@ export function createResultScraper({ http, results, settings }) {
       const parsed = parseResultList(html, url)
 
       totalPages = Math.max(totalPages, parsed.totalPages)
+      stats.totalPages = totalPages
       stats.pagesScraped += 1
       stats.itemsFound += parsed.items.length
       log.info('page parsed', { page, totalPages, items: parsed.items.length })

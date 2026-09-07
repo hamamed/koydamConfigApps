@@ -68,12 +68,32 @@ export function createScrapeJobRepository(db = getDb()) {
   }
 
   /** Closes out jobs left behind by a killed process, so they stop blocking. */
-  const expireStale = async (staleAfterHours = 12) => {
-    const cutoff = new Date(Date.now() - staleAfterHours * 3600 * 1000).toISOString()
+  /**
+   * Releases the guard from a job whose process is gone.
+   *
+   * The window is per source because the jobs are not the same size. Every
+   * scheduled crawl is bounded by its unit's TimeoutStartSec of 90 minutes, so
+   * one still "running" after two hours is dead; the manual full backfill is
+   * allowed a day, which is what it is for.
+   *
+   * A single window of twelve hours was calibrated for the backfill and applied
+   * to everything, so a slice stopped by hand held the guard closed against
+   * twelve hourly slices after it. Nothing failed — the archive simply stopped
+   * advancing, which is the shape of problem this project keeps meeting.
+   */
+  const STALE_AFTER_HOURS = Object.freeze({ backfill: 25, default: 2 })
+
+  const expireStale = async () => {
+    const now = Date.now()
+    const cutoff = (source) =>
+      new Date(now - (STALE_AFTER_HOURS[source] ?? STALE_AFTER_HOURS.default) * 3600 * 1000).toISOString()
+
     const result = await db.run(
       `UPDATE ${TABLE} SET status = 'failed', error_message = 'abandoned — process ended before finishing',
-              finished_at = ? WHERE status = 'running' AND started_at <= ?`,
-      [nowIso(), cutoff],
+              finished_at = ?
+       WHERE status = 'running'
+         AND ((source = 'backfill' AND started_at <= ?) OR (source <> 'backfill' AND started_at <= ?))`,
+      [nowIso(), cutoff('backfill'), cutoff('default')],
     )
     return result.changes
   }

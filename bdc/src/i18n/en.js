@@ -348,6 +348,14 @@ export default {
   'benchmark.tooFew': 'Too few comparable awards ({count}) to put a figure on this.',
 
   // ---- System screen, mail settings ----
+  'system.archive': 'Award archive',
+  'system.archive.progress': 'Progress',
+  'system.archive.page': 'Next page',
+  'system.archive.awards': 'Awards collected',
+  'system.archive.lastSlice': 'Last slice',
+  'system.archive.note': 'The pass advances one slice an hour, except during the daily crawl. A counter that stops moving is the only symptom of a stalled pass.',
+  'health.check.archive': 'Award archive',
+
   'nav.system': 'System',
   'system.title': 'System',
   'system.subtitle': 'Backups, storage and delivery',

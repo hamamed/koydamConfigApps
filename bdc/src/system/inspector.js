@@ -37,6 +37,8 @@ const DISK_FAIL_PERCENT = 94
 
 export function createSystemInspector({
   settings,
+  jobs,
+  results,
   translation,
   mailer,
   manifestPath = MANIFEST_PATH,
@@ -85,9 +87,24 @@ export function createSystemInspector({
     add('translation', translationReady ? SEVERITY.OK : SEVERITY.WARN,
       translationReady ? 'article translation is available' : 'no translation key: the buttons are disabled')
 
+    const archive = await readArchive()
+    if (archive) {
+      // A stalled archive is silent: the daily crawl keeps the freshness check
+      // green while the history stops growing. The only symptom is a page
+      // counter that does not move, so it is a check rather than a statistic.
+      add(
+        'archive',
+        archive.complete ? SEVERITY.OK : archive.stalledHours > 6 ? SEVERITY.WARN : SEVERITY.OK,
+        archive.complete
+          ? 'the award history is complete'
+          : `page ${archive.nextPage} of ${archive.totalPages}, last slice ${Math.round(archive.stalledHours)}h ago`,
+      )
+    }
+
     return {
       severity: worst(checks),
       checks,
+      archive,
       backup,
       disk,
       database,
@@ -104,6 +121,32 @@ export function createSystemInspector({
         alertsAt: await safely(() => settings?.get('alerts.dailyRunAt'), null),
       },
       integrations: { mail: mailReady, translation: translationReady },
+    }
+  }
+
+  /**
+   * How far the archival pass over the award history has got.
+   *
+   * `totalPages` is what the portal last told us it had, recorded by the
+   * scraper rather than assumed here, so this reports the real denominator
+   * instead of a number baked into the code.
+   */
+  async function readArchive() {
+    const nextPage = Number(await safely(() => settings?.get('scraper.archiveNextPage'), 0)) || 0
+    if (!nextPage) return null
+
+    const recent = await safely(() => jobs?.listRecent(40), [])
+    const last = (recent ?? []).find((job) => job.source === 'archive' && job.status === 'success') ?? null
+    const totalPages = Number(safeParse(last?.detail_json)?.archive?.totalPages ?? 0) || null
+
+    return {
+      nextPage,
+      totalPages,
+      complete: totalPages !== null && nextPage > totalPages,
+      percent: totalPages ? Math.min(100, Math.round(((nextPage - 1) / totalPages) * 100)) : null,
+      lastSliceAt: last?.finished_at ?? null,
+      stalledHours: last?.finished_at ? (now().getTime() - Date.parse(last.finished_at)) / 3_600_000 : Infinity,
+      awards: await safely(() => results?.countAll(), null),
     }
   }
 
@@ -213,5 +256,13 @@ async function safely(fn, fallback) {
     return value === undefined ? fallback : value
   } catch {
     return fallback
+  }
+}
+
+const safeParse = (value) => {
+  try {
+    return JSON.parse(value ?? '')
+  } catch {
+    return null
   }
 }

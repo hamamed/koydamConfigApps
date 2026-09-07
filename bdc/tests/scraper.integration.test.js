@@ -319,3 +319,39 @@ test('a daily crawl still fails loudly on a page it cannot read', async (t) => {
   // project keeps being bitten by.
   await assert.rejects(() => scraper.scrape({ maxPages: 2, fetchDetails: false }), /Failed to fetch/)
 })
+
+test('a crawl stopped by hand stops blocking within the hour, not within the day', async (t) => {
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+  const jobs = container.repositories.jobs
+
+  const abandon = async (source, hoursAgo) => {
+    const job = await jobs.start({ source, triggeredBy: 'test', params: {} })
+    await container.db.run('UPDATE scrape_jobs SET started_at = ? WHERE id = ?', [
+      new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString(), job.id,
+    ])
+    return job.id
+  }
+
+  // Every scheduled crawl is bounded by a 90-minute unit timeout, so one still
+  // running after three hours is dead. A single twelve-hour window — calibrated
+  // for the manual backfill — meant a slice stopped by hand held the guard shut
+  // against twelve hourly slices after it, and the archive silently stopped
+  // advancing.
+  const stopped = await abandon('archive', 3)
+  assert.equal(await jobs.expireStale(), 1)
+  assert.equal((await jobs.findById(stopped)).status, 'failed')
+  assert.equal(await jobs.findRunning(), undefined)
+
+  // The full backfill really can run for hours, so it keeps its long rope.
+  const backfill = await abandon('backfill', 3)
+  assert.equal(await jobs.expireStale(), 0, 'a three-hour backfill is still working')
+  assert.equal((await jobs.findById(backfill)).status, 'running')
+
+  // But not an unlimited one.
+  await container.db.run('UPDATE scrape_jobs SET started_at = ? WHERE id = ?', [
+    new Date(Date.now() - 26 * 3600 * 1000).toISOString(), backfill,
+  ])
+  assert.equal(await jobs.expireStale(), 1)
+  assert.equal((await jobs.findById(backfill)).status, 'failed')
+})
