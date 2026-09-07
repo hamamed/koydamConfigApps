@@ -51,5 +51,17 @@ export function createUserRepository(db = getDb()) {
   const countByRole = async (role) =>
     Number((await db.get(`SELECT COUNT(*) AS total FROM ${TABLE} WHERE role = ? AND is_active = 1`, [role])).total)
 
-  return { findById, findByEmail, findByEmailWithSecret, listAll, create, touchLogin, update, remove, countAll, countByRole }
+  /**
+   * Records that this user has just looked, and answers with when they looked
+   * before. Read-then-write in one call because every caller wants both, and
+   * doing it in two invites the window where a page load moves the mark before
+   * the page has used it.
+   */
+  async function touchPanel(id, at = nowIso()) {
+    const before = (await db.get(`SELECT last_panel_at FROM ${TABLE} WHERE id = ?`, [id]))?.last_panel_at ?? null
+    await db.run(`UPDATE ${TABLE} SET last_panel_at = ? WHERE id = ?`, [at, id])
+    return before
+  }
+
+  return { findById, findByEmail, findByEmailWithSecret, touchPanel, listAll, create, touchLogin, update, remove, countAll, countByRole }
 }

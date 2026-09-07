@@ -1,0 +1,13 @@
+[Unit]
+Description=Marches publics — refresh the open listing every three hours
+
+[Timer]
+# Every three hours, offset off the hour so it never starts alongside the
+# archive slices at :20 or the daily crawl at 05:30. 05:00 is skipped: the
+# daily pass covers the listing half an hour later.
+OnCalendar=*-*-* 02,08,11,14,17,20,23:45:00
+Persistent=true
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

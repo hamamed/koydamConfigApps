@@ -31,6 +31,7 @@ export function tableStatements(dialect) {
       role TEXT NOT NULL DEFAULT 'user',
       is_active INTEGER NOT NULL DEFAULT 1,
       last_login_at TEXT,
+      last_panel_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
@@ -460,6 +461,11 @@ export function additiveColumns() {
     { table: 'consultations', column: 'detail_scraped_at', definition: 'TEXT' },
     { table: 'consultation_articles', column: 'tva_rate', definition: 'REAL' },
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
+    // When this user last opened the panel, so "new since you looked" means
+    // something. Distinct from last_login_at: a session lasts twelve hours and
+    // somebody who checks four times in a morning should not be told the same
+    // avis are new each time.
+    { table: 'users', column: 'last_panel_at', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-07.015'
+export const SCHEMA_VERSION = '2026-09-07.016'

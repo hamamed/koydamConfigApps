@@ -126,3 +126,50 @@ test('the archive check reads as healthy while a slice is running', async () => 
 
   assert.equal((await check(build([finished(9)], 7000))).detail, 'the award history is complete')
 })
+
+test('the alert pipeline runs end to end and only the sending is missing', async (t) => {
+  const { createTestContainer } = await import('./helpers.js')
+  const container = await createTestContainer()
+  t.after(() => container.db.close?.())
+
+  const sent = []
+  container.services.mailer.send = async (message) => {
+    sent.push(message)
+    return { delivered: true, channel: 'email' }
+  }
+
+  const user = await container.services.auth.register({
+    email: 'bidder@test.ma', password: 'a-very-long-password', role: 'user',
+  })
+  const id = user.user?.id ?? user.id
+  const search = await container.services.savedSearches.create(id, {
+    name: 'Everything', filters: {}, notifyNew: true, notifyAwards: false,
+  })
+  // A search made yesterday, which is what one looks like by the time a crawl
+  // finds anything. The alert window is half-open — strictly after the last
+  // mark, up to the moment the run started — so a search and an avis stamped in
+  // the same millisecond match nothing, and that is deliberate.
+  await container.db.run('UPDATE saved_searches SET created_at = ?, last_seen_cursor = ? WHERE id = ?', [
+    new Date(Date.now() - 86_400_000).toISOString(), new Date(Date.now() - 86_400_000).toISOString(), search.id,
+  ])
+
+  await container.repositories.consultations.upsert({
+    source_id: '1', reference: '1/2026', reference_raw: '1/2026', match_key: '1/2026|x',
+    objet: 'Achat de fournitures', acheteur: 'COMMUNE TEST', status: 'open',
+    date_publication: '2026-09-01', date_limite: '2026-12-01', heure_limite: '12:00',
+    search_text: 'achat de fournitures',
+    first_seen_at: new Date().toISOString(),
+    last_seen_at: 'x', created_at: 'x', updated_at: 'x',
+  })
+
+  const stats = await container.services.alerts.run()
+
+  // Matching, recording and delivery all work; what is missing on the server is
+  // only a mail server, and without one the pipeline still completes and writes
+  // what it would have sent to the log. That is deliberate: the alternative is
+  // a feature that looks like it works and delivers nothing.
+  assert.ok(stats.alerts >= 1, 'the saved search matched the new avis')
+  assert.equal(sent.length, 1, 'and a message was handed to the mailer')
+  assert.match(sent[0].to, /bidder@test\.ma/)
+  assert.ok(sent[0].subject)
+})

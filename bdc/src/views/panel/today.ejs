@@ -1,0 +1,125 @@
+<%- include('../partials/shell-open', { title: t('today.title') }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'calendar', size: 19 }) %> <%= t('today.title') %></h1>
+  <span class="muted spacer">
+    <% if (today.since) { %><%= t('today.since') %> <span class="ltr"><%= today.since.slice(0, 16).replace('T', ' ') %></span><% } %>
+  </span>
+</div>
+
+<%# A new account is told about nothing at all until it has a saved search, and
+    landing on seven hundred undifferentiated rows teaches nobody what to do. %>
+<% if (today.needsSetup) { %>
+  <div class="card" style="border-inline-start:4px solid var(--accent)">
+    <h2><%- include('../partials/icon', { name: 'bell', size: 15 }) %><%= t('today.setupTitle') %></h2>
+    <p class="muted" style="margin-top:-6px"><%= t('today.setupLede') %></p>
+    <form method="post" action="/panel/today/setup?lang=<%= locale %>" class="filters">
+      <div>
+        <label for="categorie"><%= t('filters.categorie') %></label>
+        <select id="categorie" name="categorie">
+          <option value=""><%= t('today.setupAny') %></option>
+          <% ['Travaux', 'Fournitures', 'Services'].forEach(function (c) { %>
+            <option value="<%= c %>"><%= c %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label for="lieuExecution"><%= t('filters.lieuExecution') %></label>
+        <input id="lieuExecution" name="lieuExecution" placeholder="<%= t('today.setupPlace') %>">
+      </div>
+      <div><button type="submit"><%- include('../partials/icon', { name: 'bell', size: 15 }) %><%= t('today.setupSubmit') %></button></div>
+    </form>
+    <p class="muted" style="margin:10px 0 0; font-size:11.5px"><%= t('today.setupNote') %></p>
+  </div>
+<% } %>
+
+<div class="grid cols-2" style="align-items:start">
+  <%# Closing next. First, because it is the thing that runs out. %>
+  <div class="card" style="padding-bottom:8px; <%= today.urgent.length ? 'border-inline-start:4px solid var(--warn)' : '' %>">
+    <h2>
+      <%- include('../partials/icon', { name: 'triangle-alert', size: 15 }) %><%= t('today.closing') %>
+      <% if (today.urgentTotal) { %><span class="pill warn"><%= today.urgentTotal %></span><% } %>
+    </h2>
+    <% if (today.urgent.length === 0) { %>
+      <p class="empty"><%= t('today.noClosing') %></p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th><%= t('table.objet') %></th><th><%= t('table.deadline') %></th></tr></thead>
+          <tbody>
+            <% today.urgent.forEach(function (row) { %>
+              <tr>
+                <td style="max-width:280px">
+                  <a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a>
+                  <span class="cancel-note muted" style="color:var(--muted)"><%= row.acheteur || '' %></span>
+                </td>
+                <td><%- include('../partials/deadline', { deadline: row.deadline, date: (row.date_limite || '') + (row.heure_limite ? ' ' + row.heure_limite : '') }) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin:10px 0 4px">
+        <a class="btn secondary" href="/panel?closingWithin=2&lang=<%= locale %>"><%= t('today.allClosing') %></a>
+      </p>
+    <% } %>
+  </div>
+
+  <%# New since the last visit. %>
+  <div class="card" style="padding-bottom:8px">
+    <h2>
+      <%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('today.new') %>
+      <% if (today.freshTotal) { %><span class="pill ok"><%= today.freshTotal %></span><% } %>
+    </h2>
+    <% if (!today.since) { %>
+      <p class="empty"><%= t('today.firstVisit') %></p>
+    <% } else if (today.fresh.length === 0) { %>
+      <p class="empty"><%= t('today.noNew') %></p>
+    <% } else { %>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th><%= t('table.objet') %></th><th><%= t('table.deadline') %></th></tr></thead>
+          <tbody>
+            <% today.fresh.forEach(function (row) { %>
+              <tr>
+                <td style="max-width:280px">
+                  <a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a>
+                  <span class="cancel-note muted" style="color:var(--muted)"><%= row.acheteur || '' %></span>
+                </td>
+                <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite || '' }) %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%# Results for what this user follows: the answer to the question they were
+    watching an avis for. %>
+<% if (today.settled.length > 0) { %>
+  <div class="card" style="padding-bottom:8px">
+    <h2><%- include('../partials/icon', { name: 'award', size: 15 }) %><%= t('today.settled') %></h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
+          <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
+        </tr></thead>
+        <tbody>
+          <% today.settled.forEach(function (row) { %>
+            <tr>
+              <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
+              <td style="max-width:260px"><%= row.objet || '—' %></td>
+              <td><%= row.result.attributaire || '—' %></td>
+              <td class="ltr"><%= row.result.montant_attribue === null ? '—' : row.result.montant_attribue %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../partials/shell-close') %>

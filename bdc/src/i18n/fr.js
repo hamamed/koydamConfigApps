@@ -192,6 +192,30 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Pertinence',
 
+  // ---- Today screen ----
+  'nav.today': 'Aujourd’hui',
+  'today.title': 'Aujourd’hui',
+  'today.since': 'Depuis votre dernière visite le',
+  'today.closing': 'Se clôture sous 48 h',
+  'today.noClosing': 'Rien ne se clôture dans les deux jours.',
+  'today.allClosing': 'Tout ce qui se clôture bientôt',
+  'today.new': 'Nouveaux avis',
+  'today.noNew': 'Aucun nouvel avis depuis votre dernière visite.',
+  'today.firstVisit': 'Première visite : tout est nouveau. Revenez et cet encadré ne montrera que ce qui a changé.',
+  'today.settled': 'Résultats des avis que vous suivez',
+  'today.setupTitle': 'Être prévenu',
+  'today.setupLede': 'Le délai médian entre publication et clôture est de quatre jours. Dites-nous ce qui vous intéresse et vous serez prévenu ; sinon vous devrez venir regarder.',
+  'today.setupAny': 'Toutes catégories',
+  'today.setupPlace': 'Ville ou région',
+  'today.setupSubmit': 'Me prévenir',
+  'today.setupName': 'Mes avis',
+  'today.setupNote': 'Modifiable à tout moment dans Alertes.',
+
+  // ---- Deadlines ----
+  'deadline.hours': 'J-0 · {hours} h',
+  'deadline.minutes': 'Moins d’une heure',
+  'deadline.closesAt': 'Clôture le',
+
   // ---- Company directory ----
   'companies.title': 'Entreprises attributaires',
   'companies.total': 'Entreprises',

@@ -28,8 +28,10 @@ export function serializeRow(row, { keepRaw = false } = {}) {
   }
   if ('has_result' in output) output.has_result = Boolean(output.has_result)
   if ('is_cancelled' in output) output.is_cancelled = Boolean(output.is_cancelled)
-  // How long is left to bid — the most useful thing to show next to a project.
-  if ('date_limite' in output) output.deadline = deadlineStatus(output.date_limite)
+  // How long is left to bid — the most useful thing to show next to a project,
+  // and computed from the hour as well as the date: most avis close before noon,
+  // so a day-granular answer is wrong for most of the working day.
+  if ('date_limite' in output) output.deadline = deadlineStatus(output.date_limite, output.heure_limite ?? null)
   if ('is_active' in output) output.is_active = Boolean(output.is_active)
   if (keepRaw && row.raw_json) output.raw = safeParse(row.raw_json)
   return output

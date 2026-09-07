@@ -192,6 +192,30 @@ export default {
   // ---- Search ----
   'sort.relevance': 'الصلة',
 
+  // ---- Today screen ----
+  'nav.today': 'اليوم',
+  'today.title': 'اليوم',
+  'today.since': 'منذ آخر زيارة لك في',
+  'today.closing': 'يُغلق خلال 48 ساعة',
+  'today.noClosing': 'لا شيء يُغلق خلال يومين.',
+  'today.allClosing': 'كل ما يُغلق قريبًا',
+  'today.new': 'إعلانات جديدة',
+  'today.noNew': 'لا إعلانات جديدة منذ آخر زيارة.',
+  'today.firstVisit': 'أول زيارة: كل شيء جديد. عُد لاحقًا وسيعرض هذا الإطار ما تغيّر فقط.',
+  'today.settled': 'نتائج ما تتابعه',
+  'today.setupTitle': 'كن على علم',
+  'today.setupLede': 'المدة الوسيطة بين النشر والإغلاق أربعة أيام. أخبرنا بما يهمّك وسنعلمك؛ وإلا سيتعيّن عليك القدوم للاطلاع.',
+  'today.setupAny': 'كل الأصناف',
+  'today.setupPlace': 'المدينة أو الجهة',
+  'today.setupSubmit': 'أعلِمني',
+  'today.setupName': 'إعلاناتي',
+  'today.setupNote': 'قابل للتعديل في أي وقت من التنبيهات.',
+
+  // ---- Deadlines ----
+  'deadline.hours': 'اليوم · بقيت {hours} س',
+  'deadline.minutes': 'أقل من ساعة',
+  'deadline.closesAt': 'يُغلق في',
+
   // ---- Company directory ----
   'companies.title': 'الشركات الفائزة',
   'companies.total': 'الشركات',

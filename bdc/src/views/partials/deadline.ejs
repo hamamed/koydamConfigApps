@@ -1,15 +1,25 @@
 <%
 /*
   A deadline as a bidder reads it: how long is left, not just a date.
+
+  Hours are shown below a day because most avis close before noon and the
+  window between publication and closing has a median of four days — "closes
+  in 3h" and "closes tomorrow" are different messages, and treating both as
+  "today" is what made the badge wrong for most of the working day.
+
   Expects { deadline, date } where `deadline` is utils/deadline.js output.
 */
-const cls = !deadline ? '' : deadline.urgency === 'passed' ? 'warn' : deadline.urgency === 'open' ? '' : 'urgent'
+const cls = !deadline ? ''
+  : deadline.urgency === 'passed' ? 'warn'
+  : deadline.urgency === 'open' ? ''
+  : 'urgent'
 %>
 <span class="ltr"><%= date || '—' %></span>
 <% if (deadline) { %>
-  <span class="pill <%= cls %>" style="margin-inline-start:6px">
+  <span class="pill <%= cls %>" style="margin-inline-start:6px"
+        title="<%= t('deadline.closesAt') %> <%= deadline.closesAt.slice(0, 16).replace('T', ' ') %> UTC">
     <% if (deadline.urgency === 'passed') { %><%= t('deadline.passed') %>
-    <% } else if (deadline.urgency === 'today') { %><%= t('deadline.today') %>
+    <% } else if (deadline.urgency === 'hours') { %><%= deadline.hours <= 0 ? t('deadline.minutes') : t('deadline.hours', { hours: deadline.hours }) %>
     <% } else { %><%= t('deadline.days', { days: deadline.days }) %><% } %>
   </span>
 <% } %>

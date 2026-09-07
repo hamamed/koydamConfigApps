@@ -122,6 +122,46 @@ export function panelRoutes({ services }) {
   })
 
   // ------------------------------------------------------- everyone signed in
+  /**
+   * The home screen: what has changed since you looked, and what runs out next.
+   * The listing answers "what exists"; this answers the two questions that
+   * decide whether somebody bids in time.
+   */
+  router.get(
+    '/panel/today',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      res.render('panel/today', await shell(req, {
+        active: 'today',
+        today: await services.today.forUser(req.user),
+      }))
+    }),
+  )
+
+  /** The one-question setup a new account is offered instead of 700 rows. */
+  router.post(
+    '/panel/today/setup',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const filters = {}
+      if (typeof req.body.categorie === 'string' && req.body.categorie.trim()) filters.categorie = req.body.categorie.trim()
+      if (typeof req.body.lieuExecution === 'string' && req.body.lieuExecution.trim()) {
+        filters.lieuExecution = req.body.lieuExecution.trim()
+      }
+      try {
+        await services.savedSearches.create(req.user.id, {
+          name: translator(req.locale)('today.setupName'),
+          filters,
+          notifyNew: true,
+          notifyAwards: true,
+        })
+      } catch {
+        // A setup that fails must not block the screen it is offered on.
+      }
+      res.redirect(`/panel/today?lang=${req.locale}`)
+    }),
+  )
+
   router.get(
     '/panel',
     anyUser,
@@ -601,4 +641,4 @@ function buildInvoicePayload(consultationId, body) {
 
 /** Prevents open redirects through the `next` parameter. */
 const safeRedirect = (value) =>
-  typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/panel'
+  typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/panel/today'

@@ -89,8 +89,11 @@ export function createAlertService({ savedSearches, notifications, consultations
 
       const { rows } = await favorites.listForUser(user.id, {}, { limit: 200, offset: 0 })
       const closing = rows
-        .map((row) => ({ ...row, deadline: deadlineStatus(row.date_limite, now) }))
-        .filter((row) => row.deadline && row.deadline.days >= 0 && row.deadline.days <= SOON_DAYS)
+        .map((row) => ({ ...row, deadline: deadlineStatus(row.date_limite, row.heure_limite ?? null, now) }))
+        // Still open, and closing inside the window. Measured in hours because
+        // an avis closing at 10:00 has already gone by the afternoon, and
+        // reminding somebody about it is worse than saying nothing.
+        .filter((row) => row.deadline && row.deadline.hours > 0 && row.deadline.days <= SOON_DAYS)
 
       if (closing.length === 0) continue
 

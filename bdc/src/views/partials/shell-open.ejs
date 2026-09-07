@@ -213,6 +213,7 @@
     </div>
 
     <nav>
+      <a href="/panel/today" class="<%= active === 'today' ? 'on' : '' %>"><%- include('icon', { name: 'calendar' }) %><%= t('nav.today') %></a>
       <a href="/panel" class="<%= active === 'projects' ? 'on' : '' %>"><%- include('icon', { name: 'search' }) %><%= t('nav.projects') %></a>
       <a href="/panel/awards" class="<%= active === 'awards' ? 'on' : '' %>"><%- include('icon', { name: 'award' }) %><%= t('nav.awards') %></a>
       <a href="/panel/insights" class="<%= active === 'insights' ? 'on' : '' %>"><%- include('icon', { name: 'chart-column' }) %><%= t('nav.insights') %></a>

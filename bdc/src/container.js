@@ -40,6 +40,7 @@ import { createExclusionRepository } from './repositories/exclusionRepository.js
 import { createBtpRepository } from './repositories/btpRepository.js'
 import { createCompanyRecordService } from './services/companyRecordService.js'
 import { createCompanyDirectoryService } from './services/companyDirectoryService.js'
+import { createTodayService } from './services/todayService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
 
 /**
@@ -134,6 +135,12 @@ export function createContainer(db = getDb(), options = {}) {
     companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
     companyDirectory: createCompanyDirectoryService(repositories),
   }
+  services.today = createTodayService({
+    consultations: services.consultations,
+    favorites: services.favorites,
+    savedSearches: services.savedSearches,
+    users: repositories.users,
+  })
   services.system = createSystemInspector({
     settings,
     jobs: repositories.jobs,

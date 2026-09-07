@@ -578,14 +578,35 @@ test('a deadline is shown as time remaining, not just a date', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  const { deadlineStatus, SOON_DAYS } = await import('../src/utils/deadline.js')
-  const now = new Date('2026-09-06T10:00:00Z')
-  assert.deepEqual(deadlineStatus('2026-09-06', now), { days: 0, urgency: 'today' })
-  assert.deepEqual(deadlineStatus('2026-09-04', now), { days: -2, urgency: 'passed' })
-  assert.equal(deadlineStatus(`2026-09-0${6 + SOON_DAYS}`, now).urgency, 'soon')
-  assert.equal(deadlineStatus('2026-12-01', now).urgency, 'open')
+  const { deadlineStatus, SOON_DAYS, closingInstant } = await import('../src/utils/deadline.js')
+  // 15:00 in Casablanca, which is 14:00 UTC. Most avis close before noon, so
+  // this is the hour of the day when a day-granular badge was most wrong.
+  const now = new Date('2026-09-07T14:00:00Z')
+
+  // Shut five hours ago. It used to read "closes today" until midnight.
+  const shut = deadlineStatus('2026-09-07', '10:00', now)
+  assert.equal(shut.urgency, 'passed')
+  assert.equal(shut.hours, -5)
+
+  // Still open this afternoon: hours, not days, because they are what is left.
+  assert.deepEqual(
+    { ...deadlineStatus('2026-09-07', '16:00', now), closesAt: undefined },
+    { days: 0, hours: 1, urgency: 'hours', closesAt: undefined },
+  )
+  // Tomorrow morning is under a day away and reads as hours too.
+  assert.equal(deadlineStatus('2026-09-08', '10:00', now).urgency, 'hours')
+  assert.equal(deadlineStatus('2026-09-11', '12:00', now).urgency, 'soon')
+  assert.equal(deadlineStatus('2026-12-01', '12:00', now).urgency, 'open')
+
+  // With no hour published, assume the end of the day rather than the start.
+  assert.equal(deadlineStatus('2026-09-07', null, now).urgency, 'hours')
+
+  // The portal's clock is Morocco's, not the server's: noon there is 11:00 UTC.
+  assert.equal(new Date(closingInstant('2026-09-07', '12:00')).toISOString(), '2026-09-07T11:00:00.000Z')
+
   assert.equal(deadlineStatus(null), null)
   assert.equal(deadlineStatus('not a date'), null)
+  assert.ok(SOON_DAYS > 0)
 
   // It reaches the API and the page.
   const { data } = await (await fetch(`${api.base}/api/consultations?perPage=3`, {
@@ -1124,7 +1145,7 @@ test('every sidebar item has its own icon, and it means what the item does', asy
   const items = [...nav.matchAll(/<a href="([^"]+)"[^>]*>\s*<svg[^>]*>([\s\S]*?)<\/svg>\s*([^<]+)/g)]
     .map(([, href, paths, label]) => ({ href: href.split('?')[0], paths, label: label.trim() }))
 
-  assert.equal(items.length, 13, 'every nav item renders an icon')
+  assert.equal(items.length, 14, 'every nav item renders an icon')
 
   // Two items drawn the same are worse than one drawn badly: the sidebar is
   // scanned by shape, not read. Awards and Insights carried each other's icon
@@ -1208,4 +1229,70 @@ test('a table is never forced wider than the card holding it', async () => {
     // whole document sideways, sidebar and all.
     assert.match(shell, /\.table-wrap \{[^}]*overflow-x\s*:\s*auto/)
   }
+})
+
+test('the home screen answers what changed and what runs out, and marks the visit', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  // First visit: nothing can be "new since you looked", and the screen says so
+  // rather than showing everything and calling it new.
+  const first = await api.container.services.today.forUser({ id: 2 })
+  assert.equal(first.since, null)
+  assert.deepEqual(first.fresh, [])
+  assert.equal(first.needsSetup, true, 'a new account is told about nothing at all')
+
+  // The visit is recorded, so the second call has a mark to compare against.
+  const second = await api.container.services.today.forUser({ id: 2 })
+  assert.ok(second.since, 'the first visit left a mark')
+
+  // Closing soon is measured in hours and excludes what has already shut: an
+  // avis that closed at 10:00 must not be offered at 15:00 as still biddable.
+  assert.ok(second.urgent.every((row) => row.deadline.hours > 0 && row.deadline.hours <= 48))
+  assert.deepEqual(
+    second.urgent.map((row) => row.deadline.hours),
+    [...second.urgent.map((row) => row.deadline.hours)].sort((a, b) => a - b),
+    'soonest first',
+  )
+
+  const html = await (await api.page('/panel/today', api.staff)).text()
+  assert.match(html, /Aujourd’hui/)
+})
+
+test('signing in lands on the home screen, not on seven hundred rows', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const response = await fetch(`${api.base}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ email: 'staff@test.ma', password: 'a-very-long-password' }).toString(),
+    redirect: 'manual',
+  })
+  assert.equal(response.status, 302)
+  assert.equal(response.headers.get('location'), '/panel/today')
+})
+
+test('the one-question setup creates the alert a new account lacks', async (t) => {
+  const api = await setup()
+  t.after(() => api.close())
+
+  const before = await api.container.services.savedSearches.list(2)
+  assert.equal(before.length, 0)
+
+  const response = await fetch(`${api.base}/panel/today/setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', cookie: api.staff },
+    body: new URLSearchParams({ categorie: 'Fournitures', lieuExecution: 'CASABLANCA' }).toString(),
+    redirect: 'manual',
+  })
+  assert.equal(response.status, 302)
+
+  const [saved] = await api.container.services.savedSearches.list(2)
+  assert.ok(saved, 'the search exists after one answer')
+  assert.deepEqual(saved.filters, { categorie: 'Fournitures', lieuExecution: 'CASABLANCA' })
+  assert.equal(saved.notify_new, true)
+
+  // And the screen stops offering setup once there is something to be told about.
+  assert.equal((await api.container.services.today.forUser({ id: 2 })).needsSetup, false)
 })

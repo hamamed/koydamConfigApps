@@ -192,6 +192,30 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Relevance',
 
+  // ---- Today screen ----
+  'nav.today': 'Today',
+  'today.title': 'Today',
+  'today.since': 'Since you last looked',
+  'today.closing': 'Closing within 48h',
+  'today.noClosing': 'Nothing closes in the next two days.',
+  'today.allClosing': 'Everything closing soon',
+  'today.new': 'New notices',
+  'today.noNew': 'No new notices since you last looked.',
+  'today.firstVisit': 'First visit: everything is new. Come back and this box will show only what changed.',
+  'today.settled': 'Results for what you follow',
+  'today.setupTitle': 'Get told',
+  'today.setupLede': 'The median window between publication and closing is four days. Tell us what interests you and you will be told; otherwise you have to come and look.',
+  'today.setupAny': 'Any category',
+  'today.setupPlace': 'City or region',
+  'today.setupSubmit': 'Tell me',
+  'today.setupName': 'My notices',
+  'today.setupNote': 'Changeable at any time under Alerts.',
+
+  // ---- Deadlines ----
+  'deadline.hours': 'D-0 · {hours}h left',
+  'deadline.minutes': 'Under an hour',
+  'deadline.closesAt': 'Closes',
+
   // ---- Company directory ----
   'companies.title': 'Award-winning companies',
   'companies.total': 'Companies',

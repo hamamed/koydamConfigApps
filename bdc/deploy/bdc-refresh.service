@@ -1,0 +1,32 @@
+[Unit]
+Description=Marches publics — refresh the open listing
+Documentation=man:systemd.service(5)
+After=network-online.target bdc.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/bdc
+EnvironmentFile=/opt/bdc/.env
+
+# Just the open listing, and all of it.
+#
+# The window between an avis being published and closing has a median of four
+# days, and 93% of what is open at any moment closes within two. Looking once a
+# day meant an avis published at 07:00 was not seen until 05:30 the next
+# morning — twenty-three hours out of a ninety-six hour window, a quarter of the
+# bidder's time, gone before they knew it existed.
+#
+# Sixteen pages at fifty rows is about four minutes. Eight times a day is half
+# an hour of crawling and hands that time back.
+ExecStart=/usr/bin/node bin/scrape.js --source=consultations --page-size=50 --max-pages=30
+TimeoutStartSec=1800
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/bdc/data /opt/bdc/storage
+SyslogIdentifier=bdc-refresh
