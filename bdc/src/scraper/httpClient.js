@@ -138,7 +138,15 @@ export function createHttpClient(options = {}) {
       const search = params instanceof URLSearchParams ? params : new URLSearchParams(params)
       for (const [key, value] of search.entries()) target.searchParams.append(key, value)
     }
-    const payload = new URLSearchParams(body).toString()
+    // An array value is repeated, not comma-joined. Some forms give several
+    // controls the same name and read them back as an ordered list — the BTP
+    // register's eleven criteria selects are all named alike, and joining them
+    // with commas submits one meaningless value instead of eleven.
+    const form = new URLSearchParams()
+    for (const [key, value] of Object.entries(body)) {
+      for (const one of Array.isArray(value) ? value : [value]) form.append(key, String(one))
+    }
+    const payload = form.toString()
 
     const { userAgent, timeoutMs, delayMs, maxRetries } = await current()
     let lastError = null

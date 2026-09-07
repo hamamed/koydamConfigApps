@@ -192,6 +192,12 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Relevance',
 
+  // ---- BTP qualification register ----
+  'btp.title': 'BTP qualification (Ministry of Equipment)',
+  'btp.code': 'Code',
+  'btp.note': 'The official register of companies qualified and classified for public works. Matched on the name: treat it as a strong indication to verify, not a certainty.',
+  'stats.btp': 'Qualified BTP companies',
+
   // ---- Procurement exclusions ----
   'exclusion.search': 'Search',
   'exclusion.searchPlaceholder': 'Name, reason or trade register',

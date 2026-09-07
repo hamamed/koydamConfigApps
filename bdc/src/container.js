@@ -37,6 +37,7 @@ import { createAccessRequestRepository } from './repositories/accessRequestRepos
 import { createAccessRequestService } from './services/accessRequestService.js'
 import { createCompanyRecordRepository } from './repositories/companyRecordRepository.js'
 import { createExclusionRepository } from './repositories/exclusionRepository.js'
+import { createBtpRepository } from './repositories/btpRepository.js'
 import { createCompanyRecordService } from './services/companyRecordService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
 
@@ -66,6 +67,7 @@ export function createContainer(db = getDb(), options = {}) {
     accessRequests: createAccessRequestRepository(db),
     companyRecords: createCompanyRecordRepository(db),
     exclusions: createExclusionRepository(db),
+    btp: createBtpRepository(db),
   }
 
   const settings = createSettingsService(repositories)

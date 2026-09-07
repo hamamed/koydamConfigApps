@@ -192,6 +192,12 @@ export default {
   // ---- Search ----
   'sort.relevance': 'Pertinence',
 
+  // ---- BTP qualification register ----
+  'btp.title': 'Qualification BTP (ministère de l’Équipement)',
+  'btp.code': 'Code',
+  'btp.note': 'Registre officiel des entreprises qualifiées et classées pour les marchés de travaux publics. Le rapprochement se fait sur le nom : c’est une forte présomption, à vérifier avant toute décision.',
+  'stats.btp': 'Entreprises BTP qualifiées',
+
   // ---- Procurement exclusions ----
   'exclusion.search': 'Rechercher',
   'exclusion.searchPlaceholder': 'Nom, motif ou registre de commerce',

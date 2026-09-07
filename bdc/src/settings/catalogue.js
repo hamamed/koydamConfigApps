@@ -69,6 +69,10 @@ export const CATALOGUE = Object.freeze([
   // panel, and can be wound back by hand to re-read a stretch of the archive.
   { key: 'scraper.archiveNextPage', group: 'scraper', ...number(1, 20000), fallback: () => 1 },
   { key: 'scraper.archivePagesPerRun', group: 'scraper', ...number(10, 2000), fallback: () => 200 },
+  // Same idea for the BTP register: ten rows a page and ~490 pages, so it is
+  // walked a slice at a time and wraps around to re-read itself.
+  { key: 'scraper.btpNextPage', group: 'scraper', ...number(1, 5000), fallback: () => 1 },
+  { key: 'scraper.btpPagesPerRun', group: 'scraper', ...number(5, 600), fallback: () => 60 },
 
   // Without a host the alert pipeline still runs end to end and writes what it
   // would have sent to the log, so this can be filled in later without anything

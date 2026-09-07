@@ -192,6 +192,12 @@ export default {
   // ---- Search ----
   'sort.relevance': 'الصلة',
 
+  // ---- BTP qualification register ----
+  'btp.title': 'التأهيل في البناء والأشغال العمومية (وزارة التجهيز)',
+  'btp.code': 'الرمز',
+  'btp.note': 'السجل الرسمي للشركات المؤهَّلة والمصنَّفة لصفقات الأشغال العمومية. تتم المطابقة بالاسم: فاعتبرها قرينة قوية تستوجب التحقق، لا يقينًا.',
+  'stats.btp': 'شركات مؤهَّلة',
+
   // ---- Procurement exclusions ----
   'exclusion.search': 'بحث',
   'exclusion.searchPlaceholder': 'الاسم أو السبب أو السجل التجاري',

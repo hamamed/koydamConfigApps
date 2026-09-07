@@ -275,6 +275,32 @@ export function tableStatements(dialect) {
       UNIQUE (match_name, entite_publique, date_debut, registre_commerce)
     )`,
 
+    // The Ministry of Equipment's register of BTP companies qualified for public
+    // works. The only free, official, login-free Moroccan source that carries a
+    // trade-register number, a street address, a city and a telephone — none of
+    // which appears on an award row, where the ICE is empty on every one.
+    `CREATE TABLE IF NOT EXISTS btp_companies (
+      ${id},
+      raison_sociale TEXT NOT NULL,
+      match_name TEXT NOT NULL,
+      -- The ministry's own key for the company, taken from its detail link.
+      registre_commerce TEXT NOT NULL,
+      ville TEXT,
+      adresse TEXT,
+      telephone TEXT,
+      fax TEXT,
+      -- The qualification code the ministry assigns, e.g. "AH/30".
+      code TEXT,
+      source_url TEXT,
+      first_seen_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      -- Two companies can share a trading name and are told apart by the
+      -- register number, the same lesson the exclusion list taught.
+      UNIQUE (registre_commerce, match_name)
+    )`,
+
     `CREATE TABLE IF NOT EXISTS saved_searches (
       ${id},
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -404,6 +430,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_company_records_ice ON company_records (ice)',
     'CREATE INDEX IF NOT EXISTS idx_company_exclusions_match ON company_exclusions (match_name)',
+    'CREATE INDEX IF NOT EXISTS idx_btp_companies_match ON btp_companies (match_name)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
   ]
@@ -435,4 +462,4 @@ export function additiveColumns() {
     { table: 'consultation_articles', column: 'garanties', definition: 'TEXT' },
   ]
 }
-export const SCHEMA_VERSION = '2026-09-07.014'
+export const SCHEMA_VERSION = '2026-09-07.015'

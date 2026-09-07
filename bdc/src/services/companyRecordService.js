@@ -1,4 +1,4 @@
-import { serializeRow } from './serializers.js'
+import { serializeRow, serializeRows } from './serializers.js'
 import { ValidationError } from '../utils/errors.js'
 import { clean } from '../utils/text.js'
 
@@ -16,7 +16,7 @@ const ICE = /^\d{15}$/
  * came from and whether a person has confirmed it, and the profile page shows
  * the difference.
  */
-export function createCompanyRecordService({ companyRecords, companyLookup, exclusions }) {
+export function createCompanyRecordService({ companyRecords, companyLookup, exclusions, btp }) {
   /** The stored fields, or null when every one of them was cleared — an empty
    *  row labelled "verified" says something was checked when nothing is there. */
   async function find(name) {
@@ -72,7 +72,15 @@ export function createCompanyRecordService({ companyRecords, companyLookup, excl
     }))
   }
 
-  return { find, save, remove, lookup, lookupConfigured, exclusionsFor }
+  /**
+   * The company's entry in the Ministry of Equipment's BTP register, if it has
+   * one. Matched on the same normalised name as an exclusion, so a business is
+   * found under one key wherever it appears — an indication to check, not proof
+   * that the two are the same legal person.
+   */
+  const qualificationsFor = async (name) => serializeRows(await btp.findForCompany(name))
+
+  return { find, save, remove, lookup, lookupConfigured, exclusionsFor, qualificationsFor }
 }
 
 function field(value, key) {

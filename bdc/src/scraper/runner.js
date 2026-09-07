@@ -2,6 +2,7 @@ import { createHttpClient } from './httpClient.js'
 import { createConsultationScraper } from './consultationScraper.js'
 import { createResultScraper } from './resultScraper.js'
 import { createExclusionScraper } from './exclusionScraper.js'
+import { createBtpScraper } from './btpScraper.js'
 import { createMatcher } from './matcher.js'
 import { ConflictError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
@@ -11,7 +12,7 @@ const log = logger.child('[scraper:runner]')
 // 'exclusions' is deliberately outside 'all': it is a small, near-static list
 // on a different portal, and re-reading it on every daily crawl would spend
 // requests on a page that changes a few times a year.
-export const SOURCES = Object.freeze(['consultations', 'results', 'exclusions', 'archive', 'all'])
+export const SOURCES = Object.freeze(['consultations', 'results', 'exclusions', 'btp', 'archive', 'all'])
 
 /** An ISO date N days back, the format the portal's date filters require. */
 function daysAgo(days) {
@@ -25,7 +26,7 @@ function daysAgo(days) {
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, articles, documents, results, exclusions, jobs, settings, http }) {
+export function createScraperRunner({ db, consultations, articles, documents, results, exclusions, btp, jobs, settings, http }) {
   // Built per run from the current settings, so changing the delay or the user
   // agent in the panel applies to the next crawl without a restart. A client
   // passed in wins, which is what the tests use to serve fixtures.
@@ -36,6 +37,7 @@ export function createScraperRunner({ db, consultations, articles, documents, re
   const consultationScraper = createConsultationScraper({ http: client, consultations, articles, documents, settings })
   const resultScraper = createResultScraper({ http: client, results, settings })
   const exclusionScraper = createExclusionScraper({ http: client, exclusions })
+  const btpScraper = createBtpScraper({ http: client, btp })
   const matcher = createMatcher({ db, consultations, results })
 
   /**
@@ -109,6 +111,18 @@ export function createScraperRunner({ db, consultations, articles, documents, re
         detail.archive.nextPage = from + size
         await settings.update({ 'scraper.archiveNextPage': detail.archive.nextPage })
         accumulate(totals, detail.archive)
+      }
+
+      // The BTP register lives on the ministry's site, not the procurement
+      // portal, and changes slowly — so it is its own source, outside 'all'.
+      if (source === 'btp') {
+        const from = Number(await settings.get('scraper.btpNextPage')) || 1
+        const size = Number(await settings.get('scraper.btpPagesPerRun')) || 60
+        detail.btp = await btpScraper.scrape({ startPage: from, pages: size })
+        detail.btp.fromPage = from
+        const next = detail.btp.lastPage && detail.btp.nextPage > detail.btp.lastPage ? 1 : detail.btp.nextPage
+        await settings.update({ 'scraper.btpNextPage': next })
+        accumulate(totals, detail.btp)
       }
 
       if (source === 'exclusions') {
@@ -192,5 +206,5 @@ export function createScraperRunner({ db, consultations, articles, documents, re
     }
   }
 
-  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, exclusionScraper, http: client }
+  return { run, backfillDetails: backfillDetailsJob, matcher, consultationScraper, resultScraper, exclusionScraper, btpScraper, http: client }
 }
