@@ -7,6 +7,7 @@ import { applyRate, lineTotalCentimes, toCentimes } from '../utils/money.js'
 import { nowIso, isIsoDate } from '../utils/dates.js'
 import { clean } from '../utils/text.js'
 import { renderInvoicePdf } from '../pdf/invoiceDocument.js'
+import { resolveTheme } from '../pdf/invoiceTheme.js'
 
 const SEQUENCE_PADDING = 4
 const MAX_ITEMS = 200
@@ -18,7 +19,7 @@ const VALID_STATUSES = new Set(['draft', 'issued', 'paid', 'cancelled'])
  * All arithmetic runs in integer centimes; the decimal amounts in API payloads
  * are produced at the serialization boundary only.
  */
-export function createInvoiceService({ invoices, articles, consultations, settings }) {
+export function createInvoiceService({ invoices, articles, consultations, settings, branding = null }) {
   /** Live invoice defaults; falls back to `.env` when no settings are stored. */
   const defaults = async () => (settings ? { ...config.invoice, ...(await settings.section('invoice')) } : config.invoice)
 
@@ -196,7 +197,12 @@ export function createInvoiceService({ invoices, articles, consultations, settin
   /** Streams the invoice PDF into `stream` (an HTTP response or a file). */
   async function streamPdf(id, stream, userId = null) {
     const invoice = await getById(id, userId)
-    return renderInvoicePdf(invoice, stream, await company())
+    // The branding is the issuer's, not the reader's: an invoice looks the same
+    // to the person who wrote it, to an administrator, and in the archive.
+    const theme = branding
+      ? await branding.themeFor(invoice.user_id)
+      : resolveTheme(null, await company())
+    return renderInvoicePdf(invoice, stream, { theme })
   }
 
   /** Issuer block printed on the PDF, from settings. */

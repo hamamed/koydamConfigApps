@@ -97,6 +97,24 @@
   .combo-list li.none:hover { background:none; }
   .combo-list mark { background:none; color:var(--accent); font-weight:700; }
 
+  /* ---- invoice appearance --------------------------------------------- */
+  /* Three templates chosen by looking at them, so each is a card-sized target
+     rather than a line in a dropdown. */
+  .choices { display:grid; gap:8px; }
+  .choice { display:flex; gap:10px; align-items:flex-start; padding:11px 12px; cursor:pointer;
+            border:1px solid var(--line); border-radius:9px; background:var(--card); }
+  .choice:hover { border-color:var(--accent); }
+  .choice input { width:auto; margin:2px 0 0; flex:none; }
+  .choice span { display:block; }
+  .choice b { display:block; font-size:13.5px; color:var(--text); font-weight:600; }
+  .choice em { display:block; font-style:normal; font-size:12px; color:var(--muted); margin-top:2px; }
+  .choice:has(input:checked) { border-color:var(--accent); background:var(--accent-soft); }
+  /* The logo as it will print: on white, because that is what it prints on. */
+  .logo-now { display:flex; align-items:center; justify-content:center; padding:14px; margin-bottom:12px;
+              background:#fff; border:1px solid var(--line); border-radius:9px; }
+  .logo-now img { max-height:70px; max-width:100%; }
+  input.swatch { width:52px; height:34px; padding:2px; cursor:pointer; }
+
   /* ---- language menu ------------------------------------------------- */
   .lang { position:relative; }
   .lang > summary { display:flex; align-items:center; gap:8px; cursor:pointer; list-style:none;
@@ -170,6 +188,9 @@
   /* Two per row, not as many as fit. A settings field is read and considered
      one at a time, so wide fields with room to breathe beat a dense grid of
      narrow ones — and the values here are long: a user agent, an address. */
+  /* A labelled control in a form. Spacing only: the label and the input
+     are already styled by their own element rules. */
+  .field { margin-bottom:12px; }
   .cols-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 20px; align-items:start; }
   @media (max-width: 720px) { .cols-2 { grid-template-columns:1fr; } }
   label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500; }

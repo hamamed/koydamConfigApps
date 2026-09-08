@@ -11,6 +11,8 @@ import { createApiLimiter } from './http/middleware/rateLimit.js'
 import { localeMiddleware } from './http/middleware/locale.js'
 
 const JSON_BODY_LIMIT = '1mb'
+/** Room for a base64 logo on the one form that carries one. */
+const LOGO_FORM_LIMIT = '1mb'
 
 /**
  * Builds the Express application.
@@ -38,6 +40,11 @@ export function createApp(container = createContainer()) {
   )
   app.use(cors())
   app.use(express.json({ limit: JSON_BODY_LIMIT }))
+  // A logo arrives base64 inside a normal form field, which is larger than any
+  // other form on this panel has any business being. The global parser below
+  // runs first and would reject it before the route could raise its own limit,
+  // so that one path is parsed here and everything else stays capped.
+  app.use('/panel/invoices/apparence', express.urlencoded({ extended: true, limit: LOGO_FORM_LIMIT }))
   app.use(express.urlencoded({ extended: true }))
   app.use(cookieParser())
   app.use(localeMiddleware(container.settings))

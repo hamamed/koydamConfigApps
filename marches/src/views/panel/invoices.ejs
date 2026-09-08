@@ -3,6 +3,11 @@
 <div class="page-head">
   <h1><%- include('../partials/icon', { name: 'file-text', size: 19 }) %> <%= t('invoices.title') %></h1>
   <span class="muted spacer"><%= total %></span>
+  <%# The appearance is reached from the invoices themselves rather than from
+      the sidebar: it is something you set once, next to what it changes. %>
+  <a class="btn secondary" href="/panel/invoices/apparence?lang=<%= locale %>">
+    <%- include('../partials/icon', { name: 'sliders-horizontal', size: 15 }) %><%= t('nav.branding') %>
+  </a>
 </div>
 
 <% if (notice === 'created') { %><p class="notice"><%- include('../partials/icon', { name: 'circle-check', size: 15 }) %> <%= t('invoices.created') %></p><% } %>

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { config } from '../../config/index.js'
+import { renderInvoicePdf } from '../../pdf/invoiceDocument.js'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireAdminPage, requireUserPage } from '../middleware/auth.js'
 import { cookieOptions, clearCookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
@@ -375,6 +376,68 @@ export function panelRoutes({ services }) {
    * One buyer's record. Addressed by the name the portal prints, which is the
    * only identifier a buyer has anywhere in its markup.
    */
+
+  /* ------------------------------------------------------- invoice branding */
+
+  /** A person's own invoice appearance: template, colour, size, logo, issuer. */
+  router.get(
+    '/panel/invoices/apparence',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      res.render('panel/invoice-branding', await shell(req, {
+        active: 'invoices',
+        branding: await services.invoiceBranding.get(req.user.id),
+        saved: req.query.saved === '1',
+        error: null,
+      }))
+    }),
+  )
+
+  router.post(
+    '/panel/invoices/apparence',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      try {
+        await services.invoiceBranding.save(req.user.id, req.body)
+        res.redirect(`/panel/invoices/apparence?saved=1&lang=${req.locale}`)
+      } catch (error) {
+        res.status(error.statusCode ?? 400).render('panel/invoice-branding', await shell(req, {
+          active: 'invoices',
+          branding: { ...(await services.invoiceBranding.get(req.user.id)), ...req.body },
+          saved: false,
+          error: error.message,
+        }))
+      }
+    }),
+  )
+
+  router.post(
+    '/panel/invoices/apparence/logo',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      await services.invoiceBranding.clearLogo(req.user.id)
+      res.redirect(`/panel/invoices/apparence?saved=1&lang=${req.locale}`)
+    }),
+  )
+
+  /**
+   * The appearance, on an invoice, without having to issue one.
+   *
+   * Drawn from a specimen rather than a stored row: somebody setting this up
+   * has not written an invoice yet, and the first one they send should not be
+   * the first time they see what it looks like.
+   */
+  router.get(
+    '/panel/invoices/apparence/apercu.pdf',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const theme = await services.invoiceBranding.themeFor(req.user.id)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'inline; filename="apercu.pdf"')
+      await renderInvoicePdf(specimenInvoice(), res, { theme })
+    }),
+  )
+
   router.get(
     '/panel/buyers/:name',
     anyUser,
@@ -597,3 +660,41 @@ function buildInvoicePayload(consultationId, body) {
 /** Prevents open redirects through the `next` parameter. */
 const safeRedirect = (value) =>
   typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/panel/today'
+
+/**
+ * A specimen invoice, for previewing an appearance before there is anything to
+ * bill. Deliberately unremarkable: two lines, one long enough to wrap, a
+ * discount and a VAT rate, so every part of the layout has something in it.
+ */
+function specimenInvoice() {
+  const today = new Date().toISOString().slice(0, 10)
+  return {
+    invoice_number: 'SPECIMEN-001',
+    issue_date: today,
+    due_date: today,
+    status: 'draft',
+    currency: 'MAD',
+    client_name: 'Direction Régionale — Service des Marchés',
+    client_ice: '000000000000000',
+    client_address: 'Avenue Mohammed V, Rabat',
+    consultation_reference: '00/2026',
+    subtotal_cents: 4_800_000,
+    discount_cents: 300_000,
+    tax_rate: 20,
+    tax_cents: 900_000,
+    total_cents: 5_400_000,
+    notes: null,
+    items: [
+      {
+        designation: 'Fourniture et installation de matériel informatique, configuration et mise en service sur site',
+        lot_number: '1', quantity: 12, unit: 'U',
+        unit_price_cents: 300_000, line_total_cents: 3_600_000,
+      },
+      {
+        designation: 'Maintenance et assistance technique',
+        lot_number: '2', quantity: 6, unit: 'Mois',
+        unit_price_cents: 200_000, line_total_cents: 1_200_000,
+      },
+    ],
+  }
+}

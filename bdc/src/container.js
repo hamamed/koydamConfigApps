@@ -7,6 +7,7 @@ import { createDocumentRepository } from './repositories/documentRepository.js'
 import { createResultRepository } from './repositories/resultRepository.js'
 import { createFavoriteRepository } from './repositories/favoriteRepository.js'
 import { createInvoiceRepository } from './repositories/invoiceRepository.js'
+import { createInvoiceBrandingRepository } from './repositories/invoiceBrandingRepository.js'
 import { createUserRepository } from './repositories/userRepository.js'
 import { createScrapeJobRepository } from './repositories/scrapeJobRepository.js'
 import { createSettingsRepository } from './repositories/settingsRepository.js'
@@ -20,6 +21,7 @@ import { createHealthService } from './scraper/health.js'
 import { createConsultationService } from './services/consultationService.js'
 import { createFavoriteService } from './services/favoriteService.js'
 import { createInvoiceService } from './services/invoiceService.js'
+import { createInvoiceBrandingService } from './services/invoiceBrandingService.js'
 import { createAuthService } from './services/authService.js'
 import { createAdminService } from './services/adminService.js'
 import { createSettingsService } from './settings/service.js'
@@ -58,6 +60,7 @@ export function createContainer(db = getDb(), options = {}) {
     results: createResultRepository(db),
     favorites: createFavoriteRepository(db),
     invoices: createInvoiceRepository(db),
+    invoiceBranding: createInvoiceBrandingRepository(db),
     users: createUserRepository(db),
     jobs: createScrapeJobRepository(db),
     settings: createSettingsRepository(db),
@@ -99,10 +102,15 @@ export function createContainer(db = getDb(), options = {}) {
 
   const auth = createAuthService(repositories)
   const baseUrl = process.env.PUBLIC_URL || 'https://bdc.civictrust.ma'
+  // Built before the services object because the invoice service prints
+  // with it, and the panel edits it.
+  const invoiceBranding = createInvoiceBrandingService({ ...repositories, settings })
+
   const services = {
+    invoiceBranding,
     consultations: createConsultationService({ ...repositories, matcher: runner.matcher }),
     favorites: createFavoriteService(repositories),
-    invoices: createInvoiceService({ ...repositories, settings }),
+    invoices: createInvoiceService({ ...repositories, settings, branding: invoiceBranding }),
     auth,
     users: createUserService({ ...repositories, auth }),
     settings,

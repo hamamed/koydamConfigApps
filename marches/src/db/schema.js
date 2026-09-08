@@ -360,6 +360,36 @@ export function tableStatements(dialect) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
+    /*
+      Per-person invoice branding.
+
+      One row per user, not one per service: two people billing through the
+      same installation are two businesses with two logos, and the issuer block
+      on an invoice is theirs, not ours. Absent a row, the environment's
+      COMPANY_* values still apply, so an installation that never opens this
+      screen keeps the invoices it had.
+
+      The logo is base64 TEXT rather than a BLOB so that one statement works on
+      both engines, and so a backup of the database is a backup of the logo.
+    */
+    `CREATE TABLE IF NOT EXISTS invoice_branding (
+      ${id},
+      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      template TEXT NOT NULL DEFAULT 'classique',
+      accent TEXT NOT NULL DEFAULT '#0b5394',
+      density TEXT NOT NULL DEFAULT 'normal',
+      logo_data TEXT,
+      logo_mime TEXT,
+      logo_scale REAL NOT NULL DEFAULT 1,
+      company_name TEXT,
+      company_ice TEXT,
+      company_address TEXT,
+      company_email TEXT,
+      company_phone TEXT,
+      footer_note TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )`,
     `CREATE TABLE IF NOT EXISTS invoice_items (
       ${id},
       invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
@@ -438,6 +468,7 @@ export function indexStatements() {
     'CREATE INDEX IF NOT EXISTS idx_btp_companies_match ON btp_companies (match_name)',
     'CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications (status, created_at)',
     'CREATE INDEX IF NOT EXISTS idx_scrape_jobs_source ON scrape_jobs (source, started_at)',
+    'CREATE INDEX IF NOT EXISTS idx_invoice_branding_user ON invoice_branding (user_id)',
   ]
 }
 /**

@@ -1,0 +1,198 @@
+<%- include('../partials/shell-open', { title: t('branding.title') }) %>
+
+<%
+  const b = branding || {}
+  const template = b.template || 'classique'
+  const density = b.density || 'normal'
+  const accent = b.accent || '#0b5394'
+  const scale = b.logo_scale || b.logoScale || 1
+  const TEMPLATES = [
+    { key: 'classique', label: t('branding.tpl.classique'), hint: t('branding.tpl.classiqueHint') },
+    { key: 'moderne', label: t('branding.tpl.moderne'), hint: t('branding.tpl.moderneHint') },
+    { key: 'epure', label: t('branding.tpl.epure'), hint: t('branding.tpl.epureHint') },
+  ]
+  const DENSITIES = [
+    { key: 'compact', label: t('branding.size.compact') },
+    { key: 'normal', label: t('branding.size.normal') },
+    { key: 'large', label: t('branding.size.large') },
+  ]
+%>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'receipt', size: 19 }) %> <%= t('branding.title') %></h1>
+  <span class="muted spacer"><%= t('branding.lede') %></span>
+</div>
+
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+<% if (saved) { %><div class="notice"><%= t('branding.saved') %></div><% } %>
+
+<form method="post" action="/panel/invoices/apparence" id="branding">
+  <input type="hidden" name="lang" value="<%= locale %>">
+
+  <div class="grid cols-2" style="align-items:start">
+    <div>
+      <div class="card">
+        <h2><%- include('../partials/icon', { name: 'layout-grid', size: 15 }) %><%= t('branding.template') %></h2>
+        <%# Radios rather than a dropdown: three choices that differ in how they
+            look are chosen by looking, and each carries what it actually does. %>
+        <div class="choices">
+          <% TEMPLATES.forEach(function (tpl) { %>
+            <label class="choice">
+              <input type="radio" name="template" value="<%= tpl.key %>" <%= template === tpl.key ? 'checked' : '' %>>
+              <span>
+                <b><%= tpl.label %></b>
+                <em><%= tpl.hint %></em>
+              </span>
+            </label>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><%- include('../partials/icon', { name: 'building-2', size: 15 }) %><%= t('branding.identity') %></h2>
+        <p class="muted" style="margin:-4px 0 14px; font-size:12.5px"><%= t('branding.identityHint') %></p>
+        <div class="cols-2">
+          <div class="field">
+            <label for="companyName"><%= t('branding.name') %></label>
+            <input id="companyName" name="companyName" value="<%= b.company_name || '' %>">
+          </div>
+          <div class="field">
+            <label for="companyIce"><%= t('branding.ice') %></label>
+            <input id="companyIce" name="companyIce" dir="ltr" value="<%= b.company_ice || '' %>">
+          </div>
+          <div class="field">
+            <label for="companyEmail"><%= t('branding.email') %></label>
+            <input id="companyEmail" name="companyEmail" type="email" dir="ltr" value="<%= b.company_email || '' %>">
+          </div>
+          <div class="field">
+            <label for="companyPhone"><%= t('branding.phone') %></label>
+            <input id="companyPhone" name="companyPhone" dir="ltr" value="<%= b.company_phone || '' %>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="companyAddress"><%= t('branding.address') %></label>
+          <textarea id="companyAddress" name="companyAddress" rows="2"><%= b.company_address || '' %></textarea>
+        </div>
+        <div class="field">
+          <label for="footerNote"><%= t('branding.footerNote') %></label>
+          <textarea id="footerNote" name="footerNote" rows="2" placeholder="<%= t('branding.footerNoteHint') %>"><%= b.footer_note || '' %></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2><%- include('../partials/icon', { name: 'image', size: 15 }) %><%= t('branding.logo') %></h2>
+        <% if (b.logo_data) { %>
+          <div class="logo-now">
+            <img src="data:<%= b.logo_mime %>;base64,<%= b.logo_data %>" alt="<%= t('branding.logo') %>">
+          </div>
+        <% } else { %>
+          <p class="muted" style="margin:0 0 12px; font-size:12.5px"><%= t('branding.noLogo') %></p>
+        <% } %>
+
+        <div class="field">
+          <label for="logoFile"><%= t('branding.logoPick') %></label>
+          <%# The refusals are written here so they are translated with the
+              rest of the page rather than hard-coded in the script. %>
+          <input id="logoFile" type="file" accept="image/png,image/jpeg"
+                 data-too-big="<%= t('branding.logoTooBig') %>"
+                 data-wrong-type="<%= t('branding.logoWrongType') %>"
+                 data-unreadable="<%= t('branding.logoUnreadable') %>">
+          <%# The file is read in the browser and posted in this field: the panel
+              takes no multipart uploads anywhere else, and one form field is a
+              smaller thing to secure than an upload path. %>
+          <input type="hidden" name="logo" id="logoData">
+          <p class="muted" style="margin:6px 0 0; font-size:12px"><%= t('branding.logoHint') %></p>
+          <p class="error" id="logoError" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="logoScale"><%= t('branding.logoSize') %></label>
+          <input id="logoScale" name="logoScale" type="range" min="0.5" max="1.6" step="0.1" value="<%= scale %>">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><%- include('../partials/icon', { name: 'sliders-horizontal', size: 15 }) %><%= t('branding.style') %></h2>
+        <div class="field">
+          <label for="accent"><%= t('branding.accent') %></label>
+          <div class="row-actions">
+            <input id="accent" name="accent" type="color" value="<%= accent %>" class="swatch">
+            <span class="muted ltr" id="accentValue"><%= accent %></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="density"><%= t('branding.size') %></label>
+          <select id="density" name="density">
+            <% DENSITIES.forEach(function (d) { %>
+              <option value="<%= d.key %>" <%= density === d.key ? 'selected' : '' %>><%= d.label %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row-actions">
+      <button type="submit"><%= t('branding.save') %></button>
+      <a class="btn secondary" href="/panel/invoices/apparence/apercu.pdf" target="_blank" rel="noopener">
+        <%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('branding.preview') %>
+      </a>
+      <span class="muted" style="font-size:12.5px"><%= t('branding.previewHint') %></span>
+    </div>
+  </div>
+</form>
+
+<% if (b.logo_data) { %>
+  <%# Its own form: removing a logo is not something to do by accident while
+      saving a colour, and it is the only way a logo goes away. %>
+  <form method="post" action="/panel/invoices/apparence/logo" class="card">
+    <input type="hidden" name="lang" value="<%= locale %>">
+    <div class="row-actions">
+      <button class="danger" type="submit"><%= t('branding.logoRemove') %></button>
+      <span class="muted" style="font-size:12.5px"><%= t('branding.logoRemoveHint') %></span>
+    </div>
+  </form>
+<% } %>
+
+<script>
+/* Reads the chosen file into the hidden field, and refuses anything the PDF
+   cannot draw before it is sent rather than after. */
+(function () {
+  var MAX = 512 * 1024
+  var file = document.getElementById('logoFile')
+  var data = document.getElementById('logoData')
+  var problem = document.getElementById('logoError')
+  var accent = document.getElementById('accent')
+  var accentValue = document.getElementById('accentValue')
+
+  if (accent && accentValue) {
+    accent.addEventListener('input', function () { accentValue.textContent = accent.value })
+  }
+  if (!file) return
+
+  var fail = function (message) {
+    problem.textContent = message
+    problem.hidden = false
+    data.value = ''
+    file.value = ''
+  }
+
+  file.addEventListener('change', function () {
+    problem.hidden = true
+    var chosen = file.files && file.files[0]
+    if (!chosen) { data.value = ''; return }
+    if (chosen.size > MAX) return fail(file.dataset.tooBig)
+    if (chosen.type !== 'image/png' && chosen.type !== 'image/jpeg') return fail(file.dataset.wrongType)
+
+    var reader = new FileReader()
+    reader.onload = function () { data.value = String(reader.result) }
+    reader.onerror = function () { fail(file.dataset.unreadable) }
+    reader.readAsDataURL(chosen)
+  })
+}())
+</script>
+
+<%- include('../partials/shell-close') %>

@@ -1297,3 +1297,49 @@ test('a buyer named in the listing opens the page the listing links to', async (
   // And it offers the way to the rest of that buyer's avis.
   assert.match(html, /href="\/panel\?acheteur=/)
 })
+
+test('the invoice appearance screen renders, saves, and previews a real PDF', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  const page = await api.page('/panel/invoices/apparence', api.staff)
+  assert.equal(page.status, 200)
+  const html = await page.text()
+  ;['classique', 'moderne', 'epure'].forEach((key) => {
+    assert.match(html, new RegExp(`value="${key}"`), `${key} is not offered`)
+  })
+  assert.match(html, /name="logo"/, 'there is nowhere to put a logo')
+  assert.ok(!/undefined/.test(html), 'the screen rendered an undefined field')
+
+  // Saving a choice, and reading it back on the invoices the person issues.
+  const saved = await api.page('/panel/invoices/apparence', api.staff, {
+    method: 'POST',
+    headers: { cookie: api.staff, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      template: 'moderne', density: 'compact', accent: '#8a1f4b',
+      companyName: 'Atelier Nour', logoScale: '1.2',
+    }).toString(),
+  })
+  assert.equal(saved.status, 302)
+  const staff = await api.container.db.get('SELECT id FROM users WHERE email = ?', ['staff@test.ma'])
+  const stored = await api.container.services.invoiceBranding.get(staff.id)
+  assert.equal(stored.template, 'moderne')
+  assert.equal(stored.accent, '#8a1f4b')
+  assert.equal(stored.company_name, 'Atelier Nour')
+
+  // The preview is a PDF, not a page describing one.
+  const preview = await api.page('/panel/invoices/apparence/apercu.pdf', api.staff)
+  assert.equal(preview.status, 200)
+  assert.equal(preview.headers.get('content-type'), 'application/pdf')
+  const bytes = Buffer.from(await preview.arrayBuffer())
+  assert.equal(bytes.subarray(0, 5).toString(), '%PDF-')
+  assert.ok(bytes.includes('%%EOF'), 'the preview was never finished')
+
+  // A colour we cannot draw is refused on the way in, not inside a stream.
+  const bad = await api.page('/panel/invoices/apparence', api.staff, {
+    method: 'POST',
+    headers: { cookie: api.staff, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ template: 'classique', accent: 'rouge' }).toString(),
+  })
+  assert.equal(bad.status, 400)
+})
