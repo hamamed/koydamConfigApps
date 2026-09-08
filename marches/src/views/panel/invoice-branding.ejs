@@ -11,6 +11,12 @@
     { key: 'moderne', label: t('branding.tpl.moderne'), hint: t('branding.tpl.moderneHint') },
     { key: 'epure', label: t('branding.tpl.epure'), hint: t('branding.tpl.epureHint') },
   ]
+  const font = b.font || 'sans'
+  const FONTS = [
+    { key: 'sans', label: t('branding.font.sans'), css: 'system-ui, -apple-system, "Segoe UI", sans-serif' },
+    { key: 'serif', label: t('branding.font.serif'), css: 'Georgia, "Times New Roman", serif' },
+    { key: 'mono', label: t('branding.font.mono'), css: 'ui-monospace, "SFMono-Regular", Menlo, monospace' },
+  ]
   const DENSITIES = [
     { key: 'compact', label: t('branding.size.compact') },
     { key: 'normal', label: t('branding.size.normal') },
@@ -91,7 +97,7 @@
             that choosing a template is a matter of looking at it.
           %>
           <div class="sheet tpl-<%= template %>" id="sheet" dir="ltr"
-               style="--accent:<%= accent %>">
+               style="--accent:<%= accent %>; --face:<%= FONTS.find(function (f) { return f.key === font }).css %>">
             <div class="sheet-band">
               <div class="sheet-brand">
                 <img class="sheet-logo" id="pvLogo" alt=""
@@ -179,6 +185,14 @@
           </div>
         </div>
         <div class="field">
+          <label for="font"><%= t('branding.font') %></label>
+          <select id="font" name="font">
+            <% FONTS.forEach(function (f) { %>
+              <option value="<%= f.key %>" <%= font === f.key ? 'selected' : '' %>><%= f.label %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="field">
           <label for="density"><%= t('branding.size') %></label>
           <select id="density" name="density">
             <% DENSITIES.forEach(function (d) { %>
@@ -231,6 +245,11 @@
      saved. It draws the same blocks the PDF does; the PDF button beside it
      is what settles the question. */
   var SIZES = { compact: 0.88, normal: 1, large: 1.12 }
+  var FACES = {
+    sans: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    serif: 'Georgia, "Times New Roman", serif',
+    mono: 'ui-monospace, "SFMono-Regular", Menlo, monospace',
+  }
   var field = function (name) {
     var input = form.elements[name]
     return input && input.value ? input.value.trim() : ''
@@ -242,6 +261,7 @@
     sheet.className = 'sheet tpl-' + template
     sheet.style.setProperty('--accent', accent ? accent.value : '#0b5394')
     sheet.style.setProperty('--s', SIZES[form.elements.density.value] || 1)
+    sheet.style.setProperty('--face', FACES[form.elements.font.value] || FACES.sans)
 
     var name = document.getElementById('pvName')
     if (name) name.textContent = field('companyName') || name.dataset.fallback

@@ -376,6 +376,7 @@ export function tableStatements(dialect) {
       ${id},
       user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
       template TEXT NOT NULL DEFAULT 'classique',
+      font TEXT NOT NULL DEFAULT 'sans',
       accent TEXT NOT NULL DEFAULT '#0b5394',
       density TEXT NOT NULL DEFAULT 'normal',
       logo_data TEXT,
@@ -485,6 +486,8 @@ export function indexStatements() {
  */
 export function additiveColumns() {
   return [
+    // 2026-09-08 — the typeface an invoice is set in became a choice.
+    { table: 'invoice_branding', column: 'font', definition: "TEXT NOT NULL DEFAULT 'sans'" },
     // 2026-09-06.007 — the portal publishes attachments, and a run's per-source
     // counts are worth keeping.
     { table: 'scrape_jobs', column: 'detail_json', definition: 'TEXT' },

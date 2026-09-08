@@ -42,6 +42,22 @@ export const TEMPLATES = Object.freeze({
 })
 
 /**
+ * The typefaces on offer.
+ *
+ * These are the ones a PDF reader is required to have, so an invoice looks the
+ * same on the machine it is opened on as on the one that made it. Embedding
+ * the panel's own face would mean carrying a font file through the deploy and
+ * would still not match, because the panel asks for whatever the reader's
+ * system calls `system-ui`. Helvetica is the nearest thing every reader can be
+ * relied on to draw, so it is the default.
+ */
+export const FONTS = Object.freeze({
+  sans: Object.freeze({ key: 'sans', regular: 'Helvetica', bold: 'Helvetica-Bold', css: 'system-ui, -apple-system, "Segoe UI", sans-serif' }),
+  serif: Object.freeze({ key: 'serif', regular: 'Times-Roman', bold: 'Times-Bold', css: 'Georgia, "Times New Roman", serif' }),
+  mono: Object.freeze({ key: 'mono', regular: 'Courier', bold: 'Courier-Bold', css: 'ui-monospace, "SFMono-Regular", Menlo, monospace' }),
+})
+
+/**
  * How much fits on a page. Every size in a template scales by this.
  *
  * Larger text is given a *narrower* margin, not a wider one. The table's
@@ -77,6 +93,7 @@ export function resolveTheme(row, companyDefaults = {}) {
   const template = TEMPLATES[branding.template] ?? TEMPLATES.classique
   const density = DENSITIES[branding.density] ?? DENSITIES.normal
   const accent = HEX.test(branding.accent ?? '') ? branding.accent : DEFAULT_ACCENT
+  const font = FONTS[branding.font] ?? FONTS.sans
 
   const scale = Number(branding.logo_scale)
   const logoScale = Number.isFinite(scale)
@@ -87,6 +104,7 @@ export function resolveTheme(row, companyDefaults = {}) {
     template,
     density,
     accent,
+    font,
     logo: branding.logo_data
       ? { data: branding.logo_data, mime: branding.logo_mime, scale: logoScale }
       : null,
@@ -114,3 +132,5 @@ export const isTemplate = (key) => Object.hasOwn(TEMPLATES, key)
 export const isDensity = (key) => Object.hasOwn(DENSITIES, key)
 /** @returns {boolean} whether a colour is a six-digit hex. */
 export const isAccent = (value) => HEX.test(value ?? '')
+/** @returns {boolean} whether a typeface key is one we can draw with. */
+export const isFont = (key) => Object.hasOwn(FONTS, key)

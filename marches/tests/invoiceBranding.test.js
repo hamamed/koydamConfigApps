@@ -125,6 +125,44 @@ test('a logo that survives upload but not PDFKit costs a page, not the invoice',
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-', 'a broken logo should not cost the invoice')
 })
 
+test('the typeface is a choice, and an unknown one is refused', async () => {
+  const saved = []
+  const branding = {
+    forUser: async () => null,
+    save: async (userId, patch) => { saved.push(patch); return { user_id: userId, ...patch } },
+    clearLogo: async () => null,
+  }
+  const service = createInvoiceBrandingService({ invoiceBranding: branding, settings: null })
+
+  await service.save(1, { font: 'serif' })
+  assert.equal(saved[0].font, 'serif')
+  await assert.rejects(() => service.save(1, { font: 'comic' }), /typeface/)
+
+  // Each choice reaches PDFKit as a face it can actually draw with, and the
+  // document really is set in it — a face that silently fell back would look
+  // like a saved setting that does nothing.
+  for (const [key, expected] of [['sans', 'Helvetica'], ['serif', 'Times'], ['mono', 'Courier']]) {
+    const theme = resolveTheme({ font: key }, { name: 'Atelier Nour' })
+    const pdf = await render(invoiceOf(2), { theme })
+    assert.match(pdf.toString('latin1'), new RegExp(`/BaseFont\\s*/${expected}`), `${key} was not drawn in ${expected}`)
+  }
+})
+
+test('the invoice is drawn in the panel\'s own palette', async () => {
+  const theme = resolveTheme(null, { name: 'Atelier Nour' })
+  const pdf = await render(invoiceOf(2), { theme })
+  const content = streams(pdf).join('\n')
+
+  // --text #111827 and --muted #6b7280 as PDF fill colours, to three places:
+  // the paper should not be using a palette of its own.
+  assert.match(content, /0\.06666666666666667 0\.09411764705882353 0\.15294117647058825/, 'the ink is not --text')
+  assert.match(content, /0\.4196078431372549 0\.4470588235294118 0\.5019607843137255/, 'the muted tone is not --muted')
+  // --line #e5e9f0, the colour the panel rules its tables with
+  assert.match(content, /0\.8980392156862745 0\.9137254901960784 0\.9411764705882353/, 'the rules are not --line')
+  // and the panel's radius, which only appears if blocks are actually rounded
+  assert.match(content, / c\n?/, 'nothing is drawn with a curve')
+})
+
 /**
  * The text drawn on each page of a PDF.
  *
@@ -162,4 +200,23 @@ function text(pdf) {
     pages.push(shown.join('\n'))
   }
   return pages
+}
+
+/** Every inflated content stream, verbatim — operators and all, not just text. */
+function streams(pdf) {
+  const out = []
+  const raw = pdf.toString('latin1')
+  const pattern = /stream\r?\n/g
+  let match
+  while ((match = pattern.exec(raw)) !== null) {
+    const start = match.index + match[0].length
+    const end = raw.indexOf('endstream', start)
+    if (end < 0) continue
+    try {
+      out.push(inflateSync(pdf.subarray(start, end)).toString('latin1'))
+    } catch {
+      // fonts and metadata are in here too
+    }
+  }
+  return out
 }

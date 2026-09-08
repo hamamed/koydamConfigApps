@@ -1,6 +1,6 @@
 import { config } from '../config/index.js'
 import { ValidationError } from '../utils/errors.js'
-import { resolveTheme, isTemplate, isDensity, isAccent } from '../pdf/invoiceTheme.js'
+import { resolveTheme, isTemplate, isDensity, isAccent, isFont } from '../pdf/invoiceTheme.js'
 
 /** PDFKit draws PNG and JPEG and nothing else, so nothing else is accepted. */
 const IMAGE_TYPES = Object.freeze([
@@ -46,16 +46,19 @@ export function createInvoiceBrandingService({ invoiceBranding, settings }) {
   async function save(userId, form) {
     const template = form.template ?? 'classique'
     const density = form.density ?? 'normal'
+    const font = form.font ?? 'sans'
     const accent = (form.accent ?? '').trim() || '#0b5394'
 
     if (!isTemplate(template)) throw new ValidationError(`Unknown invoice template: ${template}`)
     if (!isDensity(density)) throw new ValidationError(`Unknown invoice density: ${density}`)
+    if (!isFont(font)) throw new ValidationError(`Unknown invoice typeface: ${font}`)
     if (!isAccent(accent)) throw new ValidationError('The accent colour must be a six-digit hex, like #0b5394')
 
     const scale = Number(form.logoScale)
 
     const patch = {
       template,
+      font,
       density,
       accent,
       logo_scale: Number.isFinite(scale) ? Math.min(1.6, Math.max(0.5, scale)) : 1,

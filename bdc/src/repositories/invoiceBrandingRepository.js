@@ -4,7 +4,7 @@ const TABLE = 'invoice_branding'
 
 /** The columns a person may set. Anything else is not theirs to write. */
 const FIELDS = Object.freeze([
-  'template', 'accent', 'density', 'logo_data', 'logo_mime', 'logo_scale',
+  'template', 'font', 'accent', 'density', 'logo_data', 'logo_mime', 'logo_scale',
   'company_name', 'company_ice', 'company_address', 'company_email', 'company_phone', 'footer_note',
 ])
 

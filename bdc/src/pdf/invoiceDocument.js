@@ -3,8 +3,22 @@ import { config } from '../config/index.js'
 import { formatAmount } from '../utils/money.js'
 import { resolveTheme } from './invoiceTheme.js'
 
-const COLORS = { text: '#1f2933', muted: '#7b8794', line: '#cbd2d9', faint: '#eef1f5', reverse: '#ffffff' }
-const FONT = { regular: 'Helvetica', bold: 'Helvetica-Bold' }
+/*
+  The panel's own tokens, so an invoice and the screen that made it read as one
+  product. These are the values in shell-open.ejs `:root` — --text, --muted,
+  --line, --accent-soft — not approximations of them; when the panel's palette
+  moves, these move with it.
+*/
+const COLORS = {
+  text: '#111827',
+  muted: '#6b7280',
+  line: '#e5e9f0',
+  faint: '#eaf1fa',
+  hairline: '#eef1f5',
+  reverse: '#ffffff',
+}
+/** --radius, in points: the panel rounds its cards and so does the paper. */
+const RADIUS = 6
 const MIN_ROW_HEIGHT = 22
 
 /**
@@ -98,8 +112,8 @@ function drawRuledHeader(context, invoice) {
   const logoHeight = drawLogo(context, margin, cursor, theme.template.logo)
   if (logoHeight) cursor += logoHeight + size(8)
 
-  doc.font(FONT.bold).fontSize(size(18)).fillColor(theme.accent).text(theme.issuer.name, margin, cursor)
-  doc.font(FONT.regular).fontSize(size(9)).fillColor(COLORS.muted)
+  doc.font(theme.font.bold).fontSize(size(18)).fillColor(theme.accent).text(theme.issuer.name, margin, cursor)
+  doc.font(theme.font.regular).fontSize(size(9)).fillColor(COLORS.muted)
   issuerLines(theme).forEach((line) => doc.text(line))
 
   drawDetails(context, invoice, { top, color: COLORS.text, muted: COLORS.muted })
@@ -133,8 +147,8 @@ function drawBannerHeader(context, invoice) {
   let cursor = padTop
   if (logoHeight) cursor += drawLogo(context, margin, cursor, theme.template.logo) + size(6)
 
-  doc.font(FONT.bold).fontSize(size(17)).fillColor(COLORS.reverse).text(theme.issuer.name, margin, cursor)
-  doc.font(FONT.regular).fontSize(size(8.5)).fillColor('#dbe7f3')
+  doc.font(theme.font.bold).fontSize(size(17)).fillColor(COLORS.reverse).text(theme.issuer.name, margin, cursor)
+  doc.font(theme.font.regular).fontSize(size(8.5)).fillColor('#dbe7f3')
   lines.forEach((line) => doc.text(line))
 
   drawDetails(context, invoice, { top: padTop, color: COLORS.reverse, muted: '#dbe7f3' })
@@ -151,18 +165,18 @@ function drawCentredHeader(context, invoice) {
   const logoHeight = drawLogo(context, margin, cursor, theme.template.logo, width)
   if (logoHeight) cursor += logoHeight + size(10)
 
-  doc.font(FONT.bold).fontSize(size(16)).fillColor(COLORS.text)
+  doc.font(theme.font.bold).fontSize(size(16)).fillColor(COLORS.text)
     .text(theme.issuer.name, margin, cursor, { width, align: 'center' })
-  doc.font(FONT.regular).fontSize(size(8.5)).fillColor(COLORS.muted)
+  doc.font(theme.font.regular).fontSize(size(8.5)).fillColor(COLORS.muted)
   issuerLines(theme).forEach((line) => doc.text(line, margin, doc.y, { width, align: 'center' }))
 
   doc.moveDown(1)
   rule(context, doc.y, COLORS.line)
   doc.moveDown(0.8)
 
-  doc.font(FONT.bold).fontSize(size(13)).fillColor(theme.accent)
+  doc.font(theme.font.bold).fontSize(size(13)).fillColor(theme.accent)
     .text('FACTURE', margin, doc.y, { width, align: 'center' })
-  doc.font(FONT.regular).fontSize(size(9)).fillColor(COLORS.muted)
+  doc.font(theme.font.regular).fontSize(size(9)).fillColor(COLORS.muted)
     .text(detailLines(invoice).join('   ·   '), margin, doc.y + size(3), { width, align: 'center' })
   doc.moveDown(1)
   rule(context, doc.y)
@@ -170,14 +184,14 @@ function drawCentredHeader(context, invoice) {
 
 /** The "FACTURE / number / dates" block, wherever a template puts it. */
 function drawDetails(context, invoice, { top, color, muted }) {
-  const { doc, margin, size } = context
+  const { doc, theme, margin, size } = context
   const boxWidth = size(210)
   const left = doc.page.width - margin - boxWidth
   const saved = doc.y
 
-  doc.font(FONT.bold).fontSize(size(16)).fillColor(color)
+  doc.font(theme.font.bold).fontSize(size(16)).fillColor(color)
     .text('FACTURE', left, top, { width: boxWidth, align: 'right' })
-  doc.font(FONT.regular).fontSize(size(9.5)).fillColor(muted)
+  doc.font(theme.font.regular).fontSize(size(9.5)).fillColor(muted)
   detailLines(invoice).forEach((line) => doc.text(line, { width: boxWidth, align: 'right' }))
 
   doc.y = Math.max(saved, doc.y)
@@ -228,9 +242,9 @@ function drawParties(context, invoice) {
   const width = centred ? contentWidth(doc, margin) : contentWidth(doc, margin) / 2
   const top = doc.y + size(14)
 
-  doc.font(FONT.bold).fontSize(size(10)).fillColor(COLORS.text)
+  doc.font(theme.font.bold).fontSize(size(10)).fillColor(COLORS.text)
     .text('Facturé à', margin, top, { width, align: centred ? 'center' : 'left' })
-  doc.font(FONT.regular).fillColor(COLORS.text)
+  doc.font(theme.font.regular).fillColor(COLORS.text)
     .text(invoice.client_name, { width, align: centred ? 'center' : 'left' })
 
   doc.fillColor(COLORS.muted).fontSize(size(9))
@@ -248,17 +262,18 @@ function drawConsultationBlock(context, invoice) {
   const height = size(26)
 
   if (theme.template.key === 'epure') {
-    doc.font(FONT.bold).fontSize(size(9)).fillColor(COLORS.muted)
+    doc.font(theme.font.bold).fontSize(size(9)).fillColor(COLORS.muted)
       .text('Consultation : ', margin, top, { continued: true })
-      .font(FONT.regular).text(invoice.consultation_reference)
+      .font(theme.font.regular).text(invoice.consultation_reference)
     doc.y = top + height
     return
   }
 
-  doc.rect(margin, top, contentWidth(doc, margin), height).fillAndStroke(COLORS.faint, COLORS.line)
-  doc.fillColor(COLORS.text).font(FONT.bold).fontSize(size(9))
+  doc.roundedRect(margin, top, contentWidth(doc, margin), height, RADIUS)
+    .fillAndStroke(COLORS.faint, COLORS.line)
+  doc.fillColor(COLORS.text).font(theme.font.bold).fontSize(size(9))
     .text('Consultation : ', margin + size(10), top + size(9), { continued: true })
-    .font(FONT.regular).text(invoice.consultation_reference)
+    .font(theme.font.regular).text(invoice.consultation_reference)
   doc.y = top + height + size(8)
 }
 
@@ -283,7 +298,7 @@ function drawItems(context, items, currency) {
       total: formatAmount(item.line_total_cents, currency),
     }
 
-    doc.font(FONT.regular).fontSize(size(9)).fillColor(COLORS.text)
+    doc.font(theme.font.regular).fontSize(size(9)).fillColor(COLORS.text)
     const designation = columns.find((column) => column.key === 'designation')
     const height = Math.max(
       size(MIN_ROW_HEIGHT),
@@ -306,7 +321,7 @@ function drawItems(context, items, currency) {
     }
 
     cursor += height
-    rule(context, cursor, COLORS.faint)
+    rule(context, cursor, COLORS.hairline)
   }
 
   return cursor
@@ -320,10 +335,12 @@ function drawTableHeader(context, columns, top) {
 
   if (ruled) {
     rule(context, top, COLORS.text)
-    doc.font(FONT.bold).fontSize(size(8.5)).fillColor(COLORS.text)
+    doc.font(theme.font.bold).fontSize(size(8.5)).fillColor(COLORS.text)
   } else {
-    doc.rect(margin, top, contentWidth(doc, margin), height).fill(theme.accent)
-    doc.font(FONT.bold).fontSize(size(9)).fillColor(COLORS.reverse)
+    // Rounded at the top only, the way a table sits inside a card on screen.
+    doc.roundedRect(margin, top, contentWidth(doc, margin), height, RADIUS).fill(theme.accent)
+    doc.rect(margin, top + height - RADIUS, contentWidth(doc, margin), RADIUS).fill(theme.accent)
+    doc.font(theme.font.bold).fontSize(size(9)).fillColor(COLORS.reverse)
   }
 
   let left = margin
@@ -353,7 +370,7 @@ function drawTotals(context, invoice, currency, tableBottom) {
     [`TVA (${invoice.tax_rate} %)`, formatAmount(invoice.tax_cents, currency)],
   ]
 
-  doc.font(FONT.regular).fontSize(size(10)).fillColor(COLORS.text)
+  doc.font(theme.font.regular).fontSize(size(10)).fillColor(COLORS.text)
   for (const [label, value] of lines) {
     doc.text(label, left, cursor, { width: boxWidth / 2 })
     doc.text(value, left + boxWidth / 2, cursor, { width: boxWidth / 2, align: 'right' })
@@ -363,10 +380,10 @@ function drawTotals(context, invoice, currency, tableBottom) {
   const height = size(28)
   if (theme.template.key === 'epure') {
     rule(context, cursor, COLORS.text, left)
-    doc.font(FONT.bold).fontSize(size(11)).fillColor(COLORS.text)
+    doc.font(theme.font.bold).fontSize(size(11)).fillColor(COLORS.text)
   } else {
-    doc.rect(left, cursor, boxWidth, height).fill(theme.accent)
-    doc.font(FONT.bold).fontSize(size(11)).fillColor(COLORS.reverse)
+    doc.roundedRect(left, cursor, boxWidth, height, RADIUS).fill(theme.accent)
+    doc.font(theme.font.bold).fontSize(size(11)).fillColor(COLORS.reverse)
   }
 
   const baseline = cursor + (theme.template.key === 'epure' ? size(8) : size(9))
@@ -385,8 +402,8 @@ function drawNotes(context, invoice) {
   const note = [invoice.notes, theme.footerNote].filter(Boolean).join('\n')
   if (!note) return
 
-  doc.font(FONT.bold).fontSize(size(9)).fillColor(COLORS.text).text('Notes', margin, doc.y)
-  doc.font(FONT.regular).fillColor(COLORS.muted)
+  doc.font(theme.font.bold).fontSize(size(9)).fillColor(COLORS.text).text('Notes', margin, doc.y)
+  doc.font(theme.font.regular).fillColor(COLORS.muted)
     .text(note, { width: contentWidth(doc, margin) })
 }
 
@@ -402,7 +419,7 @@ function drawMark(doc, theme) {
   doc.strokeOpacity(MARK.opacity)
   doc.strokeColor(COLORS.line).lineWidth(0.5)
     .moveTo(margin, bottom - 18).lineTo(doc.page.width - margin, bottom - 18).stroke()
-  doc.font(FONT.regular).fontSize(MARK.size).fillColor(COLORS.muted)
+  doc.font(theme.font.regular).fontSize(MARK.size).fillColor(COLORS.muted)
     .text(MARK.text, margin, bottom - 12, { width: doc.page.width - margin * 2, align: 'center', lineBreak: false })
   doc.restore()
 
