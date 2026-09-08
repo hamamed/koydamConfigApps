@@ -16,15 +16,15 @@
 <div class="grid" style="margin-bottom:14px">
   <div class="stat"><b class="ltr"><%= num(summary.companies) %></b><span><%= t('companies.total') %></span></div>
   <div class="stat">
-    <b class="ltr" style="color:var(--ok)"><%= summary.known %></b>
+    <b class="ltr" style="color:var(--ok)"><%= num(summary.known) %></b>
     <span><%- include('../partials/icon', { name: 'circle-check', size: 13 }) %><%= t('companies.known') %></span>
   </div>
   <div class="stat">
-    <b class="ltr"><%= summary.companies - summary.known %></b>
+    <b class="ltr"><%= num(summary.companies - summary.known) %></b>
     <span><%= t('companies.unknown') %></span>
   </div>
   <div class="stat">
-    <b class="ltr" style="<%= summary.excluded ? 'color:#a4262c' : '' %>"><%= summary.excluded %></b>
+    <b class="ltr" style="<%= summary.excluded ? 'color:#a4262c' : '' %>"><%= num(summary.excluded) %></b>
     <span><%- include('../partials/icon', { name: 'triangle-alert', size: 13 }) %><%= t('companies.excluded') %></span>
   </div>
 </div>
