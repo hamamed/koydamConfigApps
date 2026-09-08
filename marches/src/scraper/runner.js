@@ -81,13 +81,29 @@ export function createScraperRunner({ db, consultations, exclusions, jobs, setti
     const totals = { pagesScraped: 0, itemsFound: 0, itemsCreated: 0, itemsUpdated: 0, matchesLinked: 0 }
     const detail = {}
 
+    /**
+     * Rolls one scraper's numbers into the job's.
+     *
+     * Not optional bookkeeping: the dashboard and the health canary both read
+     * these, and leaving them at zero made a crawl that had just stored three
+     * thousand consultations report "the last crawl found nothing at all". The
+     * service looked dead from the outside while working perfectly.
+     */
+    const record = (stats) => {
+      if (!stats) return stats
+      for (const key of ['pagesScraped', 'itemsFound', 'itemsCreated', 'itemsUpdated']) {
+        totals[key] += Number(stats[key] ?? 0)
+      }
+      return stats
+    }
+
     try {
       if (source === 'marches' || source === 'all') {
-        detail.marches = await marcheScraper.scrape({ maxPages, fetchDetails })
+        detail.marches = record(await marcheScraper.scrape({ maxPages, fetchDetails }))
       }
 
       if (source === 'exclusions') {
-        detail.exclusions = await exclusionScraper.scrape()
+        detail.exclusions = record(await exclusionScraper.scrape())
       }
       // Awards on this portal are published as "résultats définitifs" on pages
       // this crawler does not read yet, so nothing links a marché to one.

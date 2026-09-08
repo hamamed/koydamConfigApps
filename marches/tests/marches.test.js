@@ -209,3 +209,29 @@ test('the screens with nothing behind them on this portal are gone', async (t) =
   const nav = (await (await fetch(`${server.base}/panel`, { headers: { cookie: `mp_token=${token}` } })).text())
   assert.doesNotMatch(nav, /\/panel\/(awards|insights|companies)"/, 'and the sidebar does not offer them')
 })
+
+test('a crawl records what it actually did, so the canary is not lied to', async (t) => {
+  const { createTestContainer: makeContainer, createFetchStub: stub, fixture: fx } = await import('./helpers.js')
+  const { createHttpClient: http } = await import('../src/scraper/httpClient.js')
+
+  const container = await makeContainer({
+    http: http({
+      fetchImpl: stub([
+        [/EntrepriseDetailsConsultation/, fx('live-ao-detail.html')],
+        [/EntrepriseAdvancedSearch/, fx('live-ao-listing.html')],
+      ]),
+      delayMs: 0,
+    }),
+  })
+
+  const { job, stats } = await container.runner.run({ source: 'marches', maxPages: 1, fetchDetails: true })
+
+  // The numbers on the job row are what the dashboard prints and what the
+  // health canary judges. Left at zero, a crawl that had just stored three
+  // thousand consultations reported "the last crawl found nothing at all" —
+  // the service looked dead from outside while working perfectly.
+  assert.ok(stats.itemsFound > 0, 'the run reports what it found')
+  assert.equal(Number(job.items_found), stats.itemsFound, 'and the job row agrees')
+  assert.equal(Number(job.items_created), stats.itemsCreated)
+  assert.ok(Number(job.items_found) > 0, 'so the canary sees a crawl that worked')
+})
