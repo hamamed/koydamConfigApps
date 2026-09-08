@@ -1,13 +1,13 @@
 /** English. */
 export default {
   'app.name': 'Public procurement',
-  'app.subtitle': 'Purchase-order notices',
+  'app.subtitle': 'Calls for tender and marchés',
   'nav.dashboard': 'Dashboard',
   'nav.consultations': 'Consultations',
   'nav.logout': 'Sign out',
   'nav.language': 'Language',
 
-  'nav.projects': 'Projects',
+  'nav.projects': 'Marchés',
   'nav.favorites': 'Favorites',
   'nav.administration': 'Administration',
   'nav.users': 'Users',

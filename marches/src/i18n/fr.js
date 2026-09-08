@@ -1,13 +1,13 @@
 /** French — the portal's own language, and this panel's default. */
 export default {
   'app.name': 'Marchés publics',
-  'app.subtitle': 'Avis d’achat sur bon de commande',
+  'app.subtitle': 'Appels d’offres et marchés',
   'nav.dashboard': 'Tableau de bord',
   'nav.consultations': 'Consultations',
   'nav.logout': 'Déconnexion',
   'nav.language': 'Langue',
 
-  'nav.projects': 'Projets',
+  'nav.projects': 'Marchés',
   'nav.favorites': 'Favoris',
   'nav.administration': 'Administration',
   'nav.users': 'Utilisateurs',
@@ -79,7 +79,7 @@ export default {
   'insights.intro': 'Calculé sur les marchés effectivement attribués. Les avis infructueux et annulés sont exclus : ils n’ont pas de prix et tireraient toutes les médianes vers le bas.',
   'insights.awards': 'Marchés attribués',
   'insights.median': 'Montant médian',
-  'insights.medianHint': 'La médiane, pas la moyenne : quelques très gros marchés tirent la moyenne bien au-dessus d’un bon de commande courant.',
+  'insights.medianHint': 'La médiane, pas la moyenne : quelques très gros marchés tirent la moyenne bien au-dessus d’un marché courant.',
   'insights.total': 'Montant total',
   'insights.range': 'Fourchette',
   'insights.avgBids': 'Devis reçus (moyenne)',

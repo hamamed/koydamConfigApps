@@ -1,13 +1,13 @@
 /** Arabic. Written right-to-left; the panel sets dir="rtl" for this locale. */
 export default {
   'app.name': 'الصفقات العمومية',
-  'app.subtitle': 'إعلانات الشراء بسند الطلب',
+  'app.subtitle': 'طلبات العروض والصفقات',
   'nav.dashboard': 'لوحة القيادة',
   'nav.consultations': 'الإعلانات',
   'nav.logout': 'تسجيل الخروج',
   'nav.language': 'اللغة',
 
-  'nav.projects': 'المشاريع',
+  'nav.projects': 'الصفقات',
   'nav.favorites': 'المفضلة',
   'nav.administration': 'الإدارة',
   'nav.users': 'المستخدمون',

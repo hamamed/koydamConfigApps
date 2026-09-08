@@ -3,7 +3,7 @@ export default {
   updated: '2026-09-06',
 
   landing: {
-    tagline: 'Moroccan public purchase notices, made readable.',
+    tagline: 'Moroccan public marchés, made readable.',
     lede:
       'This service follows the purchase notices published on Morocco’s public procurement ' +
       'portal, keeps them, and draws out what the portal does not show: what comparable work ' +
@@ -173,7 +173,7 @@ export default {
             'with no winner.',
           'Every row of a ranking opens: a buyer leads to their profile, a company to what they ' +
             'have won. Amounts are medians, not means — a few very large contracts pull an ' +
-            'average far above a typical purchase order.',
+            'average far above a typical marché.',
         ],
       },
       {

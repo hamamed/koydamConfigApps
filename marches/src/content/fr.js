@@ -11,7 +11,7 @@ export default {
   updated: '2026-09-06',
 
   landing: {
-    tagline: 'Les bons de commande publics marocains, lisibles.',
+    tagline: 'Les marchés publics marocains, lisibles.',
     lede:
       'Ce service suit les avis d’achat publiés sur le portail marocain des marchés publics, ' +
       'les conserve, et en tire ce que le portail ne montre pas : ce qu’un travail comparable ' +
@@ -187,7 +187,7 @@ export default {
             'par mois, et la part d’avis qui se terminent sans attributaire.',
           'Chaque ligne d’un classement s’ouvre : un acheteur mène à sa fiche, une entreprise à ' +
             'ce qu’elle a remporté. Les montants sont des médianes, pas des moyennes — quelques ' +
-            'très gros marchés tirent une moyenne loin au-dessus d’un bon de commande courant.',
+            'très gros marchés tirent une moyenne loin au-dessus d’un marché courant.',
         ],
       },
       {
