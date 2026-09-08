@@ -123,3 +123,22 @@ test('the session cookie is scoped so it reaches the other services', async (t) 
   assert.equal(cookieOptions.domain, config.auth.cookieDomain ?? undefined)
   assert.equal(cookieOptions.httpOnly, true)
 })
+
+test('the sidebar offers a way out of this space', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const html = await (await api.open('/panel', portalToken({ email: 'someone@civictrust.ma' }))).text()
+  const sidebar = html.slice(html.indexOf('<div class="bottom">'), html.indexOf('</aside>'))
+
+  // Two separate applications on two separate procedures: moving between them
+  // is a link out, and the portal is where the choice is actually made.
+  assert.match(sidebar, /class="switch" href="https?:\/\/[^"]+"/, 'a link to the sibling service')
+  assert.equal((sidebar.match(/class="switch"/g) ?? []).length, 2, 'and one to the portal')
+
+  const { config } = await import('../src/config/index.js')
+  assert.ok(sidebar.includes(config.auth.portalUrl), 'the portal by its configured address')
+  assert.ok(sidebar.includes(config.auth.siblingUrl), 'the sibling by its configured address')
+  // Named by what they are, not "the other one".
+  assert.doesNotMatch(sidebar, /nav\.(sibling|portal)/, 'labels resolve rather than falling back to the key')
+})

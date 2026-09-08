@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'Avis d’achat sur bon de commande',
   'nav.dashboard': 'Tableau de bord',
   'nav.consultations': 'Consultations',
+  'nav.sibling': 'Marchés',
+  'nav.portal': 'Portail',
   'nav.logout': 'Déconnexion',
   'nav.language': 'Langue',
 

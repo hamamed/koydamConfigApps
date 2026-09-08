@@ -38,6 +38,12 @@
   .side .bottom { margin-top:auto; display:flex; flex-direction:column; gap:8px; padding-top:14px; border-top:1px solid rgba(255,255,255,.12); }
   .side .who { padding:0 11px; font-size:12px; color:var(--sidebar-muted); overflow-wrap:anywhere; }
   .side .who b { display:block; color:#fff; font-weight:600; font-size:12.5px; }
+  /* Leaving this space. Styled like a nav item rather than a button: it is
+     navigation, and it sits with the account and the language picker because
+     that is where somebody looks when they are done here. */
+  .side .switch { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:8px;
+                  color:var(--sidebar-muted); font-size:13.5px; }
+  .side .switch:hover { background:rgba(255,255,255,.08); color:#fff; text-decoration:none; }
   .side button.out { display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; color:var(--sidebar-muted); padding:9px 11px; border-radius:8px; font:inherit; font-size:13.5px; cursor:pointer; }
   .side button.out:hover { background:rgba(255,255,255,.08); color:#fff; }
 
@@ -236,6 +242,11 @@
     </nav>
 
     <div class="bottom">
+      <%# The two services are separate applications on separate procedures, so
+          the way between them is an explicit link rather than a shared menu.
+          The portal is where the choice is made and where the session lives. %>
+      <a class="switch" href="<%= siblingUrl %>"><%- include('icon', { name: 'arrow-left-right' }) %><%= t('nav.sibling') %></a>
+      <a class="switch" href="<%= portalUrl %>"><%- include('icon', { name: 'layout-grid' }) %><%= t('nav.portal') %></a>
       <div class="who"><b><%= user.fullName || user.email %></b><%= user.role === 'admin' ? t('users.role.admin') : t('users.role.user') %></div>
       <%- include('lang-menu', { variant: 'dark' }) %>
       <form method="post" action="/logout"><button type="submit" class="out"><%- include('icon', { name: 'log-out' }) %><%= t('nav.logout') %></button></form>

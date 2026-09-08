@@ -7,6 +7,7 @@ import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { exportFilename, toCsv } from '../../utils/csv.js'
+import { config } from '../../config/index.js'
 
 /**
  * The pages anyone can read without an account: the front door, the panel
@@ -33,18 +34,16 @@ export function publicRoutes({ services }) {
     publicData: await services.settings.get('site.publicData'),
   })
 
-  router.get(
-    '/',
-    withUser,
-    asyncHandler(async (req, res) => {
-      res.render('public/landing', {
-        ...(await shell(req)),
-        // Counted at request time. A landing page that claims a scale it no
-        // longer has is worse than one that claims none, and these are four
-        // cheap COUNT(*)s against indexed tables.
-        stats: await services.public.stats(),
-      })
-    }),
+  /**
+   * There is one front door for the CivicTrust services and it is not here:
+   * the portal is the front door, it describes both procedures side by side,
+   * and it is where the session is created. Two landing pages competing to
+   * explain the same family of services is how they drift apart.
+   *
+   * Somebody already signed in goes straight to their work instead.
+   */
+  router.get('/', withUser, (req, res) =>
+    res.redirect(req.user ? '/panel' : config.auth.portalUrl),
   )
 
   /**

@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'طلبات العروض والصفقات',
   'nav.dashboard': 'لوحة القيادة',
   'nav.consultations': 'الإعلانات',
+  'nav.sibling': 'سندات الطلب',
+  'nav.portal': 'البوابة',
   'nav.logout': 'تسجيل الخروج',
   'nav.language': 'اللغة',
 

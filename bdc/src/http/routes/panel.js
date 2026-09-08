@@ -25,6 +25,9 @@ export function panelRoutes({ services }) {
 
   const shell = async (req, extra = {}) => ({
     user: req.user,
+    // Rendered by the sidebar on every panel page.
+    portalUrl: config.auth.portalUrl,
+    siblingUrl: config.auth.siblingUrl,
     siteName: await services.settings.get('site.name'),
     // Counted for the sidebar badge, and only for the people who can act on it.
     pendingRequests: req.user?.role === 'admin' ? await services.accessRequests.countPending() : 0,

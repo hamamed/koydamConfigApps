@@ -52,9 +52,12 @@ test('the landing page describes both procedures without a session', async (t) =
   assert.match(html, /Bons de commande/)
   assert.match(html, /Marchés/)
   // Naming the article each space is governed by is the point: they are
-  // different procedures, and confusing them is how the wrong rule gets applied.
-  assert.match(html, /Article 91/)
-  assert.match(html, /Articles 38–47/)
+  // different procedures, and confusing them is how the wrong rule gets
+  // applied. Matched on the numbers rather than the exact phrasing, so
+  // rewording the copy does not fail the test that guards the distinction.
+  assert.match(html, /Article\s+91/)
+  assert.match(html, /Articles\s+38\D{1,4}47/)
+  assert.match(html, /prix de référence/i, 'and says which one it belongs to')
 })
 
 test('signing in issues a session and lands on the chooser', async (t) => {

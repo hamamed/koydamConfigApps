@@ -21,39 +21,35 @@ async function site() {
 const get = (base, path, cookie) =>
   fetch(`${base}${path}`, { redirect: 'manual', headers: cookie ? { cookie } : {} })
 
-test('the front door is a page, not a redirect into the login form', async (t) => {
+test('the front door is the portal, and this service forwards to it', async (t) => {
   const api = await site()
   t.after(() => api.close())
 
+  // One front door for the CivicTrust services, and it is not here: the portal
+  // describes both procedures side by side and owns the session. Two landing
+  // pages explaining the same family is how they drift apart.
   const response = await get(api.base, '/')
-  assert.equal(response.status, 200, 'signed out')
-  const html = await response.text()
-
-  // It says what the service is, and it does not offer a sign-up that does not
-  // exist — accounts are an administrator action.
-  assert.ok(html.includes(CONTENT.fr.landing.tagline))
-  assert.ok(html.includes('/login'), 'sign in is offered')
-  assert.ok(!/sign.?up|créer un compte|s’inscrire/i.test(html), 'self-service registration is not')
-  assert.ok(html.includes(CONTENT.fr.landing.accessNote))
-
-  // And it is honest about not being the government.
-  assert.ok(html.includes(CONTENT.fr.landing.disclaimer))
+  assert.equal(response.status, 302, 'signed out')
+  assert.match(response.headers.get('location'), /^https?:\/\//, 'sent to the portal')
+  assert.doesNotMatch(response.headers.get('location'), /^\/panel/, 'not straight into the panel')
 })
 
-test('a signed-in visitor is offered the panel, not a second sign-in', async (t) => {
+test('a signed-in visitor goes straight to their work', async (t) => {
   const api = await site()
   t.after(() => api.close())
 
-  const html = await (await get(api.base, '/', api.cookie)).text()
-  assert.ok(html.includes(CONTENT.fr.landing.ctaPanel))
-  assert.ok(!html.includes(`href="/login?lang=fr"`), 'no sign-in link while signed in')
+  // Somebody who already has a session does not want the pitch, or a trip
+  // through the portal to be told they are signed in.
+  const response = await get(api.base, '/', api.cookie)
+  assert.equal(response.status, 302)
+  assert.equal(response.headers.get('location'), '/panel')
 })
 
 test('the public pages exist in all three languages, and mirror for Arabic', async (t) => {
   const api = await site()
   t.after(() => api.close())
 
-  for (const path of ['/', '/guide', '/privacy', '/terms', '/request-access']) {
+  for (const path of ['/guide', '/privacy', '/terms', '/request-access']) {
     for (const locale of CONTENT_LOCALES) {
       const response = await get(api.base, `${path}?lang=${locale}`)
       assert.equal(response.status, 200, `${path} ${locale}`)
@@ -112,7 +108,7 @@ test('robots and the sitemap point at the public pages and away from the panel',
   t.after(() => api.close())
 
   const robots = await (await get(api.base, '/robots.txt')).text()
-  for (const blocked of ['/panel', '/admin', '/api', '/login']) {
+  for (const blocked of ['/panel', '/admin', '/api']) {
     assert.match(robots, new RegExp(`Disallow: ${blocked}`), blocked)
   }
   assert.match(robots, /Sitemap: http/)
@@ -123,11 +119,13 @@ test('robots and the sitemap point at the public pages and away from the panel',
   assert.ok(!sitemap.includes('/panel'), 'the panel is not advertised')
 })
 
-test('the landing page counts the database rather than claiming a number', async (t) => {
+test('the open-data pages count the database rather than claiming a number', async (t) => {
   const api = await site()
   t.after(() => api.close())
 
-  const empty = await (await get(api.base, '/')).text()
+  // The claim this guards moved to /data with the landing page: a page that
+  // states a scale must read it, not carry a number somebody typed once.
+  const empty = await (await get(api.base, '/data')).text()
   assert.ok(empty.includes('>0<'), 'an empty database says zero')
 
   await api.container.repositories.consultations.upsert({
@@ -135,7 +133,7 @@ test('the landing page counts the database rather than claiming a number', async
     objet: 'Achat', acheteur: 'COMMUNE TEST', status: 'open',
     search_text: 'achat', first_seen_at: 'x', last_seen_at: 'x', created_at: 'x', updated_at: 'x',
   })
-  const filled = await (await get(api.base, '/')).text()
+  const filled = await (await get(api.base, '/data')).text()
   assert.ok(filled.includes('>1<'), 'and one row says one')
 })
 
@@ -155,7 +153,7 @@ test('the open-data pages can be closed from Settings, without a deploy', async 
 
   // The pages that are not about the data stay open either way: a privacy
   // policy nobody can read is worse than useless.
-  for (const path of ['/', '/privacy', '/terms', '/guide', '/status', '/request-access']) {
+  for (const path of ['/privacy', '/terms', '/guide', '/status', '/request-access']) {
     assert.equal((await get(api.base, path)).status, 200, `${path} is unaffected`)
   }
 

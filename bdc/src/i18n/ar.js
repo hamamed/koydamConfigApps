@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'إعلانات الشراء بسند الطلب',
   'nav.dashboard': 'لوحة القيادة',
   'nav.consultations': 'الإعلانات',
+  'nav.sibling': 'الصفقات',
+  'nav.portal': 'البوابة',
   'nav.logout': 'تسجيل الخروج',
   'nav.language': 'اللغة',
 

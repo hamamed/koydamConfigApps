@@ -102,6 +102,11 @@ export const config = Object.freeze({
      * domain attribute makes the browser drop the cookie entirely.
      */
     cookieDomain: process.env.AUTH_COOKIE_DOMAIN || null,
+    /**
+     * The other CivicTrust space. Separate applications on separate
+     * procedures, so moving between them is a link out, not a route.
+     */
+    siblingUrl: (process.env.SIBLING_URL || 'https://bdc.civictrust.ma/panel').replace(/\/+$/, ''),
     /** Where somebody who needs to sign in is sent. */
     portalUrl: (process.env.PORTAL_URL || 'https://portail.civictrust.ma').replace(/\/+$/, ''),
     adminEmail: process.env.ADMIN_EMAIL || 'admin@example.com',

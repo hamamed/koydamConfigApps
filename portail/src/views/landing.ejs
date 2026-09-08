@@ -3,27 +3,68 @@
 <div class="panel">
   <h1>Les marchés publics marocains, lisibles.</h1>
   <p class="lede">
-    Deux procédures, deux espaces. Un seul compte pour les deux — vous vous
+    Le portail officiel publie les avis et les retire. CivicTrust les suit, les
+    conserve, et en tire ce que le portail ne montre pas&nbsp;: ce qu’un travail
+    comparable a réellement été payé, qui remporte quoi, et quels acheteurs
+    annulent ce qu’ils publient.
+  </p>
+
+  <p class="lede" style="margin-bottom:26px">
+    Deux procédures, deux espaces — un seul compte pour les deux. Vous vous
     connectez ici et vous choisissez où aller.
   </p>
 
   <div class="choices">
     <a class="choice" href="/aller/bdc">
       <span class="head"><span class="ico"><%- include('icon', { name: 'receipt', size: 20 }) %></span><b>Bons de commande</b></span>
-      <p>Les avis d’achat sur bon de commande : suivi des échéances, résultats, analyse des attributions et facturation.</p>
-      <span class="rule">Article 91 — devis, sans commission</span>
+      <p>
+        Les achats sur bon de commande&nbsp;: un devis déposé, sans commission et
+        sans séance d’ouverture des plis.
+      </p>
+      <ul class="does">
+        <li>Recherche et filtres — objet, acheteur, catégorie, lieu, échéance</li>
+        <li>Le détail article par article, avec quantités, TVA et pièces jointes</li>
+        <li>Ce que ce type de travail rapporte&nbsp;: médiane, fourchette, part d’infructueux</li>
+        <li>Les achats déjà lancés une fois, et comment ils s’étaient terminés</li>
+        <li>Fiches acheteurs, alertes, devis et factures</li>
+      </ul>
+      <span class="rule">Article 91 du décret n° 2-22-431</span>
     </a>
+
     <a class="choice" href="/aller/marches">
       <span class="head"><span class="ico"><%- include('icon', { name: 'gavel', size: 20 }) %></span><b>Marchés</b></span>
-      <p>Les appels d’offres : estimation du maître d’ouvrage relevée pour chaque marché, et le calcul du prix de référence.</p>
-      <span class="rule">Articles 38–47 — commission, prix de référence</span>
+      <p>
+        Les appels d’offres&nbsp;: plis scellés, commission, séance d’ouverture, et
+        une attribution décidée par le prix de référence.
+      </p>
+      <ul class="does">
+        <li>Les consultations ouvertes, dans l’ordre où le portail les classe</li>
+        <li>L’estimation du maître d’ouvrage, relevée sur chaque marché</li>
+        <li>Le calcul du prix de référence, pré-rempli depuis le marché ouvert</li>
+        <li>La zone de tolérance, les offres écartées et le classement</li>
+        <li>Sociétés exclues et fiches acheteurs</li>
+      </ul>
+      <span class="rule">Articles 38 à 47 du même décret</span>
     </a>
   </div>
+
+  <%# The one thing worth saying twice, because getting it wrong is expensive:
+      these are not two views of one list. The rule that decides a marché does
+      not govern a bon de commande at all. %>
+  <p class="note">
+    <%- include('icon', { name: 'shield-check', size: 15 }) %>
+    Les deux procédures relèvent du même décret mais de chapitres différents, et
+    ce qui décide de l’une ne s’applique pas à l’autre&nbsp;: le prix de référence
+    est propre aux appels d’offres. Chaque espace n’applique que la règle qui le
+    gouverne.
+  </p>
 
   <p class="foot">
     Les deux espaces lisent le portail officiel
     <a href="https://www.marchespublics.gov.ma" target="_blank" rel="noopener noreferrer">marchespublics.gov.ma</a>.
-    CivicTrust est un service indépendant et ne représente aucune administration.
+    Les comptes sont créés par un administrateur — il n’y a pas d’inscription
+    libre. CivicTrust est un service indépendant et ne représente aucune
+    administration.
   </p>
 </div>
 <%- include('layout-close') %>

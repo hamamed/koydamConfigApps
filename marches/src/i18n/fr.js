@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'Appels d’offres et marchés',
   'nav.dashboard': 'Tableau de bord',
   'nav.consultations': 'Consultations',
+  'nav.sibling': 'Bons de commande',
+  'nav.portal': 'Portail',
   'nav.logout': 'Déconnexion',
   'nav.language': 'Langue',
 

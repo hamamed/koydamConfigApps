@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'Purchase-order notices',
   'nav.dashboard': 'Dashboard',
   'nav.consultations': 'Consultations',
+  'nav.sibling': 'Marchés',
+  'nav.portal': 'Portal',
   'nav.logout': 'Sign out',
   'nav.language': 'Language',
 

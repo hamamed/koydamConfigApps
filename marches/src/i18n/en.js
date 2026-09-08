@@ -4,6 +4,8 @@ export default {
   'app.subtitle': 'Calls for tender and marchés',
   'nav.dashboard': 'Dashboard',
   'nav.consultations': 'Consultations',
+  'nav.sibling': 'Purchase orders',
+  'nav.portal': 'Portal',
   'nav.logout': 'Sign out',
   'nav.language': 'Language',
 

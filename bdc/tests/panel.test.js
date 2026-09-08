@@ -279,13 +279,15 @@ test('old /admin bookmarks land on the panel', async (t) => {
     assert.equal(response.headers.get('location'), to, from)
   }
 
-  // `/` used to bounce into the panel. It is the public landing page now, and
-  // it stays a page for a signed-in visitor too — the privacy and terms pages
-  // have to be reachable from inside the product, not only from outside it.
+  // `/` is a forward now, in both directions: the portal is the front door for
+  // somebody signed out, and somebody already signed in goes to their work
+  // rather than through a chooser to be told what they already picked.
   const signedIn = await api.page('/', api.admin)
-  assert.equal(signedIn.status, 200)
+  assert.equal(signedIn.status, 302)
+  assert.equal(signedIn.headers.get('location'), '/panel')
   const signedOut = await fetch(`${api.base}/`, { redirect: 'manual' })
-  assert.equal(signedOut.status, 200)
+  assert.equal(signedOut.status, 302)
+  assert.match(signedOut.headers.get('location'), /^https?:\/\//, 'out to the portal')
 })
 
 test('table cells stay table cells', async () => {
@@ -1173,7 +1175,7 @@ test('the language picker is a menu listing every language by name', async (t) =
   const api = await setup()
   t.after(() => api.close())
 
-  for (const [path, cookie] of [['/panel', api.admin], ['/', null]]) {
+  for (const [path, cookie] of [['/panel', api.admin], ['/guide', null]]) {
     const html = await (cookie
       ? (await api.page(`${path}?lang=ar`, cookie)).text()
       : (await fetch(`${api.base}${path}?lang=ar`)).text())
