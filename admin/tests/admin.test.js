@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import jwt from 'jsonwebtoken'
+import { readFileSync } from 'node:fs'
 import { createApp } from '../src/app.js'
 import { config } from '../src/config/index.js'
 
@@ -183,4 +184,132 @@ test('the console forwards the caller’s own session, never a credential of its
   const payload = jwt.verify(seen[0], SECRET)
   assert.equal(payload.email, 'a@civictrust.ma')
   assert.equal(payload.role, 'admin')
+})
+
+/* ------------------------------------------------ the two rendered screens ---
+
+   Both are checked against payloads captured from the live services rather
+   than a stub shaped the way the view happens to expect. The first version of
+   the settings screen looked for `settings` where the API sends `entries`, so
+   it rendered an empty form on every service — a screen that answered 200 and
+   showed nothing, which no assertion about status codes would ever catch. */
+
+const fixture = (name) =>
+  JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8')).data
+
+async function bootWith(payloads) {
+  const client = {
+    call: async (_service, path) => ({ ok: true, status: 200, error: null, data: payloads[path] ?? {} }),
+    fanOut: async (path) => config.services.map((service) => ({ service, ok: true, status: 200, data: payloads[path] ?? {}, error: null })),
+  }
+  const server = createApp({ client }).listen(0)
+  await new Promise((resolve) => server.once('listening', resolve))
+  const base = `http://127.0.0.1:${server.address().port}`
+  return {
+    html: async (path) =>
+      (await fetch(`${base}${path}`, { headers: { cookie: `${config.auth.cookieName}=${token()}` } })).text(),
+    close: () => new Promise((r) => server.close(r)),
+  }
+}
+
+test('the settings screen renders the fields the service actually sends', async (t) => {
+  const api = await bootWith({ '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/parametres')
+  const entries = fixture('settings').flatMap((group) => group.entries)
+  assert.ok(entries.length > 20, 'the fixture is a real payload')
+
+  // Every single one, not "some fields rendered".
+  for (const entry of entries) {
+    assert.ok(html.includes(`id="${entry.key}"`), `${entry.key} has a control`)
+  }
+  assert.ok(html.includes('Nom du site'), 'and they are labelled, not shown as keys')
+})
+
+test('each setting gets the control its type calls for', async (t) => {
+  const api = await bootWith({ '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/parametres')
+  const byKey = Object.fromEntries(fixture('settings').flatMap((g) => g.entries).map((e) => [e.key, e]))
+
+  // A number with bounds keeps them, and as real attributes: an escaping tag
+  // turns min="1" into min=&#34;1&#34;, which a browser ignores — the field
+  // looks bounded and accepts anything.
+  const maxPages = html.match(/<input id="scraper\.maxPages"[^>]*>/)[0]
+  assert.match(maxPages, /type="number"/)
+  assert.match(maxPages, new RegExp(`min="${byKey['scraper.maxPages'].min}"`))
+  assert.doesNotMatch(html, /min=&#3[04];/, 'the bounds are not escaped into inertness')
+
+  // A select carries its options rather than becoming free text.
+  const locale = html.match(/<select id="site\.defaultLocale"[\s\S]*?<\/select>/)[0]
+  for (const option of byKey['site.defaultLocale'].options) assert.ok(locale.includes(`value="${option}"`))
+
+  // A boolean is a yes/no.
+  assert.match(html.match(/<select id="scraper\.fetchDetails"[\s\S]*?<\/select>/)[0], /Oui[\s\S]*Non/)
+})
+
+test('a secret is never printed back, and clearing one is its own decision', async (t) => {
+  const api = await bootWith({ '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/parametres')
+  const secrets = fixture('settings').flatMap((g) => g.entries).filter((e) => e.type === 'secret')
+  assert.equal(secrets.length, 3, 'the fixture has write-only settings')
+
+  for (const entry of secrets) {
+    const field = html.match(new RegExp(`<input id="${entry.key.replace('.', '\\.')}"[^>]*>`))[0]
+    assert.match(field, /type="password"/, `${entry.key} is write-only`)
+    assert.doesNotMatch(field, /value=/, `${entry.key} is not rendered back`)
+  }
+  // Nothing is configured on the box this was captured from, so each one says
+  // so rather than showing an empty box that could mean either.
+  assert.equal((html.match(/Aucune clé/g) ?? []).length, secrets.length, 'an unset key says it is unset')
+  assert.doesNotMatch(html, /name="clear"/, 'and there is nothing to offer clearing')
+})
+
+test('a secret that is set says so, and can be erased on purpose', async (t) => {
+  // The same payload with one key stored, which is the state the box will be in
+  // once somebody pastes a Google Translate key.
+  const withKey = fixture('settings').map((group) => ({
+    ...group,
+    entries: group.entries.map((entry) =>
+      entry.key === 'translation.googleApiKey' ? { ...entry, isSet: true, fromEnvironment: false } : entry,
+    ),
+  }))
+  const api = await bootWith({ '/settings': withKey })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/parametres')
+  assert.match(html, /Une clé est enregistrée/, 'the stored key is acknowledged')
+  assert.match(html, /name="clear" value="translation\.googleApiKey"/, 'and erasing it is its own tick')
+
+  // Still never printed back, set or not.
+  const field = html.match(/<input id="translation\.googleApiKey"[^>]*>/)[0]
+  assert.doesNotMatch(field, /value=/)
+})
+
+test('the system screen leads with what is wrong', async (t) => {
+  const api = await bootWith({ '/system': fixture('system') })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/systeme')
+  const report = fixture('system')
+  for (const check of report.checks) assert.ok(html.includes(check.id), `${check.id} is reported`)
+
+  // The failing checks sort above the passing ones. A status page where a
+  // warning sits below the uptime has to be read carefully to use, and nobody
+  // reads one carefully at the moment they need it.
+  const problems = report.checks.filter((c) => c.severity !== 'ok')
+  const passing = report.checks.filter((c) => c.severity === 'ok')
+  if (problems.length > 0 && passing.length > 0) {
+    assert.ok(html.indexOf(problems[0].id) < html.indexOf(passing[0].id), 'problems first')
+  }
+
+  // The one this exists for: bdc ran a month with its database in no archive
+  // while every backup reported success.
+  assert.match(html, /Contient cette base/)
+  assert.match(html, /hamaprojects-/, 'the archive is named')
+  assert.doesNotMatch(html, /\d{10,}/, 'sizes are readable, not raw bytes')
 })

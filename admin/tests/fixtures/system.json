@@ -1,0 +1,129 @@
+{
+ "success": true,
+ "data": {
+  "severity": "warn",
+  "checks": [
+   {
+    "id": "backup",
+    "severity": "ok",
+    "detail": "last backup 10h ago"
+   },
+   {
+    "id": "backupCoverage",
+    "severity": "ok",
+    "detail": "the database is in the archive"
+   },
+   {
+    "id": "disk",
+    "severity": "ok",
+    "detail": "42% of the data volume used"
+   },
+   {
+    "id": "mail",
+    "severity": "warn",
+    "detail": "alerts are recorded and logged, not emailed"
+   },
+   {
+    "id": "translation",
+    "severity": "warn",
+    "detail": "no translation key: the buttons are disabled"
+   },
+   {
+    "id": "archive",
+    "severity": "ok",
+    "detail": "page 3692, last slice 0h ago"
+   }
+  ],
+  "archive": {
+   "nextPage": 3692,
+   "totalPages": null,
+   "complete": false,
+   "percent": null,
+   "lastSliceAt": "2026-09-08T12:33:19.256Z",
+   "stalledHours": 0.29779694444444443,
+   "running": false,
+   "awards": 184315
+  },
+  "backup": {
+   "path": "/var/backups/hamaprojects/inventory.json",
+   "generatedAt": "2026-09-08T02:36:54+00:00",
+   "archives": [
+    {
+     "name": "hamaprojects-2026-09-08_023302.tar.gz",
+     "sizeBytes": 1038637534,
+     "at": "2026-09-08T02:35:54+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-08_013925.tar.gz",
+     "sizeBytes": 1036386463,
+     "at": "2026-09-08T01:42:19+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-08_005322.tar.gz",
+     "sizeBytes": 1034251201,
+     "at": "2026-09-08T00:56:21+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-07_023359.tar.gz",
+     "sizeBytes": 981317797,
+     "at": "2026-09-07T02:36:43+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-06_164125.tar.gz",
+     "sizeBytes": 940522313,
+     "at": "2026-09-06T16:44:07+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-06_023304.tar.gz",
+     "sizeBytes": 921332928,
+     "at": "2026-09-06T02:35:41+00:00"
+    },
+    {
+     "name": "hamaprojects-2026-09-05_023434.tar.gz",
+     "sizeBytes": 894208236,
+     "at": "2026-09-05T02:37:07+00:00"
+    }
+   ],
+   "latest": {
+    "name": "hamaprojects-2026-09-08_023302.tar.gz",
+    "sizeBytes": 1038637534,
+    "at": "2026-09-08T02:35:54+00:00"
+   },
+   "ageHours": 10.254812222222222,
+   "includesDatabase": true,
+   "error": null
+  },
+  "disk": {
+   "totalBytes": 80307429376,
+   "freeBytes": 46259122176,
+   "usedBytes": 34048307200,
+   "usedPercent": 42
+  },
+  "database": {
+   "dialect": "sqlite",
+   "file": "/opt/bdc/data/marches.sqlite",
+   "sizeBytes": 297029632,
+   "schemaVersion": "2026-09-07.016"
+  },
+  "storage": {
+   "dir": "/opt/bdc/storage/invoices",
+   "exists": true
+  },
+  "runtime": {
+   "appVersion": "1.0.0",
+   "node": "v22.23.1",
+   "uptimeSeconds": 473,
+   "rssBytes": 113242112,
+   "startedAt": "2026-09-08T12:43:18.772Z"
+  },
+  "schedule": {
+   "crawlAt": "05:30",
+   "alertsAt": "06:30"
+  },
+  "integrations": {
+   "mail": false,
+   "translation": false
+  }
+ },
+ "error": null
+}

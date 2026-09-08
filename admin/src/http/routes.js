@@ -1,5 +1,15 @@
 import jwt from 'jsonwebtoken'
 import { config, serviceByKey } from '../config/index.js'
+import labels from '../labels.js'
+
+/**
+ * A settings label, or the key itself.
+ *
+ * Falling back to the key is deliberate: an unlabelled setting reads badly but
+ * unambiguously, where inventing a nicer name would quietly rename somebody's
+ * configuration on the only screen that shows it.
+ */
+const t = (key) => labels[key] ?? key
 
 /** Wraps an async handler so a rejected promise reaches the error middleware. */
 const handle = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
@@ -68,7 +78,7 @@ export function registerRoutes(app, { client }) {
         system: systems[index].data,
       }))
 
-      res.render('overview', { config, user: req.user, overview })
+      res.render('overview', { config, user: req.user, overview, t })
     }),
   )
 
@@ -90,6 +100,7 @@ export function registerRoutes(app, { client }) {
       const { data, error } = await client.call(service, screen.path, { token: req.token })
       res.render(`service/${screen.view}`, {
         config,
+        t,
         user: req.user,
         service,
         screen: req.params.screen,
@@ -111,15 +122,23 @@ export function registerRoutes(app, { client }) {
       // Only what the form actually carried. A blank write-only field means
       // "leave it alone", never "set it to empty" — that is how somebody
       // clears an API key by saving an unrelated setting on the same page.
+      const body = { ...(req.body ?? {}) }
+      const cleared = [body.clear ?? []].flat().filter(Boolean)
+      delete body.clear
+
       const values = Object.fromEntries(
-        Object.entries(req.body ?? {}).filter(([, value]) => String(value ?? '').trim() !== ''),
+        Object.entries(body).filter(([, value]) => String(value ?? '').trim() !== ''),
       )
+      // Erasing a secret is its own explicit tick, so it can be said and
+      // nothing else can say it by accident.
+      for (const key of cleared) values[key] = ''
 
       const { error } = await client.call(service, '/settings', { token: req.token, method: 'PATCH', body: values })
       if (error) {
         const current = await client.call(service, '/settings', { token: req.token })
         return res.status(502).render('service/settings', {
           config,
+          t,
           user: req.user,
           service,
           screen: 'parametres',

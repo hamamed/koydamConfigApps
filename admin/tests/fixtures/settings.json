@@ -1,0 +1,452 @@
+{
+ "success": true,
+ "data": [
+  {
+   "group": "site",
+   "entries": [
+    {
+     "key": "site.name",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "Marchés publics",
+     "fallback": "Marchés publics",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.535Z"
+    },
+    {
+     "key": "site.defaultLocale",
+     "type": "select",
+     "options": [
+      "fr",
+      "en",
+      "ar"
+     ],
+     "min": null,
+     "max": null,
+     "value": "fr",
+     "fallback": "fr",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.537Z"
+    },
+    {
+     "key": "site.operator",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "Civic Trust",
+     "fallback": "Civic Trust",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "site.contactEmail",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "contact@civictrust.ma",
+     "fallback": "contact@civictrust.ma",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "site.publicData",
+     "type": "boolean",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": true,
+     "fallback": true,
+     "isOverridden": false,
+     "updatedAt": null
+    }
+   ]
+  },
+  {
+   "group": "scraper",
+   "entries": [
+    {
+     "key": "scraper.maxPages",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 2000,
+     "value": 50,
+     "fallback": 50,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.538Z"
+    },
+    {
+     "key": "scraper.pageSize",
+     "type": "select",
+     "options": [
+      "10",
+      "20",
+      "30",
+      "50"
+     ],
+     "min": null,
+     "max": null,
+     "value": "20",
+     "fallback": "20",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.539Z"
+    },
+    {
+     "key": "scraper.delayMs",
+     "type": "number",
+     "options": null,
+     "min": 500,
+     "max": 60000,
+     "value": 2000,
+     "fallback": 2000,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.540Z"
+    },
+    {
+     "key": "scraper.detailConcurrency",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 8,
+     "value": 2,
+     "fallback": 2,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.541Z"
+    },
+    {
+     "key": "scraper.fetchDetails",
+     "type": "boolean",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": true,
+     "fallback": true,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.542Z"
+    },
+    {
+     "key": "scraper.maxRetries",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 10,
+     "value": 3,
+     "fallback": 3,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.543Z"
+    },
+    {
+     "key": "scraper.timeoutMs",
+     "type": "number",
+     "options": null,
+     "min": 5000,
+     "max": 120000,
+     "value": 30000,
+     "fallback": 30000,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.544Z"
+    },
+    {
+     "key": "scraper.userAgent",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 bdc.civictrust.ma/+admin@civictrust.ma",
+     "fallback": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 bdc.civictrust.ma/+admin@civictrust.ma",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.545Z"
+    },
+    {
+     "key": "scraper.dailyRunAt",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "05:30",
+     "fallback": "05:30",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.546Z"
+    },
+    {
+     "key": "scraper.dailySinceDays",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 60,
+     "value": 7,
+     "fallback": 7,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.547Z"
+    },
+    {
+     "key": "alerts.dailyRunAt",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "06:30",
+     "fallback": "06:30",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "scraper.archiveNextPage",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 20000,
+     "value": 3692,
+     "fallback": 1,
+     "isOverridden": true,
+     "updatedAt": "2026-09-08T12:33:18.966Z"
+    },
+    {
+     "key": "scraper.archivePagesPerRun",
+     "type": "number",
+     "options": null,
+     "min": 10,
+     "max": 2000,
+     "value": 60,
+     "fallback": 200,
+     "isOverridden": true,
+     "updatedAt": "2026-09-07 02:48:34"
+    },
+    {
+     "key": "scraper.btpNextPage",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 5000,
+     "value": 1,
+     "fallback": 1,
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "scraper.btpPagesPerRun",
+     "type": "number",
+     "options": null,
+     "min": 5,
+     "max": 600,
+     "value": 600,
+     "fallback": 60,
+     "isOverridden": true,
+     "updatedAt": "2026-09-07 01:21:53"
+    }
+   ]
+  },
+  {
+   "group": "mail",
+   "entries": [
+    {
+     "key": "mail.host",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "",
+     "fallback": "",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "mail.port",
+     "type": "number",
+     "options": null,
+     "min": 1,
+     "max": 65535,
+     "value": 587,
+     "fallback": 587,
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "mail.secure",
+     "type": "boolean",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": false,
+     "fallback": false,
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "mail.user",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "",
+     "fallback": "",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "mail.password",
+     "type": "secret",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": null,
+     "fallback": null,
+     "isSet": false,
+     "fromEnvironment": false,
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "mail.from",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "bdc@civictrust.ma",
+     "fallback": "bdc@civictrust.ma",
+     "isOverridden": false,
+     "updatedAt": null
+    }
+   ]
+  },
+  {
+   "group": "translation",
+   "entries": [
+    {
+     "key": "translation.googleApiKey",
+     "type": "secret",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": null,
+     "fallback": null,
+     "isSet": false,
+     "fromEnvironment": false,
+     "isOverridden": false,
+     "updatedAt": null
+    }
+   ]
+  },
+  {
+   "group": "registry",
+   "entries": [
+    {
+     "key": "registry.openCorporatesToken",
+     "type": "secret",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": null,
+     "fallback": null,
+     "isSet": false,
+     "fromEnvironment": false,
+     "isOverridden": false,
+     "updatedAt": null
+    }
+   ]
+  },
+  {
+   "group": "invoice",
+   "entries": [
+    {
+     "key": "invoice.currency",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "MAD",
+     "fallback": "MAD",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.548Z"
+    },
+    {
+     "key": "invoice.taxRate",
+     "type": "number",
+     "options": null,
+     "min": 0,
+     "max": 100,
+     "value": 20,
+     "fallback": 20,
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.550Z"
+    },
+    {
+     "key": "invoice.numberPrefix",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "FCT",
+     "fallback": "FCT",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.551Z"
+    }
+   ]
+  },
+  {
+   "group": "company",
+   "entries": [
+    {
+     "key": "company.name",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "CIVICTRUST",
+     "fallback": "Civic Trust",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.552Z"
+    },
+    {
+     "key": "company.ice",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "",
+     "fallback": "",
+     "isOverridden": false,
+     "updatedAt": null
+    },
+    {
+     "key": "company.address",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "MADINAT EL WAHDA BLOC E NR11 LAAYOUNE",
+     "fallback": "",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.553Z"
+    },
+    {
+     "key": "company.email",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "contact@civictrust.ma",
+     "fallback": "contact@civictrust.ma",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.554Z"
+    },
+    {
+     "key": "company.phone",
+     "type": "string",
+     "options": null,
+     "min": null,
+     "max": null,
+     "value": "0669684646",
+     "fallback": "",
+     "isOverridden": true,
+     "updatedAt": "2026-09-06T13:56:52.555Z"
+    }
+   ]
+  }
+ ],
+ "error": null
+}

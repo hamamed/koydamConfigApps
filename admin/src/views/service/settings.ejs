@@ -1,28 +1,103 @@
 <%- include('../layout-open', { title: service.label + ' — paramètres' }) %>
 <%- include('_nav') %>
 
-<% if (data) { %>
-  <form method="post" action="/s/<%= service.key %>/parametres">
-    <% (Array.isArray(data) ? data : Object.values(data)).forEach(function (group) { %>
-      <h2 style="font-size:15px; font-weight:650; margin:18px 0 8px"><%= group.group || group.label || '' %></h2>
-      <% (group.settings || group.items || []).forEach(function (setting) { %>
+<%
+  /*
+    The settings a service exposes, rendered the way that service used to
+    render them itself.
+
+    Every entry declares its own type, and each type needs a different control:
+    a boolean is a yes/no, a select carries its options, a number carries its
+    bounds, and a secret is never printed back. Falling back to a plain text box
+    for all of them — which is what the first version of this screen did — turns
+    a bounded number into free text and a stored key into an empty field that
+    looks unset.
+  */
+  const GROUP_ICONS = {
+    site: 'shield-check', scraper: 'arrow-left-right', mail: 'gavel',
+    translation: 'layout-grid', registry: 'receipt', invoice: 'receipt', company: 'shield-check',
+  }
+  const groups = Array.isArray(data) ? data : []
+%>
+
+<% if (groups.length === 0 && !error) { %>
+  <p class="muted"><%= service.label %> n’expose aucun paramètre.</p>
+<% } %>
+
+<form method="post" action="/s/<%= service.key %>/parametres">
+  <% groups.forEach(function (group) { %>
+    <h2 style="font-size:15px; font-weight:650; margin:22px 0 4px; display:flex; align-items:center; gap:8px">
+      <%- include('../icon', { name: GROUP_ICONS[group.group] || 'shield-check', size: 16 }) %>
+      <%= t('settings.group.' + group.group) %>
+    </h2>
+    <% if (t('settings.group.' + group.group + 'Hint') !== 'settings.group.' + group.group + 'Hint') { %>
+      <p class="muted" style="margin:0 0 12px; font-size:12px"><%= t('settings.group.' + group.group + 'Hint') %></p>
+    <% } %>
+
+    <div class="cols-2">
+      <% (group.entries || []).forEach(function (entry) { %>
         <div class="field">
-          <label for="<%= setting.key %>"><%= setting.label || setting.key %></label>
-          <input id="<%= setting.key %>" name="<%= setting.key %>"
-                 value="<%= setting.secret ? '' : (setting.value ?? '') %>"
-                 <%= setting.secret ? 'type="password" autocomplete="new-password"' : '' %>
-                 placeholder="<%= setting.secret ? (setting.set ? '•••••••• (déjà enregistré)' : 'non renseigné') : '' %>">
-          <% if (setting.help) { %><p class="muted" style="margin:5px 0 0; font-size:11.5px"><%= setting.help %></p><% } %>
-          <% if (setting.secret) { %>
-            <%# A write-only value: laissé vide, il n'est pas touché. Sinon,
-                enregistrer une page mettrait à zéro une clé qu'on ne voulait
-                pas changer, sans le dire. %>
-            <p class="muted" style="margin:5px 0 0; font-size:11.5px">Laisser vide pour conserver la valeur actuelle.</p>
+          <label for="<%= entry.key %>">
+            <%= t('settings.key.' + entry.key) %>
+            <% if (entry.isOverridden) { %><span class="pill" style="font-size:10px">modifié</span><% } %>
+          </label>
+
+          <% if (entry.type === 'boolean') { %>
+            <select id="<%= entry.key %>" name="<%= entry.key %>">
+              <option value="true" <%= entry.value ? 'selected' : '' %>>Oui</option>
+              <option value="false" <%= entry.value ? '' : 'selected' %>>Non</option>
+            </select>
+
+          <% } else if (entry.type === 'select') { %>
+            <select id="<%= entry.key %>" name="<%= entry.key %>">
+              <% (entry.options || []).forEach(function (option) { %>
+                <option value="<%= option %>" <%= String(entry.value) === String(option) ? 'selected' : '' %>><%= option %></option>
+              <% }) %>
+            </select>
+
+          <% } else if (entry.type === 'secret') { %>
+            <%# Never rendered back, in either direction. The field is always
+                empty; an empty submission means "no change", and erasing one is
+                its own explicit tick rather than a side effect of saving. %>
+            <input id="<%= entry.key %>" name="<%= entry.key %>" type="password" autocomplete="off" dir="ltr"
+                   placeholder="<%= t('settings.secret.placeholder') %>">
+            <p class="muted" style="margin:6px 0 0; font-size:11.5px; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+              <% if (entry.isSet) { %>
+                <span class="pill ok"><%= entry.fromEnvironment ? t('settings.secret.fromEnv') : t('settings.secret.set') %></span>
+                <label style="display:flex; gap:5px; align-items:center; margin:0; font-size:11.5px">
+                  <input type="checkbox" name="clear" value="<%= entry.key %>" style="width:auto"> <%= t('settings.secret.clear') %>
+                </label>
+              <% } else { %>
+                <span class="pill warn"><%= t('settings.secret.none') %></span>
+              <% } %>
+              <span><%= t('settings.secret.unchanged') %></span>
+            </p>
+
+          <% } else if (entry.type === 'number') { %>
+            <%# The bounds are their own attributes rather than a built string.
+                An escaping output tag turns a produced `min="1"` into
+                `min=&#34;1&#34;`, which the browser ignores: the field looks
+                bounded and accepts anything. An empty min or max is inert. %>
+            <input id="<%= entry.key %>" name="<%= entry.key %>" type="number" value="<%= entry.value %>" dir="ltr"
+                   min="<%= entry.min ?? '' %>" max="<%= entry.max ?? '' %>">
+
+          <% } else { %>
+            <input id="<%= entry.key %>" name="<%= entry.key %>" value="<%= entry.value ?? '' %>" dir="ltr">
+          <% } %>
+
+          <% if (entry.type !== 'secret') { %>
+            <small class="muted" style="font-size:11.5px">Défaut : <span class="ltr"><%= String(entry.fallback) %></span></small>
           <% } %>
         </div>
       <% }) %>
-    <% }) %>
-    <button class="primary small" type="submit">Enregistrer</button>
-  </form>
-<% } %>
+    </div>
+  <% }) %>
+
+  <% if (groups.length > 0) { %>
+    <div class="row-actions">
+      <button class="primary small" type="submit">Enregistrer</button>
+      <span class="muted" style="font-size:12.5px">Les valeurs s’appliquent immédiatement. Un champ vide reprend le défaut du serveur ; un secret laissé vide n’est pas touché.</span>
+    </div>
+  <% } %>
+</form>
 <%- include('../layout-close') %>

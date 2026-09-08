@@ -1,0 +1,68 @@
+/**
+ * Labels for the settings each service exposes.
+ *
+ * Lifted from the services' own dictionaries rather than re-invented, so a
+ * field reads here exactly as it read where it used to live. Both services are
+ * forks of one catalogue, so one map covers them; a key with no entry falls
+ * back to itself, which is ugly but honest — better than a console that
+ * silently renames somebody's setting.
+ */
+export default {
+  "settings.title": "Paramètres",
+  "settings.intro": "Ces valeurs s’appliquent immédiatement. Un champ vide reprend la valeur par défaut du serveur.",
+  "settings.group.site": "Site",
+  "settings.group.scraper": "Collecte",
+  "settings.group.translation": "Traduction",
+  "settings.key.translation.googleApiKey": "Clé API Google Translate",
+  "settings.secret.set": "Une clé est enregistrée",
+  "settings.secret.fromEnv": "Définie dans le fichier .env du serveur",
+  "settings.secret.none": "Aucune clé",
+  "settings.secret.placeholder": "Coller une nouvelle clé pour la remplacer",
+  "settings.secret.unchanged": "Laisser vide pour ne rien changer.",
+  "settings.secret.clear": "Effacer",
+  "settings.group.translationHint": "Activez « Cloud Translation API » dans la console Google Cloud, créez une clé API et restreignez-la à cette API. La clé n’est jamais réaffichée après enregistrement.",
+  "settings.group.invoice": "Facturation",
+  "settings.group.company": "Émetteur des factures",
+  "settings.default": "Défaut : {value}",
+  "settings.overridden": "Modifié",
+  "settings.key.site.name": "Nom du site",
+  "settings.key.site.defaultLocale": "Langue par défaut",
+  "settings.key.scraper.maxPages": "Pages maximum par collecte",
+  "settings.key.scraper.pageSize": "Résultats par page",
+  "settings.key.scraper.delayMs": "Délai entre requêtes (ms)",
+  "settings.key.scraper.detailConcurrency": "Pages de détail en parallèle",
+  "settings.key.scraper.fetchDetails": "Ouvrir les pages de détail",
+  "settings.key.scraper.maxRetries": "Tentatives en cas d’échec",
+  "settings.key.scraper.timeoutMs": "Délai d’attente (ms)",
+  "settings.key.scraper.userAgent": "User-Agent",
+  "settings.key.invoice.currency": "Devise",
+  "settings.key.invoice.taxRate": "Taux de TVA par défaut (%)",
+  "settings.key.invoice.numberPrefix": "Préfixe de numérotation",
+  "settings.key.company.name": "Raison sociale",
+  "settings.key.company.ice": "ICE",
+  "settings.key.company.address": "Adresse",
+  "settings.key.company.email": "E-mail",
+  "settings.key.company.phone": "Téléphone",
+  "settings.key.scraper.dailyRunAt": "Heure de la collecte quotidienne (UTC)",
+  "settings.key.scraper.dailySinceDays": "Fenêtre quotidienne (jours)",
+  "settings.save": "Enregistrer",
+  "settings.saved": "Paramètres enregistrés.",
+  "settings.secretsNote": "Les secrets (JWT_SECRET, accès base de données) restent dans le fichier .env du serveur.",
+  "settings.key.site.publicData": "Données consultables sans compte",
+  "settings.group.registry": "Registre des entreprises",
+  "settings.group.registryHint": "OMPIC ne publie pas d’interface programmable et vend ses données via DirectInfo, sur abonnement. OpenCorporates expose une API qui demande un jeton, à demander sur leur site. Sans jeton, la recherche reste désactivée.",
+  "settings.key.registry.openCorporatesToken": "Jeton API OpenCorporates",
+  "settings.key.site.operator": "Éditeur du service",
+  "settings.key.site.contactEmail": "E-mail de contact public",
+  "settings.group.mail": "E-mail et alertes",
+  "settings.group.mailHint": "Sans serveur SMTP, les alertes sont enregistrées et journalisées mais pas envoyées. Le mot de passe n’est jamais réaffiché après enregistrement.",
+  "settings.key.mail.host": "Serveur SMTP",
+  "settings.key.mail.port": "Port",
+  "settings.key.mail.secure": "Connexion TLS directe",
+  "settings.key.mail.user": "Utilisateur",
+  "settings.key.mail.password": "Mot de passe",
+  "settings.key.mail.from": "Expéditeur",
+  "settings.key.alerts.dailyRunAt": "Heure des alertes (UTC)",
+  "common.yes": "Oui",
+  "common.no": "Non"
+}

@@ -1,28 +1,140 @@
 <%- include('../layout-open', { title: service.label + ' — système' }) %>
 <%- include('_nav') %>
 
+<%
+  /*
+    The system report, read the way somebody on call reads it: the checks that
+    are not ok first, then the things that go wrong quietly — a backup that
+    stopped being written, a disk filling, an integration that was never
+    configured — and the inert facts last.
+
+    The first version of this screen printed every key of the payload in a
+    two-column table. It was complete and told you nothing: a failing check and
+    the Node version had the same weight.
+  */
+  const d = data || {}
+  const bytes = (n) => {
+    if (n === null || n === undefined) return '—'
+    const units = ['o', 'Ko', 'Mo', 'Go', 'To']
+    let value = Number(n), unit = 0
+    while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1 }
+    return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`
+  }
+  const hours = (h) => (h === null || h === undefined ? '—' : `${Number(h).toFixed(1)} h`)
+  const pill = (s) => (s === 'ok' ? 'ok' : s === 'warn' ? 'warn' : 'bad')
+  const checks = d.checks || []
+  const problems = checks.filter((c) => c.severity !== 'ok')
+%>
+
 <% if (data) { %>
-  <% const groups = Object.entries(data).filter(([, v]) => v && typeof v === 'object') %>
-  <% groups.forEach(function ([name, group]) { %>
-    <h2 style="font-size:15px; font-weight:650; margin:18px 0 8px"><%= name %></h2>
+  <div class="tiles">
+    <div class="tile">
+      <b><span class="pill <%= pill(d.severity) %>" style="font-size:14px"><%= d.severity || '—' %></span></b>
+      <span>état général</span>
+    </div>
+    <div class="tile">
+      <b class="ltr"><%= d.disk ? d.disk.usedPercent + ' %' : '—' %></b>
+      <span>disque utilisé<% if (d.disk) { %> — <%= bytes(d.disk.freeBytes) %> libres<% } %></span>
+    </div>
+    <div class="tile">
+      <b class="ltr"><%= d.backup ? hours(d.backup.ageHours) : '—' %></b>
+      <span>dernière sauvegarde</span>
+    </div>
+    <div class="tile">
+      <b class="ltr"><%= d.database ? bytes(d.database.sizeBytes) : '—' %></b>
+      <span>base de données</span>
+    </div>
+  </div>
+
+  <%# The checks, worst first. A report where a failure sorts below the uptime
+      is a report somebody has to read carefully to use, and nobody reads a
+      status page carefully at the moment they need it. %>
+  <h2 style="font-size:15px; font-weight:650; margin:22px 0 10px">Contrôles<% if (problems.length > 0) { %> — <%= problems.length %> à regarder<% } %></h2>
+  <table>
+    <thead><tr><th>Contrôle</th><th>État</th><th>Détail</th></tr></thead>
+    <tbody>
+      <% [...problems, ...checks.filter((c) => c.severity === 'ok')].forEach(function (c) { %>
+        <tr>
+          <td><%= c.id %></td>
+          <td><span class="pill <%= pill(c.severity) %>"><%= c.severity %></span></td>
+          <td class="muted"><%= c.detail || '—' %></td>
+        </tr>
+      <% }) %>
+      <% if (checks.length === 0) { %><tr><td colspan="3" class="muted">Aucun contrôle rapporté.</td></tr><% } %>
+    </tbody>
+  </table>
+
+  <% if (d.backup) { %>
+    <h2 style="font-size:15px; font-weight:650; margin:22px 0 10px">Sauvegardes</h2>
     <table>
       <tbody>
-        <% Object.entries(group).forEach(function ([key, value]) { %>
+        <tr><td style="width:34%">Dernière archive</td><td class="ltr"><%= d.backup.latest ? d.backup.latest.name : '—' %></td></tr>
+        <tr><td>Taille</td><td class="ltr"><%= d.backup.latest ? bytes(d.backup.latest.sizeBytes) : '—' %></td></tr>
+        <tr><td>Âge</td><td class="ltr"><%= hours(d.backup.ageHours) %></td></tr>
+        <tr>
+          <td>Contient cette base</td>
+          <%# The check this exists for: bdc ran a month with its database in no
+              archive at all while every backup reported success. %>
+          <td><span class="pill <%= d.backup.includesDatabase ? 'ok' : 'bad' %>"><%= d.backup.includesDatabase ? 'oui' : 'non' %></span></td>
+        </tr>
+        <tr><td>Archives conservées</td><td class="ltr"><%= (d.backup.archives || []).length %></td></tr>
+        <% if (d.backup.error) { %><tr><td>Erreur</td><td><span class="pill bad"><%= d.backup.error %></span></td></tr><% } %>
+      </tbody>
+    </table>
+  <% } %>
+
+  <% if (d.archive && (d.archive.totalPages || d.archive.nextPage)) { %>
+    <h2 style="font-size:15px; font-weight:650; margin:22px 0 10px">Archive en cours</h2>
+    <table>
+      <tbody>
+        <tr><td style="width:34%">Progression</td><td class="ltr"><%= d.archive.percent === null ? '—' : d.archive.percent + ' %' %> (page <%= d.archive.nextPage %><%= d.archive.totalPages ? ' / ' + d.archive.totalPages : '' %>)</td></tr>
+        <tr><td>Terminée</td><td><span class="pill <%= d.archive.complete ? 'ok' : '' %>"><%= d.archive.complete ? 'oui' : 'non' %></span></td></tr>
+        <tr><td>En cours</td><td><span class="pill <%= d.archive.running ? 'ok' : '' %>"><%= d.archive.running ? 'oui' : 'non' %></span></td></tr>
+        <tr><td>Dernière tranche</td><td class="ltr"><%= d.archive.lastSliceAt || '—' %> (<%= hours(d.archive.stalledHours) %>)</td></tr>
+      </tbody>
+    </table>
+  <% } %>
+
+  <% if (d.integrations) { %>
+    <h2 style="font-size:15px; font-weight:650; margin:22px 0 10px">Intégrations</h2>
+    <table>
+      <tbody>
+        <% Object.entries(d.integrations).forEach(function ([name, ready]) { %>
           <tr>
-            <td style="width:34%"><%= key %></td>
-            <td>
-              <% if (value && typeof value === 'object') { %>
-                <span class="ltr muted" style="font-size:12.5px"><%= JSON.stringify(value) %></span>
-              <% } else if (typeof value === 'boolean') { %>
-                <span class="pill <%= value ? 'ok' : 'bad' %>"><%= value ? 'oui' : 'non' %></span>
-              <% } else { %>
-                <span class="ltr"><%= value === null ? '—' : value %></span>
-              <% } %>
-            </td>
+            <td style="width:34%"><%= name %></td>
+            <%# "Not configured" is a fact worth stating plainly: these fail
+                silently, and a service with no SMTP simply never sends. %>
+            <td><span class="pill <%= ready ? 'ok' : 'warn' %>"><%= ready ? 'configurée' : 'non configurée' %></span></td>
           </tr>
         <% }) %>
       </tbody>
     </table>
-  <% }) %>
+  <% } %>
+
+  <h2 style="font-size:15px; font-weight:650; margin:22px 0 10px">Le service</h2>
+  <table>
+    <tbody>
+      <% if (d.database) { %>
+        <tr><td style="width:34%">Base</td><td class="ltr"><%= d.database.dialect %> — <%= d.database.file %></td></tr>
+        <tr><td>Version du schéma</td><td class="ltr"><%= d.database.schemaVersion %></td></tr>
+      <% } %>
+      <% if (d.runtime) { %>
+        <tr><td>Version</td><td class="ltr"><%= d.runtime.appVersion %> sur Node <%= d.runtime.node %></td></tr>
+        <tr><td>Démarré</td><td class="ltr"><%= d.runtime.startedAt %> (<%= Math.round((d.runtime.uptimeSeconds || 0) / 60) %> min)</td></tr>
+        <tr><td>Mémoire</td><td class="ltr"><%= bytes(d.runtime.rssBytes) %></td></tr>
+      <% } %>
+      <% if (d.schedule) { %>
+        <% Object.entries(d.schedule).forEach(function ([name, at]) { %>
+          <tr><td><%= name %></td><td class="ltr"><%= at %></td></tr>
+        <% }) %>
+      <% } %>
+      <% if (d.disk) { %>
+        <tr><td>Disque</td><td class="ltr"><%= bytes(d.disk.usedBytes) %> utilisés sur <%= bytes(d.disk.totalBytes) %></td></tr>
+      <% } %>
+      <% if (d.storage) { %>
+        <tr><td>Stockage</td><td class="ltr"><%= d.storage.dir %> <span class="pill <%= d.storage.exists ? 'ok' : 'bad' %>"><%= d.storage.exists ? 'présent' : 'absent' %></span></td></tr>
+      <% } %>
+    </tbody>
+  </table>
 <% } %>
 <%- include('../layout-close') %>
