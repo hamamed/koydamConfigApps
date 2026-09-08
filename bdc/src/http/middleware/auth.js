@@ -17,6 +17,29 @@ function extractToken(req) {
   return req.cookies?.[config.auth.cookieName] ?? null
 }
 
+/**
+ * Expires a session cookie scoped to this host only.
+ *
+ * Signing in used to happen here, and it set `mp_token` without a Domain — a
+ * host-only cookie. The shared session sets the same name on ".civictrust.ma".
+ * A browser that has both sends both, and the host-only one wins, so a visitor
+ * who ever signed in to this service directly arrives carrying a token this
+ * service can no longer verify: it bounces them to the portal, the portal sees
+ * a perfectly good session and sends them straight back. A loop, out of two
+ * cookies that are each doing what they were told.
+ *
+ * Clearing without a `domain` targets exactly the stale one and leaves the
+ * shared session alone, so the next request works and nobody has to be told to
+ * clear their cookies.
+ */
+const dropHostCookie = (res) =>
+  res.clearCookie(config.auth.cookieName, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.isProduction,
+  })
+
 /** Where an anonymous visitor is sent to sign in, and back to where they were. */
 const signInUrl = (req) =>
   `${config.auth.portalUrl}/login?next=${encodeURIComponent(`${config.publicUrl}${req.originalUrl}`)}`
@@ -84,7 +107,10 @@ function pageGuard(auth, { adminOnly }) {
       // Signing in happens on the portal now, so an anonymous visitor leaves
       // this host entirely and comes back with a session that works here and
       // on every other CivicTrust service.
-      if (error instanceof UnauthorizedError) return res.redirect(signInUrl(req))
+      if (error instanceof UnauthorizedError) {
+        dropHostCookie(res)
+        return res.redirect(signInUrl(req))
+      }
       // Signed in but not an administrator: send them where they can go, rather
       // than to a sign-in form that would not help.
       if (error instanceof ForbiddenError) return res.redirect('/panel')

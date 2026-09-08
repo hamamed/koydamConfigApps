@@ -142,3 +142,25 @@ test('the sidebar offers a way out of this space', async (t) => {
   // Named by what they are, not "the other one".
   assert.doesNotMatch(sidebar, /nav\.(sibling|portal)/, 'labels resolve rather than falling back to the key')
 })
+
+test('a stale host-only cookie is dropped rather than bouncing forever', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  // Signing in used to happen here and set `mp_token` without a Domain. The
+  // shared session sets the same name on the parent domain, so a browser that
+  // has both sends both and the host-only one wins — carrying a token this
+  // service can no longer verify. It bounced to the portal, the portal saw a
+  // good session and bounced straight back: a loop out of two cookies each
+  // doing what they were told.
+  const stale = jwt.sign({ sub: '1', email: 'x@civictrust.ma', role: 'user' }, 'the-old-per-service-secret')
+  const response = await api.open('/panel', stale)
+
+  assert.equal(response.status, 302)
+  const cleared = response.headers.get('set-cookie') ?? ''
+  assert.match(cleared, new RegExp(`${COOKIE}=`), 'the cookie that failed is expired')
+  assert.match(cleared, /Expires=Thu, 01 Jan 1970|Max-Age=0/)
+  // Cleared without a Domain, so it targets the stale host-only cookie and
+  // leaves the shared session — which lives on the parent domain — alone.
+  assert.doesNotMatch(cleared, /Domain=/i, 'and the shared session is not touched')
+})
