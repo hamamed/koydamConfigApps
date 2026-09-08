@@ -33,8 +33,19 @@ function stubClient({ fail = false } = {}) {
             : []
     return { ok: true, status: 200, data, error: null }
   }
+  const ACCOUNTS = [
+    { id: 1, email: 'admin@civictrust.ma', fullName: 'Administrateur', role: 'admin', services: ['bdc', 'marches'], isActive: true, lastLoginAt: '2026-09-08T05:00:00Z' },
+    { id: 2, email: 'lecteur@civictrust.ma', fullName: 'Lecteur', role: 'user', services: ['marches'], isActive: true, lastLoginAt: null },
+    { id: 3, email: 'parti@civictrust.ma', fullName: null, role: 'user', services: [], isActive: false, lastLoginAt: '2026-01-02T09:00:00Z' },
+  ]
   return {
     calls,
+    accounts: async () => {
+      calls.push({ service: 'portail', path: '/users' })
+      return fail
+        ? { ok: false, status: 0, data: null, error: 'Le portail is unreachable (timed out)' }
+        : { ok: true, status: 200, data: ACCOUNTS, error: null }
+    },
     call: async (service, path) => answer(service, path),
     fanOut: async (path) => config.services.map((service) => ({ service, ...answer(service, path) })),
   }
@@ -108,7 +119,7 @@ test('one service being down does not take the console with it', async (t) => {
   const api = await boot({ fail: true })
   t.after(() => api.close())
 
-  for (const path of ['/', '/s/bdc/dashboard', '/s/marches/systeme', '/s/bdc/parametres']) {
+  for (const path of ['/', '/s/bdc/dashboard', '/s/marches/systeme', '/s/bdc/parametres', '/comptes']) {
     const response = await api.open(path)
     assert.equal(response.status, 200, `${path} still answers`)
   }
@@ -119,11 +130,17 @@ test('every screen the console offers is reachable', async (t) => {
   t.after(() => api.close())
 
   for (const service of config.services) {
-    for (const screen of ['dashboard', 'systeme', 'parametres', 'comptes']) {
+    for (const screen of ['dashboard', 'systeme', 'parametres']) {
       const response = await api.open(`/s/${service.key}/${screen}`)
       assert.equal(response.status, 200, `/s/${service.key}/${screen}`)
     }
   }
+
+  // Accounts is not one of them: it is one screen for everything, because
+  // there is one list. A per-service version answered "who has been here"
+  // twice when the question is "who has access".
+  assert.equal((await api.open('/comptes')).status, 200)
+  assert.equal((await api.open('/s/bdc/comptes')).status, 404, 'and not per service')
 })
 
 test('an unknown service is a 404, not a call to nowhere', async (t) => {
@@ -312,4 +329,89 @@ test('the system screen leads with what is wrong', async (t) => {
   assert.match(html, /Contient cette base/)
   assert.match(html, /hamaprojects-/, 'the archive is named')
   assert.doesNotMatch(html, /\d{10,}/, 'sizes are readable, not raw bytes')
+})
+
+test('the accounts screen is one list, and says where the accounts live', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const html = await (await api.open('/comptes')).text()
+
+  // Every account, with the fact only the portal can answer: which spaces it
+  // may open. bdc and marches each know who has visited them, which is a
+  // different question asked twice.
+  assert.match(html, /admin@civictrust\.ma/)
+  assert.match(html, /lecteur@civictrust\.ma/)
+  assert.match(html, /Bons de commande/)
+  assert.match(html, /Marchés/)
+
+  // An account with access to nothing says so rather than showing a blank cell.
+  assert.match(html, /parti@civictrust\.ma/)
+  assert.match(html, /aucun/)
+  assert.match(html, /désactivé/, 'and a disabled account is visible as one')
+
+  // Read from the portal, not from either service.
+  assert.ok(api.client.calls.some((c) => c.service === 'portail'))
+  assert.ok(!api.client.calls.some((c) => c.path === '/users' && c.service !== 'portail'))
+})
+
+test('the accounts screen survives the portal being down', async (t) => {
+  const api = await boot({ fail: true })
+  t.after(() => api.close())
+
+  const response = await api.open('/comptes')
+  assert.equal(response.status, 200)
+  const html = await response.text()
+  assert.match(html, /unreachable|injoignable/i, 'it says so')
+  assert.doesNotMatch(html, /<b class="ltr">[1-9]/, 'and invents no counts')
+})
+
+test('the system screen shows the machine, not just the process', async (t) => {
+  const report = fixture('system')
+  const withHost = {
+    ...report,
+    host: {
+      platform: 'Linux 6.1.0',
+      cpuModel: 'AMD EPYC',
+      cpuCount: 4,
+      loadAvg: [1.2, 0.9, 0.7],
+      loadPerCore: 30,
+      totalMemBytes: 8 * 1024 ** 3,
+      freeMemBytes: 2 * 1024 ** 3,
+      usedMemPercent: 75,
+      uptimeSeconds: 86400 * 3,
+    },
+  }
+  const api = await bootWith({ '/system': withHost })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/systeme')
+
+  // Six services share this box, so "how much is this process using" is half a
+  // question — the half that matters when something is being killed is how
+  // much the host has left.
+  assert.match(html, /AMD EPYC/)
+  assert.match(html, /4 cœurs/)
+  assert.match(html, /1\.2 · 0\.9 · 0\.7/, 'load over 1, 5 and 15 minutes')
+  assert.match(html, /3 j/, 'and how long the machine has been up')
+
+  // Each proportion gets a bar, and they share one scale so a full disk and a
+  // loaded CPU turn the same colour at the same point.
+  const bars = html.match(/<div class="meter[^"]*"><span style="width:(\d+)%/g) ?? []
+  assert.ok(bars.length >= 3, 'processor, memory and disk each have a bar')
+  assert.match(html, /class="meter warn"/, '75% memory reads as a warning')
+})
+
+test('each section is its own box, not one long column', async (t) => {
+  const api = await bootWith({ '/system': fixture('system'), '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  // A heading is a weak separator once there are six of them; the boxes are
+  // what let somebody find "Sauvegardes" rather than scroll past it.
+  const system = await api.html('/s/bdc/systeme')
+  assert.ok((system.match(/class="box"/g) ?? []).length >= 5, 'the system report is sectioned')
+
+  const settings = await api.html('/s/bdc/parametres')
+  const groups = fixture('settings').length
+  assert.ok((settings.match(/class="box"/g) ?? []).length >= groups, 'one box per settings group')
 })

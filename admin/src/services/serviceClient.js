@@ -66,5 +66,16 @@ export function createServiceClient() {
     return results
   }
 
-  return { call, fanOut }
+  /**
+   * The portal's own admin API, for the accounts.
+   *
+   * Same shape as `call`, same forwarded token, different host — the portal is
+   * not one of the services this console administers, it is where identity
+   * lives for all of them.
+   */
+  async function accounts(path, options) {
+    return call({ key: 'portail', label: 'Le portail', api: config.auth.accountsApi }, path, options)
+  }
+
+  return { call, fanOut, accounts }
 }

@@ -35,6 +35,43 @@ export function registerRoutes(app, { services }) {
       (service) => config.enabledServices.includes(service.key) && user.services.includes(service.key),
     )
 
+  /**
+   * The accounts, for the administration console.
+   *
+   * One list, because there is one list: since sign-in moved here, bdc and
+   * marches each hold only a shadow row created the first time somebody
+   * visited. Reading either of those would show who has *been* there, which is
+   * a different question from who has access.
+   *
+   * Admin only, and gated on the same session every other service verifies.
+   */
+  app.get(
+    '/admin/api/users',
+    handle(async (req, res) => {
+      const user = currentUser(req)
+      if (!user) return res.status(401).json({ success: false, data: null, error: 'Not signed in' })
+      if (user.role !== 'admin') return res.status(403).json({ success: false, data: null, error: 'Administrator access required' })
+
+      const rows = await services.users.listAll()
+      res.json({
+        success: true,
+        error: null,
+        data: rows.map((row) => ({
+          id: row.id,
+          email: row.email,
+          fullName: row.full_name,
+          role: row.role,
+          // Which spaces this account may open — the thing that is actually
+          // decided here rather than in either service.
+          services: servicesOf(row),
+          isActive: Boolean(row.is_active),
+          lastLoginAt: row.last_login_at,
+          createdAt: row.created_at,
+        })),
+      })
+    }),
+  )
+
   // ------------------------------------------------------------------ landing
   app.get('/', (req, res) => {
     const user = currentUser(req)

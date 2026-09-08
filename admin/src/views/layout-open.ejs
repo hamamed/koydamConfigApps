@@ -97,6 +97,33 @@
   .notice { background:#e7f5ec; color:#116b3a; padding:10px 12px; border-radius:9px; margin-bottom:16px; }
   .row-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:16px; }
   button.small { width:auto; padding:8px 13px; font-size:13.5px; }
+  /* Each section in its own box. A long report read as one column of tables
+     runs together — a heading is a weak separator once there are six of them,
+     and the eye needs an edge to know where "Sauvegardes" stopped. */
+  .screens-dark { border-bottom-color:rgba(255,255,255,.16); }
+  .screens-dark a { color:#bcd0e6; }
+  .screens-dark a:hover { background:rgba(255,255,255,.10); color:#fff; }
+  .screens-dark a.on { background:#fff; color:var(--accent); }
+  code { direction:ltr; unicode-bidi:isolate; background:#f2f5f9; padding:1px 6px; border-radius:5px; font-size:12.5px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+         padding:18px 20px; margin:0 0 16px; }
+  .box > h2 { margin:0 0 12px; font-size:15px; font-weight:650; display:flex; align-items:center; gap:8px; }
+  .box > h2 .count { margin-inline-start:auto; font-size:12px; font-weight:500; color:var(--muted); }
+  .box table { margin:0; }
+  .box table tr:last-child td { border-bottom:0; }
+  .box .cols-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 20px; align-items:start; }
+  @media (max-width:760px) { .box .cols-2 { grid-template-columns:1fr; } }
+
+  /* A proportion. The width is data, not style — it differs on every render,
+     so no class can carry it. */
+  .meter { height:8px; border-radius:999px; background:var(--line); overflow:hidden; margin-top:7px; }
+  .meter span { display:block; height:100%; border-radius:999px; background:var(--accent); }
+  .meter.warn span { background:#c2740a; }
+  .meter.bad span { background:#a4262c; }
+  .metric { border:1px solid var(--line); border-radius:10px; padding:14px 15px; }
+  .metric b { display:block; font-size:20px; font-weight:650; letter-spacing:-.01em; }
+  .metric span.k { display:block; color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
+  .metric small { display:block; color:var(--muted); font-size:11.5px; margin-top:6px; }
   .foot { margin-top:26px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px; }
   .who { color:var(--muted); font-size:13px; margin:0 0 18px; }
   .who b { color:var(--ink); }
@@ -113,6 +140,7 @@
   </span>
   <span class="spacer"></span>
   <% if (typeof user !== 'undefined' && user) { %>
+    <a class="btn-ghost" href="/comptes">Comptes</a>
     <a class="btn-ghost" href="<%= config.auth.portalUrl %>">Portail</a>
     <span class="whoami"><%= user.fullName || user.email %></span>
   <% } %>

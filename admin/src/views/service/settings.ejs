@@ -26,15 +26,19 @@
 
 <form method="post" action="/s/<%= service.key %>/parametres">
   <% groups.forEach(function (group) { %>
-    <h2 style="font-size:15px; font-weight:650; margin:22px 0 4px; display:flex; align-items:center; gap:8px">
-      <%- include('../icon', { name: GROUP_ICONS[group.group] || 'shield-check', size: 16 }) %>
-      <%= t('settings.group.' + group.group) %>
-    </h2>
-    <% if (t('settings.group.' + group.group + 'Hint') !== 'settings.group.' + group.group + 'Hint') { %>
-      <p class="muted" style="margin:0 0 12px; font-size:12px"><%= t('settings.group.' + group.group + 'Hint') %></p>
-    <% } %>
+    <%# One box per group. Thirty-six fields in one column is a wall; the boxes
+        are what make "Collecte" a thing you can find rather than scroll past. %>
+    <div class="box">
+      <h2>
+        <%- include('../icon', { name: GROUP_ICONS[group.group] || 'shield-check', size: 16 }) %>
+        <%= t('settings.group.' + group.group) %>
+        <span class="count"><%= (group.entries || []).length %> réglages</span>
+      </h2>
+      <% if (t('settings.group.' + group.group + 'Hint') !== 'settings.group.' + group.group + 'Hint') { %>
+        <p class="muted" style="margin:-4px 0 14px; font-size:12px"><%= t('settings.group.' + group.group + 'Hint') %></p>
+      <% } %>
 
-    <div class="cols-2">
+      <div class="cols-2">
       <% (group.entries || []).forEach(function (entry) { %>
         <div class="field">
           <label for="<%= entry.key %>">
@@ -89,12 +93,13 @@
             <small class="muted" style="font-size:11.5px">Défaut : <span class="ltr"><%= String(entry.fallback) %></span></small>
           <% } %>
         </div>
-      <% }) %>
+        <% }) %>
+      </div>
     </div>
   <% }) %>
 
   <% if (groups.length > 0) { %>
-    <div class="row-actions">
+    <div class="box row-actions" style="margin-bottom:0">
       <button class="primary small" type="submit">Enregistrer</button>
       <span class="muted" style="font-size:12.5px">Les valeurs s’appliquent immédiatement. Un champ vide reprend le défaut du serveur ; un secret laissé vide n’est pas touché.</span>
     </div>

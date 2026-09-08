@@ -275,3 +275,34 @@ test('a signed-in visitor is not shown the pitch again', async (t) => {
   assert.equal(landing.status, 302)
   assert.equal(landing.headers.get('location'), '/choisir')
 })
+
+test('the accounts API is one list, and only for administrators', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const anonymous = await api.open('/admin/api/users')
+  assert.equal(anonymous.status, 401)
+
+  const { cookie } = await api.signIn()
+  const response = await api.open('/admin/api/users', cookie)
+  assert.equal(response.status, 200)
+
+  const { data } = await response.json()
+  const account = data.find((row) => row.email === 'you@civictrust.ma')
+  assert.ok(account, 'the account is listed')
+  assert.equal(account.role, 'admin')
+  // Which spaces it may open is decided here, not in either service — that is
+  // the whole reason the console reads accounts from the portal rather than
+  // from bdc and marches, which only know who has visited them.
+  assert.deepEqual(account.services, ['bdc', 'marches'])
+  assert.equal(account.isActive, true)
+  assert.ok(!('password_hash' in account) && !('passwordHash' in account), 'and no hash leaves here')
+})
+
+test('an ordinary account cannot read the accounts', async (t) => {
+  const api = await boot({ role: 'user' })
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  assert.equal((await api.open('/admin/api/users', cookie)).status, 403)
+})

@@ -87,7 +87,6 @@ export function registerRoutes(app, { client }) {
     ['dashboard', { path: '/dashboard', view: 'dashboard', label: 'Tableau de bord' }],
     ['systeme', { path: '/system', view: 'system', label: 'Système' }],
     ['parametres', { path: '/settings', view: 'settings', label: 'Paramètres' }],
-    ['comptes', { path: '/users', view: 'users', label: 'Comptes' }],
   ])
 
   app.get(
@@ -109,6 +108,22 @@ export function registerRoutes(app, { client }) {
         error,
         notice: req.query.saved ? 'Enregistré.' : null,
       })
+    }),
+  )
+
+  /**
+   * The accounts, once, for everything.
+   *
+   * Read from the portal rather than per service: since sign-in moved there,
+   * bdc and marches each hold a shadow row created on somebody's first visit,
+   * so a per-service list answers "who has been here" when the question is
+   * "who has access" — and it answers it twice, differently.
+   */
+  app.get(
+    '/comptes',
+    handle(async (req, res) => {
+      const { data, error } = await client.accounts('/users', { token: req.token })
+      res.render('accounts', { config, t, user: req.user, accounts: data ?? [], error })
     }),
   )
 

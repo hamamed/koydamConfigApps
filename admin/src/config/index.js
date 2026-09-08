@@ -45,6 +45,13 @@ export const config = Object.freeze({
     jwtSecret: process.env.JWT_SECRET || 'insecure-development-secret',
     cookieName: process.env.AUTH_COOKIE_NAME || 'mp_token',
     portalUrl: (process.env.PORTAL_URL || 'https://portail.civictrust.ma').replace(/\/+$/, ''),
+    /**
+     * Where the accounts live, which is the portal and not either service.
+     * bdc and marches each hold only a shadow row created on somebody's first
+     * visit, so reading them would answer "who has been here" when the
+     * question is "who has access".
+     */
+    accountsApi: (process.env.PORTAL_API || process.env.PORTAL_URL || 'https://portail.civictrust.ma').replace(/\/+$/, ''),
   },
 
   services: SERVICES,

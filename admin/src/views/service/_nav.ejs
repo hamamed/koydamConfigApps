@@ -5,9 +5,9 @@
   <% }) %>
 </div>
 
-<div class="panel">
-  <h1><%= service.label %></h1>
-  <div class="screens">
+<div class="panel" style="background:transparent; box-shadow:none; padding:0">
+  <h1 style="color:#fff; margin-bottom:14px"><%= service.label %></h1>
+  <div class="screens screens-dark">
     <% screens.forEach(function (s) { %>
       <a class="<%= s.key === screen ? 'on' : '' %>" href="/s/<%= service.key %>/<%= s.key %>"><%= s.label %></a>
     <% }) %>

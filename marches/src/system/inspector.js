@@ -1,3 +1,4 @@
+import os from 'node:os'
 import { readFile, stat, statfs } from 'node:fs/promises'
 import { config } from '../config/index.js'
 import { SCHEMA_VERSION } from '../db/schema.js'
@@ -106,7 +107,28 @@ export function createSystemInspector({
         node: process.version,
         uptimeSeconds: Math.round(process.uptime()),
         rssBytes: process.memoryUsage().rss,
+        heapUsedBytes: process.memoryUsage().heapUsed,
         startedAt: new Date(now().getTime() - process.uptime() * 1000).toISOString(),
+      },
+      /**
+       * The machine, not the process.
+       *
+       * Six services share this box, so "how much memory is this one using" is
+       * only half a question — the half that matters when something is being
+       * killed is how much the host has left. Load is reported per core as
+       * well as raw, because "load 4" means nothing until you know whether
+       * that is four cores busy or four cores' worth of queue on one.
+       */
+      host: {
+        platform: `${os.type()} ${os.release()}`,
+        cpuModel: os.cpus()[0]?.model ?? null,
+        cpuCount: os.cpus().length,
+        loadAvg: os.loadavg().map((n) => Math.round(n * 100) / 100),
+        loadPerCore: Math.round((os.loadavg()[0] / Math.max(1, os.cpus().length)) * 1000) / 10,
+        totalMemBytes: os.totalmem(),
+        freeMemBytes: os.freemem(),
+        usedMemPercent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100),
+        uptimeSeconds: Math.round(os.uptime()),
       },
       schedule: {
         crawlAt: await safely(() => settings?.get('scraper.dailyRunAt'), null),
