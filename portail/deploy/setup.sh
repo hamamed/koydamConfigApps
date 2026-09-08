@@ -173,6 +173,4 @@ Next:
   2. Give bdc and marches the SAME JWT_SECRET and AUTH_COOKIE_DOMAIN as this
      service, or a session opened here will not be accepted by either:
        grep -E '^(JWT_SECRET|AUTH_COOKIE_DOMAIN)=' ${APP_DIR}/.env
-
-
-
+NOTE
