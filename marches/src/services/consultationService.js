@@ -65,5 +65,21 @@ export function createConsultationService({ consultations, documents, favorites 
     return serializeRows(await consultations.findByReference(reference))
   }
 
-  return { search, getById, findByReference }
+  /**
+   * The values the three list filters can be set to.
+   *
+   * Read together because the form needs all three at once, and each is a
+   * grouped count over an indexed column — cheaper than the listing query
+   * beside it.
+   */
+  async function facets() {
+    const [categories, buyers, places] = await Promise.all([
+      consultations.facets('categorie'),
+      consultations.facets('acheteur'),
+      consultations.facets('lieu_execution'),
+    ])
+    return { categories, buyers, places }
+  }
+
+  return { search, getById, findByReference, facets }
 }

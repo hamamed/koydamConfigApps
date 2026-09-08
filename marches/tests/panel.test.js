@@ -818,3 +818,31 @@ test('the form refuses a submission it cannot evaluate, in the reader’s langua
   assert.match(noOffers, /au moins une offre/)
 })
 
+
+test('the list filters offer the values the data actually holds, and selecting one filters', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  // What the three columns really contain, straight from the repository.
+  const facets = await api.container.services.consultations.facets()
+  assert.ok(facets.categories.length > 0, 'expected at least one category in the fixtures')
+  assert.ok(facets.buyers.length > 0, 'expected at least one buyer in the fixtures')
+
+  const html = await (await api.page('/panel', api.staff)).text()
+
+  // A category is a short list, so every value is a real option to pick.
+  facets.categories.forEach((f) => {
+    assert.match(html, new RegExp(`<option value="${f.value}"`), `missing category option ${f.value}`)
+  })
+  // A buyer is one of hundreds, so the field is typeable and suggests them.
+  assert.match(html, /<input id="acheteur"[^>]*list="acheteur-list"/)
+  assert.match(html, /<datalist id="acheteur-list">/)
+  assert.match(html, /<datalist id="lieu-list">/)
+
+  // The point of offering a value is that choosing it narrows the list. A
+  // dropdown of values that do not filter would look identical to this one.
+  const chosen = facets.categories[0]
+  const filtered = await api.container.services.consultations.search({ categorie: chosen.value }, { limit: 50, offset: 0 })
+  assert.equal(filtered.total, chosen.count)
+  assert.ok(filtered.data.every((row) => row.categorie === chosen.value))
+})

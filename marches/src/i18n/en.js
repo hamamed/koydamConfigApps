@@ -573,6 +573,7 @@ export default {
   'filters.reference': 'Reference',
   'filters.objet': 'Subject',
   'filters.acheteur': 'Buyer',
+  'filters.categorie.any': 'All',
   'filters.categorie': 'Category',
   'filters.lieuExecution': 'Place of performance',
   'filters.publishedFrom': 'Published from',

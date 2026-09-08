@@ -84,6 +84,37 @@ export function createConsultationRepository(db = getDb()) {
     return { row: await db.get(update.sql, update.params), outcome: 'updated' }
   }
 
+  /**
+   * The values a column actually holds, with how many rows carry each.
+   *
+   * For the filter controls. Typing a buyer or a town exactly right, from
+   * memory, is not something anybody can do — "KENITRA" matches and "Kenitra"
+   * is a guess — so the form offers what exists instead of asking people to
+   * know it. The count comes with each one because "RABAT (283)" tells you
+   * whether a filter is worth applying and a bare "RABAT" does not.
+   *
+   * Column names are whitelisted rather than interpolated from a caller: this
+   * builds SQL by concatenation, which is safe only because the set is closed.
+   *
+   * @param {'categorie'|'acheteur'|'lieu_execution'} column
+   * @returns {Promise<Array<{value: string, count: number}>>}
+   */
+  async function facets(column, limit = 2000) {
+    const ALLOWED = new Set(['categorie', 'acheteur', 'lieu_execution', 'procedure_type'])
+    if (!ALLOWED.has(column)) throw new Error(`Not a facetable column: ${column}`)
+
+    const rows = await db.all(
+      `SELECT ${column} AS value, COUNT(*) AS count
+         FROM ${TABLE}
+        WHERE ${column} IS NOT NULL AND ${column} <> ''
+        GROUP BY ${column}
+        ORDER BY COUNT(*) DESC, ${column} ASC
+        LIMIT ?`,
+      [limit],
+    )
+    return rows.map((row) => ({ value: row.value, count: Number(row.count) }))
+  }
+
   /** Paginated, filtered listing. Returns `{ rows, total }`. */
   async function search(filters = {}, { limit, offset, sort } = {}) {
     const where = buildWhere(consultationClauses(filters, 'c'))
@@ -183,5 +214,6 @@ export function createConsultationRepository(db = getDb()) {
     listPendingDetails,
     countPendingDetails,
     markDetailsStale,
+    facets,
   }
 }

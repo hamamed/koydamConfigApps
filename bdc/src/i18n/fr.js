@@ -593,6 +593,7 @@ export default {
   'filters.objet': 'Objet',
   'filters.acheteur': 'Acheteur',
   'filters.categorie': 'Catégorie',
+  'filters.categorie.any': 'Toutes',
   'filters.lieuExecution': 'Lieu d’exécution',
   'filters.publishedFrom': 'Publié du',
   'filters.publishedTo': 'au',

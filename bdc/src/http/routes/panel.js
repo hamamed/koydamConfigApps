@@ -170,7 +170,8 @@ export function panelRoutes({ services }) {
         { ...pagination, sort: req.query.sort },
         req.user.id,
       )
-      res.render('panel/projects', await shell(req, { active: 'projects', rows: data, total, pagination, query: req.query }))
+      const facets = await services.consultations.facets()
+      res.render('panel/projects', await shell(req, { active: 'projects', rows: data, total, pagination, query: req.query, facets }))
     }),
   )
 

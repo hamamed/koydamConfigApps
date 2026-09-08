@@ -593,6 +593,7 @@ export default {
   'filters.objet': 'Subject',
   'filters.acheteur': 'Buyer',
   'filters.categorie': 'Category',
+  'filters.categorie.any': 'All',
   'filters.lieuExecution': 'Place of performance',
   'filters.publishedFrom': 'Published from',
   'filters.publishedTo': 'to',

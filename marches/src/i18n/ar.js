@@ -573,6 +573,7 @@ export default {
   'filters.reference': 'المرجع',
   'filters.objet': 'الموضوع',
   'filters.acheteur': 'المشتري العمومي',
+  'filters.categorie.any': 'الكل',
   'filters.categorie': 'الفئة',
   'filters.lieuExecution': 'مكان التنفيذ',
   'filters.publishedFrom': 'نُشر من',

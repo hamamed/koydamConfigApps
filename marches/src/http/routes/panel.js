@@ -172,7 +172,15 @@ export function panelRoutes({ services }) {
         { ...pagination, sort: req.query.sort },
         req.user.id,
       )
-      res.render('panel/projects', await shell(req, { active: 'projects', rows: data, total, pagination, query: req.query }))
+      res.render('panel/projects', await shell(req, {
+        active: 'projects',
+        rows: data,
+        total,
+        pagination,
+        query: req.query,
+        // What the filters can actually be set to. Three indexed GROUP BYs.
+        facets: await services.consultations.facets(),
+      }))
     }),
   )
 
