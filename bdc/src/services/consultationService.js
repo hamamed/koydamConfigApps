@@ -104,10 +104,30 @@ export function createConsultationService({ consultations, articles, documents, 
     return { categories, buyers, places }
   }
 
+
+  /**
+   * One article and the consultation it belongs to.
+   *
+   * Both together because an article on its own says nothing useful: the
+   * reference, the buyer and the deadline are what turn a line item into
+   * something a supplier can quote against.
+   *
+   * @param {number} articleId
+   * @param {number|null} userId to decorate the consultation as the list does.
+   * @returns {Promise<{article: object, consultation: object}|null>}
+   */
+  async function getArticle(articleId, userId = null) {
+    const article = await articles.findById(articleId)
+    if (!article) return null
+    const consultation = await getById(article.consultation_id, userId)
+    return { article, consultation }
+  }
+
   return {
     facets,
     search,
     getById,
+    getArticle,
     findByReference,
     listArticles,
     searchResults,

@@ -197,6 +197,7 @@
           <th><%= t('article.number') %></th><th><%= t('article.designation') %></th>
           <th><%= t('article.description') %></th><th><%= t('article.quantity') %></th>
           <th><%= t('article.unit') %></th><th><%= t('article.tva') %></th><th><%= t('article.warranty') %></th>
+          <th><%= t('article.actions') %></th>
         </tr></thead>
         <tbody>
           <% consultation.articles.forEach(function (a) { %>
@@ -208,6 +209,15 @@
               <td><%= a.unit || '—' %></td>
               <td class="ltr"><%= a.tva_rate === null ? '—' : a.tva_rate %></td>
               <td><%= a.garanties || '—' %></td>
+              <td>
+                <%# Two things somebody does with a line item: read it in full,
+                    and go and see what it costs. The sheet holds both, so the
+                    row carries one link rather than a menu per marketplace. %>
+                <a class="btn secondary" href="/panel/articles/<%= a.id %>?lang=<%= locale %>"
+                   title="<%= t('article.sheetHint') %>">
+                  <%- include('../partials/icon', { name: 'search', size: 14 }) %><%= t('article.buy') %>
+                </a>
+              </td>
             </tr>
           <% }) %>
         </tbody>

@@ -7,8 +7,9 @@ import { cookieOptions, clearCookieOptions, createLoginLimiter } from '../middle
 import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
-import { translator } from '../../i18n/index.js'
 import { rememberList, forgetList, listUrl } from '../listState.js'
+import { marketLinks, searchQuery } from '../../utils/marketSearch.js'
+import { translator } from '../../i18n/index.js'
 
 /**
  * The panel.
@@ -404,6 +405,35 @@ export function panelRoutes({ services }) {
     }),
   )
 
+
+  /**
+   * One article, in full, with somewhere to buy it.
+   *
+   * A designation is a specification written for a procurement file, and in
+   * the table it lives in a cell 210px wide. This is the same row with room to
+   * be read, plus the two things somebody does next with it: look for the item
+   * on the market, and ask a supplier to quote for it.
+   */
+  router.get(
+    '/panel/articles/:id',
+    anyUser,
+    asyncHandler(async (req, res) => {
+      const found = await services.consultations.getArticle(Number(req.params.id), req.user.id)
+      if (!found) throw new NotFoundError(`Article ${req.params.id}`)
+      const { article, consultation } = found
+
+      const query = searchQuery(article.designation)
+      res.render('panel/article', await shell(req, {
+        active: 'projects',
+        consultation,
+        article: { ...article, estimation: article.estimation_cents === null ? null : article.estimation_cents / 100 },
+        query,
+        links: marketLinks(article.designation),
+        rfq: requestForQuote(article, consultation, req.locale),
+      }))
+    }),
+  )
+
   router.get(
     '/panel/buyers/:name',
     anyUser,
@@ -661,4 +691,31 @@ function specimenInvoice() {
       },
     ],
   }
+}
+
+/**
+ * The article written out as a request for a quotation.
+ *
+ * Everything a supplier needs to price the line and nothing they should not
+ * have: the reference and the buyer are public, the estimation is not included
+ * — telling a supplier what the administration expects to pay is how a quote
+ * comes back at exactly that figure.
+ */
+function requestForQuote(article, consultation, locale) {
+  const t = translator(locale)
+  const lines = [
+    `${t('article.rfq.subject')} ${consultation.reference}`,
+    '',
+    `${t('article.designation')} : ${article.designation}`,
+  ]
+  if (article.description) lines.push(`${t('article.description')} : ${article.description}`)
+  if (article.quantity !== null) {
+    lines.push(`${t('article.quantity')} : ${article.quantity}${article.unit ? ' ' + article.unit : ''}`)
+  }
+  if (article.garanties) lines.push(`${t('article.warranty')} : ${article.garanties}`)
+  if (article.delai_execution) lines.push(`${t('article.delay')} : ${article.delai_execution}`)
+  if (consultation.lieu_execution) lines.push(`${t('article.place')} : ${consultation.lieu_execution}`)
+  if (consultation.date_limite) lines.push(`${t('article.rfq.deadline')} : ${consultation.date_limite}`)
+  lines.push('', t('article.rfq.ask'))
+  return lines.join('\n')
 }

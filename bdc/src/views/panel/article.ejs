@@ -1,0 +1,85 @@
+<%- include('../partials/shell-open', { title: article.designation }) %>
+
+<div class="page-head">
+  <h1><%- include('../partials/icon', { name: 'package', size: 19 }) %> <%= t('article.sheet') %></h1>
+  <span class="muted spacer">
+    <a href="/panel/consultations/<%= consultation.id %>?lang=<%= locale %>"><code class="ltr"><%= consultation.reference %></code></a>
+  </span>
+</div>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'package', size: 15 }) %><%= t('article.designation') %></h2>
+  <%# The designation in full. In the table it is a cell capped at 210px, which
+      is where a specification goes to be unreadable. %>
+  <p style="margin:0 0 4px; font-size:16px; font-weight:600"><%= article.designation %></p>
+  <% if (article.description) { %>
+    <p class="muted" style="margin:0; white-space:pre-line"><%= article.description %></p>
+  <% } %>
+</div>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'list-checks', size: 15 }) %><%= t('article.specs') %></h2>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    <div class="figure"><label><%= t('article.quantity') %></label><b class="ltr"><%= article.quantity === null ? '—' : num(article.quantity) %> <%= article.unit || '' %></b></div>
+    <div class="figure"><label><%= t('article.number') %></label><b class="ltr"><%= article.article_number || '—' %></b></div>
+    <div class="figure"><label><%= t('article.lot') %></label><b class="ltr"><%= article.lot_number || '—' %></b></div>
+    <div class="figure"><label><%= t('article.tva') %></label><b class="ltr"><%= article.tva_rate === null ? '—' : article.tva_rate + ' %' %></b></div>
+    <div class="figure"><label><%= t('article.estimation') %></label><b class="ltr money"><%= article.estimation === null || article.estimation === undefined ? '—' : money(article.estimation) %></b></div>
+    <div class="figure"><label><%= t('article.delay') %></label><b><%= article.delai_execution || '—' %></b></div>
+  </div>
+  <% if (article.garanties) { %>
+    <p style="margin:14px 0 0"><label><%= t('article.warranty') %></label><span><%= article.garanties %></span></p>
+  <% } %>
+  <% if (article.lieu_execution) { %>
+    <p style="margin:10px 0 0"><label><%= t('article.place') %></label><span><%= article.lieu_execution %></span></p>
+  <% } %>
+</div>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('article.market') %></h2>
+  <% if (links.length === 0) { %>
+    <p class="empty"><%= t('article.noQuery') %></p>
+  <% } else { %>
+    <p class="muted" style="margin:-4px 0 12px; font-size:12.5px">
+      <%- t('article.marketHint', { query: `<code class="ltr">${query}</code>` }) %>
+    </p>
+    <div class="row-actions" style="flex-wrap:wrap">
+      <% links.forEach(function (link) { %>
+        <%# Opened in the reader's own browser: nothing here fetches or stores a
+            retailer's pages, so no shop's terms are engaged by this panel. %>
+        <a class="btn secondary" href="<%= link.url %>" target="_blank" rel="noopener noreferrer">
+          <%- include('../partials/icon', { name: 'external-link', size: 14 }) %><%= link.label %>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<div class="card">
+  <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('article.rfq') %></h2>
+  <p class="muted" style="margin:-4px 0 12px; font-size:12.5px"><%= t('article.rfqHint') %></p>
+  <textarea id="rfq" rows="9" readonly><%= rfq %></textarea>
+  <div class="row-actions" style="margin-top:10px">
+    <button type="button" id="copy-rfq"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('article.copy') %></button>
+    <span class="muted" id="copy-done" style="font-size:12.5px" hidden><%= t('article.copied') %></span>
+  </div>
+</div>
+
+<script>
+  // Copying is the point of the block: it is written to be pasted into an
+  // e-mail to a supplier, and selecting nine lines by hand is a small tax on
+  // something done for every article.
+  document.getElementById('copy-rfq').addEventListener('click', function () {
+    var box = document.getElementById('rfq')
+    box.select()
+    var done = function () {
+      var note = document.getElementById('copy-done')
+      note.hidden = false
+      setTimeout(function () { note.hidden = true }, 2500)
+    }
+    if (navigator.clipboard) navigator.clipboard.writeText(box.value).then(done, function () { document.execCommand('copy'); done() })
+    else { document.execCommand('copy'); done() }
+  })
+</script>
+
+<%- include('../partials/shell-close') %>

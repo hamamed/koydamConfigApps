@@ -1451,3 +1451,52 @@ test('a number inside a translated sentence is grouped, an id in one is not', as
   // A short count is left alone.
   assert.match(t('table.count', { count: 42, page: 1 }), /\b42\b/)
 })
+
+test('an article can be opened in full, searched for on the market, and quoted', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  // The link the detail screen renders, followed exactly as it is written.
+  const detail = await (await api.page(`/panel/consultations/${api.consultationId}`, api.staff)).text()
+  const href = /href="(\/panel\/articles\/\d+[^"]*)"/.exec(detail)
+  assert.ok(href, 'no article carries a link to its sheet')
+
+  const response = await api.page(href[1].replace(/&amp;/g, '&'), api.staff)
+  assert.equal(response.status, 200, `the article sheet answered ${response.status}`)
+  const html = await response.text()
+  assert.ok(!/undefined/.test(html), 'the sheet rendered an undefined field')
+
+  // Somewhere to buy it: outbound links, and the query is the searchable part
+  // of the wording rather than the whole procurement sentence.
+  assert.match(html, /jumia\.ma/)
+  assert.match(html, /marjane\.ma/)
+  assert.match(html, /rel="noopener noreferrer"/, 'outbound links must not hand over the opener')
+  assert.doesNotMatch(html, /q=FOURNITURE/i, 'the administrative wording was searched for verbatim')
+
+  // And something to send a supplier, which must not carry what the
+  // administration expects to pay.
+  assert.match(html, /<textarea id="rfq"/)
+  const rfq = /<textarea id="rfq"[^>]*>([\s\S]*?)<\/textarea>/.exec(html)[1]
+  assert.ok(rfq.length > 40, 'the request for a quote is empty')
+  assert.doesNotMatch(rfq, /estimation|estimate/i, 'the estimate leaked into the supplier text')
+})
+
+test('an article that does not exist is a 404, not a 500', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+  assert.equal((await api.page('/panel/articles/99999', api.staff)).status, 404)
+})
+
+test('a procurement sentence is reduced to what a shop can search for', async () => {
+  const { searchQuery, marketLinks } = await import('../src/utils/marketSearch.js')
+
+  assert.equal(searchQuery('FOURNITURE ET INSTALLATION DE DEUX (02) CLIMATISEURS AU NIVEAU DU LOCAL'), 'CLIMATISEURS')
+  assert.equal(searchQuery('Fourniture de connecteurs CLP120'), 'connecteurs CLP120')
+  // Wording that is entirely administrative leaves nothing to search, and must
+  // offer no links rather than a link to an empty search.
+  assert.equal(searchQuery('Travaux divers y compris toutes sujestion'), '')
+  assert.deepEqual(marketLinks('Travaux divers y compris toutes sujestion'), [])
+  assert.equal(marketLinks('connecteurs CLP120').length > 0, true)
+  // The query is escaped into the URL, not concatenated raw.
+  assert.match(marketLinks('câble 3x2.5 & co')[0]?.url ?? '', /%/)
+})
