@@ -1,6 +1,5 @@
 import { createHttpClient } from './httpClient.js'
 import { createMarcheScraper } from './marcheScraper.js'
-import { createExclusionScraper } from './exclusionScraper.js'
 import { ConflictError } from '../utils/errors.js'
 import { logger } from '../utils/logger.js'
 
@@ -9,7 +8,7 @@ const log = logger.child('[scraper:runner]')
 // 'exclusions' is deliberately outside 'all': it is a small, near-static list
 // on a different portal, and re-reading it on every daily crawl would spend
 // requests on a page that changes a few times a year.
-export const SOURCES = Object.freeze(['marches', 'exclusions', 'all'])
+export const SOURCES = Object.freeze(['marches', 'all'])
 
 /** An ISO date N days back, the format the portal's date filters require. */
 function daysAgo(days) {
@@ -23,7 +22,7 @@ function daysAgo(days) {
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, exclusions, jobs, settings, http }) {
+export function createScraperRunner({ db, consultations, jobs, settings, http }) {
   // Built per run from the current settings, so changing the delay or the user
   // agent in the panel applies to the next crawl without a restart. A client
   // passed in wins, which is what the tests use to serve fixtures.
@@ -32,7 +31,6 @@ export function createScraperRunner({ db, consultations, exclusions, jobs, setti
     createHttpClient(settings ? { resolveOptions: () => settings.section('scraper') } : undefined)
 
   const marcheScraper = createMarcheScraper({ http: client, consultations, settings })
-  const exclusionScraper = createExclusionScraper({ http: client, exclusions })
 
   /**
    * @param {object} options
@@ -102,9 +100,6 @@ export function createScraperRunner({ db, consultations, exclusions, jobs, setti
         detail.marches = record(await marcheScraper.scrape({ maxPages, fetchDetails }))
       }
 
-      if (source === 'exclusions') {
-        detail.exclusions = record(await exclusionScraper.scrape())
-      }
       // Awards on this portal are published as "résultats définitifs" on pages
       // this crawler does not read yet, so nothing links a marché to one.
       totals.matchesLinked = detail.matching?.matchesLinked ?? 0
@@ -177,5 +172,5 @@ export function createScraperRunner({ db, consultations, exclusions, jobs, setti
     }
   }
 
-  return { run, backfillDetails: backfillDetailsJob, marcheScraper, exclusionScraper, http: client }
+  return { run, backfillDetails: backfillDetailsJob, marcheScraper, http: client }
 }

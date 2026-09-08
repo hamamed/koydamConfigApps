@@ -16,7 +16,7 @@ const ICE = /^\d{15}$/
  * came from and whether a person has confirmed it, and the profile page shows
  * the difference.
  */
-export function createCompanyRecordService({ companyRecords, companyLookup, exclusions, btp }) {
+export function createCompanyRecordService({ companyRecords, companyLookup, btp }) {
   /** The stored fields, or null when every one of them was cleared — an empty
    *  row labelled "verified" says something was checked when nothing is there. */
   async function find(name) {
@@ -56,31 +56,9 @@ export function createCompanyRecordService({ companyRecords, companyLookup, excl
   const lookup = (name) => companyLookup.search(name)
   const lookupConfigured = () => companyLookup.isConfigured()
 
-  /**
-   * Official exclusions recorded against this company, newest first, each
-   * flagged with whether it is in force today.
-   *
-   * Matched on a normalised name because neither source publishes an id the
-   * other has — so this is a strong indication, not a certainty, and the panel
-   * says as much rather than asserting the two are the same legal person.
-   */
-  async function exclusionsFor(name, today = new Date().toISOString().slice(0, 10)) {
-    const rows = await exclusions.findForCompany(name)
-    return rows.map((row) => ({
-      ...serializeRow(row),
-      active: (!row.date_debut || row.date_debut <= today) && (!row.date_fin || row.date_fin >= today),
-    }))
-  }
-
-  /**
-   * The company's entry in the Ministry of Equipment's BTP register, if it has
-   * one. Matched on the same normalised name as an exclusion, so a business is
-   * found under one key wherever it appears — an indication to check, not proof
-   * that the two are the same legal person.
-   */
   const qualificationsFor = async (name) => serializeRows(await btp.findForCompany(name))
 
-  return { find, save, remove, lookup, lookupConfigured, exclusionsFor, qualificationsFor }
+  return { find, save, remove, lookup, lookupConfigured, qualificationsFor }
 }
 
 function field(value, key) {

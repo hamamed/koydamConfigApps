@@ -86,3 +86,20 @@ const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (character) => HTML_ESCAPES[character])
 }
+
+/**
+ * A company name reduced to the words that carry meaning.
+ *
+ * Two sources name the same business differently — "LA SOCIETE SOUFOUH ATLAS
+ * SARL" against "SOUFOUH ATLAS" — so both sides drop the legal form and the
+ * "société" prefix, which are exactly the parts that vary. That is what makes
+ * the two meet.
+ *
+ * It lived in the exclusions repository, which is gone; it is a text
+ * normaliser and never belonged to one table.
+ */
+const COMPANY_NOISE = /\b(la|le|les|de|du|des|et)\b|\b(ste|societe|société|ets|etablissements?|entreprise)\b|\b(sarl|s\.?a\.?r\.?l|sa|snc|scp|sas|au|s\.?a)\b/g
+
+export function matchName(raw) {
+  return normalize(raw ?? '').replace(COMPANY_NOISE, ' ').replace(/[^a-z0-9]+/g, ' ').trim()
+}

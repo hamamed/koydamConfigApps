@@ -1,7 +1,7 @@
 import { getDb } from '../db/index.js'
 import { buildInsert, buildUpdate } from '../db/sql.js'
 import { nowIso } from '../utils/dates.js'
-import { matchName } from './exclusionRepository.js'
+import { matchName } from '../utils/text.js'
 
 const TABLE = 'btp_companies'
 

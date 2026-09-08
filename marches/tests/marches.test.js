@@ -197,8 +197,10 @@ test('the screens with nothing behind them on this portal are gone', async (t) =
   // An appel d'offres publishes no article breakdown on its consultation page —
   // the lots are inside the downloadable dossier — and its award appears later
   // as a separate résultat définitif notice nothing here crawls. Every screen
-  // built on either could only ever render zeroes.
-  for (const path of ['/panel/awards', '/panel/insights', '/panel/companies']) {
+  // built on either could only ever render zeroes. The exclusion register goes
+  // with them: it is a list of companies barred from winning, and nothing here
+  // records who wins.
+  for (const path of ['/panel/awards', '/panel/insights', '/panel/companies', '/panel/exclusions']) {
     const response = await fetch(`${server.base}${path}`, {
       redirect: 'manual',
       headers: { cookie: `mp_token=${token}` },
@@ -207,7 +209,7 @@ test('the screens with nothing behind them on this portal are gone', async (t) =
   }
 
   const nav = (await (await fetch(`${server.base}/panel`, { headers: { cookie: `mp_token=${token}` } })).text())
-  assert.doesNotMatch(nav, /\/panel\/(awards|insights|companies)"/, 'and the sidebar does not offer them')
+  assert.doesNotMatch(nav, /\/panel\/(awards|insights|companies|exclusions)"/, 'and the sidebar does not offer them')
 })
 
 test('a crawl records what it actually did, so the canary is not lied to', async (t) => {

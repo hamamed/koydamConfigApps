@@ -4,7 +4,6 @@
  *
  *   npm run scrape -- --source=marches --max-pages=20   the open window
  *   npm run scrape -- --source=marches --max-pages=201  the whole archive
- *   npm run scrape -- --source=exclusions               the official exclusion list
  */
 import { initDatabase } from '../src/db/init.js'
 import { closeDb, getDb } from '../src/db/index.js'

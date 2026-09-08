@@ -251,28 +251,7 @@ export default {
   'stats.btp': 'شركات مؤهَّلة',
 
   // ---- Procurement exclusions ----
-  'exclusion.search': 'بحث',
-  'exclusion.searchPlaceholder': 'الاسم أو السبب أو السجل التجاري',
-  'exclusion.allEntities': 'كل الجهات',
-  'exclusion.allStatuses': 'كل الحالات',
-  'exclusion.clear': 'مسح',
-  'exclusion.noMatch': 'لا يوجد إقصاء يطابق هذا البحث.',
 
-  'exclusion.activeTitle': 'مُقصاة من الصفقات العمومية',
-  'exclusion.pastTitle': 'سبق إقصاؤها من الصفقات العمومية',
-  'exclusion.entity': 'الجهة التي أصدرت الإقصاء',
-  'exclusion.motif': 'السبب',
-  'exclusion.period': 'الفترة',
-  'exclusion.scope': 'النطاق',
-  'exclusion.inForce': 'سارية',
-  'exclusion.expired': 'منتهية',
-  'exclusion.note': 'منشور من البوابة المغربية للصفقات العمومية. تتم المطابقة بالاسم لأن أيًّا من المصدرين لا ينشر معرّفًا مشتركًا: فاعتبرها قرينة قوية تستوجب التحقق، لا يقينًا.',
-  'exclusion.title': 'الشركات المُقصاة',
-  'nav.exclusions': 'الشركات المُقصاة',
-  'exclusion.company': 'التسمية',
-  'exclusion.empty': 'لا توجد إقصاءات مسجَّلة. شغّل الجمع من لوحة القيادة.',
-  'exclusion.lede': 'اللائحة الرسمية المنشورة من البوابة المغربية للصفقات العمومية.',
-  'stats.exclusions': 'شركات مُقصاة',
 
   // ---- Company register ----
   'registry.title': 'هوية الشركة',

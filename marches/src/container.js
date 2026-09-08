@@ -35,7 +35,6 @@ import { createCompanyRecordRepository } from './repositories/companyRecordRepos
 import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
 import { createCompanyRecordService } from './services/companyRecordService.js'
 import { createAccessRequestService } from './services/accessRequestService.js'
-import { createExclusionRepository } from './repositories/exclusionRepository.js'
 import { createBtpRepository } from './repositories/btpRepository.js'
 import { createTodayService } from './services/todayService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
@@ -62,7 +61,6 @@ export function createContainer(db = getDb(), options = {}) {
     passwordResets: createPasswordResetRepository(db),
     translations: createTranslationRepository(db),
     accessRequests: createAccessRequestRepository(db),
-    exclusions: createExclusionRepository(db),
     companyRecords: createCompanyRecordRepository(db),
     btp: createBtpRepository(db),
   }
@@ -114,18 +112,6 @@ export function createContainer(db = getDb(), options = {}) {
     admin: createAdminService({ ...repositories, runner, settings, health: createHealthService({ ...repositories, db }) }),
     mailer,
     public: createPublicService(repositories),
-    exclusions: {
-      list: async (limit) => serializeRows(await repositories.exclusions.listAll(limit)),
-      /** Filtered, each row flagged with whether the ban bites today. */
-      search: async (filters, today = new Date().toISOString().slice(0, 10)) =>
-        serializeRows(await repositories.exclusions.search(filters, today)).map((row) => ({
-          ...row,
-          active: (!row.date_debut || row.date_debut <= today) && (!row.date_fin || row.date_fin >= today),
-        })),
-      entities: () => repositories.exclusions.listEntities(),
-      countAll: () => repositories.exclusions.countAll(),
-      countActive: () => repositories.exclusions.countActive(),
-    },
     companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
     accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
   }

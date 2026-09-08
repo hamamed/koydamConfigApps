@@ -414,27 +414,6 @@ export function panelRoutes({ services }) {
    * for candidates. Both are administrator actions: the register is matched by
    * name alone, so a match is a proposal for a person to accept, never a write.
    */
-  router.get(
-    '/panel/exclusions',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      const filters = {
-        q: typeof req.query.q === 'string' ? req.query.q : '',
-        entite: typeof req.query.entite === 'string' ? req.query.entite : '',
-        // Anything other than the two known values means "no filter", rather
-        // than an error: this is a link somebody may have edited by hand.
-        statut: ['active', 'expired'].includes(req.query.statut) ? req.query.statut : '',
-      }
-      res.render('panel/exclusions', await shell(req, {
-        active: 'exclusions',
-        rows: await services.exclusions.search(filters),
-        entities: await services.exclusions.entities(),
-        total: await services.exclusions.countAll(),
-        query: req.query,
-        filters,
-      }))
-    }),
-  )
 
 
 
