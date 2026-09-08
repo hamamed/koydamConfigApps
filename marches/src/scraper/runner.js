@@ -54,6 +54,7 @@ export function createScraperRunner({ db, consultations, documents, jobs, settin
       maxPages,
       startPage,
       fetchDetails,
+      refreshDetails = false,
       backfillDetails = false,
       backfillLimit,
       sinceDays,
@@ -97,7 +98,7 @@ export function createScraperRunner({ db, consultations, documents, jobs, settin
 
     try {
       if (source === 'marches' || source === 'all') {
-        detail.marches = record(await marcheScraper.scrape({ maxPages, fetchDetails }))
+        detail.marches = record(await marcheScraper.scrape({ maxPages, fetchDetails, refreshDetails }))
       }
 
       // Awards on this portal are published as "résultats définitifs" on pages

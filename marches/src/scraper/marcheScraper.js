@@ -49,6 +49,12 @@ export function createMarcheScraper({ http, consultations, documents = null, set
       until = (row) => Boolean(row.date_limite) && row.date_limite < today(),
       maxPages = 20,
       fetchDetails = true,
+      // Re-read a detail page even when its estimate is already stored.
+      // The pass normally skips those, which is right — but it means anything
+      // the parser learns to read *later* never reaches a consultation that
+      // was crawled before it. The documents did exactly that: 3,500 rows had
+      // their estimate and would never have been read again.
+      refreshDetails = false,
       onProgress = () => {},
     } = options
 
@@ -84,7 +90,7 @@ export function createMarcheScraper({ http, consultations, documents = null, set
       if (parsed.items.length === 0) break
 
       const saved = await persist(parsed.items, stats)
-      if (fetchDetails) await withDetails(saved, runtime, stats)
+      if (fetchDetails) await withDetails(saved, runtime, stats, { refreshDetails })
       onProgress({ ...stats, page })
 
       if (parsed.items.some(until)) {
@@ -139,8 +145,10 @@ export function createMarcheScraper({ http, consultations, documents = null, set
    * computes every threshold from, and the listing does not carry it. The page
    * needs no session, so this is a plain throttled GET per consultation.
    */
-  async function withDetails(rows, runtime, stats) {
-    const pending = rows.filter((row) => row && row.estimation_cents === null && row.detail_url)
+  async function withDetails(rows, runtime, stats, { refreshDetails = false } = {}) {
+    const pending = rows.filter(
+      (row) => row && row.detail_url && (refreshDetails || row.estimation_cents === null),
+    )
     if (pending.length === 0) return
 
     /*
