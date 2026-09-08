@@ -1,36 +1,95 @@
 <%- include('../layout-open', { title: service.label + ' — tableau de bord' }) %>
 <%- include('_nav') %>
 
+<%
+  /*
+    What this service holds, and what its last passes did.
+
+    The counts are the service's own keys, which are not labels — `consultations`
+    and `pendingDetails` are column names. They are given readable names here
+    and anything unrecognised still shows, under its key, rather than being
+    dropped: a counter that appears when a service adds one is more useful than
+    a tidy list that silently omits it.
+  */
+  const d = data || {}
+  const COUNTS = {
+    consultations: 'count.consultations', documents: 'count.documents', invoices: 'count.invoices',
+    users: 'count.users', cancelled: 'count.cancelled', pendingDetails: 'count.pendingDetails',
+    articles: 'count.articles', results: 'count.results',
+  }
+  // Not every count is good news. A backlog and a cancellation are facts to
+  // notice, so they are not painted the same as a total.
+  const TONE = { pendingDetails: 'warn', cancelled: 'warn' }
+  const num = (n) => Number(n ?? 0).toLocaleString('fr-MA')
+  const jobPill = (status) => (status === 'success' ? 'ok' : status === 'running' ? '' : 'bad')
+  const jobs = d.recentJobs || []
+  const counts = Object.entries(d.counts || {})
+%>
+
 <% if (data) { %>
-  <div class="tiles">
-    <% Object.entries(data.counts || {}).forEach(function ([key, value]) { %>
-      <div class="tile"><b class="ltr"><%= Number(value).toLocaleString('fr-MA') %></b><span><%= key %></span></div>
-    <% }) %>
+  <div class="box">
+    <h2><%- include('../icon', { name: 'layout-grid', size: 16 }) %><%= t('dash.holds') %></h2>
+    <div class="tiles" style="margin:0">
+      <% counts.forEach(function ([key, value]) { %>
+        <div class="metric <%= TONE[key] && Number(value) > 0 ? 'tone-' + TONE[key] : '' %>">
+          <b class="ltr"><%= num(value) %></b>
+          <span class="k"><%= COUNTS[key] ? t(COUNTS[key]) : key %></span>
+        </div>
+      <% }) %>
+      <% if (counts.length === 0) { %><p class="muted"><%= t('dash.noCounters') %></p><% } %>
+    </div>
   </div>
 
-  <h2 style="font-size:15px; font-weight:650; margin:20px 0 10px">Derniers passages</h2>
-  <table>
-    <thead><tr><th>Source</th><th>État</th><th>Début</th><th>Fin</th><th>Trouvés</th><th>Créés</th></tr></thead>
-    <tbody>
-      <% (data.recentJobs || []).forEach(function (job) { %>
-        <tr>
-          <td><%= job.source %></td>
-          <td><span class="pill <%= job.status === 'success' ? 'ok' : (job.status === 'running' ? '' : 'bad') %>"><%= job.status %></span></td>
-          <td class="ltr"><%= job.started_at || '—' %></td>
-          <td class="ltr"><%= job.finished_at || '—' %></td>
-          <td class="ltr"><%= job.items_found ?? '—' %></td>
-          <td class="ltr"><%= job.items_created ?? '—' %></td>
-        </tr>
-      <% }) %>
-      <% if ((data.recentJobs || []).length === 0) { %>
-        <tr><td colspan="6" class="muted">Aucun passage enregistré.</td></tr>
-      <% } %>
-    </tbody>
-  </table>
+  <div class="box">
+    <h2>
+      <%- include('../icon', { name: 'arrow-left-right', size: 16 }) %><%= t('dash.crawl') %>
+      <span class="count">
+        <% if (d.lastRun) { %><%= t('overview.lastRun') %> <span class="ltr"><%= d.lastRun.finishedAt || d.lastRun.startedAt || '—' %></span><% } else { %><%= t('overview.noRun') %><% } %>
+      </span>
+    </h2>
 
-  <form method="post" action="/s/<%= service.key %>/crawl" class="row-actions">
-    <button class="primary small" type="submit">Lancer un passage maintenant</button>
-    <span class="muted" style="font-size:12.5px">Le service décide de ce qu’il va chercher ; ceci ne fait que le déclencher.</span>
-  </form>
+    <% if (d.schedule) { %>
+      <p class="muted" style="margin:-4px 0 14px; font-size:12.5px">
+        <%- d.schedule.nextRunAt ? t('dash.scheduledNext', { at: `<span class="ltr">${d.schedule.runAt || '—'}</span>`, next: d.schedule.nextRunAt }) : t('dash.scheduled', { at: `<span class="ltr">${d.schedule.runAt || '—'}</span>` }) %>
+      </p>
+    <% } %>
+
+    <table>
+      <thead><tr><th><%= t('dash.source') %></th><th><%= t('dash.state') %></th><th><%= t('dash.start') %></th><th><%= t('dash.duration') %></th><th><%= t('dash.found') %></th><th><%= t('dash.created') %></th><th><%= t('dash.updated') %></th></tr></thead>
+      <tbody>
+        <% jobs.forEach(function (job) { %>
+          <%
+            const started = job.started_at ? new Date(job.started_at) : null
+            const finished = job.finished_at ? new Date(job.finished_at) : null
+            const mins = started && finished ? Math.round((finished - started) / 60000) : null
+          %>
+          <tr>
+            <td><%= job.source %></td>
+            <td><span class="pill <%= jobPill(job.status) %>"><%= job.status %></span></td>
+            <td class="ltr"><%= job.started_at || '—' %></td>
+            <td class="ltr"><%= mins === null ? '—' : mins + ' min' %></td>
+            <%# A pass that found nothing is the shape of a crawler that has
+                quietly stopped working, so it is coloured rather than left as
+                a zero among other zeroes. %>
+            <td class="ltr"><% if (Number(job.items_found) === 0) { %><span class="pill warn">0</span><% } else { %><%= num(job.items_found) %><% } %></td>
+            <td class="ltr"><%= num(job.items_created) %></td>
+            <td class="ltr"><%= num(job.items_updated) %></td>
+          </tr>
+        <% }) %>
+        <% if (jobs.length === 0) { %>
+          <tr><td colspan="7" class="muted"><%= t('dash.noJobs') %></td></tr>
+        <% } %>
+      </tbody>
+    </table>
+
+    <% if (d.runningJob) { %>
+      <p style="margin:14px 0 0"><span class="pill"><%= t('dash.running', { source: d.runningJob.source }) %></span></p>
+    <% } %>
+
+    <form method="post" action="/s/<%= service.key %>/crawl" class="row-actions" style="margin-top:16px">
+      <button class="primary small" type="submit"><%= t('dash.run') %></button>
+      <span class="muted" style="font-size:12.5px"><%= t('dash.runHint') %></span>
+    </form>
+  </div>
 <% } %>
 <%- include('../layout-close') %>

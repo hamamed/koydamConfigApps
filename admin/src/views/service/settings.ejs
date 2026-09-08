@@ -21,7 +21,7 @@
 %>
 
 <% if (groups.length === 0 && !error) { %>
-  <p class="muted"><%= service.label %> n’expose aucun paramètre.</p>
+  <p class="muted"><%= t('set.none', { service: service.label }) %></p>
 <% } %>
 
 <form method="post" action="/s/<%= service.key %>/parametres">
@@ -32,7 +32,7 @@
       <h2>
         <%- include('../icon', { name: GROUP_ICONS[group.group] || 'shield-check', size: 16 }) %>
         <%= t('settings.group.' + group.group) %>
-        <span class="count"><%= (group.entries || []).length %> réglages</span>
+        <span class="count"><%= t('set.settings', { n: (group.entries || []).length }) %></span>
       </h2>
       <% if (t('settings.group.' + group.group + 'Hint') !== 'settings.group.' + group.group + 'Hint') { %>
         <p class="muted" style="margin:-4px 0 14px; font-size:12px"><%= t('settings.group.' + group.group + 'Hint') %></p>
@@ -43,13 +43,13 @@
         <div class="field">
           <label for="<%= entry.key %>">
             <%= t('settings.key.' + entry.key) %>
-            <% if (entry.isOverridden) { %><span class="pill" style="font-size:10px">modifié</span><% } %>
+            <% if (entry.isOverridden) { %><span class="pill" style="font-size:10px"><%= t('set.changed') %></span><% } %>
           </label>
 
           <% if (entry.type === 'boolean') { %>
             <select id="<%= entry.key %>" name="<%= entry.key %>">
-              <option value="true" <%= entry.value ? 'selected' : '' %>>Oui</option>
-              <option value="false" <%= entry.value ? '' : 'selected' %>>Non</option>
+              <option value="true" <%= entry.value ? 'selected' : '' %>><%= t('common.yes') %></option>
+              <option value="false" <%= entry.value ? '' : 'selected' %>><%= t('common.no') %></option>
             </select>
 
           <% } else if (entry.type === 'select') { %>
@@ -90,7 +90,7 @@
           <% } %>
 
           <% if (entry.type !== 'secret') { %>
-            <small class="muted" style="font-size:11.5px">Défaut : <span class="ltr"><%= String(entry.fallback) %></span></small>
+            <small class="muted" style="font-size:11.5px"><%= t('set.default') %> <span class="ltr"><%= String(entry.fallback) %></span></small>
           <% } %>
         </div>
         <% }) %>
@@ -100,8 +100,8 @@
 
   <% if (groups.length > 0) { %>
     <div class="box row-actions" style="margin-bottom:0">
-      <button class="primary small" type="submit">Enregistrer</button>
-      <span class="muted" style="font-size:12.5px">Les valeurs s’appliquent immédiatement. Un champ vide reprend le défaut du serveur ; un secret laissé vide n’est pas touché.</span>
+      <button class="primary small" type="submit"><%= t('set.save') %></button>
+      <span class="muted" style="font-size:12.5px"><%= t('set.saveHint') %></span>
     </div>
   <% } %>
 </form>

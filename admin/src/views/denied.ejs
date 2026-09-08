@@ -1,7 +1,7 @@
-<%- include('layout-open', { title: 'Accès refusé' }) %>
+<%- include('layout-open', { title: t('denied.title') }) %>
 <div class="panel narrow">
-  <h1>Accès refusé</h1>
-  <p class="lede">Cette console est réservée aux administrateurs. Vous êtes connecté en tant que <b><%= user.email %></b>.</p>
-  <p><a href="<%= config.auth.portalUrl %>">Retour au portail</a></p>
+  <h1><%= t('denied.title') %></h1>
+  <p class="lede"><%- t('denied.lede', { email: `<b>${user.email}</b>` }) %></p>
+  <p><a href="<%= config.auth.portalUrl %>"><%= t('denied.back') %></a></p>
 </div>
 <%- include('layout-close') %>

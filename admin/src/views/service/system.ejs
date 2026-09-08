@@ -37,59 +37,59 @@
 
 <% if (data) { %>
   <div class="box">
-    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %>État<span class="count"><%= service.label %></span></h2>
+    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %><%= t('sys.state') %><span class="count"><%= service.label %></span></h2>
     <div class="tiles" style="margin:0">
       <div class="metric">
         <b><span class="pill <%= pill(d.severity) %>" style="font-size:14px"><%= d.severity || '—' %></span></b>
-        <span class="k">état général</span>
-        <small><%= problems.length %> contrôle(s) à regarder sur <%= checks.length %></small>
+        <span class="k"><%= t('sys.overall') %></span>
+        <small><%= t('sys.checksToWatch', { n: problems.length, total: checks.length }) %></small>
       </div>
 
       <% if (host) { %>
         <div class="metric">
           <b class="ltr"><%= host.loadPerCore %> %</b>
-          <span class="k">processeur</span>
+          <span class="k"><%= t('sys.cpu') %></span>
           <div class="meter <%= level(host.loadPerCore) %>"><span style="width:<%= Math.min(100, host.loadPerCore) %>%"></span></div>
           <%# Load per core, not raw: "4" means nothing until you know whether
               that is four cores busy or four cores' worth of queue on one. %>
-          <small>charge <span class="ltr"><%= host.loadAvg.join(' · ') %></span> sur <%= host.cpuCount %> cœurs</small>
+          <small><%- t('sys.cpuHint', { load: `<span class="ltr">${host.loadAvg.join(' · ')}</span>`, cores: host.cpuCount }) %></small>
         </div>
 
         <div class="metric">
           <b class="ltr"><%= host.usedMemPercent %> %</b>
-          <span class="k">mémoire du serveur</span>
+          <span class="k"><%= t('sys.memory') %></span>
           <div class="meter <%= level(host.usedMemPercent) %>"><span style="width:<%= host.usedMemPercent %>%"></span></div>
-          <small><span class="ltr"><%= bytes(host.totalMemBytes - host.freeMemBytes) %></span> sur <span class="ltr"><%= bytes(host.totalMemBytes) %></span> — <span class="ltr"><%= bytes(host.freeMemBytes) %></span> libres</small>
+          <small><%- t('sys.memoryHint', { used: `<span class="ltr">${bytes(host.totalMemBytes - host.freeMemBytes)}</span>`, total: `<span class="ltr">${bytes(host.totalMemBytes)}</span>`, free: `<span class="ltr">${bytes(host.freeMemBytes)}</span>` }) %></small>
         </div>
       <% } %>
 
       <% if (d.disk) { %>
         <div class="metric">
           <b class="ltr"><%= d.disk.usedPercent %> %</b>
-          <span class="k">disque</span>
+          <span class="k"><%= t('sys.disk') %></span>
           <div class="meter <%= level(d.disk.usedPercent) %>"><span style="width:<%= d.disk.usedPercent %>%"></span></div>
-          <small><span class="ltr"><%= bytes(d.disk.usedBytes) %></span> sur <span class="ltr"><%= bytes(d.disk.totalBytes) %></span> — <span class="ltr"><%= bytes(d.disk.freeBytes) %></span> libres</small>
+          <small><%- t('sys.memoryHint', { used: `<span class="ltr">${bytes(d.disk.usedBytes)}</span>`, total: `<span class="ltr">${bytes(d.disk.totalBytes)}</span>`, free: `<span class="ltr">${bytes(d.disk.freeBytes)}</span>` }) %></small>
         </div>
       <% } %>
 
       <div class="metric">
         <b class="ltr"><%= d.backup ? hours(d.backup.ageHours) : '—' %></b>
-        <span class="k">dernière sauvegarde</span>
-        <small><%= d.backup && d.backup.includesDatabase ? 'cette base est dans l’archive' : 'cette base n’est PAS dans l’archive' %></small>
+        <span class="k"><%= t('sys.lastBackup') %></span>
+        <small><%= t(d.backup && d.backup.includesDatabase ? 'sys.inArchive' : 'sys.notInArchive') %></small>
       </div>
 
       <div class="metric">
         <b class="ltr"><%= d.database ? bytes(d.database.sizeBytes) : '—' %></b>
-        <span class="k">base de données</span>
-        <small><%= d.runtime ? bytes(d.runtime.rssBytes) + ' pour ce service' : '' %></small>
+        <span class="k"><%= t('sys.database') %></span>
+        <small><%= d.runtime ? t('sys.forService', { size: bytes(d.runtime.rssBytes) }) : '' %></small>
       </div>
     </div>
   </div>
 
   <div class="box">
-    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %>Contrôles<span class="count"><%= problems.length %> à regarder</span></h2>
+    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %><%= t('sys.checks') %><span class="count"><%= t('sys.toWatch', { n: problems.length }) %></span></h2>
     <table>
-      <thead><tr><th>Contrôle</th><th>État</th><th>Détail</th></tr></thead>
+      <thead><tr><th><%= t('sys.check') %></th><th><%= t('sys.state') %></th><th><%= t('sys.detail') %></th></tr></thead>
       <tbody>
         <%# Worst first. A status page where a warning sits below the uptime has
             to be read carefully to use, and nobody reads one carefully at the
@@ -101,26 +101,26 @@
             <td class="muted"><%= c.detail || '—' %></td>
           </tr>
         <% }) %>
-        <% if (checks.length === 0) { %><tr><td colspan="3" class="muted">Aucun contrôle rapporté.</td></tr><% } %>
+        <% if (checks.length === 0) { %><tr><td colspan="3" class="muted"><%= t('sys.noChecks') %></td></tr><% } %>
       </tbody>
     </table>
   </div>
 
   <% if (d.backup) { %>
     <div class="box">
-      <h2><%- include('../icon', { name: 'receipt', size: 16 }) %>Sauvegardes<span class="count"><%= (d.backup.archives || []).length %> archives</span></h2>
+      <h2><%- include('../icon', { name: 'receipt', size: 16 }) %><%= t('sys.backups') %><span class="count"><%= t('sys.archives', { n: (d.backup.archives || []).length }) %></span></h2>
       <table>
         <tbody>
-          <tr><td style="width:34%">Dernière archive</td><td class="ltr"><%= d.backup.latest ? d.backup.latest.name : '—' %></td></tr>
-          <tr><td>Taille</td><td class="ltr"><%= d.backup.latest ? bytes(d.backup.latest.sizeBytes) : '—' %></td></tr>
-          <tr><td>Âge</td><td class="ltr"><%= hours(d.backup.ageHours) %></td></tr>
+          <tr><td style="width:34%"><%= t('sys.lastArchive') %></td><td class="ltr"><%= d.backup.latest ? d.backup.latest.name : '—' %></td></tr>
+          <tr><td><%= t('sys.size') %></td><td class="ltr"><%= d.backup.latest ? bytes(d.backup.latest.sizeBytes) : '—' %></td></tr>
+          <tr><td><%= t('sys.age') %></td><td class="ltr"><%= hours(d.backup.ageHours) %></td></tr>
           <tr>
-            <td>Contient cette base</td>
+            <td><%= t('sys.containsDb') %></td>
             <%# The check this exists for: bdc ran a month with its database in
                 no archive at all while every backup reported success. %>
             <td><span class="pill <%= d.backup.includesDatabase ? 'ok' : 'bad' %>"><%= d.backup.includesDatabase ? 'oui' : 'non' %></span></td>
           </tr>
-          <% if (d.backup.error) { %><tr><td>Erreur</td><td><span class="pill bad"><%= d.backup.error %></span></td></tr><% } %>
+          <% if (d.backup.error) { %><tr><td><%= t('sys.error') %></td><td><span class="pill bad"><%= d.backup.error %></span></td></tr><% } %>
         </tbody>
       </table>
     </div>
@@ -128,17 +128,17 @@
 
   <% if (d.archive && (d.archive.totalPages || d.archive.nextPage)) { %>
     <div class="box">
-      <h2><%- include('../icon', { name: 'arrow-left-right', size: 16 }) %>Archive en cours</h2>
+      <h2><%- include('../icon', { name: 'arrow-left-right', size: 16 }) %><%= t('sys.archiveRunning') %></h2>
       <% if (d.archive.percent !== null && d.archive.percent !== undefined) { %>
         <div class="meter"><span style="width:<%= Math.min(100, d.archive.percent) %>%"></span></div>
-        <p class="muted" style="margin:8px 0 14px; font-size:12.5px"><%= d.archive.percent %> % — page <%= d.archive.nextPage %> sur <%= d.archive.totalPages %></p>
+        <p class="muted" style="margin:8px 0 14px; font-size:12.5px"><%= t('sys.progress', { percent: d.archive.percent, page: d.archive.nextPage, total: d.archive.totalPages }) %></p>
       <% } %>
       <table>
         <tbody>
-          <tr><td style="width:34%">Page suivante</td><td class="ltr"><%= d.archive.nextPage %><%= d.archive.totalPages ? ' / ' + d.archive.totalPages : '' %></td></tr>
-          <tr><td>Terminée</td><td><span class="pill <%= d.archive.complete ? 'ok' : '' %>"><%= d.archive.complete ? 'oui' : 'non' %></span></td></tr>
-          <tr><td>En cours</td><td><span class="pill <%= d.archive.running ? 'ok' : '' %>"><%= d.archive.running ? 'oui' : 'non' %></span></td></tr>
-          <tr><td>Dernière tranche</td><td class="ltr"><%= d.archive.lastSliceAt || '—' %><%= d.archive.stalledHours ? ` (il y a ${hours(d.archive.stalledHours)})` : '' %></td></tr>
+          <tr><td style="width:34%"><%= t('sys.nextPage') %></td><td class="ltr"><%= d.archive.nextPage %><%= d.archive.totalPages ? ' / ' + d.archive.totalPages : '' %></td></tr>
+          <tr><td><%= t('sys.complete') %></td><td><span class="pill <%= d.archive.complete ? 'ok' : '' %>"><%= d.archive.complete ? 'oui' : 'non' %></span></td></tr>
+          <tr><td><%= t('sys.inProgress') %></td><td><span class="pill <%= d.archive.running ? 'ok' : '' %>"><%= d.archive.running ? 'oui' : 'non' %></span></td></tr>
+          <tr><td><%= t('sys.lastSlice') %></td><td class="ltr"><%= d.archive.lastSliceAt || '—' %><%= d.archive.stalledHours ? ` (${hours(d.archive.stalledHours)})` : '' %></td></tr>
         </tbody>
       </table>
     </div>
@@ -146,7 +146,7 @@
 
   <% if (d.integrations) { %>
     <div class="box">
-      <h2><%- include('../icon', { name: 'layout-grid', size: 16 }) %>Intégrations</h2>
+      <h2><%- include('../icon', { name: 'layout-grid', size: 16 }) %><%= t('sys.integrations') %></h2>
       <table>
         <tbody>
           <% Object.entries(d.integrations).forEach(function ([name, ready]) { %>
@@ -154,7 +154,7 @@
               <td style="width:34%"><%= name %></td>
               <%# Worth stating plainly: these fail silently. A service with no
                   SMTP simply never sends, and says nothing about it. %>
-              <td><span class="pill <%= ready ? 'ok' : 'warn' %>"><%= ready ? 'configurée' : 'non configurée' %></span></td>
+              <td><span class="pill <%= ready ? 'ok' : 'warn' %>"><%= t(ready ? 'sys.configured' : 'sys.notConfigured') %></span></td>
             </tr>
           <% }) %>
         </tbody>
@@ -163,39 +163,39 @@
   <% } %>
 
   <div class="box">
-    <h2><%- include('../icon', { name: 'gavel', size: 16 }) %>Le serveur</h2>
+    <h2><%- include('../icon', { name: 'gavel', size: 16 }) %><%= t('sys.server') %></h2>
     <table>
       <tbody>
         <% if (host) { %>
-          <tr><td style="width:34%">Machine</td><td class="ltr"><%= host.platform %></td></tr>
-          <tr><td>Processeur</td><td class="ltr"><%= host.cpuModel || '—' %> — <%= host.cpuCount %> cœurs</td></tr>
-          <tr><td>Charge</td><td class="ltr"><%= host.loadAvg.join(' · ') %> (1, 5, 15 min)</td></tr>
-          <tr><td>Mémoire</td><td class="ltr"><%= bytes(host.totalMemBytes - host.freeMemBytes) %> sur <%= bytes(host.totalMemBytes) %></td></tr>
-          <tr><td>Allumé depuis</td><td class="ltr"><%= duration(host.uptimeSeconds) %></td></tr>
+          <tr><td style="width:34%"><%= t('sys.machine') %></td><td class="ltr"><%= host.platform %></td></tr>
+          <tr><td><%= t('sys.processor') %></td><td class="ltr"><%= host.cpuModel || '—' %> — <%= t('sys.cores', { n: host.cpuCount }) %></td></tr>
+          <tr><td><%= t('sys.load') %></td><td class="ltr"><%= host.loadAvg.join(' · ') %> <%= t('sys.loadWindows') %></td></tr>
+          <tr><td><%= t('sys.memory') %></td><td class="ltr"><%= bytes(host.totalMemBytes - host.freeMemBytes) %> / <%= bytes(host.totalMemBytes) %></td></tr>
+          <tr><td><%= t('sys.upSince') %></td><td class="ltr"><%= duration(host.uptimeSeconds) %></td></tr>
         <% } %>
         <% if (d.disk) { %>
-          <tr><td>Disque</td><td class="ltr"><%= bytes(d.disk.usedBytes) %> sur <%= bytes(d.disk.totalBytes) %> (<%= d.disk.usedPercent %> %)</td></tr>
+          <tr><td><%= t('sys.disk') %></td><td class="ltr"><%= bytes(d.disk.usedBytes) %> / <%= bytes(d.disk.totalBytes) %> (<%= d.disk.usedPercent %> %)</td></tr>
         <% } %>
       </tbody>
     </table>
   </div>
 
   <div class="box">
-    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %>Ce service</h2>
+    <h2><%- include('../icon', { name: 'shield-check', size: 16 }) %><%= t('sys.thisService') %></h2>
     <table>
       <tbody>
         <% if (d.runtime) { %>
-          <tr><td style="width:34%">Version</td><td class="ltr"><%= d.runtime.appVersion %> sur Node <%= d.runtime.node %></td></tr>
-          <tr><td>Actif depuis</td><td class="ltr"><%= duration(d.runtime.uptimeSeconds) %> — démarré <%= d.runtime.startedAt %></td></tr>
-          <tr><td>Mémoire du processus</td><td class="ltr"><%= bytes(d.runtime.rssBytes) %><%= d.runtime.heapUsedBytes ? ` (tas ${bytes(d.runtime.heapUsedBytes)})` : '' %></td></tr>
+          <tr><td style="width:34%"><%= t('sys.version') %></td><td class="ltr"><%= d.runtime.appVersion %> sur Node <%= d.runtime.node %></td></tr>
+          <tr><td><%= t('sys.activeSince') %></td><td class="ltr"><%= duration(d.runtime.uptimeSeconds) %> — <%= t('sys.startedAt', { at: d.runtime.startedAt }) %></td></tr>
+          <tr><td><%= t('sys.processMemory') %></td><td class="ltr"><%= bytes(d.runtime.rssBytes) %><%= d.runtime.heapUsedBytes ? ` (${t('sys.heap', { size: bytes(d.runtime.heapUsedBytes) })})` : '' %></td></tr>
         <% } %>
         <% if (d.database) { %>
-          <tr><td>Base</td><td class="ltr"><%= d.database.dialect %> — <%= d.database.file %></td></tr>
-          <tr><td>Taille</td><td class="ltr"><%= bytes(d.database.sizeBytes) %></td></tr>
-          <tr><td>Version du schéma</td><td class="ltr"><%= d.database.schemaVersion %></td></tr>
+          <tr><td><%= t('sys.database') %></td><td class="ltr"><%= d.database.dialect %> — <%= d.database.file %></td></tr>
+          <tr><td><%= t('sys.size') %></td><td class="ltr"><%= bytes(d.database.sizeBytes) %></td></tr>
+          <tr><td><%= t('sys.schema') %></td><td class="ltr"><%= d.database.schemaVersion %></td></tr>
         <% } %>
         <% if (d.storage) { %>
-          <tr><td>Stockage</td><td class="ltr"><%= d.storage.dir %> <span class="pill <%= d.storage.exists ? 'ok' : 'bad' %>"><%= d.storage.exists ? 'présent' : 'absent' %></span></td></tr>
+          <tr><td><%= t('sys.storage') %></td><td class="ltr"><%= d.storage.dir %> <span class="pill <%= d.storage.exists ? 'ok' : 'bad' %>"><%= t(d.storage.exists ? 'sys.present' : 'sys.absent') %></span></td></tr>
         <% } %>
         <% if (d.schedule) { %>
           <% Object.entries(d.schedule).forEach(function ([name, at]) { %>

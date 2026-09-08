@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" dir="ltr">
+<html lang="<%= locale %>" dir="<%= dir %>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -38,8 +38,19 @@
   .lede { margin:0 0 22px; color:var(--muted); font-size:14.5px; }
 
   label { display:block; font-size:12.5px; color:var(--muted); margin:0 0 5px; font-weight:500; }
-  input { width:100%; padding:11px 12px; border:1px solid #d6dde7; border-radius:9px; font:inherit; background:#fff; }
-  input:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+  /* Selects were never styled, so every dropdown on the settings screen fell
+     back to the browser default: a small grey control beside full-width text
+     inputs. They take the same box as an input, plus their own arrow — setting
+     `appearance:none` removes the native one along with the sizing. */
+  input, select, textarea { width:100%; padding:11px 12px; border:1px solid #d6dde7; border-radius:9px;
+                            font:inherit; background:#fff; color:inherit; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+  select { appearance:none; -webkit-appearance:none; cursor:pointer; padding-inline-end:34px;
+           background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+           background-repeat:no-repeat; background-position:right 11px center; }
+  body[dir="rtl"] select { background-position:left 11px center; }
+  /* A checkbox is not a text field and must not stretch to the row. */
+  input[type="checkbox"], input[type="radio"] { width:auto; padding:0; }
   .field { margin-bottom:15px; }
   button.primary { width:100%; background:var(--accent); color:#fff; border:0; border-radius:9px;
                    padding:12px 14px; font:inherit; font-size:15px; font-weight:550; cursor:pointer; }
@@ -105,6 +116,24 @@
   .screens-dark a:hover { background:rgba(255,255,255,.10); color:#fff; }
   .screens-dark a.on { background:#fff; color:var(--accent); }
   code { direction:ltr; unicode-bidi:isolate; background:#f2f5f9; padding:1px 6px; border-radius:5px; font-size:12.5px; }
+  /* The language picker. <details> rather than a script: this page runs under
+     a CSP and a dropdown is not worth an exception to it. */
+  .lang { position:relative; }
+  .lang > summary { display:flex; align-items:center; gap:7px; cursor:pointer; list-style:none;
+                    background:rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.22);
+                    border-radius:9px; padding:8px 12px; font-size:13.5px; }
+  .lang > summary::-webkit-details-marker { display:none; }
+  .lang .caret { font-size:11px; opacity:.8; }
+  .lang-list { position:absolute; inset-block-start:calc(100% + 6px); inset-inline-end:0; min-width:180px;
+               background:var(--card); border:1px solid var(--line); border-radius:10px; padding:5px;
+               box-shadow:0 12px 34px rgba(6,22,40,.28); z-index:50; }
+  .lang-list a { display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:7px; color:var(--ink); font-size:13.5px; }
+  .lang-list a:hover { background:var(--accent-soft); text-decoration:none; }
+  .lang-list a.on { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .lang-list .code { font-size:10.5px; letter-spacing:.06em; color:var(--muted); border:1px solid var(--line);
+                     border-radius:5px; padding:1px 5px; min-width:26px; text-align:center; }
+  /* Latin faces carry no Arabic glyphs. */
+  body[dir="rtl"] { font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic","Geeza Pro",sans-serif; }
   .box { background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
          padding:18px 20px; margin:0 0 16px; }
   .box > h2 { margin:0 0 12px; font-size:15px; font-weight:650; display:flex; align-items:center; gap:8px; }
@@ -123,6 +152,13 @@
   .metric { border:1px solid var(--line); border-radius:10px; padding:14px 15px; }
   .metric b { display:block; font-size:20px; font-weight:650; letter-spacing:-.01em; }
   .metric span.k { display:block; color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
+  /* A count that is not good news. Colour is the whole point of a dashboard —
+     twelve identical grey tiles say "here are twelve numbers", not "look at
+     this one". */
+  .metric.tone-warn { border-color:#f0d9bd; background:#fffaf4; }
+  .metric.tone-warn b { color:#9a4a06; }
+  .metric.tone-bad { border-color:#e7c3c5; background:#fff6f6; }
+  .metric.tone-bad b { color:#a4262c; }
   .metric small { display:block; color:var(--muted); font-size:11.5px; margin-top:6px; }
   .foot { margin-top:26px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px; }
   .who { color:var(--muted); font-size:13px; margin:0 0 18px; }
@@ -136,12 +172,25 @@
 <header class="top">
   <span class="brand">
     <%- include('icon', { name: 'shield-check', size: 22 }) %>
-    <span>CivicTrust<small>Administration</small></span>
+    <span><%= t('app.name') %><small><%= t('app.subtitle') %></small></span>
   </span>
   <span class="spacer"></span>
   <% if (typeof user !== 'undefined' && user) { %>
-    <a class="btn-ghost" href="/comptes">Comptes</a>
-    <a class="btn-ghost" href="<%= config.auth.portalUrl %>">Portail</a>
+    <a class="btn-ghost" href="/comptes"><%= t('nav.accounts') %></a>
+    <%# The language picker sits with the account, where somebody looks when
+        they want to change something about themselves rather than about a
+        service. Built from <details> so it needs no script. %>
+    <details class="lang">
+      <summary><%= (locales.find((l) => l.code === locale) || locales[0]).label %><span class="caret">▾</span></summary>
+      <div class="lang-list">
+        <% locales.forEach(function (l) { %>
+          <a class="<%= l.code === locale ? 'on' : '' %>" href="<%= langUrl(l.code) %>" hreflang="<%= l.code %>">
+            <span class="code"><%= l.code %></span><%= l.label %>
+          </a>
+        <% }) %>
+      </div>
+    </details>
+    <a class="btn-ghost" href="<%= config.auth.portalUrl %>"><%= t('nav.portal') %></a>
     <span class="whoami"><%= user.fullName || user.email %></span>
   <% } %>
 </header>

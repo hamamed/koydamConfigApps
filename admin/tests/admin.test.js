@@ -415,3 +415,114 @@ test('each section is its own box, not one long column', async (t) => {
   const groups = fixture('settings').length
   assert.ok((settings.match(/class="box"/g) ?? []).length >= groups, 'one box per settings group')
 })
+
+/* ------------------------------------------------------------ languages --- */
+
+test('every screen renders in all three languages, with no key falling through', async (t) => {
+  const api = await bootWith({ '/system': fixture('system'), '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  for (const locale of ['fr', 'en', 'ar']) {
+    for (const path of ['/', '/comptes', '/s/bdc/dashboard', '/s/bdc/systeme', '/s/bdc/parametres']) {
+      const html = await api.html(`${path}?lang=${locale}`)
+      // A key that has no translation renders as the key itself, which is
+      // deliberate — an untranslated string should be obvious rather than
+      // silently blank. Nothing should be reaching that fallback.
+      const leaked = html.match(/>(?:[a-z]+\.[a-zA-Z.]+)</g) ?? []
+      assert.deepEqual(leaked, [], `${path} in ${locale}`)
+      assert.match(html, new RegExp(`<html lang="${locale}"`), `${path} declares ${locale}`)
+    }
+  }
+})
+
+test('Arabic mirrors, and the others do not', async (t) => {
+  const api = await bootWith({ '/system': fixture('system') })
+  t.after(() => api.close())
+
+  assert.match(await api.html('/s/bdc/systeme?lang=ar'), /dir="rtl"/)
+  assert.match(await api.html('/s/bdc/systeme?lang=fr'), /dir="ltr"/)
+  assert.match(await api.html('/s/bdc/systeme?lang=en'), /dir="ltr"/)
+})
+
+test('the language is remembered, so it survives the next click', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const chosen = await api.open('/?lang=en')
+  assert.match(chosen.headers.get('set-cookie') ?? '', /lang=en/, 'the choice is kept')
+  assert.equal(chosen.headers.get('content-language'), 'en')
+
+  // And a cookie alone is enough on the next request, with no ?lang= on it.
+  const later = await fetch(`${api.base}/`, {
+    headers: { cookie: `${config.auth.cookieName}=${token()}; lang=ar` },
+  })
+  assert.equal(later.headers.get('content-language'), 'ar')
+})
+
+test('the picker offers every language and marks the one in use', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const html = await (await api.open('/?lang=en')).text()
+  for (const label of ['Français', 'English', 'العربية']) {
+    assert.ok(html.includes(label), `${label} is offered`)
+  }
+  assert.match(html, /class="on"[^>]*hreflang="en"|hreflang="en"[^>]*class="on"/, 'the current one is marked')
+  // The picker keeps you where you are rather than sending you home.
+  const onSettings = await (await api.open('/s/bdc/parametres?lang=fr')).text()
+  assert.match(onSettings, /href="\/s\/bdc\/parametres\?lang=ar"/, 'switching stays on this screen')
+})
+
+test('an ordinary account is refused in their own language', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  // Being turned away in a language you do not read is a worse version of
+  // being turned away, so the locale is resolved before the admin guard.
+  const html = await (await api.open('/?lang=ar', 'user')).text()
+  assert.match(html, /الدخول مرفوض/)
+  assert.match(html, /dir="rtl"/)
+})
+
+test('a dropdown is styled like the fields beside it', async (t) => {
+  const api = await bootWith({ '/settings': fixture('settings') })
+  t.after(() => api.close())
+
+  const html = await api.html('/s/bdc/parametres')
+  // Selects were never styled, so every dropdown fell back to the browser
+  // default: a small grey control beside full-width inputs.
+  assert.match(html, /input, select, textarea \{[^}]*width:100%/)
+  assert.match(html, /select \{[^}]*appearance:none/)
+  // And a checkbox must not stretch to the row it sits in.
+  assert.match(html, /input\[type="checkbox"\][^{]*\{[^}]*width:auto/)
+})
+
+test('creating an account posts to the portal and shows the password once', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const sent = []
+  api.client.accounts = async (path, options) => {
+    sent.push({ path, method: options?.method, body: options?.body })
+    return options?.method === 'POST'
+      ? { ok: true, status: 201, error: null, data: { email: 'new@civictrust.ma', services: ['marches'], password: 'a-generated-one' } }
+      : { ok: true, status: 200, error: null, data: [] }
+  }
+
+  const response = await fetch(`${api.base}/comptes`, {
+    method: 'POST',
+    headers: { cookie: `${config.auth.cookieName}=${token()}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ email: 'new@civictrust.ma', fullName: 'New', role: 'user', services: 'marches' }).toString(),
+  })
+  assert.equal(response.status, 200)
+
+  const post = sent.find((c) => c.method === 'POST')
+  assert.ok(post, 'it went to the portal, where the accounts are')
+  assert.equal(post.body.email, 'new@civictrust.ma')
+  assert.equal(post.body.services, 'marches')
+
+  // Shown once, here, because it is stored as a hash and this is the only
+  // place it exists in the clear.
+  const html = await response.text()
+  assert.match(html, /a-generated-one/)
+})

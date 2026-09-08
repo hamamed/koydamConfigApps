@@ -17,30 +17,77 @@
 
 <% if (error) { %><div class="down"><%= error %></div><% } %>
 
+<% if (created) { %>
+  <div class="box" style="border-color:#bfe0cb; background:#f4fbf6">
+    <h2><%- include('icon', { name: 'shield-check', size: 16 }) %><%- t('acc.created', { email: `<span class="ltr">${created.email}</span>` }) %></h2>
+    <%# Shown once, here, and nowhere afterwards: it is stored as a hash, so
+        this is the only place it exists in the clear. Saying so is kinder than
+        letting somebody come back for it. %>
+    <p style="margin:0 0 10px"><%= t('acc.password') %> <code class="ltr" style="font-size:15px; padding:4px 10px"><%= created.password %></code></p>
+    <p class="muted" style="margin:0; font-size:12.5px">
+      <%= t('acc.passwordOnce') %>
+    </p>
+  </div>
+<% } %>
+
 <div class="box">
-  <h2><%- include('icon', { name: 'shield-check', size: 16 }) %>Comptes<span class="count">une seule liste, pour les deux espaces</span></h2>
+  <h2><%- include('icon', { name: 'log-in', size: 16 }) %><%= t('acc.create') %></h2>
+  <form method="post" action="/comptes">
+    <div class="cols-2">
+      <div class="field">
+        <label for="email"><%= t('acc.email') %></label>
+        <input id="email" name="email" type="email" dir="ltr" required value="<%= form.email || '' %>">
+      </div>
+      <div class="field">
+        <label for="fullName"><%= t('acc.name') %></label>
+        <input id="fullName" name="fullName" value="<%= form.fullName || '' %>">
+      </div>
+      <div class="field">
+        <label for="role"><%= t('acc.role') %></label>
+        <select id="role" name="role">
+          <option value="user" <%= form.role === 'admin' ? '' : 'selected' %>><%= t('acc.roleUser') %></option>
+          <option value="admin" <%= form.role === 'admin' ? 'selected' : '' %>><%= t('acc.roleAdmin') %></option>
+        </select>
+      </div>
+      <div class="field">
+        <label><%= t('acc.spacesOpen') %></label>
+        <% config.services.forEach(function (svc) { %>
+          <label style="display:flex; gap:7px; align-items:center; margin:0 0 6px; font-size:13.5px; color:var(--ink)">
+            <input type="checkbox" name="services" value="<%= svc.key %>"
+                   <%= !form.services || form.services.length === 0 || form.services.includes(svc.key) ? 'checked' : '' %>>
+            <%= svc.label %>
+          </label>
+        <% }) %>
+      </div>
+    </div>
+    <div class="row-actions" style="margin-top:4px">
+      <button class="primary small" type="submit"><%= t('acc.createButton') %></button>
+      <span class="muted" style="font-size:12.5px"><%= t('acc.createHint') %></span>
+    </div>
+  </form>
+</div>
+
+<div class="box">
+  <h2><%- include('icon', { name: 'shield-check', size: 16 }) %><%= t('acc.title') %><span class="count"><%= t('acc.subtitle') %></span></h2>
   <p class="muted" style="margin:-4px 0 14px; font-size:12.5px">
-    Les comptes vivent sur le portail : c’est là que le mot de passe est vérifié
-    et que se décide qui peut ouvrir quel espace. bdc et marchés ne conservent
-    qu’une ligne locale créée à la première visite, pour leurs favoris et leurs
-    alertes — elle dit qui est venu, pas qui a accès.
+    <%= t('acc.lede') %>
   </p>
 
   <div class="tiles" style="margin:0 0 16px">
-    <div class="metric"><b class="ltr"><%= rows.length %></b><span class="k">comptes</span></div>
-    <div class="metric"><b class="ltr"><%= active.length %></b><span class="k">actifs</span></div>
-    <div class="metric"><b class="ltr"><%= admins.length %></b><span class="k">administrateurs</span></div>
+    <div class="metric"><b class="ltr"><%= rows.length %></b><span class="k"><%= t('acc.count') %></span></div>
+    <div class="metric"><b class="ltr"><%= active.length %></b><span class="k"><%= t('acc.active') %></span></div>
+    <div class="metric"><b class="ltr"><%= admins.length %></b><span class="k"><%= t('acc.admins') %></span></div>
     <% config.services.forEach(function (s) { %>
       <div class="metric">
         <b class="ltr"><%= rows.filter((row) => (row.services || []).includes(s.key)).length %></b>
-        <span class="k">accès <%= s.label.toLowerCase() %></span>
+        <span class="k"><%= t('acc.accessTo', { service: s.label.toLowerCase() }) %></span>
       </div>
     <% }) %>
   </div>
 
   <table>
     <thead>
-      <tr><th>Adresse</th><th>Nom</th><th>Rôle</th><th>Espaces</th><th>État</th><th>Dernière connexion</th></tr>
+      <tr><th><%= t('acc.address') %></th><th><%= t('acc.name') %></th><th><%= t('acc.role') %></th><th><%= t('acc.spaces') %></th><th><%= t('acc.state') %></th><th><%= t('acc.lastLogin') %></th></tr>
     </thead>
     <tbody>
       <% rows.forEach(function (row) { %>
@@ -54,25 +101,20 @@
             <% (row.services || []).forEach(function (key) { %>
               <span class="pill" style="margin-inline-end:4px"><%= label[key] || key %></span>
             <% }) %>
-            <% if ((row.services || []).length === 0) { %><span class="pill warn">aucun</span><% } %>
+            <% if ((row.services || []).length === 0) { %><span class="pill warn"><%= t('acc.none') %></span><% } %>
           </td>
-          <td><span class="pill <%= row.isActive ? 'ok' : 'bad' %>"><%= row.isActive ? 'actif' : 'désactivé' %></span></td>
-          <td class="ltr"><%= row.lastLoginAt || 'jamais' %></td>
+          <td><span class="pill <%= row.isActive ? 'ok' : 'bad' %>"><%= t(row.isActive ? 'acc.activeOne' : 'acc.disabled') %></span></td>
+          <td class="ltr"><%= row.lastLoginAt || t('acc.never') %></td>
         </tr>
       <% }) %>
       <% if (rows.length === 0 && !error) { %>
-        <tr><td colspan="6" class="muted">Aucun compte.</td></tr>
+        <tr><td colspan="6" class="muted"><%= t('acc.empty') %></td></tr>
       <% } %>
     </tbody>
   </table>
 
   <p class="muted" style="margin:14px 0 0; font-size:12.5px">
-    <%# Read-only, and saying so beats a disabled button. Creating an account
-        and setting a password happen on the box, where the plaintext is shown
-        once and never stored. %>
-    Lecture seule. Un compte se crée sur le serveur&nbsp;:
-    <code class="ltr">node bin/users.js add &lt;adresse&gt; &lt;mot de passe&gt; --role=admin</code>
-    dans <code class="ltr">/opt/portail</code>.
+    <%- t('acc.resetHint', { command: '<code class="ltr">node bin/users.js password &lt;adresse&gt; &lt;nouveau&gt;</code>', dir: '<code class="ltr">/opt/portail</code>' }) %>
   </p>
 </div>
 <%- include('layout-close') %>

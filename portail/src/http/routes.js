@@ -1,3 +1,4 @@
+import { webcrypto } from 'node:crypto'
 import { config } from '../config/index.js'
 import { cookieOptions, clearCookieOptions } from './cookies.js'
 import { createLoginLimiter } from './rateLimit.js'
@@ -85,6 +86,44 @@ export function registerRoutes(app, { services }) {
           createdAt: row.created_at,
         })),
       })
+    }),
+  )
+
+  /**
+   * Creating an account, from the administration console.
+   *
+   * The password is returned once, in this response, and never again — it is
+   * stored only as a bcrypt hash. An administrator has to pass it on, which is
+   * the honest shape: a console that could show a password on demand would be
+   * a console worth stealing.
+   */
+  app.post(
+    '/admin/api/users',
+    handle(async (req, res) => {
+      const user = currentUser(req)
+      if (!user) return res.status(401).json({ success: false, data: null, error: 'Not signed in' })
+      if (user.role !== 'admin') return res.status(403).json({ success: false, data: null, error: 'Administrator access required' })
+
+      // Generated here unless one was supplied, so the common path does not go
+      // through somebody inventing a weak one under time pressure.
+      const password = String(req.body?.password ?? '').trim() || randomPassword()
+      const services_ = Array.isArray(req.body?.services)
+        ? req.body.services
+        : String(req.body?.services ?? 'bdc,marches')
+
+      try {
+        const created = await services.auth.register({
+          email: req.body?.email,
+          password,
+          fullName: req.body?.fullName || null,
+          role: req.body?.role === 'admin' ? 'admin' : 'user',
+          services: Array.isArray(services_) ? services_.join(',') : services_,
+        })
+        res.status(201).json({ success: true, error: null, data: { ...created, password } })
+      } catch (error) {
+        const status = error.statusCode ?? 400
+        res.status(status).json({ success: false, data: null, error: error.message })
+      }
     }),
   )
 
@@ -207,6 +246,18 @@ function safeNext(value) {
   } catch {
     return null
   }
+}
+
+/**
+ * A password nobody has to invent.
+ *
+ * Ambiguous characters are left out: these get read off a screen and typed
+ * somewhere else, and an O that was a 0 is a support conversation.
+ */
+function randomPassword(length = 20) {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = webcrypto.getRandomValues(new Uint32Array(length))
+  return [...bytes].map((n) => alphabet[n % alphabet.length]).join('')
 }
 
 export { servicesOf }

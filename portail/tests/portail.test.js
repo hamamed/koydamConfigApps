@@ -326,3 +326,71 @@ test('the accounts API accepts a bearer token, not only a cookie', async (t) => 
   const forged = await fetch(`${api.base}/admin/api/users`, { headers: { Authorization: 'Bearer not-a-token' } })
   assert.equal(forged.status, 401)
 })
+
+test('an administrator can create an account, and sees the password once', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const token = cookie.split('=')[1]
+
+  const response = await fetch(`${api.base}/admin/api/users`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'Nouvelle@Civictrust.MA', fullName: 'Nouvelle', role: 'user', services: 'marches' }),
+  })
+  assert.equal(response.status, 201)
+
+  const { data } = await response.json()
+  assert.equal(data.email, 'nouvelle@civictrust.ma', 'the address is normalised')
+  assert.deepEqual(data.services, ['marches'], 'and only the space it was given')
+  assert.ok(data.password && data.password.length >= 16, 'a password was generated')
+  assert.ok(!('password_hash' in data), 'and the hash never leaves')
+
+  // It works, which is the only proof that matters.
+  const signIn = await fetch(`${api.base}/login`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ email: 'nouvelle@civictrust.ma', password: data.password }).toString(),
+  })
+  assert.equal(signIn.status, 302)
+  assert.equal(signIn.headers.get('location'), '/choisir')
+
+  // And it is never retrievable afterwards: it is stored as a hash and this
+  // response was the only place it existed in the clear.
+  const listed = await (await fetch(`${api.base}/admin/api/users`, { headers: { Authorization: `Bearer ${token}` } })).json()
+  const row = listed.data.find((u) => u.email === 'nouvelle@civictrust.ma')
+  assert.ok(row && !('password' in row))
+})
+
+test('creating an account refuses what it should', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const post = (body, auth = `Bearer ${cookie.split('=')[1]}`) =>
+    fetch(`${api.base}/admin/api/users`, {
+      method: 'POST',
+      headers: { ...(auth ? { Authorization: auth } : {}), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+  assert.equal((await post({ email: 'x@y.ma' }, null)).status, 401, 'anonymous')
+  assert.equal((await post({ email: 'not-an-address' })).status, 400, 'a malformed address')
+  assert.equal((await post({ email: 'you@civictrust.ma' })).status, 409, 'an address that already has an account')
+  assert.equal((await post({ email: 'short@civictrust.ma', password: 'short' })).status, 400, 'a password too short to be one')
+})
+
+test('an ordinary account cannot create one', async (t) => {
+  const api = await boot({ role: 'user' })
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const response = await fetch(`${api.base}/admin/api/users`, {
+    method: 'POST',
+    headers: { cookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'nope@civictrust.ma' }),
+  })
+  assert.equal(response.status, 403)
+})

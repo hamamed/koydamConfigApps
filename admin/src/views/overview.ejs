@@ -1,14 +1,14 @@
-<%- include('layout-open', { title: 'Vue d’ensemble' }) %>
+<%- include('layout-open', { title: t('nav.overview') }) %>
 
 <div class="tabs">
-  <a class="on" href="/">Vue d’ensemble</a>
+  <a class="on" href="/"><%= t('nav.overview') %></a>
   <% config.services.forEach(function (s) { %>
     <a href="/s/<%= s.key %>/dashboard"><%= s.label %></a>
   <% }) %>
 </div>
 
 <div class="panel">
-  <h1>Administration</h1>
+  <h1><%= t('overview.title') %></h1>
   <p class="lede">Les deux services, côte à côte. Chaque chiffre est lu chez le service lui-même au moment où cette page s’affiche.</p>
 
   <% overview.forEach(function (row) { %>
@@ -35,9 +35,9 @@
           </span>
         <% } %>
         <% if (row.dashboard.lastRun) { %>
-          Dernier passage : <span class="ltr"><%= row.dashboard.lastRun.finishedAt || row.dashboard.lastRun.startedAt || '—' %></span>
+          <%= t('overview.lastRun') %> <span class="ltr"><%= row.dashboard.lastRun.finishedAt || row.dashboard.lastRun.startedAt || '—' %></span>
         <% } else { %>
-          Aucun passage enregistré.
+          <%= t('overview.noRun') %>
         <% } %>
       </p>
     <% } %>

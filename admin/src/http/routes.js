@@ -1,15 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { config, serviceByKey } from '../config/index.js'
-import labels from '../labels.js'
-
-/**
- * A settings label, or the key itself.
- *
- * Falling back to the key is deliberate: an unlabelled setting reads badly but
- * unambiguously, where inventing a nicer name would quietly rename somebody's
- * configuration on the only screen that shows it.
- */
-const t = (key) => labels[key] ?? key
+import { LOCALES, directionOf, resolveLocale, translator } from '../i18n/index.js'
 
 /** Wraps an async handler so a rejected promise reaches the error middleware. */
 const handle = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)
@@ -47,6 +38,33 @@ export function registerRoutes(app, { client }) {
    * find every panel empty — the services would refuse each call individually
    * and the screens would fill with permission errors instead of an answer.
    */
+  /**
+   * The reader's language, remembered.
+   *
+   * Ahead of the admin guard so that the refusal page is in their language
+   * too — being turned away in a language you do not read is a worse version
+   * of being turned away.
+   */
+  app.use((req, res, next) => {
+    const locale = resolveLocale({ query: req.query.lang, cookie: req.cookies?.lang })
+    if (req.query.lang && req.query.lang === locale && req.cookies?.lang !== locale) {
+      res.cookie('lang', locale, { httpOnly: false, sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000, path: '/' })
+    }
+    req.locale = locale
+    res.locals.locale = locale
+    res.locals.dir = directionOf(locale)
+    res.locals.locales = LOCALES
+    res.locals.t = translator(locale)
+    // The same URL in another language, for the picker.
+    res.locals.langUrl = (code) => {
+      const url = new URL(req.originalUrl, config.publicUrl)
+      url.searchParams.set('lang', code)
+      return `${url.pathname}${url.search}`
+    }
+    res.setHeader('Content-Language', locale)
+    next()
+  })
+
   app.use((req, res, next) => {
     if (req.path === '/health') return next()
     const user = userOf(req)
@@ -78,15 +96,16 @@ export function registerRoutes(app, { client }) {
         system: systems[index].data,
       }))
 
-      res.render('overview', { config, user: req.user, overview, t })
+      res.render('overview', { config, user: req.user, overview })
     }),
   )
 
   // ------------------------------------------------------------- one service
+  // The label is a key; the view resolves it in the reader's language.
   const SCREENS = new Map([
-    ['dashboard', { path: '/dashboard', view: 'dashboard', label: 'Tableau de bord' }],
-    ['systeme', { path: '/system', view: 'system', label: 'Système' }],
-    ['parametres', { path: '/settings', view: 'settings', label: 'Paramètres' }],
+    ['dashboard', { path: '/dashboard', view: 'dashboard', label: 'screen.dashboard' }],
+    ['systeme', { path: '/system', view: 'system', label: 'screen.system' }],
+    ['parametres', { path: '/settings', view: 'settings', label: 'screen.settings' }],
   ])
 
   app.get(
@@ -99,14 +118,13 @@ export function registerRoutes(app, { client }) {
       const { data, error } = await client.call(service, screen.path, { token: req.token })
       res.render(`service/${screen.view}`, {
         config,
-        t,
         user: req.user,
         service,
         screen: req.params.screen,
         screens: [...SCREENS].map(([key, value]) => ({ key, label: value.label })),
         data,
         error,
-        notice: req.query.saved ? 'Enregistré.' : null,
+        notice: req.query.saved ? 'set.saved' : null,
       })
     }),
   )
@@ -119,11 +137,40 @@ export function registerRoutes(app, { client }) {
    * so a per-service list answers "who has been here" when the question is
    * "who has access" — and it answers it twice, differently.
    */
-  app.get(
+  const accountsScreen = async (req, res, extra = {}) => {
+    const { data, error } = await client.accounts('/users', { token: req.token })
+    res.render('accounts', { config, user: req.user, accounts: data ?? [], error, created: null, form: {}, ...extra })
+  }
+
+  app.get('/comptes', handle((req, res) => accountsScreen(req, res)))
+
+  /**
+   * Creating an account.
+   *
+   * The password comes back once, in the response the portal sends, and is
+   * shown once here. It is stored only as a hash, so this screen is the only
+   * place it will ever exist in the clear — which is said plainly rather than
+   * left for somebody to discover by coming back for it.
+   */
+  app.post(
     '/comptes',
     handle(async (req, res) => {
-      const { data, error } = await client.accounts('/users', { token: req.token })
-      res.render('accounts', { config, t, user: req.user, accounts: data ?? [], error })
+      const form = {
+        email: String(req.body?.email ?? '').trim(),
+        fullName: String(req.body?.fullName ?? '').trim(),
+        role: req.body?.role === 'admin' ? 'admin' : 'user',
+        services: [req.body?.services ?? []].flat().filter(Boolean),
+      }
+
+      const { data, error } = await client.accounts('/users', {
+        token: req.token,
+        method: 'POST',
+        body: { ...form, services: form.services.join(',') },
+      })
+
+      // The form comes back filled in on a failure: retyping an address
+      // because the role was wrong is a small insult a form can avoid.
+      await accountsScreen(req, res, error ? { error, form } : { created: data })
     }),
   )
 
@@ -153,7 +200,6 @@ export function registerRoutes(app, { client }) {
         const current = await client.call(service, '/settings', { token: req.token })
         return res.status(502).render('service/settings', {
           config,
-          t,
           user: req.user,
           service,
           screen: 'parametres',

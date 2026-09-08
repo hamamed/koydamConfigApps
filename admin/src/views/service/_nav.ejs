@@ -1,7 +1,7 @@
 <div class="tabs">
-  <a href="/">Vue d’ensemble</a>
+  <a href="/"><%= t('nav.overview') %></a>
   <% config.services.forEach(function (s) { %>
-    <a class="<%= s.key === service.key ? 'on' : '' %>" href="/s/<%= s.key %>/dashboard"><%= s.label %></a>
+    <a class="<%= s.key === service.key ? 'on' : '' %>" href="/s/<%= s.key %>/dashboard"><%= t(s.label) %></a>
   <% }) %>
 </div>
 
@@ -9,9 +9,9 @@
   <h1 style="color:#fff; margin-bottom:14px"><%= service.label %></h1>
   <div class="screens screens-dark">
     <% screens.forEach(function (s) { %>
-      <a class="<%= s.key === screen ? 'on' : '' %>" href="/s/<%= service.key %>/<%= s.key %>"><%= s.label %></a>
+      <a class="<%= s.key === screen ? 'on' : '' %>" href="/s/<%= service.key %>/<%= s.key %>"><%= t(s.label) %></a>
     <% }) %>
-    <a href="<%= service.panel %>" target="_blank" rel="noopener noreferrer">Ouvrir le service ↗</a>
+    <a href="<%= service.panel %>" target="_blank" rel="noopener noreferrer"><%= t('screen.open') %></a>
   </div>
-  <% if (typeof notice !== 'undefined' && notice) { %><div class="notice"><%= notice %></div><% } %>
+  <% if (typeof notice !== 'undefined' && notice) { %><div class="notice"><%= t(notice) %></div><% } %>
   <% if (error) { %><div class="down"><%= error %></div><% } %>
