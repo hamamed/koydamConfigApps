@@ -15,7 +15,8 @@ import { parseDate, nowIso } from '../../utils/dates.js'
 
 const PAGER_NEXT = 'ctl0$CONTENU_PAGE$resultSearch$PagerTop$ctl2'
 const PAGE_SIZE_CONTROL = 'ctl0$CONTENU_PAGE$resultSearch$listePageSizeTop'
-const LISTING_URL = 'https://www.marchespublics.gov.ma/index.php?page=entreprise.EntrepriseAdvancedSearch&AllCons'
+const PORTAL_ORIGIN = 'https://www.marchespublics.gov.ma'
+const LISTING_URL = `${PORTAL_ORIGIN}/index.php?page=entreprise.EntrepriseAdvancedSearch&AllCons`
 
 /** What free-text search matches on, normalised the same way a query is. */
 const searchText = (row) =>
@@ -207,6 +208,7 @@ export function parseMarcheDetail(html) {
   return {
     estimation_cents: estimation ? parseAmountToCentimes(estimation[1]) : null,
     qualifications: labelled(text, 'Qualifications'),
+    documents: parseDocuments($, html),
     // The commission's own workings. The portal emits the container and fills
     // it only for a signed-in company that bid on this consultation, so an
     // anonymous crawl always reads it empty — the competitors' prices are not
@@ -214,6 +216,59 @@ export function parseMarcheDetail(html) {
     has_commission_block: /Bloc Suivi des travaux de la commission/.test(html),
     commission_rows: [],
   }
+}
+
+/**
+ * What the portal publishes alongside a consultation.
+ *
+ * Two things, and they are not the same kind of thing. The avis de publicité is
+ * a file: a direct link that downloads. The dossier de consultation is a
+ * *request* page — the portal wants to know who is taking it before it hands
+ * it over — so the link goes to that form rather than to a file, and it is
+ * recorded as what it is rather than dressed up as a download that will not
+ * download.
+ *
+ * @returns {Array<{kind:string,file_name:string|null,url:string,source_file_id:string|null}>}
+ */
+function parseDocuments($, html) {
+  const documents = []
+  const seen = new Set()
+
+  const add = (kind, url, fileName) => {
+    if (!url) return
+    const absolute = url.startsWith('http') ? url : `${PORTAL_ORIGIN}/${url.replace(/^\/+/, '')}`
+    if (seen.has(absolute)) return
+    seen.add(absolute)
+    documents.push({
+      kind,
+      file_name: fileName ?? null,
+      url: absolute,
+      // The repository stamps `updated_at` and leaves `created_at` to the
+      // caller, which is NOT NULL — a record without it is rejected at write
+      // time, long after the parse looked fine.
+      created_at: nowIso(),
+      // The portal's own id for the notice, when it names one. Empty on a
+      // consultation whose avis has not been attached yet, which is common.
+      source_file_id: new URL(absolute).searchParams.get('idAvis') || null,
+    })
+  }
+
+  $('a[href]').each((_, node) => {
+    const href = String($(node).attr('href') ?? '')
+    // Named by what the portal calls the section, not by the anchor's title —
+    // that reads "Lien d'accès direct", which describes the link rather than
+    // the document behind it.
+    if (/EntrepriseDownloadAvisJAL/.test(href)) add('avis', href, 'Avis de publicité')
+    else if (/EntrepriseDemandeTelechargementDce/.test(href)) {
+      // The label carries the size — "Dossier de consultation - 54,1 Mo" —
+      // which is worth keeping: a 54 MB dossier is a different afternoon from
+      // a 400 KB one.
+      const label = clean($(node).closest('td,div,li').text()).match(/Dossier de consultation[^|]{0,40}/)
+      add('dce', href, label ? label[0].trim() : 'Dossier de consultation')
+    }
+  })
+
+  return documents
 }
 
 /** A "Label : value" pair from the detail page's flattened text. */

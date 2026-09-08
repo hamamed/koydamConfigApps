@@ -8,7 +8,7 @@ import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { translator } from '../../i18n/index.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
-import { MARKET_KINDS, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
+import { MARKET_KINDS, bandFor, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
 
 /**
  * The panel.
@@ -184,7 +184,14 @@ export function panelRoutes({ services }) {
       const favorite = consultation.isFavorite
         ? await services.favorites.find(req.user.id, consultation.id)
         : null
-      res.render('panel/consultation', await shell(req, { active: 'projects', consultation, favorite }))
+      res.render('panel/consultation', await shell(req, {
+        active: 'projects',
+        consultation,
+        favorite,
+        // What article 44 can be said about this marché without anybody
+        // entering a competitor's price. See admissibleRange below.
+        range: admissibleRange(consultation),
+      }))
     }),
   )
 
@@ -428,6 +435,39 @@ export function panelRoutes({ services }) {
   return router
 }
 
+
+/**
+ * The band a bid has to land in, computed from what the crawler already read.
+ *
+ * The reference price itself needs the competitors' offers, and this portal
+ * publishes none — the commission's workings are visible only to a company
+ * that bid. But the *band* needs nothing but the estimate and the nature of
+ * the market, and both are on the consultation. That is the half a bidder
+ * needs before submitting: outside this range an offer is thrown out before a
+ * reference price is computed at all, so it is worth knowing at the moment you
+ * are reading the avis rather than after.
+ *
+ * @returns {object|null} null when the estimate is missing or the nature is
+ *   études, which article 44 carves out of the mechanism entirely.
+ */
+function admissibleRange(consultation) {
+  const estimate = consultation?.estimation
+  if (estimate === null || estimate === undefined || Number(estimate) <= 0) return null
+
+  const kind = classifyKind(consultation.categorie) ?? classifyKind(consultation.procedure_type)
+  const band = bandFor(kind)
+  if (!band) return null
+
+  const cents = Math.round(Number(estimate) * 100)
+  const result = computeReferencePrice({ estimateCentimes: cents, kind, offers: [] })
+  return {
+    kind,
+    band,
+    low: result.bounds.lowCentimes / 100,
+    high: result.bounds.highCentimes / 100,
+    estimate: Number(estimate),
+  }
+}
 
 /* ---------------------------------------------------------------- article 44 */
 

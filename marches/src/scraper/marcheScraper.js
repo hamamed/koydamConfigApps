@@ -27,7 +27,7 @@ const log = logger.child('[scraper:marches]')
  * inside a day. `until` decides where to stop, and defaults to the whole of the
  * open window rather than a page count.
  */
-export function createMarcheScraper({ http, consultations, settings }) {
+export function createMarcheScraper({ http, consultations, documents = null, settings }) {
   const knobs = async () => (settings ? { ...config.scraper, ...(await settings.section('scraper')) } : config.scraper)
 
   const LISTING_PATH = '/index.php?page=entreprise.EntrepriseAdvancedSearch&AllCons'
@@ -143,23 +143,45 @@ export function createMarcheScraper({ http, consultations, settings }) {
     const pending = rows.filter((row) => row && row.estimation_cents === null && row.detail_url)
     if (pending.length === 0) return
 
+    /*
+      Fetching is concurrent; writing is not.
+
+      Both halves matter. The fetches are what the wall clock is spent on, so
+      they run in parallel. But the writes share one SQLite connection, and two
+      overlapping transactions on it fail with "no such savepoint" — the
+      documents write opens one, so the moment it was added the second worker
+      started losing rows. So the workers only read, and what they read is
+      written afterwards, in order.
+    */
+    const parsed = []
     await mapWithConcurrency(pending, async (row) => {
       try {
         const { html } = await http.getHtml(row.detail_url)
-        // Only the columns: the parser also reports whether the commission
-        // block was present, which is diagnostic rather than data.
-        const { estimation_cents, qualifications } = parseMarcheDetail(html)
-        await consultations.update(row.id, {
-          estimation_cents,
-          qualification: qualifications,
-          detail_scraped_at: nowIso(),
-        })
-        stats.detailsFetched += 1
-        if (estimation_cents !== null) stats.estimatesFound += 1
+        parsed.push({ row, detail: parseMarcheDetail(html) })
       } catch (error) {
         stats.errors.push({ source_id: row.source_id, message: error.message })
       }
     }, runtime.concurrency ?? 2)
+
+    for (const { row, detail } of parsed) {
+      try {
+        await consultations.update(row.id, {
+          estimation_cents: detail.estimation_cents,
+          qualification: detail.qualifications,
+          detail_scraped_at: nowIso(),
+        })
+        // The published notice and the dossier. Replaced rather than added to,
+        // so a document the portal withdraws stops being offered here.
+        if (documents && detail.documents.length > 0) {
+          await documents.replaceForConsultation(row.id, detail.documents)
+          stats.documentsFound = (stats.documentsFound ?? 0) + detail.documents.length
+        }
+        stats.detailsFetched += 1
+        if (detail.estimation_cents !== null) stats.estimatesFound += 1
+      } catch (error) {
+        stats.errors.push({ source_id: row.source_id, message: error.message })
+      }
+    }
   }
 
   return { scrape, scrapeDetail: withDetails }

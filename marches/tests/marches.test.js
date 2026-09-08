@@ -88,7 +88,13 @@ async function crawler(options = {}) {
   ])
   const http = createHttpClient({ fetchImpl: stub, delayMs: 0 })
   const container = await createTestContainer({ http })
-  const scraper = createMarcheScraper({ http, consultations: container.repositories.consultations })
+  // Wired the way the runner wires it, documents included — a helper that
+  // omits a collaborator tests a scraper nobody runs.
+  const scraper = createMarcheScraper({
+    http,
+    consultations: container.repositories.consultations,
+    documents: container.repositories.documents,
+  })
   const stats = await scraper.scrape({ maxPages: 1, fetchDetails: true, until: () => true, ...options })
   return { stats, container, calls: stub.calls ?? [] }
 }
@@ -119,7 +125,7 @@ test('a second crawl re-reads nothing it already has an estimate for', async () 
       [/EntrepriseAdvancedSearch/, LISTING],
     ]),
     delayMs: 0,
-  }), consultations: container.repositories.consultations })
+  }), consultations: container.repositories.consultations, documents: container.repositories.documents })
 
   const again = await scraper.scrape({ maxPages: 1, fetchDetails: true, until: () => true })
   assert.equal(again.itemsCreated, 0, 'the same consultations are not duplicated')
@@ -236,4 +242,109 @@ test('a crawl records what it actually did, so the canary is not lied to', async
   assert.equal(Number(job.items_found), stats.itemsFound, 'and the job row agrees')
   assert.equal(Number(job.items_created), stats.itemsCreated)
   assert.ok(Number(job.items_found) > 0, 'so the canary sees a crawl that worked')
+})
+
+test('every table has as many cells in a row as it has headers', async (t) => {
+  // The bug this exists for: removing the Articles and Résultat columns took
+  // their <th> and left two <td>. Six headers, eight cells — so every value
+  // sat under the wrong heading, and the objet appeared beneath "Acheteur".
+  // Nothing errored, the page rendered, and it read as a CSS problem.
+  const { createApp } = await import('../src/app.js')
+  const { startTestServer } = await import('./helpers.js')
+  const jwt = (await import('jsonwebtoken')).default
+
+  const { container } = await crawler()
+  const server = await startTestServer(createApp(container))
+  t.after(() => server.close())
+
+  const token = jwt.sign(
+    { sub: '1', email: 'you@civictrust.ma', role: 'admin', svc: ['marches'] },
+    process.env.JWT_SECRET,
+    { expiresIn: '12h' },
+  )
+  const row = await container.db.get('SELECT id FROM consultations LIMIT 1')
+
+  for (const path of ['/panel', '/panel/today', `/panel/consultations/${row.id}`, '/panel/favorites']) {
+    const html = await (await fetch(`${server.base}${path}?lang=fr`, { headers: { cookie: `mp_token=${token}` } })).text()
+
+    for (const table of html.match(/<table[\s\S]*?<\/table>/g) ?? []) {
+      const head = table.match(/<thead>[\s\S]*?<\/thead>/)?.[0]
+      if (!head) continue
+      const headers = (head.match(/<th\b/g) ?? []).length
+
+      const body = table.match(/<tbody>[\s\S]*?<\/tbody>/)?.[0] ?? ''
+      for (const tr of body.match(/<tr>[\s\S]*?<\/tr>/g) ?? []) {
+        // A colspan row is a deliberate "nothing here" message, not a data row.
+        if (/colspan=/.test(tr)) continue
+        const cells = (tr.match(/<td\b/g) ?? []).length
+        assert.equal(cells, headers, `${path}: a row has ${cells} cells under ${headers} headers`)
+      }
+    }
+  }
+})
+
+test('the documents the portal publishes are captured and named for what they are', async () => {
+  const detail = parseMarcheDetail(DETAIL)
+  const byKind = Object.fromEntries(detail.documents.map((d) => [d.kind, d]))
+
+  // Two, and they are not the same kind of thing. The avis is a file that
+  // downloads; the dossier is a request form — the portal wants to know who is
+  // taking it before it hands it over.
+  assert.ok(byKind.avis, 'the published notice')
+  assert.ok(byKind.dce, 'the tender dossier')
+  assert.match(byKind.avis.url, /^https:\/\/www\.marchespublics\.gov\.ma\//, 'absolute, so the link works from here')
+  assert.match(byKind.dce.file_name, /Dossier de consultation/)
+  // The label carries the size, which is worth keeping: a 54 MB dossier is a
+  // different afternoon from a 400 KB one.
+  assert.match(byKind.dce.file_name, /\d+[,.]\d+\s*[MK]o/)
+  // The repository leaves created_at to the caller and it is NOT NULL.
+  for (const doc of detail.documents) assert.ok(doc.created_at, `${doc.kind} carries a timestamp`)
+})
+
+test('a crawl stores the documents, with concurrent reads but serial writes', async (t) => {
+  const { container } = await crawler()
+
+  const rows = await container.db.all('SELECT consultation_id, kind FROM consultation_documents ORDER BY consultation_id, kind')
+  assert.equal(rows.length, 6, 'two documents for each of three consultations')
+
+  // The bug this guards: the detail pass fetches with two workers, and the
+  // documents write opens a transaction. Two overlapping transactions on one
+  // SQLite connection fail with "no such savepoint", so a row was lost every
+  // run. Reads are concurrent; writes are not.
+  const { stats } = await crawler()
+  assert.deepEqual(stats.errors, [], 'no savepoint collisions')
+})
+
+test('a project page states the band a bid has to land in', async (t) => {
+  const { createApp } = await import('../src/app.js')
+  const { startTestServer } = await import('./helpers.js')
+  const jwt = (await import('jsonwebtoken')).default
+
+  const { container } = await crawler()
+  const server = await startTestServer(createApp(container))
+  t.after(() => server.close())
+
+  const token = jwt.sign(
+    { sub: '1', email: 'you@civictrust.ma', role: 'admin', svc: ['marches'] },
+    process.env.JWT_SECRET,
+    { expiresIn: '12h' },
+  )
+  const row = await container.db.get(
+    "SELECT id FROM consultations WHERE estimation_cents IS NOT NULL AND categorie = 'Services' LIMIT 1",
+  )
+  const html = await (
+    await fetch(`${server.base}/panel/consultations/${row.id}?lang=fr`, { headers: { cookie: `mp_token=${token}` } })
+  ).text()
+
+  // 15 000 000 as Services: floor -25%, ceiling +20%. Asymmetric, which is the
+  // detail every other calculator gets wrong — and it is computed here from
+  // what the crawler already read, with nobody entering anything.
+  assert.match(html, /11\.250\.000,00/, 'the floor')
+  assert.match(html, /18\.000\.000,00/, 'the ceiling')
+  assert.match(html, /−25 %/)
+  assert.match(html, /\+20 %/)
+
+  // And the limit is stated rather than implied: the reference price itself
+  // needs the competitors' offers, which this portal does not publish.
+  assert.match(html, /offres des concurrents/)
 })

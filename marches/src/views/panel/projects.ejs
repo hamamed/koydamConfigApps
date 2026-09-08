@@ -51,7 +51,7 @@
       <thead><tr>
         <th style="width:38px"></th>
         <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.acheteur') %></th>
-        <th><%= t('table.categorie') %></th><th><%= t('table.deadline') %></th>
+        <th><%= t('table.categorie') %></th><th><%= t('table.deadline') %></th><th><%= t('table.status') %></th>
       </tr></thead>
       <tbody>
         <% rows.forEach(function (row) { %>
@@ -67,7 +67,6 @@
             <td><% if (row.acheteur) { %><a href="/panel/buyers/<%= encodeURIComponent(row.acheteur) %>?lang=<%= locale %>" title="<%= t('buyer.profile') %>"><%= row.acheteur %></a><% } else { %>—<% } %></td>
             <td><%= row.categorie || '—' %></td>
             <td><%- include('../partials/deadline', { deadline: row.deadline, date: row.date_limite }) %></td>
-            <td class="ltr"><%= row.lots_count %></td>
             <td><%- include('../partials/status-pill', { row: row }) %></td>
           </tr>
         <% }) %>

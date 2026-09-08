@@ -61,6 +61,41 @@
 
 <%# The same buyer, the same purchase, already published once. %>
 
+<% if (range) { %>
+  <%
+    /*
+      Article 44, as far as it can be taken without the competitors.
+
+      The reference price needs the offers, and this portal publishes none. The
+      band needs only the estimate and the nature of the market, and both were
+      read off this consultation — so the one thing a bidder must know before
+      submitting is here, on the avis, rather than behind a form.
+    */
+    const money = function (v) {
+      return v === null || v === undefined ? '—'
+        : Number(v).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+  %>
+  <div class="card">
+    <h2><%- include('../partials/icon', { name: 'calculator', size: 15 }) %><%= t('range.title') %></h2>
+    <p class="muted" style="margin:-6px 0 14px; font-size:12.5px"><%= t('range.hint') %></p>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+      <div><label><%= t('range.estimate') %></label><b class="ltr" style="font-size:18px"><%= money(range.estimate) %></b></div>
+      <div><label><%= t('range.floor', { percent: range.band.lowPercent }) %></label><b class="ltr" style="font-size:18px"><%= money(range.low) %></b></div>
+      <div><label><%= t('range.ceiling', { percent: range.band.highPercent }) %></label><b class="ltr" style="font-size:18px"><%= money(range.high) %></b></div>
+      <div><label><%= t('range.kind') %></label><span class="pill"><%= t('referencePrice.kind.' + range.kind) %></span></div>
+    </div>
+
+    <p style="margin:14px 0 0; display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <a class="btn secondary" href="/panel/reference-price?from=<%= consultation.id %>&amp;lang=<%= locale %>"><%- include('../partials/icon', { name: 'calculator', size: 15 }) %><%= t('range.compute') %></a>
+      <%# Said plainly, because it is the limit of what anybody can automate:
+          the commission's own workings are visible only to a company that bid. %>
+      <span class="muted" style="font-size:12px"><%= t('range.needsOffers') %></span>
+    </p>
+  </div>
+<% } %>
+
 <div class="card">
   <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('detail.documents') %> (<span class="ltr"><%= consultation.documents.length %></span>)</h2>
   <% if (consultation.documents.length === 0) { %>
@@ -69,9 +104,16 @@
     <ul style="margin:0; padding-inline-start:18px">
       <% consultation.documents.forEach(function (doc) { %>
         <li style="margin-bottom:6px">
-          <a href="<%= doc.url %>" target="_blank" rel="noopener noreferrer"><%= doc.file_name || t('detail.document' + (doc.kind === 'annulation' ? 'Annulation' : 'Avis')) %></a>
-          <span class="pill <%= doc.kind === 'annulation' ? 'warn' : '' %>"><%= t('detail.document' + (doc.kind === 'annulation' ? 'Annulation' : 'Avis')) %></span>
-          <span class="muted" style="font-size:11.5px"><%- include('../partials/icon', { name: 'external-link', size: 12 }) %> <%= t('detail.onPortal') %></span>
+          <%# Labelled by what it is. The kinds are not interchangeable: the
+              avis is a file that downloads, and the dossier is a request form
+              — the portal wants to know who is taking it. Calling the second
+              one an avis promises a download that does not happen. %>
+          <a href="<%= doc.url %>" target="_blank" rel="noopener noreferrer"><%= doc.file_name || t('doc.kind.' + doc.kind) %></a>
+          <span class="pill <%= doc.kind === 'annulation' ? 'warn' : '' %>"><%= t('doc.kind.' + doc.kind) %></span>
+          <span class="muted" style="font-size:11.5px">
+            <%- include('../partials/icon', { name: 'external-link', size: 12 }) %>
+            <%= doc.kind === 'dce' ? t('doc.viaRequest') : t('detail.onPortal') %>
+          </span>
         </li>
       <% }) %>
     </ul>

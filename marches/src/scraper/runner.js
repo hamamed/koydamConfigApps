@@ -22,7 +22,7 @@ function daysAgo(days) {
  * matching pass — recording progress in `scrape_jobs` so the admin dashboard can
  * report on it.
  */
-export function createScraperRunner({ db, consultations, jobs, settings, http }) {
+export function createScraperRunner({ db, consultations, documents, jobs, settings, http }) {
   // Built per run from the current settings, so changing the delay or the user
   // agent in the panel applies to the next crawl without a restart. A client
   // passed in wins, which is what the tests use to serve fixtures.
@@ -30,7 +30,7 @@ export function createScraperRunner({ db, consultations, jobs, settings, http })
     http ??
     createHttpClient(settings ? { resolveOptions: () => settings.section('scraper') } : undefined)
 
-  const marcheScraper = createMarcheScraper({ http: client, consultations, settings })
+  const marcheScraper = createMarcheScraper({ http: client, consultations, documents, settings })
 
   /**
    * @param {object} options
