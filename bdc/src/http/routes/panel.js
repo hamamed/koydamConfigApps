@@ -8,7 +8,7 @@ import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { rememberList, forgetList, listUrl } from '../listState.js'
-import { marketLinks, searchQuery } from '../../utils/marketSearch.js'
+import { marketLinks, searchQuery, articleKind } from '../../utils/marketSearch.js'
 import { translator } from '../../i18n/index.js'
 
 /**
@@ -429,6 +429,7 @@ export function panelRoutes({ services }) {
         article: { ...article, estimation: article.estimation_cents === null ? null : article.estimation_cents / 100 },
         query,
         links: marketLinks(article.designation),
+        kind: articleKind(article.designation),
         rfq: requestForQuote(article, consultation, req.locale),
       }))
     }),

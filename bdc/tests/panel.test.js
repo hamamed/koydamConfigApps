@@ -1500,3 +1500,34 @@ test('a procurement sentence is reduced to what a shop can search for', async ()
   // The query is escaped into the URL, not concatenated raw.
   assert.match(marketLinks('câble 3x2.5 & co')[0]?.url ?? '', /%/)
 })
+
+test('the shops offered match what the article actually is', async () => {
+  const { marketLinks, articleKind, MARKETPLACES } = await import('../src/utils/marketSearch.js')
+
+  const labels = (designation) => marketLinks(designation).filter((l) => l.specialist).map((l) => l.label)
+
+  assert.equal(articleKind('Toner Kyocera FS 6525 MFP photocopieuse'), 'it')
+  assert.ok(labels('Toner Kyocera FS 6525 MFP photocopieuse').includes('UltraPC'))
+
+  assert.equal(articleKind('Fourniture de perceuse à percussion'), 'tools')
+  assert.deepEqual(labels('Fourniture de perceuse à percussion'), ['Bricoma'])
+
+  assert.equal(articleKind("Acquisition d'ouvrages et livres scientifiques"), 'books')
+  assert.ok(labels("Acquisition d'ouvrages et livres scientifiques").includes('Mabooko'))
+
+  assert.equal(articleKind('Appareil photo reflex avec objectif 50mm'), 'photo')
+  assert.ok(labels('Appareil photo reflex avec objectif 50mm').includes('SaymonShop'))
+
+  // A bookshop under a pallet of cement is noise; the general marketplaces are
+  // always there, so there is somewhere to look whatever the article is.
+  assert.ok(!labels('Fourniture de perceuse à percussion').includes('Mabooko'))
+  const anything = marketLinks('connecteurs CLP120')
+  assert.ok(anything.length >= 5, 'every article should still offer the general marketplaces')
+
+  // Every shop builds a real URL from the query, escaped, on its own host.
+  MARKETPLACES.forEach((shop) => {
+    const url = shop.search('câble 3x2.5 & co')
+    assert.match(url, /^https:\/\//, `${shop.key} did not produce an https URL`)
+    assert.doesNotMatch(url, /[ &]co\b/, `${shop.key} put the query in raw instead of escaping it`)
+  })
+})

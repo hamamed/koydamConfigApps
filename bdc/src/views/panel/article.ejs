@@ -43,10 +43,25 @@
     <p class="muted" style="margin:-4px 0 12px; font-size:12.5px">
       <%- t('article.marketHint', { query: `<code class="ltr">${query}</code>` }) %>
     </p>
+    <%
+      const specialists = links.filter(function (l) { return l.specialist })
+      const general = links.filter(function (l) { return !l.specialist })
+    %>
+    <%# Opened in the reader's own browser: nothing here fetches or stores a
+        retailer's pages, so no shop's terms are engaged by this panel. %>
+    <% if (specialists.length > 0) { %>
+      <p class="muted" style="margin:0 0 7px; font-size:12px"><%= t('article.market.' + kind) %></p>
+      <div class="row-actions" style="flex-wrap:wrap; margin-bottom:14px">
+        <% specialists.forEach(function (link) { %>
+          <a class="btn secondary" href="<%= link.url %>" target="_blank" rel="noopener noreferrer">
+            <%- include('../partials/icon', { name: 'external-link', size: 14 }) %><%= link.label %>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+    <p class="muted" style="margin:0 0 7px; font-size:12px"><%= t('article.market.general') %></p>
     <div class="row-actions" style="flex-wrap:wrap">
-      <% links.forEach(function (link) { %>
-        <%# Opened in the reader's own browser: nothing here fetches or stores a
-            retailer's pages, so no shop's terms are engaged by this panel. %>
+      <% general.forEach(function (link) { %>
         <a class="btn secondary" href="<%= link.url %>" target="_blank" rel="noopener noreferrer">
           <%- include('../partials/icon', { name: 'external-link', size: 14 }) %><%= link.label %>
         </a>
