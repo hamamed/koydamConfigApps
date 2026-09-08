@@ -10,19 +10,19 @@
 </div>
 
 <div class="grid" style="margin-bottom:14px">
-  <div class="stat"><b class="ltr"><%= buyer.avis.total %></b><span><%= t('buyer.avis') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.avis.open %></b><span><%= t('buyer.open') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.avis.total) %></b><span><%= t('buyer.avis') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.avis.open) %></b><span><%= t('buyer.open') %></span></div>
   <div class="stat">
     <b class="ltr" style="<%= buyer.cancellationRate !== null && buyer.cancellationRate >= 10 ? 'color:var(--warn)' : '' %>">
       <%= buyer.cancellationRate === null ? '—' : buyer.cancellationRate + ' %' %>
     </b>
     <span><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('buyer.cancelled') %></span>
   </div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.total %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('buyer.awards') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.awards.total) %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('buyer.awards') %></span></div>
   <div class="stat"><b class="ltr"><%= buyer.awards.median === null ? '—' : buyer.awards.median %></b><span><%= t('buyer.median') %></span></div>
   <div class="stat"><b class="ltr"><%= buyer.awards.avgBids === null ? '—' : buyer.awards.avgBids %></b><span><%= t('buyer.bids') %></span></div>
   <div class="stat"><b class="ltr"><%= buyer.unsuccessfulRate === null ? '—' : buyer.unsuccessfulRate + ' %' %></b><span><%= t('buyer.unsuccessful') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.winners %></b><span><%= t('buyer.suppliers') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.awards.winners) %></b><span><%= t('buyer.suppliers') %></span></div>
 </div>
 
 <p class="muted" style="margin:-4px 0 16px; font-size:11.5px"><%= t('buyer.note') %></p>
@@ -39,7 +39,7 @@
           <% buyer.winners.forEach(function (row) { %>
             <tr>
               <td style="max-width:220px"><a href="/panel/companies/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>" title="<%= t('company.profile') %>"><%= row.label %></a></td>
-              <td class="ltr"><%= row.awards %></td>
+              <td class="ltr"><%= num(row.awards) %></td>
               <td class="ltr money"><%= money(row.total) %></td>
             </tr>
           <% }) %>

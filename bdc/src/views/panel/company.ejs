@@ -10,8 +10,8 @@
 </div>
 
 <div class="grid" style="margin-bottom:14px">
-  <div class="stat"><b class="ltr"><%= company.awards %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('company.awards') %></span></div>
-  <div class="stat"><b class="ltr"><%= company.buyers %></b><span><%- include('../partials/icon', { name: 'building-2', size: 13 }) %><%= t('company.buyers') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(company.awards) %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('company.awards') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(company.buyers) %></b><span><%- include('../partials/icon', { name: 'building-2', size: 13 }) %><%= t('company.buyers') %></span></div>
   <div class="stat"><b class="ltr"><%= company.totalAmount === null ? '—' : company.totalAmount %></b><span><%= t('company.total') %></span></div>
   <div class="stat"><b class="ltr"><%= company.median === null ? '—' : company.median %></b><span><%= t('company.median') %></span></div>
   <div class="stat"><b class="ltr"><%= company.min === null ? '—' : company.min %></b><span><%= t('company.smallest') %></span></div>
@@ -190,7 +190,7 @@
           <% company.topBuyers.forEach(function (row) { %>
             <tr>
               <td style="max-width:220px"><a href="/panel/buyers/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>"><%= row.label %></a></td>
-              <td class="ltr"><%= row.awards %></td>
+              <td class="ltr"><%= num(row.awards) %></td>
               <td class="ltr money"><%= money(row.total) %></td>
             </tr>
           <% }) %>

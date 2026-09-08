@@ -132,3 +132,23 @@ export function priceClass(text) {
   if (length <= 20) return 'price-s'
   return 'price-xs'
 }
+
+/**
+ * A count, grouped so it can be read at a glance: 187292 becomes 187.292.
+ *
+ * Same separator as a price, because a page that grouped its counts one way
+ * and its amounts another would look like two systems. Below ten thousand
+ * nothing is grouped: "1.024 projets" is harder to read than "1024", and four
+ * digits need no help.
+ *
+ * @param {number|string|null} value
+ * @returns {string} the grouped figure, or the value unchanged if it is not a
+ *   number — an id or a reference must never be grouped.
+ */
+export function formatCount(value) {
+  if (value === null || value === undefined || value === '') return '—'
+  const number = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(number)) return String(value)
+  if (Math.abs(number) < 10000) return String(number)
+  return new Intl.NumberFormat('fr-MA', { maximumFractionDigits: 0 }).format(number)
+}

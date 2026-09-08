@@ -4,9 +4,9 @@
   <h1><%- include('../partials/icon', { name: 'triangle-alert', size: 19 }) %> <%= t('exclusion.title') %></h1>
   <span class="muted spacer">
     <% if (rows.length === total) { %>
-      <span class="ltr"><%= total %></span>
+      <span class="ltr"><%= num(total) %></span>
     <% } else { %>
-      <span class="ltr"><%= rows.length %></span> / <span class="ltr"><%= total %></span>
+      <span class="ltr"><%= num(rows.length) %></span> / <span class="ltr"><%= num(total) %></span>
     <% } %>
   </span>
 </div>
@@ -26,7 +26,7 @@
         <option value=""><%= t('exclusion.allEntities') %></option>
         <% entities.forEach(function (entity) { %>
           <option value="<%= entity.label %>" <%= filters.entite === entity.label ? 'selected' : '' %>>
-            <%= entity.label.length > 52 ? entity.label.slice(0, 52) + '…' : entity.label %> (<%= entity.total %>)
+            <%= entity.label.length > 52 ? entity.label.slice(0, 52) + '…' : entity.label %> (<%= num(entity.total) %>)
           </option>
         <% }) %>
       </select>

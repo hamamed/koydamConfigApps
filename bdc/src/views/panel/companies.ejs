@@ -4,9 +4,9 @@
   <h1><%- include('../partials/icon', { name: 'award', size: 19 }) %> <%= t('companies.title') %></h1>
   <span class="muted spacer">
     <% if (total === summary.companies) { %>
-      <span class="ltr"><%= summary.companies %></span>
+      <span class="ltr"><%= num(summary.companies) %></span>
     <% } else { %>
-      <span class="ltr"><%= total %></span> / <span class="ltr"><%= summary.companies %></span>
+      <span class="ltr"><%= num(total) %></span> / <span class="ltr"><%= num(summary.companies) %></span>
     <% } %>
   </span>
 </div>
@@ -14,7 +14,7 @@
 <%# Coverage first: the point of this screen is which companies we can say
     anything about beyond a name, so the counts lead. %>
 <div class="grid" style="margin-bottom:14px">
-  <div class="stat"><b class="ltr"><%= summary.companies %></b><span><%= t('companies.total') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(summary.companies) %></b><span><%= t('companies.total') %></span></div>
   <div class="stat">
     <b class="ltr" style="color:var(--ok)"><%= summary.known %></b>
     <span><%- include('../partials/icon', { name: 'circle-check', size: 13 }) %><%= t('companies.known') %></span>
@@ -41,7 +41,7 @@
       <select id="city" name="city">
         <option value=""><%= t('companies.allCities') %></option>
         <% cities.forEach(function (town) { %>
-          <option value="<%= town.label %>" <%= filters.city === town.label ? 'selected' : '' %>><%= town.label %> (<%= town.total %>)</option>
+          <option value="<%= town.label %>" <%= filters.city === town.label ? 'selected' : '' %>><%= town.label %> (<%= num(town.total) %>)</option>
         <% }) %>
       </select>
     </div>
@@ -86,9 +86,9 @@
                   <a href="?<%= new URLSearchParams(Object.assign({}, query, { city: row.city, page: 1, lang: locale })).toString() %>"><%= row.city %></a>
                 <% } else { %><span class="muted">—</span><% } %>
               </td>
-              <td class="ltr"><%= row.awards %></td>
-              <td class="ltr"><%= row.total %></td>
-              <td class="ltr"><%= row.buyers %></td>
+              <td class="ltr"><%= num(row.awards) %></td>
+              <td class="ltr money"><%= money(row.total) %></td>
+              <td class="ltr"><%= num(row.buyers) %></td>
               <td>
                 <div class="row-actions" style="flex-wrap:wrap">
                   <% if (row.qualified) { %>

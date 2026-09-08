@@ -1413,3 +1413,41 @@ test('a long price is set smaller, and a short one is never shrunk for it', asyn
   // And a missing amount is not a long string.
   assert.equal(priceClass(formatMoney(null)), '')
 })
+
+test('a count is grouped once it is long enough, and an identifier never is', async () => {
+  const { formatCount } = await import('../src/utils/money.js')
+
+  // Four digits read fine as they are; "1.024" is harder than "1024".
+  assert.equal(formatCount(7), '7')
+  assert.equal(formatCount(999), '999')
+  assert.equal(formatCount(3575), '3575')
+  assert.equal(formatCount(9999), '9999')
+
+  // From ten thousand, grouped.
+  assert.equal(formatCount(10000), '10.000')
+  assert.equal(formatCount(100000), '100.000')
+  assert.equal(formatCount(1000000), '1.000.000')
+  assert.equal(formatCount(187292), '187.292')
+
+  // Not a number: handed back untouched. A reference like "61/2026/SIM" or an
+  // id must survive this unchanged — grouping an identifier corrupts it.
+  assert.equal(formatCount('61/2026/SIM'), '61/2026/SIM')
+  assert.equal(formatCount(null), '—')
+})
+
+test('a number inside a translated sentence is grouped, an id in one is not', async () => {
+  const { translator } = await import('../src/i18n/index.js')
+  const t = translator('fr')
+
+  // The count in "{count} résultats" is a quantity and is grouped wherever
+  // that sentence is used, rather than at each of the screens that use it.
+  const many = t('table.count', { count: 187292, page: 1 })
+  assert.match(many, /187\.292/, 'a large count was not grouped in the sentence')
+  assert.doesNotMatch(many, /187292/)
+
+  // The page number in the same sentence is small and stays as it is.
+  assert.match(many, /\b1\b/)
+
+  // A short count is left alone.
+  assert.match(t('table.count', { count: 42, page: 1 }), /\b42\b/)
+})

@@ -20,9 +20,9 @@
 </div>
 
 <div class="grid" style="margin-bottom:14px">
-  <div class="stat"><b class="ltr"><%= buyer.avis.total %></b><span><%= t('buyer.avis') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.avis.open %></b><span><%= t('buyer.open') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.avis.cancelled %></b><span><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('buyer.cancelled') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.avis.total) %></b><span><%= t('buyer.avis') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.avis.open) %></b><span><%= t('buyer.open') %></span></div>
+  <div class="stat"><b class="ltr"><%= num(buyer.avis.cancelled) %></b><span><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('buyer.cancelled') %></span></div>
   <div class="stat">
     <%# A rate as well as a count: "12 cancelled" means nothing without knowing
         whether it is out of 20 or out of 2,000. Coloured past one in ten,

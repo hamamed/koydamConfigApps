@@ -2,7 +2,7 @@
 
 <div class="page-head">
   <h1><%- include('../partials/icon', { name: 'file-text', size: 19 }) %> <%= t('invoices.title') %></h1>
-  <span class="muted spacer"><%= total %></span>
+  <span class="muted spacer"><%= num(total) %></span>
   <%# The appearance is reached from the invoices themselves rather than from
       the sidebar: it is something you set once, next to what it changes. %>
   <a class="btn secondary" href="/panel/invoices/apparence?lang=<%= locale %>">

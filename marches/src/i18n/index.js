@@ -1,6 +1,7 @@
 import fr from './fr.js'
 import en from './en.js'
 import ar from './ar.js'
+import { formatCount } from '../utils/money.js'
 
 /**
  * UI translation for the admin panel.
@@ -40,7 +41,7 @@ export function translator(locale) {
   return function t(key, params = {}) {
     const template = dictionary[key] ?? fallback[key] ?? key
     return template.replace(/\{(\w+)\}/g, (match, name) =>
-      Object.hasOwn(params, name) ? String(params[name]) : match,
+      Object.hasOwn(params, name) ? render(params[name]) : match,
     )
   }
 }
@@ -61,4 +62,20 @@ export function resolveLocale({ query, cookie, acceptLanguage, fallback } = {}) 
     if (isSupported(code)) return code
   }
   return isSupported(fallback) ? fallback : DEFAULT_LOCALE
+}
+
+/**
+ * A value on its way into a sentence.
+ *
+ * Counts are grouped here rather than at each call site, because a count is
+ * almost always interpolated — "{count} résultats", "{days} jours" — and
+ * "187292 résultats" is a number the reader has to count before they can read
+ * it. Anything that is not a whole number is left exactly as it was: an id, a
+ * year and a reference are not quantities, and grouping them would be wrong.
+ */
+function render(value) {
+  if (typeof value === 'number' && Number.isInteger(value) && Math.abs(value) >= 10000) {
+    return formatCount(value)
+  }
+  return String(value)
 }
