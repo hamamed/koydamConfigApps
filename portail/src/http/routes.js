@@ -114,13 +114,46 @@ export function registerRoutes(app, { services }) {
 }
 
 /**
- * Only same-site paths, so `?next=` cannot be used to bounce somebody to
- * another domain carrying the appearance of our sign-in.
+ * The origins this portal will return somebody to: itself, and the services it
+ * fronts. Built from the same config the chooser links to, so a service added
+ * there becomes returnable without a second list to keep in step.
+ */
+const RETURNABLE = new Set(
+  [config.publicUrl, ...config.services.map((service) => service.url)]
+    .map((url) => {
+      try {
+        return new URL(url).origin
+      } catch {
+        return null
+      }
+    })
+    .filter(Boolean),
+)
+
+/**
+ * Where to send somebody after signing in.
+ *
+ * A path here, or an absolute URL at one of the services above. The absolute
+ * form is the one that matters: bdc and marches send people here carrying
+ * `next=https://bdc.civictrust.ma/panel`, and discarding that meant signing in
+ * worked and then dropped you on the chooser to pick the space you had just
+ * asked for — which reads as being sent back to the portal for no reason.
+ *
+ * Anything else is discarded rather than followed, so `?next=` cannot bounce
+ * somebody onto another domain wearing the credibility of our sign-in.
  * @returns {string|null}
  */
 function safeNext(value) {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return null
-  return value
+  if (typeof value !== 'string' || value === '') return null
+  // "//evil.example" is a protocol-relative URL, not a path.
+  if (value.startsWith('/')) return value.startsWith('//') ? null : value
+
+  try {
+    const target = new URL(value)
+    return RETURNABLE.has(target.origin) ? target.href : null
+  } catch {
+    return null
+  }
 }
 
 export { servicesOf }

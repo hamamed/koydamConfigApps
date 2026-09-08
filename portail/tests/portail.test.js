@@ -178,7 +178,18 @@ test('`next` cannot be used to bounce somebody off the domain', async (t) => {
   const api = await boot()
   t.after(() => api.close())
 
-  for (const hostile of ['https://evil.example', '//evil.example', 'javascript:alert(1)']) {
+  // An absolute URL at a service we front is the normal case now, so the guard
+  // has to tell "somewhere we sent them from" apart from "anywhere at all" —
+  // including hosts that merely start or end with ours.
+  for (const hostile of [
+    'https://evil.example',
+    '//evil.example',
+    'javascript:alert(1)',
+    'https://civictrust.ma.evil.example/panel',
+    'https://notcivictrust.ma/panel',
+    'https://bdc.civictrust.ma.evil.example/panel',
+    'http://bdc.civictrust.ma/panel',
+  ]) {
     const response = await fetch(`${api.base}/login`, {
       method: 'POST',
       redirect: 'manual',
@@ -191,6 +202,31 @@ test('`next` cannot be used to bounce somebody off the domain', async (t) => {
     })
     assert.equal(response.headers.get('location'), '/choisir', `${hostile} is ignored`)
   }
+})
+
+test('a service can send somebody back to where they were going', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  // bdc and marches bounce an unauthenticated visitor here carrying an absolute
+  // return address. Dropping it meant signing in worked and then landed you on
+  // the chooser to pick the space you had already asked for, which reads as
+  // being sent back to the portal for nothing.
+  const back = 'https://bdc.civictrust.ma/panel/awards'
+  const response = await fetch(`${api.base}/login`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ email: 'you@civictrust.ma', password: 'a-very-long-password', next: back }).toString(),
+  })
+  assert.equal(response.headers.get('location'), back)
+
+  // And with a session already in hand, /login is a pass-through rather than a
+  // form telling somebody they are signed in.
+  const { cookie } = await api.signIn()
+  const through = await api.open(`/login?next=${encodeURIComponent(back)}`, cookie)
+  assert.equal(through.status, 302)
+  assert.equal(through.headers.get('location'), back)
 })
 
 test('signing out clears the session', async (t) => {
