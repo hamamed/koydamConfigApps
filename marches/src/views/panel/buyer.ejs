@@ -1,5 +1,15 @@
 <%- include('../partials/shell-open', { title: buyer.name }) %>
 
+<%#
+  What can be said about a buyer on this portal.
+
+  Only avis. The award figures this page used to carry — how much a buyer
+  settles for, how many bidders it draws, who wins — were removed from this
+  service along with the awards they were computed from: appels d'offres
+  publish a result notice, not the bid table that bons de commande carry.
+  The stats left are the ones this portal actually publishes.
+%>
+
 <div class="page-head">
   <h1><%- include('../partials/icon', { name: 'building-2', size: 19 }) %> <%= buyer.name %></h1>
   <span class="muted spacer">
@@ -12,90 +22,45 @@
 <div class="grid" style="margin-bottom:14px">
   <div class="stat"><b class="ltr"><%= buyer.avis.total %></b><span><%= t('buyer.avis') %></span></div>
   <div class="stat"><b class="ltr"><%= buyer.avis.open %></b><span><%= t('buyer.open') %></span></div>
+  <div class="stat"><b class="ltr"><%= buyer.avis.cancelled %></b><span><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('buyer.cancelled') %></span></div>
   <div class="stat">
+    <%# A rate as well as a count: "12 cancelled" means nothing without knowing
+        whether it is out of 20 or out of 2,000. Coloured past one in ten,
+        which is where a buyer's cancellations stop looking like accidents. %>
     <b class="ltr" style="<%= buyer.cancellationRate !== null && buyer.cancellationRate >= 10 ? 'color:var(--warn)' : '' %>">
       <%= buyer.cancellationRate === null ? '—' : buyer.cancellationRate + ' %' %>
     </b>
-    <span><%- include('../partials/icon', { name: 'circle-x', size: 13 }) %><%= t('buyer.cancelled') %></span>
+    <span><%= t('buyer.cancellationRate') %></span>
   </div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.total %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('buyer.awards') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.median === null ? '—' : buyer.awards.median %></b><span><%= t('buyer.median') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.avgBids === null ? '—' : buyer.awards.avgBids %></b><span><%= t('buyer.bids') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.unsuccessfulRate === null ? '—' : buyer.unsuccessfulRate + ' %' %></b><span><%= t('buyer.unsuccessful') %></span></div>
-  <div class="stat"><b class="ltr"><%= buyer.awards.winners %></b><span><%= t('buyer.suppliers') %></span></div>
 </div>
 
 <p class="muted" style="margin:-4px 0 16px; font-size:11.5px"><%= t('buyer.note') %></p>
 
-<div class="grid cols-2" style="align-items:start">
-  <div class="card" style="padding-bottom:8px">
-    <h2><%- include('../partials/icon', { name: 'award', size: 15 }) %><%= t('buyer.topWinners') %></h2>
-    <% if (buyer.winners.length === 0) { %>
-      <p class="empty"><%= t('insights.empty') %></p>
-    <% } else { %>
-      <div class="table-wrap"><table>
-        <thead><tr><th><%= t('insights.company') %></th><th><%= t('insights.count') %></th><th><%= t('insights.total') %></th></tr></thead>
-        <tbody>
-          <% buyer.winners.forEach(function (row) { %>
-            <tr>
-              <td style="max-width:220px"><a href="/panel/companies/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>" title="<%= t('company.profile') %>"><%= row.label %></a></td>
-              <td class="ltr"><%= row.awards %></td>
-              <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table></div>
-    <% } %>
-  </div>
-
-  <div class="card" style="padding-bottom:8px">
-    <h2><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('buyer.recentAvis') %></h2>
-    <% if (buyer.recentAvis.length === 0) { %>
-      <p class="empty"><%= t('table.empty') %></p>
-    <% } else { %>
-      <div class="table-wrap"><table>
-        <thead><tr><th><%= t('table.reference') %></th><th><%= t('table.objet') %></th><th><%= t('table.result') %></th></tr></thead>
-        <tbody>
-          <% buyer.recentAvis.forEach(function (row) { %>
-            <tr>
-              <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
-              <td style="max-width:260px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></td>
-              <td><%- include('../partials/status-pill', { row: row }) %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table></div>
-      <p style="margin:10px 0 4px">
-        <a class="btn secondary" href="/panel?<%= new URLSearchParams({ acheteur: buyer.name, lang: locale }).toString() %>"><%= t('buyer.allAvis') %></a>
-      </p>
-    <% } %>
-  </div>
-</div>
-
-<div class="card" style="padding:0; overflow:hidden">
-  <h2 style="padding:16px 16px 0"><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('buyer.recentAwards') %></h2>
-  <% if (buyer.recentAwards.length === 0) { %>
-    <p class="empty"><%= t('awards.empty') %></p>
+<div class="card" style="padding-bottom:8px">
+  <h2><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('buyer.recentAvis') %></h2>
+  <% if (buyer.recentAvis.length === 0) { %>
+    <p class="empty"><%= t('table.empty') %></p>
   <% } else { %>
     <div class="table-wrap"><table>
       <thead><tr>
         <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
-        <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
-        <th><%= t('awards.bids') %></th><th><%= t('awards.publishedOn') %></th>
+        <th><%= t('table.categorie') %></th><th><%= t('table.deadline') %></th><th><%= t('table.result') %></th>
       </tr></thead>
       <tbody>
-        <% buyer.recentAwards.forEach(function (row) { %>
+        <% buyer.recentAvis.forEach(function (row) { %>
           <tr>
-            <td><code><%= row.reference %></code></td>
-            <td style="max-width:300px"><%= row.objet || '—' %></td>
-            <td><%= row.attributaire || '—' %></td>
-            <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
-            <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
-            <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
+            <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
+            <td style="max-width:340px"><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>" style="color:inherit"><%= row.objet || '—' %></a><%- include('../partials/cancel-note', { row: row }) %></td>
+            <td><%= row.categorie || '—' %></td>
+            <td class="ltr"><%= row.date_limite || '—' %></td>
+            <td><%- include('../partials/status-pill', { row: row }) %></td>
           </tr>
         <% }) %>
       </tbody>
     </table></div>
+    <p style="margin:10px 0 4px">
+      <a class="btn secondary" href="/panel?<%= new URLSearchParams({ acheteur: buyer.name }).toString() %>"><%= t('buyer.allAvis') %></a>
+    </p>
   <% } %>
 </div>
 

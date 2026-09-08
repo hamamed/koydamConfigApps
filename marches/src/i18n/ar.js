@@ -362,6 +362,7 @@ export default {
   'buyer.avis': 'الإعلانات المنشورة',
   'buyer.open': 'ما زالت مفتوحة',
   'buyer.cancelled': 'ملغاة',
+  'buyer.cancellationRate': 'نسبة الإلغاء',
   'buyer.awards': 'النتائج',
   'buyer.median': 'المبلغ الوسيط',
   'buyer.bids': 'متوسط العروض',

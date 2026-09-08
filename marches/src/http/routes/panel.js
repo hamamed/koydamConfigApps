@@ -381,7 +381,7 @@ export function panelRoutes({ services }) {
     asyncHandler(async (req, res) => {
       const name = decodeURIComponent(req.params.name)
       const buyer = await services.analytics.buyer(name, services.consultations)
-      if (buyer.avis.total === 0 && buyer.awards.total === 0) throw new NotFoundError(`Buyer ${name}`)
+      if (buyer.avis.total === 0) throw new NotFoundError(`Buyer ${name}`)
       res.render('panel/buyer', await shell(req, { active: 'projects', buyer }))
     }),
   )

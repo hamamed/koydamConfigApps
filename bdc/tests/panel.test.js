@@ -1273,3 +1273,27 @@ test('an unfiltered listing is not remembered, and clearing forgets one that was
   const dropped = (cleared.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('mp_list='))
   assert.ok(dropped && /mp_list=;/.test(dropped), 'clearing did not forget the search')
 })
+
+test('a buyer named in the listing opens the page the listing links to', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  // The link is built from the listing, and followed exactly as rendered —
+  // the earlier break was a page that rendered figures its own service had
+  // stopped returning, which only a request that reaches the view can catch.
+  const listing = await (await api.page('/panel', api.staff)).text()
+  const href = /href="(\/panel\/buyers\/[^"]+)"/.exec(listing)
+  assert.ok(href, 'the listing names no buyer')
+
+  const response = await api.page(href[1].replace(/&amp;/g, '&'), api.staff)
+  assert.equal(response.status, 200, `the buyer page answered ${response.status}`)
+
+  const html = await response.text()
+  assert.match(html, /class="stat"/, 'the buyer page rendered no figures')
+  // Every figure it shows has to be a number or an em dash, never the string
+  // an undefined field renders as.
+  assert.ok(!/undefined/.test(html), 'the buyer page rendered an undefined field')
+
+  // And it offers the way to the rest of that buyer's avis.
+  assert.match(html, /href="\/panel\?acheteur=/)
+})

@@ -362,6 +362,7 @@ export default {
   'buyer.avis': 'Avis publiés',
   'buyer.open': 'Encore ouverts',
   'buyer.cancelled': 'Annulés',
+  'buyer.cancellationRate': 'Taux d’annulation',
   'buyer.awards': 'Résultats',
   'buyer.median': 'Montant médian',
   'buyer.bids': 'Devis reçus en moyenne',
