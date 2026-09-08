@@ -115,6 +115,75 @@
   .logo-now img { max-height:70px; max-width:100%; }
   input.swatch { width:52px; height:34px; padding:2px; cursor:pointer; }
 
+  /* ---- the invoice preview -------------------------------------------- */
+  /* A drawing of the page, not the page: it mirrors what the PDF templates
+     do with the header, the accent and the text size, so a choice can be made
+     by looking rather than by saving and opening a download. The real thing
+     is always one button away, and that button says so. */
+  .preview { position:sticky; top:14px; }
+  .sheet { --s:1; --accent:#0b5394; position:relative; aspect-ratio:1/1.414; overflow:hidden;
+           background:#fff; border:1px solid var(--line); border-radius:8px;
+           box-shadow:0 6px 22px rgba(15,44,77,.13); color:#1f2933;
+           font-size:calc(5.4px * var(--s)); line-height:1.45; }
+  .sheet-band { display:flex; justify-content:space-between; gap:10px; padding:7% 7% 0; }
+  .sheet-brand { min-width:0; }
+  .sheet-logo { max-height:calc(19px * var(--s)); max-width:46%; margin-bottom:4px; display:block; }
+  .sheet-name { font-size:calc(9px * var(--s)); font-weight:700; color:var(--accent); line-height:1.2; }
+  .sheet-lines { color:#7b8794; margin-top:2px; white-space:pre-line; }
+  .sheet-details { text-align:right; white-space:nowrap; flex:none; }
+  .sheet-details b { display:block; font-size:calc(8px * var(--s)); letter-spacing:.02em; }
+  .sheet-details span { display:block; color:#7b8794; }
+  .sheet-body { padding:4% 7% 0; }
+  .sheet-rule { height:1px; background:var(--line); margin:5% 7% 0; }
+  .sheet-to b { display:block; }
+  /* Each part of an address on its own line, as it prints. Left inline the
+     recipient's street runs on from their name and reads as one long name. */
+  .sheet-to span { display:block; color:#7b8794; }
+  .sheet-ref { margin:4% 0 0; padding:1.6% 2.5%; background:#f5f7fa; border:1px solid var(--line); border-radius:3px; }
+  /* The panel styles every table on the page — its own font size, padding and
+     borders. Inside the sheet those win over the drawing and blow the invoice
+     up to panel scale, so the sheet restates them at its own size. */
+  .sheet table, .sheet th, .sheet td { font-size:inherit; line-height:inherit; color:inherit;
+                                       background:none; border:0; }
+  .sheet-table { width:100%; border-collapse:collapse; margin-top:4%; table-layout:fixed; }
+  .sheet-table th { background:var(--accent); color:#fff; text-align:left;
+                    padding:1.6% 2%; font-weight:600; white-space:nowrap; }
+  .sheet-table td { padding:1.6% 2%; border-bottom:1px solid #eef1f5; vertical-align:top; }
+  .sheet-table .num { text-align:right; white-space:nowrap; }
+  .sheet-table col.c-desc { width:52%; }
+  .sheet-table col.c-qty { width:12%; }
+  .sheet-table col.c-money { width:18%; }
+  .sheet-totals { margin:4% 0 0 auto; width:52%; }
+  .sheet-totals div { display:flex; justify-content:space-between; padding:1% 0; }
+  .sheet-total { margin-top:2%; padding:2% 3%; background:var(--accent); color:#fff; font-weight:700; }
+  .sheet-notes { margin-top:5%; color:#7b8794; white-space:pre-line; }
+  .sheet-notes b { display:block; color:#1f2933; }
+  .sheet-mark { position:absolute; inset-inline:0; bottom:2.5%; text-align:center;
+                color:#7b8794; opacity:.28; font-size:calc(4.4px * var(--s));
+                border-top:1px solid var(--line); margin:0 7%; padding-top:2%; }
+
+  /* Classique: nothing reversed, a rule under the header. */
+  .sheet.tpl-classique .sheet-band { padding-bottom:5%; border-bottom:1px solid var(--line); }
+
+  /* Moderne: the header is a band of the accent, everything reversed out. */
+  .sheet.tpl-moderne .sheet-band { background:var(--accent); color:#fff; padding-bottom:6%; }
+  .sheet.tpl-moderne .sheet-name { color:#fff; }
+  .sheet.tpl-moderne .sheet-lines,
+  .sheet.tpl-moderne .sheet-details span { color:#dbe7f3; }
+
+  /* Épuré: no fills anywhere, centred, hairlines instead of blocks. */
+  .sheet.tpl-epure .sheet-band { flex-direction:column; align-items:center; text-align:center; padding-bottom:4%; }
+  .sheet.tpl-epure .sheet-logo { margin-inline:auto; }
+  .sheet.tpl-epure .sheet-name { color:#1f2933; }
+  .sheet.tpl-epure .sheet-details { text-align:center; border-top:1px solid var(--line); margin-top:4%; padding-top:3%; width:100%; }
+  .sheet.tpl-epure .sheet-details b { color:var(--accent); }
+  .sheet.tpl-epure .sheet-to { text-align:center; }
+  .sheet.tpl-epure .sheet-ref { background:none; border:0; padding-inline:0; }
+  .sheet.tpl-epure .sheet-table th { background:none; color:#1f2933;
+                                     border-top:1px solid #1f2933; border-bottom:1px solid var(--line); }
+  .sheet.tpl-epure .sheet-total { background:none; color:#1f2933; border-top:1px solid #1f2933; }
+  .preview-note { margin:8px 2px 0; font-size:12px; color:var(--muted); }
+
   /* ---- language menu ------------------------------------------------- */
   .lang { position:relative; }
   .lang > summary { display:flex; align-items:center; gap:8px; cursor:pointer; list-style:none;

@@ -949,6 +949,12 @@ test('the invoice appearance screen renders, saves, and previews a real PDF', as
   assert.match(html, /name="logo"/, 'there is nowhere to put a logo')
   assert.ok(!/undefined/.test(html), 'the screen rendered an undefined field')
 
+  // The preview is drawn on the page, showing the template that is saved —
+  // the point of it is choosing by looking rather than by downloading.
+  assert.match(html, /id="sheet"/, 'the screen shows no preview')
+  assert.match(html, /class="sheet tpl-classique"/, 'the preview ignores the saved template')
+  assert.match(html, /Établie avec CivicTrust/, 'the preview omits the mark the PDF carries')
+
   // Saving a choice, and reading it back on the invoices the person issues.
   const saved = await api.page('/panel/invoices/apparence', api.staff, {
     method: 'POST',
@@ -964,6 +970,11 @@ test('the invoice appearance screen renders, saves, and previews a real PDF', as
   assert.equal(stored.template, 'moderne')
   assert.equal(stored.accent, '#8a1f4b')
   assert.equal(stored.company_name, 'Atelier Nour')
+
+  // Re-opened, the preview shows what was just chosen.
+  const again = await (await api.page('/panel/invoices/apparence', api.staff)).text()
+  assert.match(again, /class="sheet tpl-moderne"/, 'the preview did not follow the saved template')
+  assert.match(again, /--accent:#8a1f4b/, 'the preview did not take the saved colour')
 
   // The preview is a PDF, not a page describing one.
   const preview = await api.page('/panel/invoices/apparence/apercu.pdf', api.staff)

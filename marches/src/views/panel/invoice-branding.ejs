@@ -82,6 +82,62 @@
 
     <div>
       <div class="card">
+        <h2><%- include('../partials/icon', { name: 'file-text', size: 15 }) %><%= t('branding.previewLive') %></h2>
+        <div class="preview">
+          <%#
+            A drawing of the invoice, kept in step with the controls as they are
+            touched. It is deliberately a specimen with the same blocks as the
+            PDF — header, recipient, consultation, table, totals, the mark — so
+            that choosing a template is a matter of looking at it.
+          %>
+          <div class="sheet tpl-<%= template %>" id="sheet" dir="ltr"
+               style="--accent:<%= accent %>">
+            <div class="sheet-band">
+              <div class="sheet-brand">
+                <img class="sheet-logo" id="pvLogo" alt=""
+                     <% if (b.logo_data) { %>src="data:<%= b.logo_mime %>;base64,<%= b.logo_data %>"<% } else { %>hidden<% } %>>
+                <div class="sheet-name" id="pvName" data-fallback="<%= t('branding.yourName') %>"><%= b.company_name || t('branding.yourName') %></div>
+                <div class="sheet-lines" id="pvLines"><%= [b.company_address, b.company_email, b.company_phone, b.company_ice ? 'ICE : ' + b.company_ice : ''].filter(Boolean).join('\n') %></div>
+              </div>
+              <div class="sheet-details">
+                <b>FACTURE</b>
+                <span>N° FA-2026-0042</span>
+                <span>Date d’émission : 2026-09-08</span>
+                <span>Échéance : 2026-10-08</span>
+              </div>
+            </div>
+
+            <div class="sheet-body">
+              <div class="sheet-to">
+                <b>Facturé à</b>
+                Commune Urbaine de Rabat
+                <span>ICE : 001122334455667</span>
+                <span>Avenue Mohammed V, Rabat</span>
+              </div>
+              <div class="sheet-ref">Consultation : 07/2026</div>
+              <table class="sheet-table">
+                <colgroup><col class="c-desc"><col class="c-qty"><col class="c-money"><col class="c-money"></colgroup>
+                <thead><tr><th>Désignation</th><th class="num">Qté</th><th class="num">P.U. HT</th><th class="num">Total HT</th></tr></thead>
+                <tbody>
+                  <tr><td>Fourniture et installation de matériel informatique</td><td class="num">12</td><td class="num">3.000,00</td><td class="num">36.000,00</td></tr>
+                  <tr><td>Maintenance et assistance technique</td><td class="num">6</td><td class="num">2.000,00</td><td class="num">12.000,00</td></tr>
+                </tbody>
+              </table>
+              <div class="sheet-totals">
+                <div><span>Total HT</span><span>48.000,00 MAD</span></div>
+                <div><span>TVA (20 %)</span><span>9.000,00 MAD</span></div>
+                <div class="sheet-total"><span>Total TTC</span><span>54.000,00 MAD</span></div>
+              </div>
+              <div class="sheet-notes" id="pvNote"><%= b.footer_note || '' %></div>
+            </div>
+
+            <div class="sheet-mark">Établie avec CivicTrust</div>
+          </div>
+          <p class="preview-note"><%= t('branding.previewLiveHint') %></p>
+        </div>
+      </div>
+
+      <div class="card">
         <h2><%- include('../partials/icon', { name: 'image', size: 15 }) %><%= t('branding.logo') %></h2>
         <% if (b.logo_data) { %>
           <div class="logo-now">
@@ -167,9 +223,51 @@
   var problem = document.getElementById('logoError')
   var accent = document.getElementById('accent')
   var accentValue = document.getElementById('accentValue')
+  var sheet = document.getElementById('sheet')
+  var form = document.getElementById('branding')
+
+  /* The preview follows the controls, so the template, the colour, the size,
+     the logo and the issuer's own lines are all seen before anything is
+     saved. It draws the same blocks the PDF does; the PDF button beside it
+     is what settles the question. */
+  var SIZES = { compact: 0.88, normal: 1, large: 1.12 }
+  var field = function (name) {
+    var input = form.elements[name]
+    return input && input.value ? input.value.trim() : ''
+  }
+
+  var refresh = function () {
+    if (!sheet) return
+    var template = (form.elements.template.value || 'classique')
+    sheet.className = 'sheet tpl-' + template
+    sheet.style.setProperty('--accent', accent ? accent.value : '#0b5394')
+    sheet.style.setProperty('--s', SIZES[form.elements.density.value] || 1)
+
+    var name = document.getElementById('pvName')
+    if (name) name.textContent = field('companyName') || name.dataset.fallback
+
+    var lines = document.getElementById('pvLines')
+    if (lines) {
+      var ice = field('companyIce')
+      lines.textContent = [field('companyAddress'), field('companyEmail'), field('companyPhone'),
+        ice ? 'ICE : ' + ice : ''].filter(Boolean).join('\n')
+    }
+
+    var note = document.getElementById('pvNote')
+    if (note) note.textContent = field('footerNote')
+
+    var logo = document.getElementById('pvLogo')
+    var scale = Number(field('logoScale')) || 1
+    if (logo) logo.style.maxHeight = 'calc(' + (19 * scale).toFixed(1) + 'px * var(--s))'
+  }
 
   if (accent && accentValue) {
     accent.addEventListener('input', function () { accentValue.textContent = accent.value })
+  }
+  if (form) {
+    form.addEventListener('input', refresh)
+    form.addEventListener('change', refresh)
+    refresh()
   }
   if (!file) return
 
@@ -188,7 +286,13 @@
     if (chosen.type !== 'image/png' && chosen.type !== 'image/jpeg') return fail(file.dataset.wrongType)
 
     var reader = new FileReader()
-    reader.onload = function () { data.value = String(reader.result) }
+    reader.onload = function () {
+      data.value = String(reader.result)
+      // Straight into the preview: a logo is the one setting whose effect
+      // cannot be guessed from its name.
+      var logo = document.getElementById('pvLogo')
+      if (logo) { logo.src = data.value; logo.hidden = false }
+    }
     reader.onerror = function () { fail(file.dataset.unreadable) }
     reader.readAsDataURL(chosen)
   })
