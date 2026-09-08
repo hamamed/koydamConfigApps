@@ -13,8 +13,6 @@ export default {
   'nav.favorites': 'المفضلة',
   'nav.administration': 'الإدارة',
   'nav.users': 'المستخدمون',
-  'nav.awards': 'النتائج',
-  'nav.insights': 'التحليلات',
   'nav.invoices': 'الفواتير',
   'nav.alerts': 'التنبيهات',
 
@@ -244,7 +242,6 @@ export default {
   'companies.badge.excluded': 'مُقصاة',
   'companies.badge.excludedHint': 'مدرجة في اللائحة الرسمية للشركات المُقصاة من الصفقات العمومية.',
   'companies.badge.nameOnly': 'الاسم فقط',
-  'nav.companies': 'الشركات',
 
   // ---- BTP qualification register ----
   'btp.title': 'التأهيل في البناء والأشغال العمومية (وزارة التجهيز)',

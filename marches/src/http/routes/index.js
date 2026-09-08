@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { consultationRoutes } from './consultations.js'
-import { resultRoutes } from './results.js'
 import { favoriteRoutes } from './favorites.js'
 import { invoiceRoutes } from './invoices.js'
 import { authRoutes } from './auth.js'
@@ -24,7 +23,6 @@ export function registerRoutes(app, container) {
 
   app.use('/api/auth', authRoutes(container))
   app.use('/api/consultations', consultationRoutes(container))
-  app.use('/api/results', resultRoutes(container))
   app.use('/api/favorites', favoriteRoutes(container))
   app.use('/api/invoices', invoiceRoutes(container))
   app.use('/api/export', exportRoutes(container))

@@ -137,3 +137,67 @@ test('the crawl stops at the end of the open window rather than at a page count'
   const { stats } = await crawler({ until: (row) => row.date_limite < '2026-11-03', maxPages: 5 })
   assert.equal(stats.pagesScraped, 1, 'stopped on the page that reached the boundary')
 })
+
+test('every screen the sidebar offers actually renders', async (t) => {
+  // The gap that let a 500 through: nothing opened a project page, so a route
+  // still asking for a price benchmark — deleted with the awards it was
+  // computed from — was only found by hand. A sidebar link that 500s is worse
+  // than one that is missing, so every one of them is opened here.
+  const { createApp } = await import('../src/app.js')
+  const { startTestServer } = await import('./helpers.js')
+  const jwt = (await import('jsonwebtoken')).default
+
+  const { container } = await crawler()
+  const server = await startTestServer(createApp(container))
+  t.after(() => server.close())
+
+  const token = jwt.sign(
+    { sub: '1', email: 'you@civictrust.ma', role: 'admin', name: 'You', svc: ['marches'] },
+    process.env.JWT_SECRET,
+    { expiresIn: '12h' },
+  )
+  const open = (path) =>
+    fetch(`${server.base}${path}`, { redirect: 'manual', headers: { cookie: `mp_token=${token}` } })
+
+  const html = await (await open('/panel')).text()
+  const nav = html.slice(html.indexOf('<nav>'), html.indexOf('</nav>'))
+  const links = [...nav.matchAll(/<a href="([^"]+)"/g)].map((m) => m[1])
+  assert.ok(links.length >= 8, 'the sidebar has items')
+
+  const row = await container.db.get('SELECT id FROM consultations LIMIT 1')
+  for (const path of [...links, `/panel/consultations/${row.id}`]) {
+    const response = await open(path)
+    assert.ok(response.status < 400, `${path} answered ${response.status}`)
+  }
+})
+
+test('the screens with nothing behind them on this portal are gone', async (t) => {
+  const { createApp } = await import('../src/app.js')
+  const { startTestServer } = await import('./helpers.js')
+  const jwt = (await import('jsonwebtoken')).default
+
+  const { container } = await crawler()
+  const server = await startTestServer(createApp(container))
+  t.after(() => server.close())
+
+  const token = jwt.sign(
+    { sub: '1', email: 'you@civictrust.ma', role: 'admin', svc: ['marches'] },
+    process.env.JWT_SECRET,
+    { expiresIn: '12h' },
+  )
+
+  // An appel d'offres publishes no article breakdown on its consultation page —
+  // the lots are inside the downloadable dossier — and its award appears later
+  // as a separate résultat définitif notice nothing here crawls. Every screen
+  // built on either could only ever render zeroes.
+  for (const path of ['/panel/awards', '/panel/insights', '/panel/companies']) {
+    const response = await fetch(`${server.base}${path}`, {
+      redirect: 'manual',
+      headers: { cookie: `mp_token=${token}` },
+    })
+    assert.equal(response.status, 404, `${path} is gone, not empty`)
+  }
+
+  const nav = (await (await fetch(`${server.base}/panel`, { headers: { cookie: `mp_token=${token}` } })).text())
+  assert.doesNotMatch(nav, /\/panel\/(awards|insights|companies)"/, 'and the sidebar does not offer them')
+})

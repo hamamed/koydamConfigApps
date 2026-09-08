@@ -4,11 +4,6 @@
 
 <div class="grid" style="margin-bottom:18px">
   <div class="stat"><b class="ltr"><%= dashboard.counts.consultations %></b><span><%- include('../partials/icon', { name: 'file-text', size: 13 }) %><%= t('stats.consultations') %></span></div>
-  <div class="stat"><b class="ltr"><%= dashboard.counts.articles %></b><span><%- include('../partials/icon', { name: 'package', size: 13 }) %><%= t('stats.articles') %></span></div>
-  <div class="stat"><b class="ltr"><%= dashboard.counts.results %></b><span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('stats.results') %></span></div>
-  <div class="stat"><b class="ltr"><%= dashboard.matchRate === null ? '—' : dashboard.matchRate + ' %' %></b><span><%- include('../partials/icon', { name: 'link', size: 13 }) %><%= t('stats.matchRate') %></span></div>
-  <div class="stat"><b class="ltr"><%= dashboard.counts.unmatchedResults %></b><span><%= t('stats.unmatched') %></span></div>
-  <div class="stat"><b class="ltr"><%= dashboard.counts.ambiguousResults %></b><span><%= t('stats.ambiguous') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.cancelled %></b><span><%= t('stats.cancelled') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.documents %></b><span><%= t('stats.documents') %></span></div>
   <div class="stat"><b class="ltr"><%= dashboard.counts.pendingDetails %></b><span><%= t('stats.pendingDetails') %></span></div>
@@ -62,7 +57,6 @@
       <select id="source" name="source">
         <option value="all"><%= t('scrape.source.all') %></option>
         <option value="consultations"><%= t('scrape.source.consultations') %></option>
-        <option value="results"><%= t('scrape.source.results') %></option>
       </select>
     </div>
     <div><label for="maxPages"><%= t('scrape.maxPages') %></label><input id="maxPages" name="maxPages" type="number" min="1" max="500" value="5" dir="ltr"></div>

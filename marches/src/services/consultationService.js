@@ -6,12 +6,7 @@ import { NotFoundError } from '../utils/errors.js'
  * already joined to its award (when one has been published), which is the whole
  * point of the reference-based matching.
  */
-export function createConsultationService({ consultations, articles, documents, results, favorites, matcher = null }) {
-  // Awards on the appel d'offres portal are published as "résultats définitifs"
-  // and "avis d'attribution" — separate pages this crawler does not read yet.
-  // Until it does, a consultation simply has no award attached rather than the
-  // lookup throwing; the matcher stays an optional collaborator.
-  const findResultFor = async (id) => (matcher ? matcher.findResultFor(id) : null)
+export function createConsultationService({ consultations, documents, favorites }) {
   /**
    * @param {object} filters canonical filters from http/filters.js
    * @param {{limit:number, offset:number, sort?:string}} pagination
@@ -39,24 +34,25 @@ export function createConsultationService({ consultations, articles, documents, 
   }
 
   /**
-   * Full detail: header, article breakdown and the matched award.
-   * Addressed by id — a reference is not unique across buyers.
+   * Full detail: the header and the published attachments.
+   *
+   * No article breakdown and no award. The appel d'offres portal publishes
+   * neither on a consultation page: the lots live inside the downloadable
+   * dossier, and an award appears later as a separate "résultat définitif"
+   * notice this service does not crawl. Loading them meant two queries per
+   * page that could only ever return nothing.
    */
   async function getById(id, userId = null) {
     const consultation = await consultations.findById(id)
     if (!consultation) throw new NotFoundError(`Consultation ${id}`)
 
-    const [rows, files, result, favorite] = await Promise.all([
-      articles.findByConsultationId(consultation.id),
+    const [files, favorite] = await Promise.all([
       documents.findByConsultationId(consultation.id),
-      findResultFor(consultation.id),
       userId ? favorites.find(userId, consultation.id) : Promise.resolve(null),
     ])
 
     return serializeConsultation(consultation, {
-      articles: rows,
       documents: files,
-      result,
       ...(userId ? { isFavorite: Boolean(favorite) } : {}),
     })
   }
@@ -69,37 +65,5 @@ export function createConsultationService({ consultations, articles, documents, 
     return serializeRows(await consultations.findByReference(reference))
   }
 
-  /** Article rows of a consultation — the input to the invoice generator. */
-  async function listArticles(id) {
-    const consultation = await consultations.findById(id)
-    if (!consultation) throw new NotFoundError(`Consultation ${id}`)
-    return serializeRows(await articles.findByConsultationId(consultation.id))
-  }
-
-  async function searchResults(filters, pagination) {
-    const { rows, total } = await results.search(filters, pagination)
-    return { data: serializeRows(rows), total }
-  }
-
-  async function getResultForConsultation(consultationId) {
-    const result = await findResultFor(consultationId)
-    if (!result) throw new NotFoundError(`Result for consultation ${consultationId}`)
-    return { ...serializeRow(result), lots: serializeRows(result.lots) }
-  }
-
-  async function getResultById(id) {
-    const result = await results.findById(id)
-    if (!result) throw new NotFoundError(`Result ${id}`)
-    return { ...serializeRow(result), lots: serializeRows(await results.findLots(id)) }
-  }
-
-  return {
-    search,
-    getById,
-    findByReference,
-    listArticles,
-    searchResults,
-    getResultForConsultation,
-    getResultById,
-  }
+  return { search, getById, findByReference }
 }

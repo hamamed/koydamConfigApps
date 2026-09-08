@@ -98,28 +98,5 @@
 
 <%# Results for what this user follows: the answer to the question they were
     watching an avis for. %>
-<% if (today.settled.length > 0) { %>
-  <div class="card" style="padding-bottom:8px">
-    <h2><%- include('../partials/icon', { name: 'award', size: 15 }) %><%= t('today.settled') %></h2>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th><%= t('table.reference') %></th><th><%= t('table.objet') %></th>
-          <th><%= t('awards.winner') %></th><th><%= t('awards.amount') %></th>
-        </tr></thead>
-        <tbody>
-          <% today.settled.forEach(function (row) { %>
-            <tr>
-              <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
-              <td style="max-width:260px"><%= row.objet || '—' %></td>
-              <td><%= row.result.attributaire || '—' %></td>
-              <td class="ltr"><%= row.result.montant_attribue === null ? '—' : row.result.montant_attribue %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-<% } %>
 
 <%- include('../partials/shell-close') %>

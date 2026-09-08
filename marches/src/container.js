@@ -2,9 +2,7 @@ import { APP_VERSION } from './config/index.js'
 import { serializeRows } from './services/serializers.js'
 import { getDb } from './db/index.js'
 import { createConsultationRepository } from './repositories/consultationRepository.js'
-import { createArticleRepository } from './repositories/articleRepository.js'
 import { createDocumentRepository } from './repositories/documentRepository.js'
-import { createResultRepository } from './repositories/resultRepository.js'
 import { createFavoriteRepository } from './repositories/favoriteRepository.js'
 import { createInvoiceRepository } from './repositories/invoiceRepository.js'
 import { createUserRepository } from './repositories/userRepository.js'
@@ -33,13 +31,12 @@ import { createTranslator } from './translation/translator.js'
 import { createMailer } from './notifications/mailer.js'
 import { createSystemInspector } from './system/inspector.js'
 import { createPublicService } from './services/publicService.js'
-import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
-import { createAccessRequestService } from './services/accessRequestService.js'
 import { createCompanyRecordRepository } from './repositories/companyRecordRepository.js'
+import { createAccessRequestRepository } from './repositories/accessRequestRepository.js'
+import { createCompanyRecordService } from './services/companyRecordService.js'
+import { createAccessRequestService } from './services/accessRequestService.js'
 import { createExclusionRepository } from './repositories/exclusionRepository.js'
 import { createBtpRepository } from './repositories/btpRepository.js'
-import { createCompanyRecordService } from './services/companyRecordService.js'
-import { createCompanyDirectoryService } from './services/companyDirectoryService.js'
 import { createTodayService } from './services/todayService.js'
 import { createCompanyLookup } from './enrichment/openCorporates.js'
 
@@ -53,9 +50,7 @@ export function createContainer(db = getDb(), options = {}) {
   const { http, mailer: injectedMailer, translator } = options
   const repositories = {
     consultations: createConsultationRepository(db),
-    articles: createArticleRepository(db),
     documents: createDocumentRepository(db),
-    results: createResultRepository(db),
     favorites: createFavoriteRepository(db),
     invoices: createInvoiceRepository(db),
     users: createUserRepository(db),
@@ -67,8 +62,8 @@ export function createContainer(db = getDb(), options = {}) {
     passwordResets: createPasswordResetRepository(db),
     translations: createTranslationRepository(db),
     accessRequests: createAccessRequestRepository(db),
-    companyRecords: createCompanyRecordRepository(db),
     exclusions: createExclusionRepository(db),
+    companyRecords: createCompanyRecordRepository(db),
     btp: createBtpRepository(db),
   }
 
@@ -131,9 +126,8 @@ export function createContainer(db = getDb(), options = {}) {
       countAll: () => repositories.exclusions.countAll(),
       countActive: () => repositories.exclusions.countActive(),
     },
-    accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
     companyRecords: createCompanyRecordService({ ...repositories, companyLookup }),
-    companyDirectory: createCompanyDirectoryService(repositories),
+    accessRequests: createAccessRequestService({ ...repositories, auth, mailer, settings }),
   }
   services.today = createTodayService({
     consultations: services.consultations,

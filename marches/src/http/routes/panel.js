@@ -173,28 +173,7 @@ export function panelRoutes({ services }) {
       const favorite = consultation.isFavorite
         ? await services.favorites.find(req.user.id, consultation.id)
         : null
-      res.render('panel/consultation', await shell(req, {
-        active: 'projects',
-        consultation,
-        favorite,
-        benchmark: await services.analytics.benchmark(consultation),
-        precedents: await services.analytics.precedents(consultation),
-        canTranslate: await services.translation.isConfigured(),
-      }))
-    }),
-  )
-
-  router.get(
-    '/panel/awards',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      const filters = parseFilters(req.query)
-      const pagination = parsePagination(req.query)
-      const { data, total } = await services.consultations.searchResults(filters, {
-        ...pagination,
-        sort: req.query.sort,
-      })
-      res.render('panel/awards', await shell(req, { active: 'awards', rows: data, total, pagination, query: req.query }))
+      res.render('panel/consultation', await shell(req, { active: 'projects', consultation, favorite }))
     }),
   )
 
@@ -282,19 +261,6 @@ export function panelRoutes({ services }) {
           error: [error.message, ...(error.details ?? [])].join(' — '),
         }))
       }
-    }),
-  )
-
-  router.get(
-    '/panel/insights',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      const filters = parseFilters(req.query)
-      res.render('panel/insights', await shell(req, {
-        active: 'insights',
-        insights: await services.analytics.overview(filters),
-        query: req.query,
-      }))
     }),
   )
 
@@ -449,100 +415,14 @@ export function panelRoutes({ services }) {
    * Administrator-only: it exists to review the coverage of the identity
    * registers, which is an operational question rather than a bidder's one.
    */
-  router.get(
-    '/panel/companies',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      const directory = await services.companyDirectory.list({
-        q: typeof req.query.q === 'string' ? req.query.q : '',
-        filter: typeof req.query.filter === 'string' ? req.query.filter : '',
-        city: typeof req.query.city === 'string' ? req.query.city : '',
-        page: Number.parseInt(req.query.page, 10) || 1,
-      })
-      res.render('panel/companies', await shell(req, {
-        active: 'companies',
-        ...directory,
-        query: req.query,
-        filters: { q: req.query.q ?? '', filter: req.query.filter ?? '', city: req.query.city ?? '' },
-      }))
-    }),
-  )
 
   /** One company's record — the award side of a buyer profile. */
-  router.get(
-    '/panel/companies/:name',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      const name = decodeURIComponent(req.params.name)
-      const company = await services.analytics.company(name, services.consultations)
-      if (company.awards === 0) throw new NotFoundError(`Company ${name}`)
-      res.render('panel/company', await shell(req, {
-        active: 'awards',
-        company,
-        record: await services.companyRecords.find(name),
-        exclusions: await services.companyRecords.exclusionsFor(name),
-      qualifications: await services.companyRecords.qualificationsFor(name),
-        qualifications: await services.companyRecords.qualificationsFor(name),
-        canLookup: await services.companyRecords.lookupConfigured(),
-        candidates: null,
-        notice: null,
-        error: null,
-      }))
-    }),
-  )
 
   /**
    * Recording what is known about a company, and asking the public register
    * for candidates. Both are administrator actions: the register is matched by
    * name alone, so a match is a proposal for a person to accept, never a write.
    */
-  const companyScreen = async (req, extra) => {
-    const name = decodeURIComponent(req.params.name)
-    return {
-      active: 'awards',
-      company: await services.analytics.company(name, services.consultations),
-      record: await services.companyRecords.find(name),
-      exclusions: await services.companyRecords.exclusionsFor(name),
-      qualifications: await services.companyRecords.qualificationsFor(name),
-      canLookup: await services.companyRecords.lookupConfigured(),
-      candidates: null,
-      notice: null,
-      error: null,
-      ...extra,
-    }
-  }
-
-  router.post(
-    '/panel/companies/:name/record',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      const name = decodeURIComponent(req.params.name)
-      let extra = {}
-      try {
-        await services.companyRecords.save(name, req.body, req.user)
-        extra = { notice: translator(req.locale)('registry.saved') }
-      } catch (error) {
-        extra = { error: error.message }
-      }
-      res.status(extra.error ? 400 : 200).render('panel/company', await shell(req, await companyScreen(req, extra)))
-    }),
-  )
-
-  router.post(
-    '/panel/companies/:name/lookup',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      const name = decodeURIComponent(req.params.name)
-      const result = await services.companyRecords.lookup(name)
-      res.render('panel/company', await shell(req, await companyScreen(req, {
-        candidates: result.candidates,
-        error: result.error,
-        notice: result.configured ? null : translator(req.locale)('registry.notConfigured'),
-      })))
-    }),
-  )
-
-  /** The official exclusion list as a browsable table. */
   router.get(
     '/panel/exclusions',
     anyUser,

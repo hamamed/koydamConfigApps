@@ -426,8 +426,9 @@ test('CSV export is safe to open in a spreadsheet', async (t) => {
   const body = await response.text()
   assert.match(body.split('\r\n')[0], /Référence,Objet,Acheteur/)
 
-  const awards = await fetch(`${api.base}/api/export/awards.csv`, { headers: { cookie: api.staff } })
-  assert.match((await awards.text()).split('\r\n')[0], /Attributaire/)
+  // No awards export: this portal publishes an award as a separate resultat
+  // definitif notice that nothing here crawls, so the file would have had a
+  // header row and nothing under it.
 })
 
 test('the canary flags a schedule that has stopped firing', async (t) => {
@@ -459,30 +460,6 @@ test('settings fields are laid out two to a row', async (t) => {
   // a time and the values here are long.
   assert.match(html, /\.cols-2 \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
   assert.match(html, /@media \(max-width: 720px\) \{ \.cols-2 \{ grid-template-columns:1fr/, 'one column on a phone')
-})
-
-test('categories are counted where the data actually is', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  // The awards listing publishes no category — zero of ten thousand rows on the
-  // live box carry one — so ranking awards by category showed an empty table.
-  // Consultations do carry it, and it is the more useful question anyway.
-  const awardsWithCategory = await api.container.db.get(
-    "SELECT COUNT(*) AS total FROM consultation_results WHERE categorie IS NOT NULL AND categorie <> ''",
-  )
-  assert.equal(Number(awardsWithCategory.total), 0, 'the portal gives awards no category')
-
-  const { categories } = await api.container.services.analytics.overview({})
-  assert.ok(categories.length > 0, 'but the ranking is not empty')
-  assert.ok(categories.every((row) => row.label && row.projects > 0))
-  assert.ok(categories.every((row) => row.openProjects <= row.projects))
-
-  const stored = await api.container.db.get(
-    'SELECT COUNT(*) AS total FROM consultations WHERE categorie = ?',
-    [categories[0].label],
-  )
-  assert.equal(categories[0].projects, Number(stored.total))
 })
 
 test('the translator talks to Google the way its API expects', async () => {
@@ -665,8 +642,6 @@ test('every sidebar item has its own icon, and it means what the item does', asy
   // And the two that were swapped are the right way round: the trophy belongs
   // to Results, not to the analysis screen.
   const byHref = Object.fromEntries(items.map((item) => [item.href, item.paths]))
-  assert.match(byHref['/panel/awards'], /circle cx="12" cy="8" r="6"/, 'Results carries the medal')
-  assert.match(byHref['/panel/insights'], /rect x="7" y="13"/, 'Insights carries the bar chart')
 })
 
 test('the language picker is a menu listing every language by name', async (t) => {
@@ -775,10 +750,10 @@ test('the sign-in form is the portal’s, and old links still reach it', async (
   // This service holds no sign-in form any more; the portal is the account
   // authority for every CivicTrust service. /login stays as a forward rather
   // than a 404, because every `next=` this panel ever issued points at it.
-  const get = await fetch(`${api.base}/login?next=/panel/awards`, { redirect: 'manual' })
+  const get = await fetch(`${api.base}/login?next=/panel/favorites`, { redirect: 'manual' })
   assert.equal(get.status, 302)
   assert.match(get.headers.get('location'), /\/login\?next=/, 'forwarded to a sign-in form')
-  assert.match(decodeURIComponent(get.headers.get('location')), /\/panel\/awards$/, 'carrying where to come back to')
+  assert.match(decodeURIComponent(get.headers.get('location')), /\/panel\/favorites$/, 'carrying where to come back to')
 
   // And a form posted here goes the same way rather than checking a password
   // this service no longer owns.

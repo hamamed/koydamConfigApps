@@ -9,19 +9,15 @@ const log = logger.child('[admin]')
  * Admin-panel operations: dashboard counters, manual scrape triggers and CRUD
  * over the scraped records.
  */
-export function createAdminService({ consultations, articles, documents, results, invoices, users, jobs, runner, settings, health }) {
+export function createAdminService({ consultations, documents, invoices, users, jobs, runner, settings, health }) {
   /** Counters and recent activity for the dashboard. */
   async function dashboard() {
     const [
       consultationCount,
-      articleCount,
       documentCount,
-      resultCount,
       invoiceCount,
       userCount,
       cancelled,
-      unmatched,
-      ambiguous,
       pendingDetails,
       recentJobs,
       lastRun,
@@ -29,14 +25,10 @@ export function createAdminService({ consultations, articles, documents, results
       sinceDays,
     ] = await Promise.all([
       consultations.countAll(),
-      articles.countAll(),
       documents.countAll(),
-      results.countAll(),
       invoices.countAll(),
       users.countAll(),
       consultations.countCancelled(),
-      results.countUnmatched(),
-      results.countAmbiguous(),
       consultations.countPendingDetails(),
       jobs.listRecent(10),
       jobs.lastFinished(),
@@ -47,20 +39,15 @@ export function createAdminService({ consultations, articles, documents, results
     return {
       counts: {
         consultations: consultationCount,
-        articles: articleCount,
-        results: resultCount,
         invoices: invoiceCount,
         users: userCount,
         documents: documentCount,
         cancelled,
-        unmatchedResults: unmatched,
-        ambiguousResults: ambiguous,
         pendingDetails,
       },
       health: await health.check(),
       lastRun: describeRun(lastRun),
       schedule: { runAt, sinceDays, nextRunAt: nextRunAfter(runAt) },
-      matchRate: resultCount > 0 ? Number((((resultCount - unmatched) / resultCount) * 100).toFixed(1)) : null,
       recentJobs: serializeRows(recentJobs),
       runningJob: (await jobs.findRunning()) ?? null,
     }
@@ -68,7 +55,7 @@ export function createAdminService({ consultations, articles, documents, results
 
   /**
    * The last finished crawl, flattened for the dashboard: when it ran, how long
-   * it took, and how many projects and awards it actually brought in.
+   * it took, and how many marchés it actually brought in.
    */
   function describeRun(job) {
     if (!job) return null
@@ -152,29 +139,24 @@ export function createAdminService({ consultations, articles, documents, results
     return { id, deleted: true }
   }
 
-  async function updateResult(id, patch) {
-    const existing = await results.findById(id)
-    if (!existing) throw new NotFoundError(`Result ${id}`)
-    const allowed = pick(patch, [
-      'objet', 'acheteur', 'attributaire', 'attributaire_ice',
-      'montant_attribue_cents', 'date_attribution', 'result_status',
-    ])
-    return serializeRow(await results.update(id, allowed))
-  }
 
-  async function deleteResult(id) {
-    const existing = await results.findById(id)
-    if (!existing) throw new NotFoundError(`Result ${id}`)
-    await results.remove(id)
-    return { id, deleted: true }
-  }
 
-  /** Re-crawls a single consultation's detail page to refresh its articles. */
+  /**
+   * Re-reads one consultation's detail page.
+   *
+   * The estimate is what it is there for: it is the only field the listing does
+   * not carry, and the one the article 44 calculation is computed from.
+   */
   async function refreshConsultationDetail(id) {
     const consultation = await consultations.findById(id)
     if (!consultation) throw new NotFoundError(`Consultation ${id}`)
-    const { articles: stored } = await runner.consultationScraper.scrapeDetail(consultation)
-    return { id: consultation.id, reference: consultation.reference, articles: serializeRows(stored) }
+    await runner.marcheScraper.scrapeDetail([consultation], {}, { detailsFetched: 0, estimatesFound: 0, errors: [] })
+    const refreshed = await consultations.findById(id)
+    return {
+      id: refreshed.id,
+      reference: refreshed.reference,
+      estimation_cents: refreshed.estimation_cents,
+    }
   }
 
   /**
@@ -206,8 +188,6 @@ export function createAdminService({ consultations, articles, documents, results
     listJobs,
     updateConsultation,
     deleteConsultation,
-    updateResult,
-    deleteResult,
     refreshConsultationDetail,
   }
 }

@@ -57,45 +57,6 @@ export function consultationRoutes({ services }) {
   )
 
   /** Article breakdown — the selectable input of the invoice generator. */
-  router.get(
-    '/:id/articles',
-    asyncHandler(async (req, res) => {
-      res.json(ok(await services.consultations.listArticles(Number(req.params.id))))
-    }),
-  )
-
-  /** The award linked to this consultation, if one has been published. */
-  router.get(
-    '/:id/result',
-    asyncHandler(async (req, res) => {
-      res.json(ok(await services.consultations.getResultForConsultation(Number(req.params.id))))
-    }),
-  )
-
-  /**
-   * What comparable work has been awarded for. Public alongside the avis it
-   * describes: it is derived entirely from results the portal already publishes.
-   */
-  router.get(
-    '/:id/benchmark',
-    asyncHandler(async (req, res) => {
-      const consultation = await services.consultations.getById(Number(req.params.id))
-      res.json(ok(await services.analytics.benchmark(consultation)))
-    }),
-  )
-
-  /**
-   * Translates this avis's articles into the requested language, cached.
-   * Signed in only: it spends money per uncached article.
-   */
-  router.post(
-    '/:id/translate',
-    requireAuth(services.auth),
-    asyncHandler(async (req, res) => {
-      const locale = req.body.locale ?? req.locale
-      res.json(ok(await services.translation.translateConsultation(Number(req.params.id), locale)))
-    }),
-  )
 
   return router
 }

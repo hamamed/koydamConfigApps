@@ -13,8 +13,6 @@ export default {
   'nav.favorites': 'Favorites',
   'nav.administration': 'Administration',
   'nav.users': 'Users',
-  'nav.awards': 'Awards',
-  'nav.insights': 'Insights',
   'nav.invoices': 'Invoices',
   'nav.alerts': 'Alerts',
 
@@ -244,7 +242,6 @@ export default {
   'companies.badge.excluded': 'Excluded',
   'companies.badge.excludedHint': 'On the official list of companies excluded from public procurement.',
   'companies.badge.nameOnly': 'Name only',
-  'nav.companies': 'Companies',
 
   // ---- BTP qualification register ----
   'btp.title': 'BTP qualification (Ministry of Equipment)',

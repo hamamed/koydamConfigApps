@@ -116,23 +116,6 @@ export function publicRoutes({ services }) {
     }),
   )
 
-  router.get(
-    '/awards',
-    publicData,
-    withUser,
-    asyncHandler(async (req, res) => {
-      const filters = parseFilters(req.query)
-      const pagination = parsePagination(req.query)
-      const { data, total } = await services.consultations.searchResults(filters, {
-        ...pagination,
-        sort: req.query.sort,
-      })
-      res.render('public/awards', {
-        ...(await shell(req)),
-        rows: data, total, pagination, query: req.query,
-      })
-    }),
-  )
 
   router.get(
     '/buyers/:name',
@@ -141,22 +124,11 @@ export function publicRoutes({ services }) {
     asyncHandler(async (req, res) => {
       const name = decodeURIComponent(req.params.name)
       const buyer = await services.analytics.buyer(name, services.consultations)
-      if (buyer.avis.total === 0 && buyer.awards.total === 0) throw new NotFoundError(`Buyer ${name}`)
+      if (buyer.avis.total === 0) throw new NotFoundError(`Buyer ${name}`)
       res.render('public/profile', { ...(await shell(req)), profile: publicBuyer(buyer), kind: 'buyer' })
     }),
   )
 
-  router.get(
-    '/companies/:name',
-    publicData,
-    withUser,
-    asyncHandler(async (req, res) => {
-      const name = decodeURIComponent(req.params.name)
-      const company = await services.analytics.company(name, services.consultations)
-      if (company.awards === 0) throw new NotFoundError(`Company ${name}`)
-      res.render('public/profile', { ...(await shell(req)), profile: publicCompany(company), kind: 'company' })
-    }),
-  )
 
   router.get(
     '/data',
@@ -185,11 +157,6 @@ export function publicRoutes({ services }) {
     )
 
   csv(
-    'awards',
-    (filters) => services.consultations.searchResults(filters, { limit: EXPORT_LIMIT, offset: 0 }),
-    PUBLIC_AWARD_COLUMNS,
-  )
-  csv(
     'notices',
     (filters) => services.consultations.search(filters, { limit: EXPORT_LIMIT, offset: 0 }),
     PUBLIC_NOTICE_COLUMNS,
@@ -211,7 +178,6 @@ export function publicRoutes({ services }) {
         'Allow: /request-access',
         'Allow: /status',
         'Allow: /data',
-        'Allow: /awards',
         'Allow: /buyers',
         'Allow: /companies',
         'Disallow: /panel',
@@ -230,7 +196,7 @@ export function publicRoutes({ services }) {
   /** Four public pages in three languages. Small enough to build per request. */
   router.get('/sitemap.xml', (req, res) => {
     const base = baseUrl(req)
-    const urls = ['', '/guide', '/privacy', '/terms', '/request-access', '/status', '/data', '/awards'].flatMap((path) =>
+    const urls = ['', '/guide', '/privacy', '/terms', '/request-access', '/status', '/data'].flatMap((path) =>
       ['fr', 'en', 'ar'].map((lang) => `${base}${path || '/'}?lang=${lang}`),
     )
     res.type('application/xml').send(
@@ -283,7 +249,14 @@ const PUBLIC_NOTICE_COLUMNS = [
   { key: 'source_url', label: 'Source' },
 ]
 
-/** The buyer profile, reduced to the shape the shared public view renders. */
+/**
+ * The buyer profile, reduced to the shape the shared public view renders.
+ *
+ * Avis only. Everything this used to add — what a buyer's markets settle at,
+ * how many bids they draw, which suppliers keep winning them — was read from
+ * awards, and this portal publishes an award as a separate résultat définitif
+ * notice that nothing here crawls. Those rows would each have been a dash.
+ */
 const publicBuyer = (buyer) => ({
   name: buyer.name,
   since: buyer.avis.firstSeen,
@@ -291,36 +264,7 @@ const publicBuyer = (buyer) => ({
     { label: 'buyer.avis', value: buyer.avis.total },
     { label: 'buyer.open', value: buyer.avis.open },
     { label: 'buyer.cancelled', value: buyer.cancellationRate === null ? '—' : `${buyer.cancellationRate} %` },
-    { label: 'buyer.awards', value: buyer.awards.total },
-    { label: 'buyer.median', value: buyer.awards.median ?? '—' },
-    { label: 'buyer.bids', value: buyer.awards.avgBids ?? '—' },
-    { label: 'buyer.unsuccessful', value: buyer.unsuccessfulRate === null ? '—' : `${buyer.unsuccessfulRate} %` },
-    { label: 'buyer.suppliers', value: buyer.awards.winners },
   ],
-  relatedTitle: 'buyer.topWinners',
-  relatedLabel: 'insights.company',
-  relatedPath: '/companies',
-  related: buyer.winners,
   note: 'buyer.note',
-  awards: buyer.recentAwards,
 })
 
-const publicCompany = (company) => ({
-  name: company.name,
-  since: company.firstSeen,
-  stats: [
-    { label: 'company.awards', value: company.awards },
-    { label: 'company.buyers', value: company.buyers },
-    { label: 'company.total', value: company.totalAmount ?? '—' },
-    { label: 'company.median', value: company.median ?? '—' },
-    { label: 'company.smallest', value: company.min ?? '—' },
-    { label: 'company.largest', value: company.max ?? '—' },
-    { label: 'company.bids', value: company.avgBids ?? '—' },
-  ],
-  relatedTitle: 'company.topBuyers',
-  relatedLabel: 'insights.buyer',
-  relatedPath: '/buyers',
-  related: company.topBuyers,
-  note: 'company.note',
-  awards: company.recentAwards,
-})

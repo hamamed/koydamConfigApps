@@ -5,19 +5,17 @@
  * the database no longer has is worse than one that claims none, and these are
  * four COUNT(*)s against indexed tables.
  */
-export function createPublicService({ consultations, articles, results, analytics, jobs }) {
+export function createPublicService({ consultations, analytics, jobs }) {
   async function stats() {
-    const [avis, lines, awards, summary] = await Promise.all([
-      consultations.countAll(),
-      articles.countAll(),
-      results.countAll(),
-      analytics.summary({}),
-    ])
+    // Consultations and the buyers publishing them. The article and award
+    // counters that used to sit here were removed with the screens behind them:
+    // this portal publishes no article breakdown, and an award arrives later as
+    // a separate résultat définitif notice nothing here crawls, so both would
+    // have read zero on a page whose whole job is to state a real scale.
+    const [avis, summary] = await Promise.all([consultations.countAll(), analytics.summary({})])
 
     return [
       { label: 'public.stats.avis', value: format(avis) },
-      { label: 'public.stats.articles', value: format(lines) },
-      { label: 'public.stats.awards', value: format(awards) },
       { label: 'public.stats.buyers', value: format(summary.buyers) },
     ]
   }

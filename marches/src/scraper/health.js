@@ -27,7 +27,7 @@ const YIELD_DROP_RATIO = 0.4
 const FIELD_FILL_FLOOR = 0.8
 const BACKLOG_CEILING = 500
 
-export function createHealthService({ consultations, results, jobs, db }) {
+export function createHealthService({ consultations, jobs, db }) {
   /**
    * @returns {Promise<{severity: string, checks: Array<{id, severity, detail}>}>}
    */
@@ -73,7 +73,11 @@ export function createHealthService({ consultations, results, jobs, db }) {
     for (const [id, sql] of [
       ['fieldAcheteur', 'SELECT COUNT(*) AS total, SUM(CASE WHEN acheteur IS NULL THEN 1 ELSE 0 END) AS missing FROM consultations'],
       ['fieldDeadline', 'SELECT COUNT(*) AS total, SUM(CASE WHEN date_limite IS NULL THEN 1 ELSE 0 END) AS missing FROM consultations'],
-      ['fieldWinner', "SELECT COUNT(*) AS total, SUM(CASE WHEN attributaire IS NULL AND result_status = 'attribue' THEN 1 ELSE 0 END) AS missing FROM consultation_results"],
+      // The estimate is the field worth watching on this portal: it is the
+      // only one the listing does not carry, it comes from a second request per
+      // consultation, and everything the reference price computes is built on
+      // it. If it stops arriving, the detail parser has moved.
+      ['fieldEstimation', 'SELECT COUNT(*) AS total, SUM(CASE WHEN estimation_cents IS NULL THEN 1 ELSE 0 END) AS missing FROM consultations WHERE detail_scraped_at IS NOT NULL'],
     ]) {
       const row = await db.get(sql)
       const total = Number(row.total)
@@ -102,7 +106,7 @@ export function createHealthService({ consultations, results, jobs, db }) {
     if (severity !== SEVERITY.OK) {
       log.warn('crawler health degraded', { severity, problems: checks.filter((c) => c.severity !== SEVERITY.OK) })
     }
-    return { severity, checks, unmatchedResults: await results.countUnmatched() }
+    return { severity, checks }
   }
 
   return { check }

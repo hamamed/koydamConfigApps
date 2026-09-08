@@ -13,8 +13,6 @@ export default {
   'nav.favorites': 'Favoris',
   'nav.administration': 'Administration',
   'nav.users': 'Utilisateurs',
-  'nav.awards': 'Résultats',
-  'nav.insights': 'Analyses',
   'nav.invoices': 'Factures',
   'nav.alerts': 'Alertes',
 
@@ -244,7 +242,6 @@ export default {
   'companies.badge.excluded': 'Exclue',
   'companies.badge.excludedHint': 'Figure sur la liste officielle des sociétés exclues des marchés publics.',
   'companies.badge.nameOnly': 'Nom seul',
-  'nav.companies': 'Entreprises',
 
   // ---- BTP qualification register ----
   'btp.title': 'Qualification BTP (ministère de l’Équipement)',

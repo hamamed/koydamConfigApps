@@ -76,17 +76,6 @@ export function exportRoutes({ services }) {
     }),
   )
 
-  router.get(
-    '/awards.csv',
-    asyncHandler(async (req, res) => {
-      const { data } = await services.consultations.searchResults(parseFilters(req.query), {
-        limit: MAX_ROWS,
-        offset: 0,
-        sort: req.query.sort,
-      })
-      send(res, 'resultats', RESULT_COLUMNS, data)
-    }),
-  )
 
   router.get(
     '/favorites.csv',
