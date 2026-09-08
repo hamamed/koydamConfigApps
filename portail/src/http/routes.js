@@ -21,9 +21,25 @@ export function registerRoutes(app, { services }) {
   app.get('/health', (_req, res) => res.json({ success: true, data: { status: 'ok', uptime: process.uptime() }, error: null }))
 
   /** Reads the shared session without demanding one. */
+  /**
+   * The session token: the cookie a browser sends, or a bearer credential.
+   *
+   * The bearer form is not decoration. The administration console reads the
+   * accounts from here on an administrator's behalf, server to server, where
+   * there is no cookie jar — it forwards the person's own token as a header,
+   * exactly as it does to bdc and marches. Reading only the cookie made that
+   * call arrive as an anonymous one and the accounts screen render empty with
+   * "Not signed in" above it.
+   */
+  const tokenOf = (req) => {
+    const header = req.headers.authorization ?? ''
+    if (header.startsWith('Bearer ')) return header.slice('Bearer '.length).trim()
+    return req.cookies?.[config.auth.cookieName] ?? null
+  }
+
   const currentUser = (req) => {
     try {
-      return services.auth.verifyToken(req.cookies?.[config.auth.cookieName])
+      return services.auth.verifyToken(tokenOf(req))
     } catch {
       return null
     }

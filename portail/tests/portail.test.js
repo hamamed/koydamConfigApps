@@ -306,3 +306,23 @@ test('an ordinary account cannot read the accounts', async (t) => {
   const { cookie } = await api.signIn()
   assert.equal((await api.open('/admin/api/users', cookie)).status, 403)
 })
+
+test('the accounts API accepts a bearer token, not only a cookie', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const token = cookie.split('=')[1]
+
+  // How the administration console actually calls this: server to server, on
+  // an administrator's behalf, with no cookie jar in between. Reading only the
+  // cookie made that arrive anonymous and the accounts screen render empty.
+  const response = await fetch(`${api.base}/admin/api/users`, { headers: { Authorization: `Bearer ${token}` } })
+  assert.equal(response.status, 200)
+  const { data } = await response.json()
+  assert.ok(data.some((row) => row.email === 'you@civictrust.ma'))
+
+  // And a bearer token still has to be a real one.
+  const forged = await fetch(`${api.base}/admin/api/users`, { headers: { Authorization: 'Bearer not-a-token' } })
+  assert.equal(forged.status, 401)
+})
