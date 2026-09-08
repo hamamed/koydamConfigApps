@@ -1,0 +1,206 @@
+<script>
+/*
+  Turns every <select class="facet"> on the page into a searchable dropdown.
+
+  The select is the real control: it is what the form submits and what the
+  server reads, and without this script it still works as an ordinary dropdown.
+  Everything below is an enhancement layered over it, which is why it runs off
+  the options already in the document rather than fetching anything.
+
+  Matching ignores case and accents, because the values are written the way the
+  portal writes them — "PECHES" in one row, "Pêches" in another — and nobody
+  should have to know which before they can find it.
+*/
+(function () {
+  var MAX_SHOWN = 200          // enough to scroll, few enough to build per keystroke
+  var flatten = function (s) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  }
+
+  var upgrade = function (select) {
+    var items = Array.prototype.map.call(select.options, function (o) {
+      var m = /^(.*?)\s*\((\d[\d\s,.]*)\)$/.exec(o.textContent.trim())
+      return {
+        value: o.value,
+        label: o.value || o.textContent.trim(),
+        count: m && o.value ? m[2] : '',
+        key: flatten(o.value || o.textContent),
+      }
+    })
+    var anyLabel = items.length ? items[0].label : ''
+
+    var wrap = document.createElement('div')
+    wrap.className = 'combo'
+    select.parentNode.insertBefore(wrap, select)
+    wrap.appendChild(select)
+
+    var input = document.createElement('input')
+    input.type = 'text'
+    input.className = 'combo-input'
+    input.autocomplete = 'off'
+    input.setAttribute('role', 'combobox')
+    input.setAttribute('aria-expanded', 'false')
+    input.setAttribute('aria-autocomplete', 'list')
+    input.placeholder = anyLabel
+    if (select.id) {
+      input.id = select.id + '-search'
+      var label = document.querySelector('label[for="' + select.id + '"]')
+      if (label) label.setAttribute('for', input.id)
+    }
+
+    var list = document.createElement('ul')
+    list.className = 'combo-list'
+    list.id = (select.id || 'facet') + '-list'
+    list.setAttribute('role', 'listbox')
+    list.hidden = true
+    input.setAttribute('aria-controls', list.id)
+
+    var caret = document.createElement('span')
+    caret.className = 'combo-caret'
+    wrap.appendChild(input)
+    wrap.appendChild(caret)
+    wrap.appendChild(list)
+
+    // What the field shows when it is not being typed in: the chosen value,
+    // or nothing at all, with the "any" row standing in as the placeholder.
+    var chosen = function () {
+      var hit = items.filter(function (i) { return i.value === select.value })[0]
+      return hit && hit.value ? hit.label : ''
+    }
+    input.value = chosen()
+
+    var shown = []
+    var active = -1
+
+    // The name is one element, never loose text nodes: inside a flex row each
+    // text node would become a flex item of its own and the row would break
+    // into pieces at every highlighted match.
+    var mark = function (label, needle) {
+      var span = document.createElement('span')
+      span.className = 'v'
+      var at = needle ? flatten(label).indexOf(needle) : -1
+      if (at < 0) {
+        span.textContent = label
+        return span
+      }
+      span.appendChild(document.createTextNode(label.slice(0, at)))
+      var hit = document.createElement('mark')
+      hit.textContent = label.slice(at, at + needle.length)
+      span.appendChild(hit)
+      span.appendChild(document.createTextNode(label.slice(at + needle.length)))
+      return span
+    }
+
+    var render = function (needle) {
+      var matches = needle
+        ? items.filter(function (i) { return i.value && i.key.indexOf(needle) >= 0 })
+        : items.slice(1)
+      shown = matches.slice(0, MAX_SHOWN)
+      active = -1
+      list.textContent = ''
+
+
+      // Clearing the field is how a filter is removed, so the way back to
+      // "all of them" is always the first row rather than a separate control.
+      if (!needle) {
+        var any = document.createElement('li')
+        any.appendChild(mark(anyLabel, ''))
+        any.setAttribute('role', 'option')
+        any.dataset.value = ''
+        list.appendChild(any)
+      }
+
+      shown.forEach(function (item) {
+        var li = document.createElement('li')
+        li.setAttribute('role', 'option')
+        li.dataset.value = item.value
+        li.appendChild(mark(item.label, needle))
+        if (item.count) {
+          var n = document.createElement('span')
+          n.className = 'n'
+          n.textContent = item.count
+          li.appendChild(n)
+        }
+        list.appendChild(li)
+      })
+
+      if (matches.length === 0) {
+        var empty = document.createElement('li')
+        empty.className = 'none'
+        empty.textContent = select.dataset.empty || '—'
+        list.appendChild(empty)
+      } else if (matches.length > shown.length) {
+        var more = document.createElement('li')
+        more.className = 'none'
+        more.textContent = '+ ' + (matches.length - shown.length)
+        list.appendChild(more)
+      }
+    }
+
+    // Opening decides which edge to hang from: a panel wider than its column
+    // would otherwise run off the side of the window on the last filter.
+    var place = function () {
+      list.classList.remove('flip')
+      var box = list.getBoundingClientRect()
+      var rtl = document.documentElement.dir === 'rtl' || document.body.dir === 'rtl'
+      if (rtl ? box.left < 8 : box.right > window.innerWidth - 8) list.classList.add('flip')
+    }
+    var show = function (needle) {
+      render(needle)
+      list.hidden = false
+      input.setAttribute('aria-expanded', 'true')
+      place()
+    }
+    var open = function () {
+      var typed = flatten(input.value.trim())
+      show(typed === flatten(chosen()) ? '' : typed)
+    }
+    var close = function () {
+      list.hidden = true
+      input.setAttribute('aria-expanded', 'false')
+      input.value = chosen()
+    }
+    var pick = function (item) {
+      select.value = item.value
+      input.value = item.value ? item.label : ''
+      list.hidden = true
+      input.setAttribute('aria-expanded', 'false')
+    }
+    var highlight = function (next) {
+      var rows = list.querySelectorAll('li[data-value]')
+      if (!rows.length) return
+      active = (next + rows.length) % rows.length
+      Array.prototype.forEach.call(rows, function (li, i) { li.classList.toggle('on', i === active) })
+      rows[active].scrollIntoView({ block: 'nearest' })
+    }
+
+    input.addEventListener('focus', open)
+    input.addEventListener('input', function () {
+      show(flatten(input.value.trim()))
+    })
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown') { if (list.hidden) open(); highlight(active + 1); event.preventDefault() }
+      else if (event.key === 'ArrowUp') { if (list.hidden) open(); highlight(active - 1); event.preventDefault() }
+      else if (event.key === 'Escape') { close() }
+      else if (event.key === 'Enter') {
+        var rows = list.querySelectorAll('li[data-value]')
+        if (!list.hidden && active >= 0 && rows[active]) {
+          pick({ value: rows[active].dataset.value, label: rows[active].dataset.value })
+          event.preventDefault()
+        }
+      }
+    })
+    list.addEventListener('mousedown', function (event) {
+      var li = event.target.closest('li[data-value]')
+      if (!li) return
+      event.preventDefault()
+      pick({ value: li.dataset.value, label: li.dataset.value })
+    })
+    document.addEventListener('click', function (event) {
+      if (!wrap.contains(event.target) && !list.hidden) close()
+    })
+  }
+
+  document.querySelectorAll('select.facet').forEach(upgrade)
+}())
+</script>

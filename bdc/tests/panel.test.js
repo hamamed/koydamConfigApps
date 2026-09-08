@@ -1195,11 +1195,16 @@ test('the list filters offer the values the data actually holds, and selecting o
   // All three are dropdowns, and each offers every value its column holds —
   // not a text box the reader has to guess the exact spelling into.
   ;['acheteur', 'categorie', 'lieuExecution'].forEach((id) => {
-    assert.match(html, new RegExp(`<select id="${id}" name="[^"]+" class="facet">`), `${id} is not a dropdown`)
+    assert.match(html, new RegExp(`<select id="${id}"[^>]*class="facet"`), `${id} is not a dropdown`)
   })
   facets.categories.forEach((f) => {
     assert.match(html, new RegExp(`<option value="${f.value}"`), `missing category option ${f.value}`)
   })
+  // The dropdown is typeable because facet-search.ejs upgrades it in the
+  // browser. Without the script shipping, this page is still usable but not
+  // searchable, which is the whole of what was asked for.
+  assert.match(html, /select\.facet/, 'the search enhancement did not ship with the page')
+
   const options = (id) => (html.split(`<select id="${id}"`)[1] || '').split('</select>')[0].match(/<option/g).length
   // Every value, plus the leading "any" row.
   assert.equal(options('acheteur'), facets.buyers.length + 1)

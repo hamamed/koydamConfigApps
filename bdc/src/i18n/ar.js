@@ -594,6 +594,7 @@ export default {
   'filters.acheteur': 'المشتري العمومي',
   'filters.acheteur.any': 'كل المشترين',
   'filters.categorie': 'الفئة',
+  'filters.noMatch': 'لا نتيجة',
   'filters.categorie.any': 'الكل',
   'filters.lieuExecution': 'مكان التنفيذ',
   'filters.lieuExecution.any': 'كل الأماكن',

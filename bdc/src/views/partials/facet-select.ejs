@@ -17,7 +17,7 @@
 %>
 <div>
   <label for="<%= id %>"><%= label %></label>
-  <select id="<%= id %>" name="<%= name %>" class="facet">
+  <select id="<%= id %>" name="<%= name %>" class="facet" data-empty="<%= t('filters.noMatch') %>">
     <option value=""><%= anyLabel %></option>
     <% if (chosen && !known) { %><option value="<%= chosen %>" selected><%= chosen %></option><% } %>
     <% values.forEach(function (f) { %>

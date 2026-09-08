@@ -61,6 +61,42 @@
   .side button.out { display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; color:var(--sidebar-muted); padding:9px 11px; border-radius:8px; font:inherit; font-size:13.5px; cursor:pointer; }
   .side button.out:hover { background:rgba(255,255,255,.08); color:#fff; }
 
+  /* ---- searchable filter dropdown ------------------------------------- */
+  /* A facet holds up to a thousand buyers, which is too many to scroll and
+     too many to guess the spelling of. The markup ships a plain <select> —
+     which works on its own, with no script — and facet-search.ejs upgrades
+     it in place into this: the same field, typeable, filtering as you go.
+     The <select> stays in the form as the control that is submitted, so
+     nothing downstream knows the difference. */
+  .combo { position:relative; }
+  .combo select.facet { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .combo-input { width:100%; padding-inline-end:30px; }
+  .combo-caret { position:absolute; inset-inline-end:11px; inset-block-start:calc(50% - 2px);
+                 width:0; height:0; pointer-events:none;
+                 border-inline:4px solid transparent; border-block-start:5px solid var(--muted); }
+  /* The panel is free to be wider than the field it hangs off: a buyer's name
+     runs to sixty characters and a filter column is 175px wide. It opens from
+     the start edge and is flipped to the end edge by the script when that
+     would take it past the window. */
+  .combo-list { position:absolute; inset-block-start:calc(100% + 5px); inset-inline-start:0; z-index:45;
+                min-width:100%; width:max-content; max-width:min(460px, calc(100vw - 32px));
+                margin:0; padding:5px; list-style:none; max-height:290px; overflow-y:auto; overflow-x:hidden;
+                background:var(--card); border:1px solid var(--line); border-radius:10px;
+                box-shadow:0 10px 30px rgba(15,44,77,.22); }
+  .combo-list.flip { inset-inline-start:auto; inset-inline-end:0; }
+  .combo-list li { display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px;
+                   font-size:13.5px; color:var(--text); cursor:pointer; }
+  /* One row is one line. The name is a single item that ellipsises — left as
+     loose text nodes it becomes several flex items and the row shatters. */
+  .combo-list li .v { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .combo-list li .n { flex:none; font-size:11px; color:var(--muted);
+                      border:1px solid var(--line); border-radius:5px; padding:0 5px; }
+  .combo-list li:hover, .combo-list li.on { background:var(--accent-soft); }
+  .combo-list li.on { color:var(--accent); font-weight:600; }
+  .combo-list li.none { color:var(--muted); cursor:default; }
+  .combo-list li.none:hover { background:none; }
+  .combo-list mark { background:none; color:var(--accent); font-weight:700; }
+
   /* ---- language menu ------------------------------------------------- */
   .lang { position:relative; }
   .lang > summary { display:flex; align-items:center; gap:8px; cursor:pointer; list-style:none;

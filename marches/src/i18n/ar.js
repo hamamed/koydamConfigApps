@@ -576,6 +576,7 @@ export default {
   'filters.acheteur.any': 'كل المشترين',
   'filters.categorie.any': 'الكل',
   'filters.categorie': 'الفئة',
+  'filters.noMatch': 'لا نتيجة',
   'filters.lieuExecution': 'مكان التنفيذ',
   'filters.lieuExecution.any': 'كل الأماكن',
   'filters.publishedFrom': 'نُشر من',

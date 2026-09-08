@@ -594,6 +594,7 @@ export default {
   'filters.acheteur': 'Buyer',
   'filters.acheteur.any': 'All buyers',
   'filters.categorie': 'Category',
+  'filters.noMatch': 'No match',
   'filters.categorie.any': 'All',
   'filters.lieuExecution': 'Place of performance',
   'filters.lieuExecution.any': 'Anywhere',
