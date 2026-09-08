@@ -9,6 +9,7 @@ import { NotFoundError } from '../../utils/errors.js'
 import { translator } from '../../i18n/index.js'
 import { parseAmountToCentimes } from '../../utils/money.js'
 import { MARKET_KINDS, bandFor, classifyKind, computeReferencePrice } from '../../utils/referencePrice.js'
+import { rememberList, forgetList, listUrl } from '../listState.js'
 
 /**
  * The panel.
@@ -27,6 +28,8 @@ export function panelRoutes({ services }) {
 
   const shell = async (req, extra = {}) => ({
     user: req.user,
+    // Where the listing was left, for the sidebar and the Back link.
+    listUrl: listUrl(req),
     // Rendered by the sidebar on every panel page.
     portalUrl: config.auth.portalUrl,
     siblingUrl: config.auth.siblingUrl,
@@ -165,8 +168,15 @@ export function panelRoutes({ services }) {
     '/panel',
     anyUser,
     asyncHandler(async (req, res) => {
+      // `reset` is the way back to an unfiltered listing once one is
+      // remembered — without it the sidebar would always reopen the search.
+      if (req.query.reset) {
+        forgetList(res)
+        return res.redirect('/panel')
+      }
       const filters = parseFilters(req.query)
       const pagination = parsePagination(req.query)
+      rememberList(res, req.query, { isProduction: config.isProduction })
       const { data, total } = await services.consultations.search(
         filters,
         { ...pagination, sort: req.query.sort },

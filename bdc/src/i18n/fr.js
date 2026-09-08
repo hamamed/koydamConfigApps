@@ -601,6 +601,7 @@ export default {
   'filters.publishedFrom': 'Publié du',
   'filters.publishedTo': 'au',
   'filters.submit': 'Filtrer',
+  'filters.reset': 'Tout effacer',
   'sort.label': 'Trier par',
   'sort.deadlineDesc': 'Date limite — la plus lointaine',
   'sort.deadlineAsc': 'Date limite — la plus proche',

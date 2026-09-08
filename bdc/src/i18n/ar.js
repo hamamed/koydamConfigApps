@@ -601,6 +601,7 @@ export default {
   'filters.publishedFrom': 'نُشر من',
   'filters.publishedTo': 'إلى',
   'filters.submit': 'تصفية',
+  'filters.reset': 'مسح الكل',
   'sort.label': 'ترتيب حسب',
   'sort.deadlineDesc': 'آخر أجل — الأبعد أولًا',
   'sort.deadlineAsc': 'آخر أجل — الأقرب أولًا',

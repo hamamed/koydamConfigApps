@@ -855,3 +855,59 @@ test('the list filters offer the values the data actually holds, and selecting o
   assert.equal(filtered.total, chosen.count)
   assert.ok(filtered.data.every((row) => row.categorie === chosen.value))
 })
+
+test('coming back from a consultation returns to the listing that was left', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  const facets = await api.container.services.consultations.facets()
+  const search = `/panel?categorie=${encodeURIComponent(facets.categories[0].value)}&sort=acheteur%3Aasc&page=2`
+
+  // Look at a filtered page 2 of the listing.
+  const listing = await api.page(search, api.staff)
+  assert.equal(listing.status, 200)
+  const remembered = (listing.headers.getSetCookie?.() ?? [])
+    .find((c) => c.startsWith('mp_list='))
+  assert.ok(remembered, 'the listing was not remembered')
+
+  // Follow a consultation, carrying the cookie the browser would carry.
+  const cookie = `${api.staff}; ${remembered.split(';')[0]}`
+  const detail = await api.page(`/panel/consultations/${api.consultationId}`, cookie)
+  assert.equal(detail.status, 200)
+  const html = await detail.text()
+
+  // Back leads to the filtered page 2, not to a bare listing.
+  const back = /<a class="btn secondary" href="([^"]+)"/.exec(html)
+  assert.ok(back, 'no Back link on the detail screen')
+  const target = back[1].replace(/&amp;/g, '&')
+  assert.match(target, /^\/panel\?/)
+  assert.match(target, new RegExp(`categorie=${encodeURIComponent(facets.categories[0].value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
+  assert.match(target, /sort=acheteur%3Aasc/)
+  assert.match(target, /page=2/)
+
+  // The sidebar leads to the same place, so a later visit resumes too — the
+  // href appears twice on the page: once in Back, once in the navigation.
+  const href = `href="${back[1]}"`
+  assert.ok(html.split(href).length - 1 >= 2, 'the sidebar does not resume the listing')
+})
+
+test('an unfiltered listing is not remembered, and clearing forgets one that was', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  // Nothing worth remembering: no cookie is kept, so the sidebar stays plain.
+  const plain = await api.page('/panel', api.staff)
+  const set = (plain.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('mp_list='))
+  assert.ok(!set || /mp_list=;/.test(set), 'an untouched listing should not be remembered')
+
+  // A search is remembered; asking to clear it takes the memory with it.
+  const listing = await api.page('/panel?categorie=Travaux', api.staff)
+  const remembered = (listing.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('mp_list='))
+  assert.ok(remembered && remembered.includes('categorie'), 'the search was not remembered')
+
+  const cookie = `${api.staff}; ${remembered.split(';')[0]}`
+  const cleared = await api.page('/panel?reset=1', cookie)
+  assert.equal(cleared.status, 302)
+  const dropped = (cleared.headers.getSetCookie?.() ?? []).find((c) => c.startsWith('mp_list='))
+  assert.ok(dropped && /mp_list=;/.test(dropped), 'clearing did not forget the search')
+})

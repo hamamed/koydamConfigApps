@@ -188,6 +188,10 @@
   /* Buttons inside a cell go in their own flex row: laying the <td> out as flex
      has the same effect as inline-block — it stops being a table cell. */
   .row-actions { display:flex; gap:6px; align-items:center; }
+  /* Sits beside the search button, quieter than it: the way out of a
+     remembered search, not a second thing to press by default. */
+  a.clear { font-size:12.5px; color:var(--muted); white-space:nowrap; padding:0 4px; }
+  a.clear:hover { color:var(--accent); }
   /* Why an avis was cancelled, on the listing itself. The motifs the portal
      publishes run from "VICE DE PROCEDURE" to a 180-character sentence, so the
      line is clamped and carries the full text in its `title`. An explicit
@@ -274,7 +278,7 @@
 
     <nav>
       <a href="/panel/today" class="<%= active === 'today' ? 'on' : '' %>"><%- include('icon', { name: 'calendar' }) %><%= t('nav.today') %></a>
-      <a href="/panel" class="<%= active === 'projects' ? 'on' : '' %>"><%- include('icon', { name: 'search' }) %><%= t('nav.projects') %></a>
+      <a href="<%= typeof listUrl === 'string' && listUrl ? listUrl : '/panel' %>" class="<%= active === 'projects' ? 'on' : '' %>"><%- include('icon', { name: 'search' }) %><%= t('nav.projects') %></a>
       <a href="/panel/reference-price" class="<%= active === 'referencePrice' ? 'on' : '' %>"><%- include('icon', { name: 'calculator' }) %><%= t('nav.referencePrice') %></a>
       <a href="/panel/invoices" class="<%= active === 'invoices' ? 'on' : '' %>"><%- include('icon', { name: 'receipt' }) %><%= t('nav.invoices') %></a>
       <a href="/panel/alerts" class="<%= active === 'alerts' ? 'on' : '' %>"><%- include('icon', { name: 'bell' }) %><%= t('nav.alerts') %></a>

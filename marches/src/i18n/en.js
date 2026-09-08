@@ -582,6 +582,7 @@ export default {
   'filters.publishedFrom': 'Published from',
   'filters.publishedTo': 'to',
   'filters.submit': 'Filter',
+  'filters.reset': 'Clear all',
   'sort.label': 'Sort by',
   'sort.deadlineDesc': 'Deadline — furthest first',
   'sort.deadlineAsc': 'Deadline — closing soonest',

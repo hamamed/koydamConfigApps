@@ -48,7 +48,14 @@
         <% }) %>
       </select>
     </div>
-    <div><button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button></div>
+    <div class="row-actions">
+      <button type="submit"><%- include('../partials/icon', { name: 'search', size: 15 }) %><%= t('filters.submit') %></button>
+      <%# The listing is remembered between visits, so there has to be a way to
+          say "show me everything again" that is not clearing five fields. %>
+      <% if (Object.keys(query).some(function (k) { return k !== 'lang' && query[k] })) { %>
+        <a class="clear" href="/panel?reset=1"><%= t('filters.reset') %></a>
+      <% } %>
+    </div>
   </form>
 </div>
 

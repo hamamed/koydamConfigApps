@@ -1,7 +1,7 @@
 <%- include('../partials/shell-open', { title: consultation.reference }) %>
 
 <div class="page-head">
-  <a class="btn secondary" href="/panel?lang=<%= locale %>"><%- include('../partials/icon', { name: 'arrow-left', size: 15, cls: 'flip-rtl' }) %><%= t('detail.back') %></a>
+  <a class="btn secondary" href="<%= typeof listUrl === 'string' && listUrl ? listUrl : '/panel' %>"><%- include('../partials/icon', { name: 'arrow-left', size: 15, cls: 'flip-rtl' }) %><%= t('detail.back') %></a>
   <span class="spacer"></span>
   <button class="star-btn" type="button" id="star" data-id="<%= consultation.id %>" aria-pressed="<%= consultation.isFavorite ? 'true' : 'false' %>"
           title="<%= consultation.isFavorite ? t('projects.untrack') : t('projects.track') %>">
