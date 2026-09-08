@@ -161,8 +161,16 @@ test('every screen the sidebar offers actually renders', async (t) => {
 
   const html = await (await open('/panel')).text()
   const nav = html.slice(html.indexOf('<nav>'), html.indexOf('</nav>'))
-  const links = [...nav.matchAll(/<a href="([^"]+)"/g)].map((m) => m[1])
-  assert.ok(links.length >= 8, 'the sidebar has items')
+  const hrefs = [...nav.matchAll(/<a href="([^"]+)"/g)].map((m) => m[1])
+  // The sidebar also links out — to the sibling service and the administration
+  // console, which are other origins. Those are somebody else's to answer for.
+  const links = hrefs.filter((href) => href.startsWith('/'))
+  // Named rather than counted: a count passes just as happily when the wrong
+  // five screens are there, and it has to be edited every time one moves.
+  for (const expected of ['/panel', '/panel/today', '/panel/reference-price', '/panel/favorites']) {
+    assert.ok(links.includes(expected), `${expected} is offered`)
+  }
+  assert.ok(hrefs.some((href) => href.startsWith('http')), 'and there is a way out of this service')
 
   const row = await container.db.get('SELECT id FROM consultations LIMIT 1')
   for (const path of [...links, `/panel/consultations/${row.id}`]) {

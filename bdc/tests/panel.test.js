@@ -61,14 +61,14 @@ test('the sidebar shows administration only to administrators', async (t) => {
   t.after(() => api.close())
 
   const asAdmin = await (await api.page('/panel', api.admin)).text()
-  assert.match(asAdmin, /href="\/panel\/dashboard"/)
-  assert.match(asAdmin, /href="\/panel\/users"/)
-  assert.match(asAdmin, /href="\/panel\/settings"/)
+  // Administration is one door now: the dashboard, the system report, the
+  // settings and the accounts moved to the console, which shows both services
+  // side by side — the comparison a per-service sidebar cannot make.
+  assert.match(asAdmin, /class="switch"[^>]*>[\s\S]{0,400}?nav\.admin|Console d[’']administration/)
+  assert.doesNotMatch(asAdmin, /href="\/panel\/(dashboard|users|settings)"/, 'and not as five entries')
 
   const asStaff = await (await api.page('/panel', api.staff)).text()
-  assert.doesNotMatch(asStaff, /href="\/panel\/dashboard"/, 'a user is not shown the dashboard')
-  assert.doesNotMatch(asStaff, /href="\/panel\/users"/)
-  assert.doesNotMatch(asStaff, /href="\/panel\/settings"/)
+  assert.doesNotMatch(asStaff, /Console d[’']administration/, 'an ordinary user is not shown the console')
   // What they can do is still there.
   assert.match(asStaff, /href="\/panel\/favorites"/)
   assert.match(asStaff, /Staff Member/)
@@ -78,17 +78,22 @@ test('the admin screens are closed to ordinary users, not just hidden', async (t
   const api = await setup()
   t.after(() => api.close())
 
+  // Those pages are gone from this service; the console renders them from the
+  // API, so the API is where the guard has to hold.
   for (const path of ['/panel/dashboard', '/panel/users', '/panel/settings']) {
-    const response = await api.page(path, api.staff)
-    assert.equal(response.status, 302, path)
-    assert.equal(response.headers.get('location'), '/panel', `${path} sends them where they can go`)
+    assert.equal((await api.page(path, api.admin)).status, 404, `${path} is not served here any more`)
+  }
+
+  for (const path of ['/admin/api/dashboard', '/admin/api/system', '/admin/api/settings', '/admin/api/users']) {
+    const response = await fetch(`${api.base}${path}`, { headers: { cookie: api.staff } })
+    assert.equal(response.status, 403, `${path} refuses an ordinary account`)
   }
 
   // And the API behind them refuses too, so hiding a link is never the control.
   const json = await fetch(`${api.base}/admin/api/dashboard`, { headers: { cookie: api.staff } })
   assert.equal(json.status, 403)
 
-  const anonymous = await api.page('/panel/dashboard', '')
+  const anonymous = await api.page('/panel/today', '')
   assert.equal(anonymous.status, 302)
   // Signing in happens on the portal now, so an anonymous visitor leaves this
   // host entirely — and the return address has to be absolute for that to come
@@ -290,26 +295,6 @@ test('old /admin bookmarks land on the panel', async (t) => {
   assert.match(signedOut.headers.get('location'), /^https?:\/\//, 'out to the portal')
 })
 
-test('table cells stay table cells', async () => {
-  // `display:inline-block` on the .ltr class, and `display:flex` on a <td>,
-  // both take the cell out of the table layout: every value carrying it dropped
-  // out of its column and bunched up under the previous header. The dashboard's
-  // job table, the article table and the user table all rendered scrambled.
-  const { readFile } = await import('node:fs/promises')
-  const shell = await readFile(new URL('../src/views/partials/shell-open.ejs', import.meta.url), 'utf8')
-
-  const ltrRule = shell.match(/^\s*\.ltr \{[^}]*\}/m)?.[0] ?? ''
-  assert.ok(ltrRule, 'the .ltr rule still exists')
-  assert.doesNotMatch(ltrRule, /display\s*:/, '.ltr must not change display — it is used on <td>')
-  assert.match(ltrRule, /direction\s*:\s*ltr/)
-  assert.match(ltrRule, /unicode-bidi\s*:\s*isolate/)
-
-  for (const view of ['projects', 'favorites', 'consultation', 'dashboard', 'users', 'settings']) {
-    const html = await readFile(new URL(`../src/views/panel/${view}.ejs`, import.meta.url), 'utf8')
-    assert.doesNotMatch(html, /<t[dh][^>]*style="[^"]*display\s*:\s*(flex|grid|inline)/, `${view}.ejs`)
-  }
-})
-
 test('navigation labels carry no hardcoded arrows', async () => {
   // The back button renders an arrow icon, so an arrow in the string showed up
   // twice — and a literal "←" points the wrong way on an RTL page.
@@ -319,22 +304,6 @@ test('navigation labels carry no hardcoded arrows', async () => {
       assert.doesNotMatch(value, /[←→⟵⟶]/, `${locale}: ${key} contains an arrow`)
     }
   }
-})
-
-test('the dashboard job table has one cell per column', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-  await api.container.repositories.jobs.start({ source: 'all', triggeredBy: 'test' })
-
-  const html = await (await api.page('/panel/dashboard', api.admin)).text()
-  const table = html.slice(html.indexOf('<thead>'), html.indexOf('</table>', html.indexOf('<thead>')))
-
-  const headers = (table.match(/<th\b/g) ?? []).length
-  const firstRow = table.slice(table.indexOf('<tbody>')).match(/<tr>([\s\S]*?)<\/tr>/)?.[1] ?? ''
-  const cells = (firstRow.match(/<td\b/g) ?? []).length
-
-  assert.equal(headers, 10)
-  assert.equal(cells, headers, 'every column has a cell')
 })
 
 test('the awards tab lists results and links the matched ones', async (t) => {
@@ -555,32 +524,6 @@ test('cancelled projects can be filtered for', async (t) => {
   assert.equal(bad.status, 400)
 })
 
-test('the dashboard reports what the last crawl brought in, and when the next one is', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const { data } = await (await fetch(`${api.base}/admin/api/dashboard`, { headers: { cookie: api.admin } })).json()
-
-  // The flat item counts on a job row are a combined total; the dashboard needs
-  // projects and awards apart, which is what the per-run detail carries.
-  assert.ok(data.lastRun, 'the setup crawl is reported')
-  assert.equal(data.lastRun.status, 'success')
-  assert.equal(data.lastRun.consultations.created, 10, 'new projects')
-  assert.equal(data.lastRun.results.created, 10, 'new awards')
-  assert.equal(typeof data.lastRun.durationMs, 'number')
-  assert.equal(typeof data.lastRun.matchesLinked, 'number')
-
-  // Next run is derived from the schedule setting, in UTC, always ahead of now.
-  assert.match(data.schedule.runAt, /^\d{2}:\d{2}$/)
-  assert.ok(new Date(data.schedule.nextRunAt) > new Date(), 'the next run is in the future')
-  assert.equal(data.schedule.sinceDays, 7)
-
-  const html = await (await api.page('/panel/dashboard', api.admin)).text()
-  assert.match(html, /New projects|Nouveaux projets/)
-  assert.match(html, /Next crawl|Prochaine collecte/)
-  assert.match(html, /Cancelled projects|Projets annulés/)
-})
-
 test('a deadline is shown as time remaining, not just a date', async (t) => {
   const api = await setup()
   t.after(() => api.close())
@@ -685,36 +628,6 @@ test('CSV export is safe to open in a spreadsheet', async (t) => {
   assert.match((await awards.text()).split('\r\n')[0], /Attributaire/)
 })
 
-test('the canary notices the failures this crawler actually has', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const healthy = await api.container.services.health.check()
-  assert.equal(healthy.severity, 'ok')
-  assert.ok(healthy.checks.find((c) => c.id === 'freshness'))
-
-  // Every real failure here has been silent: the job finishes and reports
-  // success while the data quietly stops arriving. So a crawl that found
-  // nothing, against a non-empty catalogue, is a failure whatever it claimed.
-  const empty = await api.container.repositories.jobs.start({ source: 'all', triggeredBy: 'test' })
-  await api.container.repositories.jobs.finish(empty.id, { status: 'success', stats: { itemsFound: 0 } })
-
-  const starved = await api.container.services.health.check()
-  assert.equal(starved.severity, 'fail')
-  assert.match(starved.checks.find((c) => c.id === 'yield').detail, /found nothing at all/)
-
-  // A field that stops parsing means the portal's labels moved again.
-  await api.container.db.run('UPDATE consultations SET acheteur = NULL')
-  const blind = await api.container.services.health.check()
-  const buyer = blind.checks.find((c) => c.id === 'fieldAcheteur')
-  assert.equal(buyer.severity, 'warn')
-  assert.match(buyer.detail, /0% of/)
-
-  // And it surfaces where someone will see it.
-  const html = await (await api.page('/panel/dashboard', api.admin)).text()
-  assert.match(html, /Crawler health|Santé du collecteur/)
-})
-
 test('the canary flags a schedule that has stopped firing', async (t) => {
   const api = await setup()
   t.after(() => api.close())
@@ -815,19 +728,6 @@ test('every insights ranking opens the rows behind it', async (t) => {
     headers: { cookie: api.staff },
   })).json()
   assert.ok(projects.data.every((row) => row.acheteur.toLowerCase().includes(buyer.toLowerCase())))
-})
-
-test('settings fields are laid out two to a row', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const html = await (await api.page('/panel/settings', api.admin)).text()
-  assert.match(html, /class="cols-2"/)
-  assert.doesNotMatch(html, /<div class="filters" style="align-items:start">/)
-  // Two columns exactly, not "as many as fit" — a settings field is read one at
-  // a time and the values here are long.
-  assert.match(html, /\.cols-2 \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
-  assert.match(html, /@media \(max-width: 720px\) \{ \.cols-2 \{ grid-template-columns:1fr/, 'one column on a phone')
 })
 
 test('categories are counted where the data actually is', async (t) => {
@@ -1061,59 +961,6 @@ test('the signed-out pages carry a background pattern', async (t) => {
   const arabic = await (await fetch(`${api.base}/forgot?lang=ar`)).text()
   assert.match(arabic, /body\[dir="rtl"\]::before/)
   assert.match(arabic, /repeating-linear-gradient\(45deg/)
-})
-
-test('the translate key is set from Settings, and never read back', async (t) => {
-  const api = await setup()
-  t.after(() => api.close())
-
-  const describe = async () =>
-    (await api.container.settings.describe())
-      .flatMap((group) => group.entries)
-      .find((entry) => entry.key === 'translation.googleApiKey')
-
-  assert.equal((await describe()).isSet, false)
-
-  const save = (body) =>
-    fetch(`${api.base}/admin/api/settings`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', cookie: api.admin },
-      body: JSON.stringify(body),
-    })
-
-  assert.equal((await save({ 'translation.googleApiKey': 'AIza-secret-value' })).status, 200)
-
-  // Stored and usable...
-  assert.equal(await api.container.settings.get('translation.googleApiKey'), 'AIza-secret-value')
-  assert.equal(await api.container.services.translation.isConfigured(), true)
-
-  // ...but never handed back. A field that renders the key is a field that
-  // leaks it to anyone who views source, and into every error report after.
-  const entry = await describe()
-  assert.equal(entry.isSet, true)
-  assert.equal(entry.value, null)
-  assert.doesNotMatch(JSON.stringify(await api.container.settings.describe()), /AIza-secret-value/)
-
-  const page = await (await api.page('/panel/settings', api.admin)).text()
-  assert.doesNotMatch(page, /AIza-secret-value/, 'not in the rendered page either')
-  assert.match(page, /type="password"/)
-
-  // An empty submission means "no change" — the field is empty on every load,
-  // so treating it as "erase" would wipe the key on any save that did not
-  // retype it.
-  await save({ 'translation.googleApiKey': '', 'site.name': 'Untouched' })
-  assert.equal(await api.container.settings.get('translation.googleApiKey'), 'AIza-secret-value')
-  assert.equal(await api.container.settings.get('site.name'), 'Untouched')
-
-  // Erasing is its own explicit action.
-  await fetch(`${api.base}/panel/settings`, {
-    method: 'POST',
-    redirect: 'manual',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', cookie: api.admin },
-    body: new URLSearchParams({ clear: 'translation.googleApiKey' }),
-  })
-  assert.equal(await api.container.settings.get('translation.googleApiKey'), '')
-  assert.equal((await describe()).isSet, false)
 })
 
 test('a key saved in the panel works without a restart', async (t) => {

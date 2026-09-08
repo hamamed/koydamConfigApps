@@ -88,6 +88,21 @@ export function adminRoutes({ services }) {
     asyncHandler(async (req, res) => res.json(ok(await services.admin.refreshConsultationDetail(Number(req.params.id))))),
   )
 
+  /**
+   * The access-request queue, for the administration console.
+   *
+   * Read-only here. Approving one used to create an account in this database,
+   * and since sign-in moved to the portal that would produce a row nobody can
+   * sign in with — so the decision belongs where the accounts are, and this
+   * endpoint only reports what is waiting.
+   */
+  api.get(
+    '/requests',
+    asyncHandler(async (_req, res) =>
+      res.json(ok({ pending: await services.accessRequests.pending(), recent: await services.accessRequests.recent(20) })),
+    ),
+  )
+
   api.get('/users', asyncHandler(async (_req, res) => res.json(ok(await services.users.list()))))
 
   api.post(

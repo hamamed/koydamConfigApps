@@ -1,0 +1,46 @@
+<%- include('layout-open', { title: 'Vue d’ensemble' }) %>
+
+<div class="tabs">
+  <a class="on" href="/">Vue d’ensemble</a>
+  <% config.services.forEach(function (s) { %>
+    <a href="/s/<%= s.key %>/dashboard"><%= s.label %></a>
+  <% }) %>
+</div>
+
+<div class="panel">
+  <h1>Administration</h1>
+  <p class="lede">Les deux services, côte à côte. Chaque chiffre est lu chez le service lui-même au moment où cette page s’affiche.</p>
+
+  <% overview.forEach(function (row) { %>
+    <h2 style="margin:22px 0 10px; font-size:16px; font-weight:650">
+      <a href="/s/<%= row.service.key %>/dashboard"><%= row.service.label %></a>
+    </h2>
+
+    <% if (row.error) { %>
+      <%# A console that cannot reach a service has to say so. Rendering zeroes
+          here would read as "nothing is happening", which is a different and
+          much calmer thing than "this service is not answering". %>
+      <div class="down"><%- include('icon', { name: 'shield-check', size: 15 }) %> <%= row.error %></div>
+    <% } else { %>
+      <div class="tiles">
+        <% Object.entries(row.dashboard.counts || {}).forEach(function ([key, value]) { %>
+          <div class="tile"><b class="ltr"><%= Number(value).toLocaleString('fr-MA') %></b><span><%= key %></span></div>
+        <% }) %>
+      </div>
+      <p class="muted" style="margin:0; font-size:13px">
+        <% const health = row.system && row.system.health ? row.system.health : (row.dashboard.health || null) %>
+        <% if (health) { %>
+          <span class="pill <%= health.severity === 'ok' ? 'ok' : (health.severity === 'warn' ? 'warn' : 'bad') %>">
+            <%= health.severity %>
+          </span>
+        <% } %>
+        <% if (row.dashboard.lastRun) { %>
+          Dernier passage : <span class="ltr"><%= row.dashboard.lastRun.finishedAt || row.dashboard.lastRun.startedAt || '—' %></span>
+        <% } else { %>
+          Aucun passage enregistré.
+        <% } %>
+      </p>
+    <% } %>
+  <% }) %>
+</div>
+<%- include('layout-close') %>

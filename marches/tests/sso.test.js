@@ -65,11 +65,13 @@ test('the portal is authoritative for the role, so a promotion arrives here too'
   t.after(() => api.close())
 
   await api.open('/panel', portalToken({ email: 'boss@civictrust.ma', role: 'user' }))
-  const asUser = await api.open('/panel/settings', portalToken({ email: 'boss@civictrust.ma', role: 'user' }))
-  assert.equal(asUser.status, 302, 'an ordinary account cannot open the settings')
+  // Checked against the admin API rather than a page: the admin screens moved
+  // to the console, and the API is what it calls.
+  const asUser = await api.open('/admin/api/dashboard', portalToken({ email: 'boss@civictrust.ma', role: 'user' }))
+  assert.equal(asUser.status, 403, 'an ordinary account is refused')
 
-  const asAdmin = await api.open('/panel/settings', portalToken({ email: 'boss@civictrust.ma', role: 'admin' }))
-  assert.equal(asAdmin.status, 200, 'and the same person promoted on the portal can')
+  const asAdmin = await api.open('/admin/api/dashboard', portalToken({ email: 'boss@civictrust.ma', role: 'admin' }))
+  assert.equal(asAdmin.status, 200, 'and the same person promoted on the portal is not')
 
   const row = await api.container.repositories.users.findByEmail('boss@civictrust.ma')
   assert.equal(row.role, 'admin', 'the local row followed')

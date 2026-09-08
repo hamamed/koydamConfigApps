@@ -1,0 +1,17 @@
+<div class="tabs">
+  <a href="/">Vue d’ensemble</a>
+  <% config.services.forEach(function (s) { %>
+    <a class="<%= s.key === service.key ? 'on' : '' %>" href="/s/<%= s.key %>/dashboard"><%= s.label %></a>
+  <% }) %>
+</div>
+
+<div class="panel">
+  <h1><%= service.label %></h1>
+  <div class="screens">
+    <% screens.forEach(function (s) { %>
+      <a class="<%= s.key === screen ? 'on' : '' %>" href="/s/<%= service.key %>/<%= s.key %>"><%= s.label %></a>
+    <% }) %>
+    <a href="<%= service.panel %>" target="_blank" rel="noopener noreferrer">Ouvrir le service ↗</a>
+  </div>
+  <% if (typeof notice !== 'undefined' && notice) { %><div class="notice"><%= notice %></div><% } %>
+  <% if (error) { %><div class="down"><%= error %></div><% } %>

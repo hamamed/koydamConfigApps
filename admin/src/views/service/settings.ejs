@@ -1,0 +1,28 @@
+<%- include('../layout-open', { title: service.label + ' — paramètres' }) %>
+<%- include('_nav') %>
+
+<% if (data) { %>
+  <form method="post" action="/s/<%= service.key %>/parametres">
+    <% (Array.isArray(data) ? data : Object.values(data)).forEach(function (group) { %>
+      <h2 style="font-size:15px; font-weight:650; margin:18px 0 8px"><%= group.group || group.label || '' %></h2>
+      <% (group.settings || group.items || []).forEach(function (setting) { %>
+        <div class="field">
+          <label for="<%= setting.key %>"><%= setting.label || setting.key %></label>
+          <input id="<%= setting.key %>" name="<%= setting.key %>"
+                 value="<%= setting.secret ? '' : (setting.value ?? '') %>"
+                 <%= setting.secret ? 'type="password" autocomplete="new-password"' : '' %>
+                 placeholder="<%= setting.secret ? (setting.set ? '•••••••• (déjà enregistré)' : 'non renseigné') : '' %>">
+          <% if (setting.help) { %><p class="muted" style="margin:5px 0 0; font-size:11.5px"><%= setting.help %></p><% } %>
+          <% if (setting.secret) { %>
+            <%# A write-only value: laissé vide, il n'est pas touché. Sinon,
+                enregistrer une page mettrait à zéro une clé qu'on ne voulait
+                pas changer, sans le dire. %>
+            <p class="muted" style="margin:5px 0 0; font-size:11.5px">Laisser vide pour conserver la valeur actuelle.</p>
+          <% } %>
+        </div>
+      <% }) %>
+    <% }) %>
+    <button class="primary small" type="submit">Enregistrer</button>
+  </form>
+<% } %>
+<%- include('../layout-close') %>

@@ -1,0 +1,28 @@
+<%- include('../layout-open', { title: service.label + ' — système' }) %>
+<%- include('_nav') %>
+
+<% if (data) { %>
+  <% const groups = Object.entries(data).filter(([, v]) => v && typeof v === 'object') %>
+  <% groups.forEach(function ([name, group]) { %>
+    <h2 style="font-size:15px; font-weight:650; margin:18px 0 8px"><%= name %></h2>
+    <table>
+      <tbody>
+        <% Object.entries(group).forEach(function ([key, value]) { %>
+          <tr>
+            <td style="width:34%"><%= key %></td>
+            <td>
+              <% if (value && typeof value === 'object') { %>
+                <span class="ltr muted" style="font-size:12.5px"><%= JSON.stringify(value) %></span>
+              <% } else if (typeof value === 'boolean') { %>
+                <span class="pill <%= value ? 'ok' : 'bad' %>"><%= value ? 'oui' : 'non' %></span>
+              <% } else { %>
+                <span class="ltr"><%= value === null ? '—' : value %></span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% }) %>
+<% } %>
+<%- include('../layout-close') %>

@@ -1,0 +1,36 @@
+<%- include('../layout-open', { title: service.label + ' — tableau de bord' }) %>
+<%- include('_nav') %>
+
+<% if (data) { %>
+  <div class="tiles">
+    <% Object.entries(data.counts || {}).forEach(function ([key, value]) { %>
+      <div class="tile"><b class="ltr"><%= Number(value).toLocaleString('fr-MA') %></b><span><%= key %></span></div>
+    <% }) %>
+  </div>
+
+  <h2 style="font-size:15px; font-weight:650; margin:20px 0 10px">Derniers passages</h2>
+  <table>
+    <thead><tr><th>Source</th><th>État</th><th>Début</th><th>Fin</th><th>Trouvés</th><th>Créés</th></tr></thead>
+    <tbody>
+      <% (data.recentJobs || []).forEach(function (job) { %>
+        <tr>
+          <td><%= job.source %></td>
+          <td><span class="pill <%= job.status === 'success' ? 'ok' : (job.status === 'running' ? '' : 'bad') %>"><%= job.status %></span></td>
+          <td class="ltr"><%= job.started_at || '—' %></td>
+          <td class="ltr"><%= job.finished_at || '—' %></td>
+          <td class="ltr"><%= job.items_found ?? '—' %></td>
+          <td class="ltr"><%= job.items_created ?? '—' %></td>
+        </tr>
+      <% }) %>
+      <% if ((data.recentJobs || []).length === 0) { %>
+        <tr><td colspan="6" class="muted">Aucun passage enregistré.</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <form method="post" action="/s/<%= service.key %>/crawl" class="row-actions">
+    <button class="primary small" type="submit">Lancer un passage maintenant</button>
+    <span class="muted" style="font-size:12.5px">Le service décide de ce qu’il va chercher ; ceci ne fait que le déclencher.</span>
+  </form>
+<% } %>
+<%- include('../layout-close') %>

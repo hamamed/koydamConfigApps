@@ -28,6 +28,7 @@ export function panelRoutes({ services }) {
     // Rendered by the sidebar on every panel page.
     portalUrl: config.auth.portalUrl,
     siblingUrl: config.auth.siblingUrl,
+    adminUrl: config.auth.adminUrl,
     siteName: await services.settings.get('site.name'),
     // Counted for the sidebar badge, and only for the people who can act on it.
     pendingRequests: req.user?.role === 'admin' ? await services.accessRequests.countPending() : 0,
@@ -106,6 +107,16 @@ export function panelRoutes({ services }) {
     res.clearCookie(config.auth.cookieName, clearCookieOptions)
     res.redirect(config.auth.portalUrl)
   })
+
+  // ------------------------------------------------------- administration
+  //
+  // Nothing here. The dashboard, the system report, the settings, the accounts
+  // and the access-request queue all moved to the console at
+  // admin.civictrust.ma, which reaches this service over its own /admin/api
+  // with the administrator's own session — so the guard that used to sit on
+  // these routes still runs, one layer further out.
+  //
+  // The API stays exactly where it was. It is what the console is a client of.
 
   // ------------------------------------------------------- everyone signed in
   /**
@@ -311,13 +322,6 @@ export function panelRoutes({ services }) {
   )
 
   // ------------------------------------------------------------- admin only
-  router.get(
-    '/panel/dashboard',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      res.render('panel/dashboard', await shell(req, { active: 'dashboard', dashboard: await services.admin.dashboard() }))
-    }),
-  )
 
   /**
    * One buyer's record. Addressed by the name the portal prints, which is the
@@ -335,19 +339,6 @@ export function panelRoutes({ services }) {
   )
 
   /** The queue behind the public access-request form. */
-  router.get(
-    '/panel/requests',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      res.render('panel/requests', await shell(req, {
-        active: 'requests',
-        pending: await services.accessRequests.pending(),
-        history: await services.accessRequests.recent(20),
-        notice: null,
-        error: null,
-      }))
-    }),
-  )
 
   const reviewRequest = (action, handler) =>
     router.post(
@@ -508,84 +499,10 @@ export function panelRoutes({ services }) {
     }),
   )
 
-  router.get(
-    '/panel/system',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      res.render('panel/system', await shell(req, { active: 'system', system: await services.system.report() }))
-    }),
-  )
 
-  router.get(
-    '/panel/users',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      res.render('panel/users', await shell(req, {
-        active: 'users',
-        users: await services.users.list(),
-        error: null,
-        notice: req.query.created ? 'created' : null,
-      }))
-    }),
-  )
 
-  router.post(
-    '/panel/users',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      try {
-        await services.users.create({
-          email: req.body.email,
-          password: req.body.password,
-          fullName: req.body.fullName,
-          role: req.body.role,
-        })
-        res.redirect(`/panel/users?created=1&lang=${req.locale}`)
-      } catch (error) {
-        res.status(error.statusCode ?? 400).render('panel/users', await shell(req, {
-          active: 'users',
-          users: await services.users.list(),
-          error: error.message,
-          notice: null,
-        }))
-      }
-    }),
-  )
 
-  router.get(
-    '/panel/settings',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      res.render('panel/settings', await shell(req, {
-        active: 'settings',
-        groups: await services.settings.describe(),
-        error: null,
-        notice: req.query.saved ? 'saved' : null,
-      }))
-    }),
-  )
 
-  router.post(
-    '/panel/settings',
-    adminOnly,
-    asyncHandler(async (req, res) => {
-      try {
-        // `clear` carries the keys whose "erase" box was ticked; a checkbox
-        // group arrives as a string when one is ticked and an array when more.
-        const { clear, ...values } = req.body
-        const cleared = clear === undefined ? [] : Array.isArray(clear) ? clear : [clear]
-        await services.settings.update(values, req.user.id, { clear: cleared })
-        res.redirect(`/panel/settings?saved=1&lang=${req.locale}`)
-      } catch (error) {
-        res.status(400).render('panel/settings', await shell(req, {
-          active: 'settings',
-          groups: await services.settings.describe(),
-          error: [error.message, ...(error.details ?? [])].join(' — '),
-          notice: null,
-        }))
-      }
-    }),
-  )
 
   // `/` is the public landing page now, served by routes/public.js, which is
   // mounted ahead of this router. The redirect that used to live here would

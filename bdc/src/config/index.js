@@ -107,6 +107,8 @@ export const config = Object.freeze({
      * procedures, so moving between them is a link out, not a route.
      */
     siblingUrl: (process.env.SIBLING_URL || 'https://marches.civictrust.ma/panel').replace(/\/+$/, ''),
+    /** The administration console, which fronts every service. */
+    adminUrl: (process.env.ADMIN_URL || 'https://admin.civictrust.ma').replace(/\/+$/, ''),
     /** Where somebody who needs to sign in is sent. */
     portalUrl: (process.env.PORTAL_URL || 'https://portail.civictrust.ma').replace(/\/+$/, ''),
     adminEmail: process.env.ADMIN_EMAIL || 'admin@example.com',

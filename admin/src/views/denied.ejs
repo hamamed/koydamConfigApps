@@ -1,0 +1,7 @@
+<%- include('layout-open', { title: 'Accès refusé' }) %>
+<div class="panel narrow">
+  <h1>Accès refusé</h1>
+  <p class="lede">Cette console est réservée aux administrateurs. Vous êtes connecté en tant que <b><%= user.email %></b>.</p>
+  <p><a href="<%= config.auth.portalUrl %>">Retour au portail</a></p>
+</div>
+<%- include('layout-close') %>

@@ -39,39 +39,11 @@ test('a request from the public form reaches the administrator’s queue', async
   assert.equal(queued.company, 'Berrada Fournitures')
   assert.equal(queued.status, 'pending')
 
-  const panel = await (await fetch(`${api.base}/panel/requests`, { headers: { cookie: api.cookie } })).text()
-  assert.ok(panel.includes('Amina Berrada') && panel.includes('amina@example.ma'))
-})
-
-test('approving a request creates the account and shows the password once', async (t) => {
-  const api = await site()
-  t.after(() => api.close())
-
-  await fetch(`${api.base}/request-access`, form({ fullName: 'Youssef', email: 'y@example.ma' }))
-  const [queued] = await api.container.services.accessRequests.pending()
-
-  const page = await fetch(`${api.base}/panel/requests/${queued.id}/approve`,
-    { ...form({}), headers: { ...form({}).headers, cookie: api.cookie } })
-  const html = await page.text()
-  assert.equal(page.status, 200)
-  assert.ok(html.includes('y@example.ma'))
-
-  // The password is displayed, and it actually signs the new account in.
-  const shown = html.match(/<code class="ltr"[^>]*>([^<]+)<\/code>/)
-  assert.ok(shown, 'a password is shown')
-  const login = await fetch(`${api.base}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'y@example.ma', password: shown[1] }),
-  })
-  assert.equal(login.status, 200, 'the password shown is the password set')
-
-  // And it is not recoverable afterwards: only its hash was kept.
-  const stored = await api.container.repositories.users.findByEmailWithSecret('y@example.ma')
-  assert.ok(stored.password_hash.startsWith('$2'), 'bcrypt')
-  assert.ok(!JSON.stringify(stored).includes(shown[1]), 'the plaintext is nowhere in the row')
-
-  assert.equal((await api.container.services.accessRequests.pending()).length, 0, 'and the queue is cleared')
+  // Read back the way the console reads it: over the admin API, which is the
+  // only route into the queue now that the page moved.
+  const queue = await (await fetch(`${api.base}/admin/api/requests`, { headers: { cookie: api.cookie } })).json()
+  const names = queue.data.pending.map((row) => `${row.full_name} ${row.email}`)
+  assert.ok(names.some((n) => n.includes('Amina Berrada') && n.includes('amina@example.ma')))
 })
 
 test('the form does not confirm who already has an account', async (t) => {
@@ -119,13 +91,15 @@ test('the queue is closed to ordinary users', async (t) => {
   await fetch(`${api.base}/request-access`, form({ fullName: 'X', email: 'x@example.ma' }))
   const [queued] = await api.container.services.accessRequests.pending()
 
-  for (const path of ['/panel/requests', `/panel/requests/${queued.id}/approve`]) {
-    const response = await fetch(`${api.base}${path}`, {
-      method: path.endsWith('approve') ? 'POST' : 'GET', headers: { cookie }, redirect: 'manual',
-    })
-    assert.ok(response.status === 403 || response.status === 302, `${path} is not open to a user`)
-  }
-  assert.equal((await api.container.services.accessRequests.pending()).length, 1, 'and nothing was approved')
+  // The queue moved to the console, which reads it over the admin API. The
+  // page is gone from this service; the API is what has to refuse.
+  const page = await fetch(`${api.base}/panel/requests`, { headers: { cookie }, redirect: 'manual' })
+  assert.equal(page.status, 404, 'the page is not served here any more')
+
+  const api404 = await fetch(`${api.base}/admin/api/requests`, { headers: { cookie } })
+  assert.equal(api404.status, 403, 'and the API refuses an ordinary account')
+
+  assert.equal((await api.container.services.accessRequests.pending()).length, 1, 'nothing was approved')
 })
 
 test('a request missing what it needs is refused, and says why', async (t) => {

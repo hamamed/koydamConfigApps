@@ -1,0 +1,22 @@
+{
+  "name": "civictrust-admin",
+  "version": "1.0.0",
+  "description": "Administration console for the CivicTrust services. Owns no data — every screen is a view over a service's own admin API.",
+  "type": "module",
+  "engines": { "node": ">=22.5.0" },
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "NODE_ENV=test JWT_SECRET=test-secret-that-is-long-enough-for-tests LOG_LEVEL=error node --test --test-force-exit \"tests/*.test.js\""
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  }
+}

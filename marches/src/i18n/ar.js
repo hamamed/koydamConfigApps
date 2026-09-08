@@ -11,6 +11,7 @@ export default {
 
   'nav.projects': 'الصفقات',
   'nav.favorites': 'المفضلة',
+  'nav.admin': 'لوحة الإدارة',
   'nav.administration': 'الإدارة',
   'nav.users': 'المستخدمون',
   'nav.invoices': 'الفواتير',

@@ -11,6 +11,7 @@ export default {
 
   'nav.projects': 'Marchés',
   'nav.favorites': 'Favoris',
+  'nav.admin': 'Console d’administration',
   'nav.administration': 'Administration',
   'nav.users': 'Utilisateurs',
   'nav.invoices': 'Factures',
