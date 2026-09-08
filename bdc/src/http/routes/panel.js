@@ -7,8 +7,6 @@ import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
 import { translator } from '../../i18n/index.js'
-import { parseAmountToCentimes } from '../../utils/money.js'
-import { MARKET_KINDS, computeReferencePrice } from '../../utils/referencePrice.js'
 
 /**
  * The panel.
@@ -312,47 +310,6 @@ export function panelRoutes({ services }) {
     }),
   )
 
-  /**
-   * The reference price of article 44 of décret n° 2-22-431, as a calculator.
-   *
-   * Standalone on purpose. Article 44 sits in the appel d'offres chapter: the
-   * commission, the séance d'ouverture des plis and the prix de référence are
-   * that procedure's machinery. Bons de commande — everything this panel
-   * crawls — are article 91, where competitors drop off a devis and none of
-   * that applies. So the page is a tool the same contractors can use for their
-   * marchés, and it is deliberately not wired to any avis in this database.
-   */
-  router.get(
-    '/panel/reference-price',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      res.render('panel/reference-price', await shell(req, {
-        active: 'referencePrice',
-        form: blankReferenceForm(),
-        result: null,
-        error: null,
-      }))
-    }),
-  )
-
-  router.post(
-    '/panel/reference-price',
-    anyUser,
-    asyncHandler(async (req, res) => {
-      const form = readReferenceForm(req.body)
-
-      let result = null
-      let error = null
-      try {
-        result = evaluateReferenceForm(form)
-      } catch (failure) {
-        error = failure.message
-      }
-
-      res.render('panel/reference-price', await shell(req, { active: 'referencePrice', form, result, error }))
-    }),
-  )
-
   router.get(
     '/panel/favorites',
     anyUser,
@@ -652,63 +609,6 @@ export function panelRoutes({ services }) {
   return router
 }
 
-
-/* ---------------------------------------------------------------- article 44 */
-
-/**
- * Competitor rows rendered on an empty form. Eight is the number of bidders a
- * bon de commande usually draws; the page can add more without a round trip,
- * and the form keeps whatever was submitted.
- */
-const OFFER_ROWS = 8
-const MARKET_KIND_VALUES = new Set(Object.values(MARKET_KINDS))
-
-const asArray = (value) => (value === undefined ? [] : Array.isArray(value) ? value : [value])
-
-/** Pads a set of competitor rows out to the number the form displays. */
-const padRows = (offers) => [
-  ...offers,
-  ...Array.from({ length: Math.max(0, OFFER_ROWS - offers.length) }, () => ({ name: '', amount: '' })),
-]
-
-const blankReferenceForm = () => ({ estimate: '', kind: '', offers: padRows([]) })
-
-/** Reads the posted form back, keeping the raw strings so a rejected submission re-renders as typed. */
-function readReferenceForm(body = {}) {
-  const names = asArray(body.name)
-  const amounts = asArray(body.amount)
-  const offers = amounts.map((amount, index) => ({
-    name: String(names[index] ?? ''),
-    amount: String(amount ?? ''),
-  }))
-
-  return {
-    estimate: String(body.estimate ?? ''),
-    kind: String(body.kind ?? ''),
-    offers: padRows(offers),
-  }
-}
-
-/**
- * Validates the form and runs the article 44 evaluation.
- *
- * The errors are keys rather than sentences, because this page is rendered in
- * three languages and the messages belong in the dictionaries.
- * @throws {Error} with a translation key as its message.
- */
-function evaluateReferenceForm(form) {
-  const estimateCentimes = parseAmountToCentimes(form.estimate)
-  if (estimateCentimes === null || estimateCentimes <= 0) throw new Error('referencePrice.error.estimate')
-  if (!MARKET_KIND_VALUES.has(form.kind)) throw new Error('referencePrice.error.kind')
-
-  const offers = form.offers
-    .map((offer) => ({ name: offer.name.trim(), amountCentimes: parseAmountToCentimes(offer.amount) }))
-    .filter((offer) => offer.amountCentimes !== null)
-
-  if (offers.length === 0) throw new Error('referencePrice.error.offers')
-
-  return computeReferencePrice({ estimateCentimes, kind: form.kind, offers })
-}
 
 /**
  * Turns the invoice form into the payload the service expects.

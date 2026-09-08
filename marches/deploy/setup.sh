@@ -91,6 +91,15 @@ else
   echo "    .env already exists — left alone"
 fi
 
+say "Taking ownership of the tree"
+# Before npm, not after. The code can arrive here owned by root — an rsync or a
+# git clone run with sudo, or a hand-run `npm install` — and `npm ci` as the app
+# user then dies on "EACCES: permission denied, rmdir node_modules/.bin" because
+# it cannot clear a directory it does not own. Provisioning is the moment the
+# tree gets handed to the service account; every other app on this box already
+# does it here, and these two were the exception.
+chown -R "$APP_USER:$APP_USER" "$APP_DIR"
+
 say "Installing dependencies"
 sudo -u "$APP_USER" npm ci --omit=dev --no-audit --no-fund --prefix "$APP_DIR"
 
