@@ -45,8 +45,25 @@ const COOKIE_MAX_AGE_MS = 12 * 60 * 60 * 1000
 /** Session cookie settings shared by the JSON API and the admin panel. */
 export const cookieOptions = {
   httpOnly: true,
+  // 'lax', not 'strict': arriving here by following a link from the portal is
+  // the normal path, and 'strict' withholds the cookie on exactly that
+  // navigation — the visitor would land signed out.
   sameSite: 'lax',
   secure: config.isProduction,
   maxAge: COOKIE_MAX_AGE_MS,
   path: '/',
+  ...(config.auth.cookieDomain ? { domain: config.auth.cookieDomain } : {}),
+}
+
+/**
+ * Clearing has to repeat the domain and path the cookie was set with. Omitting
+ * them clears a different cookie — one scoped to this host — and leaves the
+ * shared session in place, so signing out here would sign you out of nothing.
+ */
+export const clearCookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: config.isProduction,
+  path: '/',
+  ...(config.auth.cookieDomain ? { domain: config.auth.cookieDomain } : {}),
 }

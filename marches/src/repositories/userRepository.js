@@ -3,6 +3,13 @@ import { buildInsert, buildUpdate } from '../db/sql.js'
 import { nowIso } from '../utils/dates.js'
 
 const TABLE = 'users'
+
+/**
+ * A bcrypt-shaped string no password hashes to. Stored for accounts that exist
+ * here only because the portal vouched for them: they have no local password,
+ * and a local sign-in attempt fails the comparison like any wrong one would.
+ */
+const SSO_ONLY_HASH = '$2a$12$ssoonlyssoonlyssoonlyssoonlyssoonlyssoonlyssoonlyssoonlyss'
 const PUBLIC_COLUMNS = 'id, email, full_name, role, is_active, last_login_at, created_at, updated_at'
 
 export function createUserRepository(db = getDb()) {
@@ -34,6 +41,30 @@ export function createUserRepository(db = getDb()) {
     return findById(row.id)
   }
 
+  /**
+   * The local row for somebody the portal has already authenticated.
+   *
+   * Identity is shared across the CivicTrust services; the databases are not.
+   * Every foreign key here — favourites, invoices, saved searches — points at a
+   * row in *this* schema, so a session arriving from the portal is resolved to
+   * a local row by email address, created the first time it is seen.
+   */
+  async function ensureFromSso({ email, role = 'user', fullName = null }) {
+    const address = String(email ?? '').toLowerCase().trim()
+    if (!address) return null
+
+    const existing = await findByEmail(address)
+    if (existing) {
+      // The portal is authoritative for role and name, so a change made there
+      // arrives here on the next request rather than needing a second edit.
+      const patch = {}
+      if (role && existing.role !== role) patch.role = role
+      if (fullName && existing.full_name !== fullName) patch.full_name = fullName
+      return Object.keys(patch).length > 0 ? update(existing.id, patch) : existing
+    }
+    return create({ email: address, passwordHash: SSO_ONLY_HASH, fullName, role })
+  }
+
   const touchLogin = (id) =>
     db.run(`UPDATE ${TABLE} SET last_login_at = ?, updated_at = ? WHERE id = ?`, [nowIso(), nowIso(), id])
 
@@ -63,5 +94,5 @@ export function createUserRepository(db = getDb()) {
     return before
   }
 
-  return { findById, findByEmail, findByEmailWithSecret, touchPanel, listAll, create, touchLogin, update, remove, countAll, countByRole }
+  return { ensureFromSso, findById, findByEmail, findByEmailWithSecret, touchPanel, listAll, create, touchLogin, update, remove, countAll, countByRole }
 }

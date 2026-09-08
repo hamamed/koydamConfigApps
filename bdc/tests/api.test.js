@@ -367,21 +367,23 @@ test('renders the panel right-to-left in Arabic', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  const french = await fetch(`${api.base}/login`)
+  // Exercised on /forgot rather than /login: the sign-in form moved to the
+  // portal, and /forgot is the signed-out page this service still renders.
+  const french = await fetch(`${api.base}/forgot`)
   const frenchHtml = await french.text()
   assert.match(frenchHtml, /<html lang="fr" dir="ltr">/)
   assert.match(frenchHtml, /Adresse e-mail/)
 
-  const arabic = await fetch(`${api.base}/login?lang=ar`)
+  const arabic = await fetch(`${api.base}/forgot?lang=ar`)
   const arabicHtml = await arabic.text()
   assert.match(arabicHtml, /<html lang="ar" dir="rtl">/)
   assert.match(arabicHtml, /البريد الإلكتروني/)
   assert.equal(arabic.headers.get('content-language'), 'ar')
-  // The choice is remembered, so it survives the redirect after signing in.
+  // The choice is remembered, so it survives the round trip through the portal.
   assert.match(arabic.headers.get('set-cookie') ?? '', /lang=ar/)
 
-  const english = await fetch(`${api.base}/login?lang=en`)
-  assert.match(await english.text(), /Sign in/)
+  const english = await fetch(`${api.base}/forgot?lang=en`)
+  assert.match(await english.text(), /Reset your password/)
 })
 
 test('the panel shows every article of a consultation', async (t) => {

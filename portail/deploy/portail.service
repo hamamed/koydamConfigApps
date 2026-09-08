@@ -1,0 +1,31 @@
+[Unit]
+Description=CivicTrust portal — front door and shared sign-in
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# The shared platform account. deploy.sh chowns every service it manages to
+# this one, so a service given its own user starts fine and then dies on the
+# first deploy with "attempt to write a readonly database".
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/portail
+EnvironmentFile=/opt/portail/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+
+# It writes its accounts database and nothing else on the box.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/portail/data
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=portail
+
+[Install]
+WantedBy=multi-user.target

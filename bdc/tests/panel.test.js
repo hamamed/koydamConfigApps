@@ -90,7 +90,12 @@ test('the admin screens are closed to ordinary users, not just hidden', async (t
 
   const anonymous = await api.page('/panel/dashboard', '')
   assert.equal(anonymous.status, 302)
-  assert.match(anonymous.headers.get('location'), /^\/login\?next=/)
+  // Signing in happens on the portal now, so an anonymous visitor leaves this
+  // host entirely — and the return address has to be absolute for that to come
+  // back here rather than to a path on the portal.
+  const away = anonymous.headers.get('location')
+  assert.match(away, /^https?:\/\/[^/]+\/login\?next=/, 'sent to the portal to sign in')
+  assert.match(decodeURIComponent(away), /next=https?:\/\/[^/]+\/panel/, 'and told where to come back to')
 })
 
 test('a user tracks a project and keeps a private note on it', async (t) => {
@@ -1041,7 +1046,7 @@ test('the signed-out pages carry a background pattern', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  for (const path of ['/login', '/forgot']) {
+  for (const path of ['/forgot']) {
     const html = await (await fetch(`${api.base}${path}`)).text()
     assert.match(html, /body::before/, `${path} has the backdrop`)
     assert.match(html, /repeating-linear-gradient/, 'the hairlines')
@@ -1051,7 +1056,7 @@ test('the signed-out pages carry a background pattern', async (t) => {
   }
 
   // The diagonals lean the other way on an RTL page, so it reads as one design.
-  const arabic = await (await fetch(`${api.base}/login?lang=ar`)).text()
+  const arabic = await (await fetch(`${api.base}/forgot?lang=ar`)).text()
   assert.match(arabic, /body\[dir="rtl"\]::before/)
   assert.match(arabic, /repeating-linear-gradient\(45deg/)
 })
@@ -1263,18 +1268,28 @@ test('the home screen answers what changed and what runs out, and marks the visi
   assert.match(html, /Aujourd’hui/)
 })
 
-test('signing in lands on the home screen, not on seven hundred rows', async (t) => {
+test('the sign-in form is the portal’s, and old links still reach it', async (t) => {
   const api = await setup()
   t.after(() => api.close())
 
-  const response = await fetch(`${api.base}/login`, {
+  // This service holds no sign-in form any more; the portal is the account
+  // authority for every CivicTrust service. /login stays as a forward rather
+  // than a 404, because every `next=` this panel ever issued points at it.
+  const get = await fetch(`${api.base}/login?next=/panel/awards`, { redirect: 'manual' })
+  assert.equal(get.status, 302)
+  assert.match(get.headers.get('location'), /\/login\?next=/, 'forwarded to a sign-in form')
+  assert.match(decodeURIComponent(get.headers.get('location')), /\/panel\/awards$/, 'carrying where to come back to')
+
+  // And a form posted here goes the same way rather than checking a password
+  // this service no longer owns.
+  const post = await fetch(`${api.base}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ email: 'staff@test.ma', password: 'a-very-long-password' }).toString(),
     redirect: 'manual',
   })
-  assert.equal(response.status, 302)
-  assert.equal(response.headers.get('location'), '/panel/today')
+  assert.equal(post.status, 302)
+  assert.doesNotMatch(post.headers.get('location'), /^\/panel/, 'not signed in locally')
 })
 
 test('the one-question setup creates the alert a new account lacks', async (t) => {

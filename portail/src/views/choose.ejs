@@ -1,0 +1,29 @@
+<%- include('layout-open', { title: 'Choisir un espace' }) %>
+
+<div class="panel">
+  <h1>Où souhaitez-vous aller&nbsp;?</h1>
+  <p class="who">Connecté en tant que <b><%= user.fullName || user.email %></b></p>
+
+  <% if (available.length === 0) { %>
+    <div class="error">Aucun espace ne vous est ouvert pour l’instant. Contactez l’administrateur.</div>
+  <% } else { %>
+    <div class="choices">
+      <% available.forEach(function (service) { %>
+        <a class="choice" href="/aller/<%= service.key %>">
+          <span class="head">
+            <span class="ico"><%- include('icon', { name: service.icon, size: 20 }) %></span>
+            <b><%= service.key === 'bdc' ? 'Bons de commande' : 'Marchés' %></b>
+          </span>
+          <% if (service.key === 'bdc') { %>
+            <p>Avis d’achat sur bon de commande, résultats et facturation.</p>
+            <span class="rule">Article 91 — devis, sans commission</span>
+          <% } else { %>
+            <p>Appels d’offres, estimations et prix de référence.</p>
+            <span class="rule">Articles 38–47 — commission, prix de référence</span>
+          <% } %>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+<%- include('layout-close') %>

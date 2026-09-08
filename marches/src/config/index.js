@@ -64,6 +64,8 @@ const list = (value, fallback = []) =>
 const resolvePath = (value, fallback) => path.resolve(ROOT_DIR, value || fallback)
 
 export const config = Object.freeze({
+  /** This service's own address, used to send somebody back after signing in. */
+  publicUrl: (process.env.PUBLIC_URL || 'https://marches.civictrust.ma').replace(/\/+$/, ''),
   rootDir: ROOT_DIR,
   env: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
@@ -91,6 +93,17 @@ export const config = Object.freeze({
     jwtSecret: process.env.JWT_SECRET || 'insecure-development-secret',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '12h',
     cookieName: 'mp_token',
+    /**
+     * The domain the session cookie is scoped to.
+     *
+     * Set to ".civictrust.ma" in production so one sign-in on the portal is
+     * accepted here too: a cookie with no Domain goes back only to the host
+     * that set it. Empty in development, where everything is 127.0.0.1 and a
+     * domain attribute makes the browser drop the cookie entirely.
+     */
+    cookieDomain: process.env.AUTH_COOKIE_DOMAIN || null,
+    /** Where somebody who needs to sign in is sent. */
+    portalUrl: (process.env.PORTAL_URL || 'https://portail.civictrust.ma').replace(/\/+$/, ''),
     adminEmail: process.env.ADMIN_EMAIL || 'admin@example.com',
     adminPassword: process.env.ADMIN_PASSWORD || '',
   }),

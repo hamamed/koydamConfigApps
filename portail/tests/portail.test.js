@@ -1,0 +1,216 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import jwt from 'jsonwebtoken'
+import { createSqliteDriver } from '../src/db/drivers/sqlite.js'
+import { initDatabase } from '../src/db/init.js'
+import { setDb } from '../src/db/index.js'
+import { createContainer } from '../src/container.js'
+import { createApp } from '../src/app.js'
+import { config } from '../src/config/index.js'
+
+const COOKIE = config.auth.cookieName
+
+/** A portal on an in-memory database, with one account ready to sign in. */
+async function boot({ services = 'bdc,marches', role = 'admin' } = {}) {
+  const db = createSqliteDriver({ file: ':memory:' })
+  setDb(db)
+  await initDatabase(db)
+  const container = createContainer(db)
+  await container.services.auth.register({
+    email: 'you@civictrust.ma',
+    password: 'a-very-long-password',
+    fullName: 'Test Person',
+    role,
+    services,
+  })
+
+  const server = createApp(container).listen(0)
+  await new Promise((resolve) => server.once('listening', resolve))
+  const base = `http://127.0.0.1:${server.address().port}`
+
+  const signIn = async (password = 'a-very-long-password') => {
+    const response = await fetch(`${base}/login`, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email: 'you@civictrust.ma', password }).toString(),
+    })
+    return { response, cookie: (response.headers.get('set-cookie') ?? '').split(';')[0] }
+  }
+
+  const open = (path, cookie) =>
+    fetch(`${base}${path}`, { redirect: 'manual', headers: cookie ? { cookie } : {} })
+
+  return { base, container, signIn, open, close: () => new Promise((r) => server.close(r)) }
+}
+
+test('the landing page describes both procedures without a session', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const html = await (await api.open('/')).text()
+  assert.match(html, /Bons de commande/)
+  assert.match(html, /Marchés/)
+  // Naming the article each space is governed by is the point: they are
+  // different procedures, and confusing them is how the wrong rule gets applied.
+  assert.match(html, /Article 91/)
+  assert.match(html, /Articles 38–47/)
+})
+
+test('signing in issues a session and lands on the chooser', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { response, cookie } = await api.signIn()
+  assert.equal(response.status, 302)
+  assert.equal(response.headers.get('location'), '/choisir')
+  assert.match(cookie, new RegExp(`^${COOKIE}=`))
+
+  const chooser = await (await api.open('/choisir', cookie)).text()
+  assert.match(chooser, /Test Person/)
+  assert.match(chooser, /aller\/bdc/)
+  assert.match(chooser, /aller\/marches/)
+})
+
+test('the token carries the address the other services identify people by', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const payload = jwt.verify(cookie.split('=')[1], config.auth.jwtSecret)
+
+  // `sub` is this database's row id and means nothing in bdc or marches; the
+  // email is what they resolve their own row from.
+  assert.equal(payload.email, 'you@civictrust.ma')
+  assert.equal(payload.role, 'admin')
+  assert.deepEqual(payload.svc, ['bdc', 'marches'])
+  assert.equal(payload.iss, 'portail')
+})
+
+test('a wrong password is refused, and says no more than that', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { response } = await api.signIn('the-wrong-password')
+  assert.equal(response.status, 401)
+  const html = await response.text()
+  // Read the error element itself, not the whole page: the sign-in form's own
+  // copy mentions "compte", and asserting against the document would pass or
+  // fail on wording that has nothing to do with what is disclosed.
+  const message = html.match(/<div class="error">([\s\S]*?)<\/div>/)?.[1]?.trim()
+  assert.ok(message, 'the failure is shown')
+  assert.match(message, /incorrect/i)
+  // One message for a wrong password and for an unknown address, so this
+  // cannot be used to find out who has an account.
+  assert.doesNotMatch(message, /introuvable|inconnu|n['’]existe/i)
+  assert.equal(response.headers.get('set-cookie') ?? '', '', 'and no session is issued')
+
+  // The same wording for an address that has no account at all.
+  const unknown = await fetch(`${api.base}/login`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ email: 'nobody@civictrust.ma', password: 'a-very-long-password' }).toString(),
+  })
+  const other = (await unknown.text()).match(/<div class="error">([\s\S]*?)<\/div>/)?.[1]?.trim()
+  assert.equal(other, message, 'indistinguishable from a wrong password')
+})
+
+test('every attempt is recorded, because no other service sees passwords now', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  await api.signIn('the-wrong-password')
+  await api.signIn()
+
+  const log = await api.container.repositories.signIns.recent(10)
+  assert.deepEqual(
+    log.map((row) => row.outcome).sort(),
+    ['failed', 'success'],
+  )
+  assert.ok(log.every((row) => row.email === 'you@civictrust.ma'))
+})
+
+test('the chooser offers only the spaces an account may open', async (t) => {
+  const api = await boot({ services: 'marches' })
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const chooser = await (await api.open('/choisir', cookie)).text()
+  assert.match(chooser, /aller\/marches/)
+  assert.doesNotMatch(chooser, /aller\/bdc/, 'bdc is not offered')
+
+  // And asking for it directly is refused here, rather than by the other
+  // service's sign-in page after a confusing round trip.
+  assert.equal((await api.open('/aller/bdc', cookie)).status, 403)
+})
+
+test('opening a space is a redirect to it, and is recorded', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const go = await api.open('/aller/marches', cookie)
+  assert.equal(go.status, 302)
+  assert.match(go.headers.get('location'), /marches\.civictrust\.ma/)
+
+  const log = await api.container.repositories.signIns.recent(10)
+  assert.ok(log.some((row) => row.outcome === 'opened' && row.service === 'marches'))
+})
+
+test('an anonymous visitor is sent to sign in and returned where they were going', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const chooser = await api.open('/choisir')
+  assert.equal(chooser.status, 302)
+  assert.match(chooser.headers.get('location'), /^\/login\?next=/)
+
+  const direct = await api.open('/aller/bdc')
+  assert.equal(direct.status, 302)
+  assert.match(decodeURIComponent(direct.headers.get('location')), /next=\/aller\/bdc/)
+})
+
+test('`next` cannot be used to bounce somebody off the domain', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  for (const hostile of ['https://evil.example', '//evil.example', 'javascript:alert(1)']) {
+    const response = await fetch(`${api.base}/login`, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        email: 'you@civictrust.ma',
+        password: 'a-very-long-password',
+        next: hostile,
+      }).toString(),
+    })
+    assert.equal(response.headers.get('location'), '/choisir', `${hostile} is ignored`)
+  }
+})
+
+test('signing out clears the session', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const out = await fetch(`${api.base}/logout`, { method: 'POST', redirect: 'manual', headers: { cookie } })
+  assert.equal(out.status, 302)
+  assert.equal(out.headers.get('location'), '/')
+  // Cleared by expiry, and with the same attributes it was set with — a
+  // clearCookie that omits them removes a different cookie and leaves the
+  // shared session alive on the other services.
+  assert.match(out.headers.get('set-cookie') ?? '', new RegExp(`${COOKIE}=`))
+  assert.match(out.headers.get('set-cookie') ?? '', /Expires=Thu, 01 Jan 1970|Max-Age=0/)
+})
+
+test('a signed-in visitor is not shown the pitch again', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const { cookie } = await api.signIn()
+  const landing = await api.open('/', cookie)
+  assert.equal(landing.status, 302)
+  assert.equal(landing.headers.get('location'), '/choisir')
+})

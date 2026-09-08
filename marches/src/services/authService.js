@@ -12,6 +12,26 @@ const ROLES = new Set(['admin', 'user'])
 
 export function createAuthService({ users }) {
   /**
+   * Turns a session issued by the portal into a local user.
+   *
+   * The token's `sub` is the portal's row id and means nothing here, so the
+   * email is the identity and the local row is found — or created — from it.
+   * Everything downstream keeps using `req.user.id` as a foreign key into this
+   * schema, exactly as it did when this service owned its own sign-in.
+   * @throws {UnauthorizedError} when the token is missing, expired or forged.
+   */
+  async function resolveSession(token) {
+    const payload = verifyToken(token)
+    const local = await users.ensureFromSso({
+      email: payload.email,
+      role: payload.role,
+      fullName: payload.fullName,
+    })
+    if (!local || local.is_active === 0) throw new UnauthorizedError('Account is not active')
+    return { id: local.id, email: local.email, role: local.role, fullName: local.full_name ?? null }
+  }
+
+  /**
    * Creates a user. Passwords are hashed with bcrypt; the plaintext never
    * reaches the database or the logs.
    */
@@ -91,5 +111,5 @@ export function createAuthService({ users }) {
     return { updated: true }
   }
 
-  return { register, login, verifyToken, changePassword, setPassword, issueToken }
+  return { register, login, verifyToken, resolveSession, changePassword, setPassword, issueToken }
 }

@@ -1,0 +1,22 @@
+<%- include('layout-open', { title: 'Connexion' }) %>
+
+<div class="panel narrow">
+  <h1>Connexion</h1>
+  <p class="lede">Un seul compte pour les bons de commande et les marchés.</p>
+
+  <% if (error) { %><div class="error"><%= error %></div><% } %>
+
+  <form method="post" action="/login">
+    <input type="hidden" name="next" value="<%= next %>">
+    <div class="field">
+      <label for="email">Adresse e-mail</label>
+      <input id="email" name="email" type="email" value="<%= email %>" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">Mot de passe</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="primary" type="submit">Se connecter</button>
+  </form>
+</div>
+<%- include('layout-close') %>

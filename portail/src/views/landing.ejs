@@ -1,0 +1,29 @@
+<%- include('layout-open', { title: 'Accueil' }) %>
+
+<div class="panel">
+  <h1>Les marchés publics marocains, lisibles.</h1>
+  <p class="lede">
+    Deux procédures, deux espaces. Un seul compte pour les deux — vous vous
+    connectez ici et vous choisissez où aller.
+  </p>
+
+  <div class="choices">
+    <a class="choice" href="/aller/bdc">
+      <span class="head"><span class="ico"><%- include('icon', { name: 'receipt', size: 20 }) %></span><b>Bons de commande</b></span>
+      <p>Les avis d’achat sur bon de commande : suivi des échéances, résultats, analyse des attributions et facturation.</p>
+      <span class="rule">Article 91 — devis, sans commission</span>
+    </a>
+    <a class="choice" href="/aller/marches">
+      <span class="head"><span class="ico"><%- include('icon', { name: 'gavel', size: 20 }) %></span><b>Marchés</b></span>
+      <p>Les appels d’offres : estimation du maître d’ouvrage relevée pour chaque marché, et le calcul du prix de référence.</p>
+      <span class="rule">Articles 38–47 — commission, prix de référence</span>
+    </a>
+  </div>
+
+  <p class="foot">
+    Les deux espaces lisent le portail officiel
+    <a href="https://www.marchespublics.gov.ma" target="_blank" rel="noopener noreferrer">marchespublics.gov.ma</a>.
+    CivicTrust est un service indépendant et ne représente aucune administration.
+  </p>
+</div>
+<%- include('layout-close') %>

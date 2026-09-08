@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { config } from '../../config/index.js'
 import { asyncHandler } from '../middleware/asyncHandler.js'
 import { requireAdminPage, requireUserPage } from '../middleware/auth.js'
-import { cookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
+import { cookieOptions, clearCookieOptions, createLoginLimiter } from '../middleware/rateLimit.js'
 import { parseFilters } from '../filters.js'
 import { parsePagination } from '../../utils/pagination.js'
 import { NotFoundError } from '../../utils/errors.js'
@@ -34,37 +34,18 @@ export function panelRoutes({ services }) {
   })
 
   // ------------------------------------------------------------------ session
-  router.get(
-    '/login',
-    asyncHandler(async (req, res) => {
-      res.render('panel/login', {
-        error: null,
-        next: safeRedirect(req.query.next),
-        email: '',
-        siteName: await services.settings.get('site.name'),
-      })
-    }),
-  )
+  //
+  // Signing in happens on the portal, which is the account authority for every
+  // CivicTrust service. These two routes stay as redirects rather than being
+  // deleted: a bookmark, an old email link and every `next=` this panel ever
+  // produced still point at /login, and a 404 there would look like the service
+  // being down.
+  router.get('/login', (req, res) => {
+    const back = `${config.publicUrl}${safeRedirect(req.query.next)}`
+    res.redirect(`${config.auth.portalUrl}/login?next=${encodeURIComponent(back)}`)
+  })
 
-  router.post(
-    '/login',
-    loginLimiter,
-    asyncHandler(async (req, res) => {
-      const target = safeRedirect(req.body.next)
-      try {
-        const { token } = await services.auth.login(req.body.email, req.body.password)
-        res.cookie(config.auth.cookieName, token, cookieOptions)
-        res.redirect(target)
-      } catch (error) {
-        res.status(401).render('panel/login', {
-          error: error.message,
-          next: target,
-          email: req.body.email ?? '',
-          siteName: await services.settings.get('site.name'),
-        })
-      }
-    }),
-  )
+  router.post('/login', (_req, res) => res.redirect(`${config.auth.portalUrl}/login`))
 
   router.get(
     '/forgot',
@@ -119,8 +100,10 @@ export function panelRoutes({ services }) {
   )
 
   router.post('/logout', (req, res) => {
-    res.clearCookie(config.auth.cookieName, { ...cookieOptions, maxAge: undefined })
-    res.redirect('/login')
+    // Cleared with the domain and path it was set with, or the browser keeps a
+    // different cookie and the session survives on the other services.
+    res.clearCookie(config.auth.cookieName, clearCookieOptions)
+    res.redirect(config.auth.portalUrl)
   })
 
   // ------------------------------------------------------- everyone signed in
