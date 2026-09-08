@@ -1512,8 +1512,13 @@ test('the shops offered match what the article actually is', async () => {
   assert.equal(articleKind('Fourniture de perceuse à percussion'), 'tools')
   assert.deepEqual(labels('Fourniture de perceuse à percussion'), ['Bricoma'])
 
-  assert.equal(articleKind("Acquisition d'ouvrages et livres scientifiques"), 'books')
-  assert.ok(labels("Acquisition d'ouvrages et livres scientifiques").includes('Mabooko'))
+  assert.equal(articleKind('Acquisition de livres et manuels scolaires'), 'books')
+  assert.ok(labels('Acquisition de livres et manuels scolaires').includes('Mabooko'))
+  // "ouvrage" is not a book here: the maître d'ouvrage is the contracting
+  // authority and an ouvrage d'art is a bridge. Reading those as books put a
+  // bookshop under every supervision contract on the portal.
+  assert.equal(articleKind("Assistance au maitre d'ouvrage lors de l'examen des offres"), 'general')
+  assert.equal(articleKind("Ouvrages d'art et passerelles"), 'general')
 
   assert.equal(articleKind('Appareil photo reflex avec objectif 50mm'), 'photo')
   assert.ok(labels('Appareil photo reflex avec objectif 50mm').includes('SaymonShop'))

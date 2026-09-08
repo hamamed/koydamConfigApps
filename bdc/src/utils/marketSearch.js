@@ -105,7 +105,10 @@ const MARKETPLACES = Object.freeze([
  */
 const KINDS = Object.freeze([
   ['photo', /\b(appareil photo|camera|caméra|objectif|obturateur|tr[ée]pied|gimbal|stabilisateur|drone|flash|softbox|reflex|mirrorless|photographi|vid[ée]o surveillance|camescope)/i],
-  ['books', /\b(livre|livres|ouvrage|ouvrages|manuel scolaire|roman|dictionnaire|encyclop[ée]die|revue|abonnement|biblioth[èe]que|كتاب)/i],
+  // Not "ouvrage": in a Moroccan procurement file the maître d'ouvrage is the
+  // contracting authority and an ouvrage d'art is a bridge. It read every
+  // supervision contract on the portal as an order of books.
+  ['books', /\b(livre|livres|librairie|manuel scolaire|manuels scolaires|roman|dictionnaire|encyclop[ée]die|revue|p[ée]riodique|abonnement|كتاب)/i],
   ['it', /\b(ordinateur|pc\b|laptop|portable|serveur|imprimante|photocopieu|toner|cartouche|scanner|[ée]cran|moniteur|clavier|souris|disque dur|ssd|ram\b|processeur|carte m[èe]re|onduleur|switch|routeur|r[ée]seau|projecteur|tablette|smartphone|logiciel|licence|antivirus|cl[ée] usb)/i],
   ['tools', /\b(outil|outillage|perceuse|visseuse|meuleuse|marteau|tournevis|[ée]chelle|[ée]chafaudage|peinture|ciment|b[ée]ton|quincaillerie|tuyau|robinet|sanitaire|plomberie|menuiserie|soudure|disjoncteur|c[âa]ble|luminaire|lampe|led|climatiseur|groupe [ée]lectrog[èe]ne|pompe)/i],
 ])
