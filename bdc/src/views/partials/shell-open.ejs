@@ -126,6 +126,10 @@
 
   input, select, textarea { padding:8px 10px; border:1px solid #d6dde7; border-radius:8px; font:inherit; width:100%; background:#fff; }
   input:focus, select:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+  /* A facet dropdown can hold a thousand buyers, and their names run long.
+     The closed control is bound by the filter grid cell rather than by its
+     widest option, so one long buyer cannot stretch the row. */
+  select.facet { text-overflow:ellipsis; }
   form.filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; align-items:end; }
   /* Two per row, not as many as fit. A settings field is read and considered
      one at a time, so wide fields with room to breathe beat a dense grid of

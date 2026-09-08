@@ -1192,14 +1192,18 @@ test('the list filters offer the values the data actually holds, and selecting o
 
   const html = await (await api.page('/panel', api.staff)).text()
 
-  // A category is a short list, so every value is a real option to pick.
+  // All three are dropdowns, and each offers every value its column holds —
+  // not a text box the reader has to guess the exact spelling into.
+  ;['acheteur', 'categorie', 'lieuExecution'].forEach((id) => {
+    assert.match(html, new RegExp(`<select id="${id}" name="[^"]+" class="facet">`), `${id} is not a dropdown`)
+  })
   facets.categories.forEach((f) => {
     assert.match(html, new RegExp(`<option value="${f.value}"`), `missing category option ${f.value}`)
   })
-  // A buyer is one of hundreds, so the field is typeable and suggests them.
-  assert.match(html, /<input id="acheteur"[^>]*list="acheteur-list"/)
-  assert.match(html, /<datalist id="acheteur-list">/)
-  assert.match(html, /<datalist id="lieu-list">/)
+  const options = (id) => (html.split(`<select id="${id}"`)[1] || '').split('</select>')[0].match(/<option/g).length
+  // Every value, plus the leading "any" row.
+  assert.equal(options('acheteur'), facets.buyers.length + 1)
+  assert.equal(options('lieuExecution'), facets.places.length + 1)
 
   // The point of offering a value is that choosing it narrows the list. A
   // dropdown of values that do not filter would look identical to this one.

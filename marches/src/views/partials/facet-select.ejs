@@ -1,0 +1,27 @@
+<%
+  /*
+    One filter over a column whose values are read back from the data.
+
+    Every one of these is a real dropdown rather than a text box, because the
+    values cannot be guessed: a buyer is written "CASABLANCA - ANFA", not
+    "Casablanca", and typing the second returns nothing while looking exactly
+    like a filter that does not work. Each option carries how many rows carry
+    it, so a value that will return one row says so before it is chosen.
+
+    A value already in the query that is not in the list is kept as an option
+    of its own — a link somebody saved, or a value past the facet limit, must
+    not be silently dropped from the control that is meant to show it.
+  */
+  const chosen = current || ''
+  const known = values.some((f) => f.value === chosen)
+%>
+<div>
+  <label for="<%= id %>"><%= label %></label>
+  <select id="<%= id %>" name="<%= name %>" class="facet">
+    <option value=""><%= anyLabel %></option>
+    <% if (chosen && !known) { %><option value="<%= chosen %>" selected><%= chosen %></option><% } %>
+    <% values.forEach(function (f) { %>
+      <option value="<%= f.value %>" <%= chosen === f.value ? 'selected' : '' %>><%= f.value %> (<%= f.count %>)</option>
+    <% }) %>
+  </select>
+</div>

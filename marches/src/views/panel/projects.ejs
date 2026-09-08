@@ -10,43 +10,18 @@
     <input type="hidden" name="lang" value="<%= locale %>">
     <div><label for="q"><%= t('filters.objet') %></label><input id="q" name="q" value="<%= query.q || '' %>"></div>
     <div><label for="reference"><%= t('filters.reference') %></label><input id="reference" name="reference" value="<%= query.reference || '' %>" dir="ltr"></div>
-    <%#
-      Three filters offering what exists rather than asking somebody to type it
-      from memory. "KENITRA" matches and "Kenitra" is a guess, and a buyer name
-      runs to sixty characters — a blank box asks you to already know the
-      answer to the question you came to ask.
-
-      A category is a <select>: there are three of them, ever. A buyer or a
-      town is an <input list>, because there are hundreds — that renders as a
-      text box you can type into to narrow the list, and it still accepts a
-      value that is not on it, so an old bookmarked URL keeps working.
-
-      The count comes with each value: "RABAT (283)" says whether the filter is
-      worth applying; a bare "RABAT" does not.
-    %>
-    <div>
-      <label for="acheteur"><%= t('filters.acheteur') %></label>
-      <input id="acheteur" name="acheteur" list="acheteur-list" value="<%= query.acheteur || '' %>" autocomplete="off">
-      <datalist id="acheteur-list">
-        <% facets.buyers.forEach(function (f) { %><option value="<%= f.value %>"><%= f.count %></option><% }) %>
-      </datalist>
-    </div>
-    <div>
-      <label for="categorie"><%= t('filters.categorie') %></label>
-      <select id="categorie" name="categorie">
-        <option value=""><%= t('filters.categorie.any') %></option>
-        <% facets.categories.forEach(function (f) { %>
-          <option value="<%= f.value %>" <%= (query.categorie || '') === f.value ? 'selected' : '' %>><%= f.value %> (<%= f.count %>)</option>
-        <% }) %>
-      </select>
-    </div>
-    <div>
-      <label for="lieuExecution"><%= t('filters.lieuExecution') %></label>
-      <input id="lieuExecution" name="lieuExecution" list="lieu-list" value="<%= query.lieuExecution || '' %>" autocomplete="off">
-      <datalist id="lieu-list">
-        <% facets.places.forEach(function (f) { %><option value="<%= f.value %>"><%= f.count %></option><% }) %>
-      </datalist>
-    </div>
+    <%- include('../partials/facet-select', {
+      id: 'acheteur', name: 'acheteur', label: t('filters.acheteur'),
+      values: facets.buyers, current: query.acheteur, anyLabel: t('filters.acheteur.any'),
+    }) %>
+    <%- include('../partials/facet-select', {
+      id: 'categorie', name: 'categorie', label: t('filters.categorie'),
+      values: facets.categories, current: query.categorie, anyLabel: t('filters.categorie.any'),
+    }) %>
+    <%- include('../partials/facet-select', {
+      id: 'lieuExecution', name: 'lieuExecution', label: t('filters.lieuExecution'),
+      values: facets.places, current: query.lieuExecution, anyLabel: t('filters.lieuExecution.any'),
+    }) %>
     <div><label for="datePublicationStart"><%= t('filters.publishedFrom') %></label><input id="datePublicationStart" name="datePublicationStart" type="date" value="<%= query.datePublicationStart || '' %>" dir="ltr"></div>
     <div>
       <label for="closingWithin"><%= t('filters.closingWithin') %></label>
