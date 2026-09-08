@@ -229,6 +229,28 @@ test('a service can send somebody back to where they were going', async (t) => {
   assert.equal(through.headers.get('location'), back)
 })
 
+test('the CSP lets the sign-in redirect actually land', async (t) => {
+  const api = await boot()
+  t.after(() => api.close())
+
+  const csp = (await api.open('/login')).headers.get('content-security-policy') ?? ''
+  const formAction = csp.split(';').map((part) => part.trim()).find((part) => part.startsWith('form-action'))
+  assert.ok(formAction, 'form-action is set')
+
+  // `form-action` is enforced across redirects. With 'self' alone the browser
+  // cancels the navigation to bdc *after* the session cookie is set, so signing
+  // in looks like it did nothing until you go back and find yourself signed in.
+  // curl never sees this — it does not implement CSP — so nothing but this
+  // assertion stands between that bug and production.
+  for (const service of config.services) {
+    assert.ok(formAction.includes(new URL(service.url).origin), `${service.key} is a permitted destination`)
+  }
+  assert.ok(formAction.includes("'self'"), 'and posting back here still works')
+
+  // Not a wildcard: the point is to name the destinations, not to stop caring.
+  assert.doesNotMatch(formAction, /\*/, 'no wildcard')
+})
+
 test('signing out clears the session', async (t) => {
   const api = await boot()
   t.after(() => api.close())

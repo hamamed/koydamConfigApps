@@ -10,6 +10,23 @@ import { logger } from './utils/logger.js'
 
 const VIEWS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'views')
 
+/**
+ * The distinct origins of the services in config, for the CSP. Read from the
+ * same list the chooser links to, so adding a service does not need a second
+ * edit here that somebody would find out about through a blocked redirect.
+ */
+function serviceOrigins() {
+  const origins = new Set()
+  for (const service of config.services) {
+    try {
+      origins.add(new URL(service.url).origin)
+    } catch {
+      // A malformed URL in config is the config's problem, not the CSP's.
+    }
+  }
+  return [...origins]
+}
+
 export function createApp(container) {
   const app = express()
 
@@ -27,9 +44,20 @@ export function createApp(container) {
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:'],
-          // The chooser links out to the services this portal fronts, and a
-          // browser must be allowed to follow those.
-          formAction: ["'self'"],
+          /**
+           * The services this portal signs people in to, not just this origin.
+           *
+           * `form-action` is enforced across redirects: the sign-in form posts
+           * here, the response is a 302 to bdc or marches, and with `'self'`
+           * alone the browser cancels that navigation — after the session
+           * cookie has already been set. The symptom is a login that appears
+           * to do nothing until you go back, and find yourself signed in.
+           *
+           * (It governs form submissions only. The chooser's links out are
+           * <a> elements and were never affected — the comment that used to
+           * sit here said otherwise and set 'self' anyway.)
+           */
+          formAction: ["'self'", ...serviceOrigins()],
           frameAncestors: ["'none'"],
         },
       },
