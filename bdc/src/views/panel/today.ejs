@@ -113,7 +113,7 @@
               <td><a href="/panel/consultations/<%= row.id %>?lang=<%= locale %>"><code><%= row.reference %></code></a></td>
               <td style="max-width:260px"><%= row.objet || '—' %></td>
               <td><%= row.result.attributaire || '—' %></td>
-              <td class="ltr"><%= row.result.montant_attribue === null ? '—' : row.result.montant_attribue %></td>
+              <td class="ltr money"><%= money(row.result.montant_attribue) %></td>
             </tr>
           <% }) %>
         </tbody>

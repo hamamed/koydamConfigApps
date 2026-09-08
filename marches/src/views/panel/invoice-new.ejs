@@ -61,7 +61,7 @@
     <div><label for="notes"><%= t('invoices.notes') %></label><input id="notes" name="notes"></div>
     <p style="margin:16px 0 0; display:flex; gap:14px; align-items:center; flex-wrap:wrap">
       <button type="submit"><%- include('../partials/icon', { name: 'save', size: 15 }) %><%= t('invoices.create') %></button>
-      <span class="muted"><%= t('invoices.subtotal') %> : <b class="ltr" id="running-total">0.00</b></span>
+      <span class="muted"><%= t('invoices.subtotal') %> : <b class="ltr money" id="running-total" data-currency="<%= currency || 'MAD' %>">—</b></span>
     </p>
   </div>
 </form>
@@ -70,6 +70,13 @@
   // A running subtotal while typing. The server recomputes everything from the
   // articles and prices it is given; this is only so the number is not a
   // surprise after submitting.
+  // The same shape as every price the server prints: grouped, two decimals,
+  // and the currency attached — so the figure that appears while typing is
+  // the figure that appears on the saved invoice.
+  const CURRENCY = document.getElementById('running-total').dataset.currency || 'MAD'
+  const price = (value) =>
+    value.toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + CURRENCY
+
   const recompute = () => {
     let subtotal = 0
     document.querySelectorAll('tbody tr').forEach((row) => {
@@ -82,11 +89,10 @@
         return
       }
       const line = Math.round(quantity * price * 100) / 100
-      cell.textContent = line.toLocaleString('fr-MA', { minimumFractionDigits: 2 })
+      cell.textContent = price(line)
       subtotal += line
     })
-    document.getElementById('running-total').textContent =
-      subtotal.toLocaleString('fr-MA', { minimumFractionDigits: 2 })
+    document.getElementById('running-total').textContent = price(subtotal)
   }
 
   document.querySelectorAll('tbody input').forEach((input) => {

@@ -191,7 +191,7 @@
             <tr>
               <td style="max-width:220px"><a href="/panel/buyers/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>"><%= row.label %></a></td>
               <td class="ltr"><%= row.awards %></td>
-              <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
+              <td class="ltr money"><%= money(row.total) %></td>
             </tr>
           <% }) %>
         </tbody>
@@ -214,7 +214,7 @@
             <tr>
               <td><code><%= row.reference %></code></td>
               <td style="max-width:260px"><%= row.objet || '—' %></td>
-              <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+              <td class="ltr money"><%= money(row.montant_attribue) %></td>
               <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
             </tr>
           <% }) %>

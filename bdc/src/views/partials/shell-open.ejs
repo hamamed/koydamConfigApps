@@ -268,6 +268,10 @@
   .notice { background:var(--ok-soft); color:var(--ok); padding:10px 12px; border-radius:8px; margin-bottom:14px; }
   .muted { color:var(--muted); }
   .empty { padding:26px 10px; text-align:center; color:var(--muted); }
+  /* Money is scanned down a column, not read across a line: right-aligned so
+     the units line up, tabular figures so the digits do too, and never broken
+     across two lines — an amount that wraps reads as two numbers. */
+  .money { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
   /* References, dates and counts stay LTR on an RTL page: the bidi algorithm
      otherwise renders "6/2026" as "2026/6".
 

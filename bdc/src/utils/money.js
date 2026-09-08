@@ -82,3 +82,31 @@ export function formatAmount(centimes, currency = 'MAD') {
   }).format(fromCentimes(centimes))
   return `${formatted} ${currency}`.trim()
 }
+
+/**
+ * An amount as a reader should see it: grouped, to the centime, with its unit.
+ *
+ * Takes a decimal amount, which is what the serialisers hand the views — they
+ * turn every `*_cents` column into units on the way out. Every screen used to
+ * format its own, so the same figure appeared as "36000" in one table,
+ * "36 000" in the next and "36 000,00 MAD" in a third; and an amount printed
+ * without its currency is a number, not a price.
+ *
+ * @param {number|string|null} amount decimal units, not centimes.
+ * @param {string} [currency] printed after the figure.
+ * @returns {string} "1 250 000,00 MAD", or an em dash when there is no amount.
+ */
+export function formatMoney(amount, currency = 'MAD') {
+  if (amount === null || amount === undefined || amount === '') return '—'
+  const value = typeof amount === 'number' ? amount : Number(amount)
+  if (!Number.isFinite(value)) return '—'
+  const formatted = new Intl.NumberFormat('fr-MA', {
+    minimumFractionDigits: MAX_DECIMAL_DIGITS,
+    maximumFractionDigits: MAX_DECIMAL_DIGITS,
+  }).format(value)
+  return currency ? `${formatted} ${currency}` : formatted
+}
+
+/** The same, for a figure already in centimes. */
+export const formatCentimes = (centimes, currency = 'MAD') =>
+  formatMoney(centimes === null || centimes === undefined ? null : fromCentimes(centimes), currency)

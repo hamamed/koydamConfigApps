@@ -82,7 +82,7 @@
               </span>
             </td>
             <td><%= row.attributaire || '—' %></td>
-            <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue + ' ' + row.currency %></td>
+            <td class="ltr money"><%= money(row.montant_attribue, row.currency) %></td>
             <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
             <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
           </tr>
@@ -134,7 +134,7 @@
               <tr>
                 <td style="max-width:340px"><%= row.objet || '—' %><span class="cancel-note muted" style="color:var(--muted)"><%= row.acheteur || '' %></span></td>
                 <td><%= row.attributaire || '—' %></td>
-                <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+                <td class="ltr money"><%= money(row.montant_attribue) %></td>
                 <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
               </tr>
             <% }) %>
@@ -223,7 +223,7 @@
   <% } else { %>
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
       <div><label><%= t('detail.winner') %></label><%= consultation.result.attributaire || '—' %></div>
-      <div><label><%= t('detail.amount') %></label><span class="ltr"><%= consultation.result.montant_attribue === null ? '—' : consultation.result.montant_attribue + ' ' + consultation.result.currency %></span></div>
+      <div><label><%= t('detail.amount') %></label><span class="ltr money"><%= money(consultation.result.montant_attribue, consultation.result.currency) %></span></div>
       <div><label><%= t('detail.bids') %></label><span class="ltr"><%= consultation.result.nombre_offres === null ? '—' : consultation.result.nombre_offres %></span></div>
       <div><label><%= t('detail.awardedOn') %></label><span class="ltr"><%= consultation.result.date_publication_resultat || '—' %></span></div>
       <div><label><%= t('jobs.status') %></label><%= t('status.' + (consultation.result.result_status || 'awarded')) %></div>

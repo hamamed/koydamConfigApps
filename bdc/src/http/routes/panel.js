@@ -29,6 +29,9 @@ export function panelRoutes({ services }) {
     user: req.user,
     // Where the listing was left, for the sidebar and the Back link.
     listUrl: listUrl(req),
+    // The unit prices are quoted in, for the screens that compute one
+    // in the browser before the server has seen it.
+    currency: config.invoice.currency,
     // Rendered by the sidebar on every panel page.
     portalUrl: config.auth.portalUrl,
     siblingUrl: config.auth.siblingUrl,

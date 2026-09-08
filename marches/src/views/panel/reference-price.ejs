@@ -12,9 +12,10 @@
     ones that were thrown out, because knowing you were excluded is the whole
     reason to run this before submitting rather than after.
   */
-  const money = function (centimes) {
-    if (centimes === null || centimes === undefined) return '—'
-    return (centimes / 100).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  // This screen works in centimes throughout; the shared helper takes units
+  // and adds the currency, which is what a price on a page needs.
+  const dh = function (centimes) {
+    return centimes === null || centimes === undefined ? '—' : money(centimes / 100)
   }
   const signed = function (value) {
     if (value === null || value === undefined) return '—'
@@ -59,15 +60,15 @@
         <span><%- include('../partials/icon', { name: 'award', size: 13 }) %><%= t('referencePrice.winner') %></span>
       </div>
       <div class="stat">
-        <b class="ltr"><%= money(result.winner.amountCentimes) %></b>
+        <b class="ltr"><%= dh(result.winner.amountCentimes) %></b>
         <span><%= t('referencePrice.winningOffer') %></span>
       </div>
       <div class="stat" title="<%= t('referencePrice.referenceHint') %>">
-        <b class="ltr"><%= money(result.referenceCentimes) %></b>
+        <b class="ltr"><%= dh(result.referenceCentimes) %></b>
         <span><%= t('referencePrice.reference') %></span>
       </div>
       <div class="stat">
-        <b class="ltr"><%= money(result.meanRetainedCentimes) %></b>
+        <b class="ltr"><%= dh(result.meanRetainedCentimes) %></b>
         <span><%= t('referencePrice.meanRetained') %></span>
       </div>
       <div class="stat">
@@ -75,7 +76,7 @@
         <span><%= t('referencePrice.retained') %></span>
       </div>
       <div class="stat" title="<%= t('referencePrice.bandHint') %>">
-        <b class="ltr" style="font-size:15px"><%= money(result.bounds.lowCentimes) %> – <%= money(result.bounds.highCentimes) %></b>
+        <b class="ltr money" style="font-size:15px"><%= dh(result.bounds.lowCentimes) %> – <%= dh(result.bounds.highCentimes) %></b>
         <span><%= t('referencePrice.band', { low: band.lowPercent, high: band.highPercent }) %></span>
       </div>
     </div>
@@ -115,7 +116,7 @@
               <tr>
                 <td class="ltr"><%= offer.rank === null ? '—' : offer.rank %></td>
                 <td><%= offer.name || t('referencePrice.unnamed') %></td>
-                <td class="ltr"><%= money(offer.amountCentimes) %></td>
+                <td class="ltr money"><%= dh(offer.amountCentimes) %></td>
                 <td class="ltr"><%= signed(offer.deltaPercent) %> %</td>
                 <td class="ltr"><%= offer.gapCentimes === null ? '—' : signed(offer.gapCentimes / 100) %></td>
                 <td>

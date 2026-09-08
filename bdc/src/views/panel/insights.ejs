@@ -21,11 +21,12 @@
   <div class="grid" style="margin-bottom:18px">
     <div class="stat"><b class="ltr"><%= insights.summary.awards %></b><span><%= t('insights.awards') %></span></div>
     <div class="stat" title="<%= t('insights.medianHint') %>">
-      <b class="ltr"><%= insights.summary.median === null ? '—' : insights.summary.median.toLocaleString('fr-MA') %></b>
+      <b class="ltr money"><%= money(insights.summary.median) %></b>
       <span><%= t('insights.median') %></span>
     </div>
-    <div class="stat"><b class="ltr"><%= insights.summary.total === null ? '—' : Math.round(insights.summary.total).toLocaleString('fr-MA') %></b><span><%= t('insights.total') %></span></div>
-    <div class="stat"><b class="ltr" style="font-size:15px"><%= insights.summary.min === null ? '—' : Math.round(insights.summary.min).toLocaleString('fr-MA') + ' – ' + Math.round(insights.summary.max).toLocaleString('fr-MA') %></b><span><%= t('insights.range') %></span></div>
+    <div class="stat"><b class="ltr money"><%= money(insights.summary.total) %></b><span><%= t('insights.total') %></span></div>
+    <%# A range is two prices, so the unit is printed once, at the end. %>
+    <div class="stat"><b class="ltr money" style="font-size:15px"><%= insights.summary.min === null ? '—' : money(insights.summary.min, '') + ' – ' + money(insights.summary.max) %></b><span><%= t('insights.range') %></span></div>
     <div class="stat"><b class="ltr"><%= insights.summary.avgBids === null ? '—' : insights.summary.avgBids %></b><span><%= t('insights.avgBids') %></span></div>
     <div class="stat" title="<%= t('insights.unsuccessfulHint') %>"><b class="ltr"><%= insights.summary.unsuccessfulRate === null ? '—' : insights.summary.unsuccessfulRate + ' %' %></b><span><%= t('insights.unsuccessful') %></span></div>
     <div class="stat"><b class="ltr"><%= insights.summary.winners %></b><span><%= t('insights.company') %></span></div>
@@ -90,7 +91,7 @@
                     <span style="display:block; height:5px; border-radius:3px; background:var(--accent); opacity:.75; width:<%= bar(r[block.count], max) %>%"></span>
                   </td>
                   <td class="ltr">
-                    <% if (block.extra === 'total') { %><%= r.total === null ? '—' : Math.round(r.total).toLocaleString('fr-MA') %>
+                    <% if (block.extra === 'total') { %><%= money(r.total) %>
                     <% } else { %><%= r.openProjects %><% } %>
                   </td>
                 </tr>
@@ -115,7 +116,7 @@
               <span class="ltr"><%= m.awards %></span>
               <span style="display:block; height:5px; border-radius:3px; background:var(--accent); opacity:.75; width:<%= bar(m.awards, maxMonth) %>%"></span>
             </td>
-            <td class="ltr"><%= m.total === null ? '—' : Math.round(m.total).toLocaleString('fr-MA') %></td>
+            <td class="ltr money"><%= money(m.total) %></td>
           </tr>
         <% }) %>
       </tbody>

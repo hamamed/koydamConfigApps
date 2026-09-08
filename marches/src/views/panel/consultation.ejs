@@ -71,19 +71,15 @@
       read off this consultation — so the one thing a bidder must know before
       submitting is here, on the avis, rather than behind a form.
     */
-    const money = function (v) {
-      return v === null || v === undefined ? '—'
-        : Number(v).toLocaleString('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    }
   %>
   <div class="card">
     <h2><%- include('../partials/icon', { name: 'calculator', size: 15 }) %><%= t('range.title') %></h2>
     <p class="muted" style="margin:-6px 0 14px; font-size:12.5px"><%= t('range.hint') %></p>
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-      <div><label><%= t('range.estimate') %></label><b class="ltr" style="font-size:18px"><%= money(range.estimate) %></b></div>
-      <div><label><%= t('range.floor', { percent: range.band.lowPercent }) %></label><b class="ltr" style="font-size:18px"><%= money(range.low) %></b></div>
-      <div><label><%= t('range.ceiling', { percent: range.band.highPercent }) %></label><b class="ltr" style="font-size:18px"><%= money(range.high) %></b></div>
+      <div><label><%= t('range.estimate') %></label><b class="ltr money" style="font-size:18px"><%= money(range.estimate) %></b></div>
+      <div><label><%= t('range.floor', { percent: range.band.lowPercent }) %></label><b class="ltr money" style="font-size:18px"><%= money(range.low) %></b></div>
+      <div><label><%= t('range.ceiling', { percent: range.band.highPercent }) %></label><b class="ltr money" style="font-size:18px"><%= money(range.high) %></b></div>
       <div><label><%= t('range.kind') %></label><span class="pill"><%= t('referencePrice.kind.' + range.kind) %></span></div>
     </div>
 

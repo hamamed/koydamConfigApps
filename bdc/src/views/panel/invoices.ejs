@@ -36,9 +36,9 @@
                 <% } else { %>—<% } %>
               </td>
               <td class="ltr"><%= row.issue_date %></td>
-              <td class="ltr"><%= row.subtotal.toLocaleString('fr-MA') %></td>
-              <td class="ltr"><%= row.tax.toLocaleString('fr-MA') %></td>
-              <td class="ltr"><strong><%= row.total.toLocaleString('fr-MA') %> <%= row.currency %></strong></td>
+              <td class="ltr money"><%= money(row.subtotal, row.currency) %></td>
+              <td class="ltr money"><%= money(row.tax, row.currency) %></td>
+              <td class="ltr money"><strong><%= money(row.total, row.currency) %></strong></td>
               <td>
                 <select class="status" data-id="<%= row.id %>" style="width:auto">
                   <% ['draft','issued','paid','cancelled'].forEach(function (s) { %>

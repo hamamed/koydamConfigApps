@@ -44,7 +44,7 @@
               <td style="max-width:300px"><%= row.objet || '—' %></td>
               <td><%= row.acheteur || '—' %></td>
               <td><% if (row.attributaire) { %><a href="/panel/companies/<%= encodeURIComponent(row.attributaire) %>?lang=<%= locale %>" title="<%= t('company.profile') %>"><%= row.attributaire %></a><% } else { %>—<% } %></td>
-              <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue + ' ' + row.currency %></td>
+              <td class="ltr money"><%= money(row.montant_attribue, row.currency) %></td>
               <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
               <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
               <td>

@@ -992,3 +992,47 @@ test('the invoice appearance screen renders, saves, and previews a real PDF', as
   })
   assert.equal(bad.status, 400)
 })
+
+test('every price on a screen is grouped, to the centime, and carries its unit', async (t) => {
+  const api = await setup()
+  t.after(api.close)
+
+  // An invoice to look at: this service lists its prices here, and the table
+  // is empty until somebody issues one.
+  const staff = await api.container.db.get('SELECT id FROM users WHERE email = ?', ['staff@test.ma'])
+  await api.container.services.invoices.create(staff.id, {
+    client: { name: 'Commune de Rabat' },
+    taxRate: 20,
+    items: [
+      { designation: 'Fourniture de matériel', quantity: 12, unit: 'U', unitPrice: 3000 },
+      { designation: 'Maintenance', quantity: 6, unit: 'Mois', unitPrice: 2000 },
+    ],
+  })
+
+  const html = await (await api.page('/panel/invoices', api.staff)).text()
+
+  // Pull what sits in the money cells and check each one is a price rather
+  // than a bare figure. A single unformatted amount is the bug this guards:
+  // the same number appeared as "36000" on one screen and "36 000,00 MAD" on
+  // another, because each view formatted its own.
+  const cells = [...html.matchAll(/<td[^>]*class="[^"]*money[^"]*"[^>]*>([\s\S]*?)<\/td>/g)]
+    .map(([, cell]) => cell.replace(/<[^>]*>/g, '').trim())
+    .filter((cell) => cell && cell !== '—')
+  assert.ok(cells.length > 0, 'no money cells were found to check')
+
+  cells.forEach((cell) => {
+    assert.match(cell, /^\d{1,3}(\.\d{3})*,\d{2} [A-Z]{3}$/, `"${cell}" is not written as a price`)
+  })
+})
+
+test('an amount that is missing prints as a dash, not as zero or nothing', async () => {
+  const { formatMoney } = await import('../src/utils/money.js')
+  assert.equal(formatMoney(null), '—')
+  assert.equal(formatMoney(undefined), '—')
+  assert.equal(formatMoney(''), '—')
+  assert.equal(formatMoney('not a number'), '—')
+  // Zero is a real amount and must not be swallowed by the same check.
+  assert.equal(formatMoney(0), '0,00 MAD')
+  assert.equal(formatMoney(1250000), '1.250.000,00 MAD')
+  assert.equal(formatMoney(36000.5, 'EUR'), '36.000,50 EUR')
+})

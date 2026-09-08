@@ -1,4 +1,5 @@
 import { resolveLocale, translator, directionOf, LOCALES, DEFAULT_LOCALE } from '../../i18n/index.js'
+import { formatMoney } from '../../utils/money.js'
 
 const COOKIE_NAME = 'lang'
 const COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000
@@ -31,6 +32,9 @@ export function localeMiddleware(settings = null) {
     res.locals.locales = LOCALES
     res.locals.defaultLocale = DEFAULT_LOCALE
     res.locals.t = translator(locale)
+    // Prices are read, not parsed: one helper so every screen prints them
+    // the same way, with the currency attached.
+    res.locals.money = formatMoney
     // Keeps the current query string when switching language.
     res.locals.langUrl = (code) => {
       const params = new URLSearchParams(req.query ?? {})

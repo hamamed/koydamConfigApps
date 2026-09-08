@@ -40,7 +40,7 @@
             <tr>
               <td style="max-width:220px"><a href="/panel/companies/<%= encodeURIComponent(row.label) %>?lang=<%= locale %>" title="<%= t('company.profile') %>"><%= row.label %></a></td>
               <td class="ltr"><%= row.awards %></td>
-              <td class="ltr"><%= row.total === null ? '—' : row.total %></td>
+              <td class="ltr money"><%= money(row.total) %></td>
             </tr>
           <% }) %>
         </tbody>
@@ -89,7 +89,7 @@
             <td><code><%= row.reference %></code></td>
             <td style="max-width:300px"><%= row.objet || '—' %></td>
             <td><%= row.attributaire || '—' %></td>
-            <td class="ltr"><%= row.montant_attribue === null ? '—' : row.montant_attribue %></td>
+            <td class="ltr money"><%= money(row.montant_attribue) %></td>
             <td class="ltr"><%= row.nombre_offres === null ? '—' : row.nombre_offres %></td>
             <td class="ltr"><%= row.date_publication_resultat || '—' %></td>
           </tr>
