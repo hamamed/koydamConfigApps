@@ -1036,3 +1036,27 @@ test('an amount that is missing prints as a dash, not as zero or nothing', async
   assert.equal(formatMoney(1250000), '1.250.000,00 MAD')
   assert.equal(formatMoney(36000.5, 'EUR'), '36.000,50 EUR')
 })
+
+test('a long price is set smaller, and a short one is never shrunk for it', async () => {
+  const { formatMoney, priceClass } = await import('../src/utils/money.js')
+
+  const SIZES = { '': 24, 'price-m': 19, 'price-s': 14, 'price-xs': 11 }
+  const amounts = [999, 1968, 19968, 250000, 12345678.9, 7702995653.72, 1234567890123.45]
+
+  // Sizes only ever go down as prices get longer. A step out of order would
+  // set a longer figure larger than a shorter one, which is how a price ends
+  // up wider than the box that holds it.
+  let previous = Infinity
+  amounts.forEach((amount) => {
+    const size = SIZES[priceClass(formatMoney(amount))]
+    assert.ok(size !== undefined, `${amount} produced an unknown size class`)
+    assert.ok(size <= previous, `${formatMoney(amount)} is set larger than a shorter price`)
+    previous = size
+  })
+
+  // An ordinary amount keeps the full size; only long ones pay.
+  assert.equal(priceClass(formatMoney(999)), '')
+  assert.equal(priceClass(formatMoney(1234567890123.45)), 'price-xs')
+  // And a missing amount is not a long string.
+  assert.equal(priceClass(formatMoney(null)), '')
+})

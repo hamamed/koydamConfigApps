@@ -77,9 +77,9 @@
     <p class="muted" style="margin:-6px 0 14px; font-size:12.5px"><%= t('range.hint') %></p>
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-      <div><label><%= t('range.estimate') %></label><b class="ltr money" style="font-size:18px"><%= money(range.estimate) %></b></div>
-      <div><label><%= t('range.floor', { percent: range.band.lowPercent }) %></label><b class="ltr money" style="font-size:18px"><%= money(range.low) %></b></div>
-      <div><label><%= t('range.ceiling', { percent: range.band.highPercent }) %></label><b class="ltr money" style="font-size:18px"><%= money(range.high) %></b></div>
+      <div class="figure"><label><%= t('range.estimate') %></label><% const pestimate = money(range.estimate) %><b class="ltr money figure-value <%= priceClass(pestimate) %>"><%= pestimate %></b></div>
+      <div class="figure"><label><%= t('range.floor', { percent: range.band.lowPercent }) %></label><% const plow = money(range.low) %><b class="ltr money figure-value <%= priceClass(plow) %>"><%= plow %></b></div>
+      <div class="figure"><label><%= t('range.ceiling', { percent: range.band.highPercent }) %></label><% const phigh = money(range.high) %><b class="ltr money figure-value <%= priceClass(phigh) %>"><%= phigh %></b></div>
       <div><label><%= t('range.kind') %></label><span class="pill"><%= t('referencePrice.kind.' + range.kind) %></span></div>
     </div>
 

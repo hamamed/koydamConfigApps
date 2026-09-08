@@ -227,6 +227,30 @@
   .stat b { display:block; font-size:24px; font-weight:650; letter-spacing:-.01em; }
   .stat span { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
 
+  /* A price is as long as its number, and the boxes it sits in have a fixed
+     width: "7.702.995.653,72 MAD" at 24px needs 250px of a 170px tile.
+
+     Container units were the wrong tool — they size the figure against the
+     box, so a short amount in a wide tile got shrunk for no reason. What
+     decides the size is how many characters there are, which is known when
+     the page is built, so the class is chosen there (see `priceClass`).
+
+     Below the smallest step a figure is allowed to wrap. There is exactly one
+     sensible place to break a price — the space before the currency — so
+     `normal` is enough and `anywhere` would be wrong: a number split across
+     two lines mid-digit is worse than one that overflows. */
+  .stat b.money, .figure-value { white-space:normal; }
+  /* No base size here on purpose: `.stat b` already sets 24px, and a rule of
+     `.stat b.money` would out-specify the steps below and silently pin every
+     tile to the largest size — which is exactly what it did. */
+  .figure-value { display:block; font-size:18px; font-weight:650; letter-spacing:-.01em; }
+  /* Calibrated by measuring, in a browser, against the narrowest tile the
+     grid produces: each step is the largest that still holds a figure of that
+     length on one line there. */
+  .money.price-m { font-size:19px; }
+  .money.price-s { font-size:14px; }
+  .money.price-xs { font-size:11px; }
+
   table { width:100%; border-collapse:collapse; font-size:13px; }
   th, td { text-align:start; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
   th { background:#f2f5f9; font-weight:600; font-size:12px; color:#43506a; white-space:nowrap; }

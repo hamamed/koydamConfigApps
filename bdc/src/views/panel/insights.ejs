@@ -21,12 +21,14 @@
   <div class="grid" style="margin-bottom:18px">
     <div class="stat"><b class="ltr"><%= insights.summary.awards %></b><span><%= t('insights.awards') %></span></div>
     <div class="stat" title="<%= t('insights.medianHint') %>">
-      <b class="ltr money"><%= money(insights.summary.median) %></b>
+      <% const medianPrice = money(insights.summary.median) %><b class="ltr money <%= priceClass(medianPrice) %>"><%= medianPrice %></b>
       <span><%= t('insights.median') %></span>
     </div>
-    <div class="stat"><b class="ltr money"><%= money(insights.summary.total) %></b><span><%= t('insights.total') %></span></div>
+    <% const totalPrice = money(insights.summary.total) %>
+    <div class="stat"><b class="ltr money <%= priceClass(totalPrice) %>"><%= totalPrice %></b><span><%= t('insights.total') %></span></div>
     <%# A range is two prices, so the unit is printed once, at the end. %>
-    <div class="stat"><b class="ltr money" style="font-size:15px"><%= insights.summary.min === null ? '—' : money(insights.summary.min, '') + ' – ' + money(insights.summary.max) %></b><span><%= t('insights.range') %></span></div>
+    <div class="stat"><% const rangePrice = insights.summary.min === null ? '—' : money(insights.summary.min, '') + ' – ' + money(insights.summary.max) %>
+    <b class="ltr money figure-value <%= priceClass(rangePrice) %>"><%= rangePrice %></b><span><%= t('insights.range') %></span></div>
     <div class="stat"><b class="ltr"><%= insights.summary.avgBids === null ? '—' : insights.summary.avgBids %></b><span><%= t('insights.avgBids') %></span></div>
     <div class="stat" title="<%= t('insights.unsuccessfulHint') %>"><b class="ltr"><%= insights.summary.unsuccessfulRate === null ? '—' : insights.summary.unsuccessfulRate + ' %' %></b><span><%= t('insights.unsuccessful') %></span></div>
     <div class="stat"><b class="ltr"><%= insights.summary.winners %></b><span><%= t('insights.company') %></span></div>

@@ -110,3 +110,25 @@ export function formatMoney(amount, currency = 'MAD') {
 /** The same, for a figure already in centimes. */
 export const formatCentimes = (centimes, currency = 'MAD') =>
   formatMoney(centimes === null || centimes === undefined ? null : fromCentimes(centimes), currency)
+
+/**
+ * How large a price may be set, from how long it is.
+ *
+ * The size cannot be decided in CSS: container units size a figure against its
+ * box, which shrinks a short amount in a wide tile for no reason, and there is
+ * no content-length query. The length is known here, so it is chosen here.
+ *
+ * The steps are measured against the narrowest tile the grid produces (170px,
+ * less padding), so a figure of that length fits on one line in the worst box
+ * on the page rather than only in a comfortable one.
+ *
+ * @param {string} text an already formatted price.
+ * @returns {string} a class name, or '' at the largest size.
+ */
+export function priceClass(text) {
+  const length = String(text ?? '').length
+  if (length <= 10) return ''
+  if (length <= 14) return 'price-m'
+  if (length <= 20) return 'price-s'
+  return 'price-xs'
+}

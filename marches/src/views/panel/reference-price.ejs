@@ -76,7 +76,8 @@
         <span><%= t('referencePrice.retained') %></span>
       </div>
       <div class="stat" title="<%= t('referencePrice.bandHint') %>">
-        <b class="ltr money" style="font-size:15px"><%= dh(result.bounds.lowCentimes) %> – <%= dh(result.bounds.highCentimes) %></b>
+        <% const bandPrice = dh(result.bounds.lowCentimes) + ' – ' + dh(result.bounds.highCentimes) %>
+        <b class="ltr money figure-value <%= priceClass(bandPrice) %>"><%= bandPrice %></b>
         <span><%= t('referencePrice.band', { low: band.lowPercent, high: band.highPercent }) %></span>
       </div>
     </div>
