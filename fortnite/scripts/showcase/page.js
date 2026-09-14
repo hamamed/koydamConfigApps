@@ -117,6 +117,13 @@ export function pageHtml({ displayFont }) {
     font-family: AppDisplay; font-weight: normal; font-size: calc(26 * var(--tx));
     line-height: 1.08; color: #fff; overflow-wrap: anywhere;
   }
+  /* Who made the footage, for clips cut from a creator's showcase video.
+     Readable at a glance, and quieter than the name it sits under. */
+  .credit {
+    margin-top: calc(-3 * var(--tx));
+    font-family: AppDisplay; font-size: calc(7 * var(--tx)); letter-spacing: calc(.4 * var(--tx));
+    color: rgba(255, 255, 255, .78);
+  }
 
   body[data-layer="page"] .stack { visibility: hidden; }
   body[data-layer="card"] .page, body[data-layer="card"] .art, body[data-layer="card"] .info { visibility: hidden; }
@@ -139,6 +146,7 @@ export function pageHtml({ displayFont }) {
     <div class="info">
       <span class="chip"></span>
       <h1 class="name"></h1>
+      <span class="credit" hidden></span>
     </div>
   </div>
 <script>
@@ -188,6 +196,10 @@ export function pageHtml({ displayFont }) {
     const name = document.querySelector('.name');
     name.textContent = card.name;
     name.style.fontSize = '';
+
+    const credit = document.querySelector('.credit');
+    credit.textContent = card.credit ?? '';
+    credit.hidden = !card.credit;
 
     const art = document.querySelector('.art');
     art.style.objectViewBox = '';
