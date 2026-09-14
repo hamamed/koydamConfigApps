@@ -12,7 +12,7 @@
   <button type="button" class="ad-skin-card fg-card" data-cosmetic
           data-id="<%= row.id %>" data-name="<%= row.name %>" data-meta="<%= meta %>"
           data-description="<%= row.description || '' %>" data-image="<%= art %>"
-          data-clip="<%= row.clip || '' %>" data-youtube="<%= row.youtube || '' %>"
+          data-clip="<%= row.clip || '' %>"
           aria-label="<%= row.name %> — open">
     <span class="ad-skin-thumb fg-thumb fg-tier-<%= row.tier %>">
       <% if (row.clip) { %>
@@ -24,10 +24,10 @@
         <img class="fg-art" src="<%= art %>" alt="" loading="lazy">
       <% } %>
     </span>
-    <% if (row.clip || row.youtube) { %>
+    <%# Only the clip is offered; the full YouTube showcase is not shown in the panel. %>
+    <% if (row.clip) { %>
       <span class="ad-skin-actions">
-        <% if (row.clip) { %><span class="fg-chip"><i data-lucide="clapperboard" width="11" height="11"></i>Clip</span><% } %>
-        <% if (row.youtube) { %><span class="fg-chip"><i data-lucide="youtube" width="11" height="11"></i>YouTube</span><% } %>
+        <span class="fg-chip"><i data-lucide="clapperboard" width="11" height="11"></i>Clip</span>
       </span>
     <% } %>
     <span class="ad-skin-body">

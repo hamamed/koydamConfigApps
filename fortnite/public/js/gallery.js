@@ -13,8 +13,9 @@
   const modalElement = document.getElementById('cosmeticModal');
   if (!modalElement || !window.bootstrap) return;
 
-  const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
-  const SOURCES = ['clip', 'youtube', 'image'];
+  // No YouTube source: the full upstream showcase is not shown here, only the
+  // clip cut from it. Until that clip exists, the picture stands in.
+  const SOURCES = ['clip', 'image'];
 
   const modal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
   const field = (name) => modalElement.querySelector(`[data-field="${name}"]`);
@@ -40,20 +41,6 @@
       video.playsInline = true;
       video.disablePictureInPicture = true;
       return video;
-    }
-    if (source === 'youtube') {
-      const frame = document.createElement('iframe');
-      frame.className = 'fg-youtube';
-      // YouTube only loops a video that is also its own one-item playlist.
-      const id = encodeURIComponent(current.youtube);
-      frame.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&rel=0&playsinline=1`;
-      frame.title = `${current.name} — YouTube showcase`;
-      frame.allow = 'autoplay; encrypted-media; picture-in-picture';
-      frame.allowFullscreen = true;
-      // The panel sends no referrer, and YouTube refuses to play an embed
-      // that arrives without one. This frame alone gets the default policy.
-      frame.referrerPolicy = 'strict-origin-when-cross-origin';
-      return frame;
     }
     if (current.image) {
       const image = document.createElement('img');
@@ -84,7 +71,6 @@
       id: data.id,
       name: data.name || data.id,
       clip: data.clip || '',
-      youtube: YOUTUBE_ID.test(data.youtube || '') ? data.youtube : '',
       image: data.image || '',
     };
 
