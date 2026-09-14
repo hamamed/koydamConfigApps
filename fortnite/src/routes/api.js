@@ -6,6 +6,7 @@ import { db } from '../db/index.js';
 import { fetchMedia, proxied } from '../media.js';
 import { playerStats } from '../stats.js';
 import { KINDS, clientKey, isBlocked, reactionsFor, setReaction } from '../reactions.js';
+import { showcaseClips } from '../showcase.js';
 import { syncStatus } from '../upstream.js';
 
 export const apiRouter = Router();
@@ -22,6 +23,9 @@ const IMAGE_KEYS = new Set([
   'background', 'thumb', 'thumbnail', 'cover', 'render',
 ]);
 
+/** Keys whose value is already a path on this host, sent out as a full URL. */
+const LOCAL_PATH_KEYS = new Set(['showcaseClip']);
+
 /** Points every picture in a response at this host. */
 function throughThisHost(value, origin, key = null) {
   if (Array.isArray(value)) return value.map((v) => throughThisHost(v, origin, key));
@@ -30,6 +34,7 @@ function throughThisHost(value, origin, key = null) {
       Object.entries(value).map(([k, v]) => [k, throughThisHost(v, origin, k)]),
     );
   }
+  if (typeof value === 'string' && key && LOCAL_PATH_KEYS.has(key)) return `${origin}${value}`;
   if (typeof value === 'string' && key && IMAGE_KEYS.has(key)) return proxied(value, origin);
   return value;
 }
@@ -637,6 +642,10 @@ function toApiShape(row) {
     // app builds whatever embed it wants from it rather than being handed a URL
     // it would have to parse back apart.
     showcaseVideo: row.showcase_video ?? null,
+
+    // A short clip rendered on this host from the official artwork, for the
+    // outfits upstream has no video for. Null where none has been rendered.
+    showcaseClip: showcaseClips.pathFor(row.id),
 
     // How often it has been in the shop and when it was last there. The full
     // list of dates is deliberately not sent: it runs to eighty entries for an

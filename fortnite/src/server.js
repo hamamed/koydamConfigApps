@@ -17,6 +17,7 @@ import { SqliteSessionStore } from './middleware/session-store.js';
 import { apiRouter } from './routes/api.js';
 import { wallpapersRouter } from './routes/wallpapers.js';
 import { WALLPAPER_ROOT } from './wallpapers/root.js';
+import { SHOWCASE_ROOT, showcaseClips } from './showcase.js';
 import { startSyncLoop } from './sync.js';
 
 migrate();
@@ -82,6 +83,14 @@ app.use('/wallpapers', express.static(WALLPAPER_ROOT, {
   index: false,
 }));
 
+// Showcase clips from scripts/showcase-clips.js. A week, not a month: a
+// re-render replaces a clip under the same name.
+app.use('/showcase', express.static(SHOWCASE_ROOT, {
+  maxAge: '7d',
+  fallthrough: true,
+  index: false,
+}));
+
 // ── Panel ───────────────────────────────────────────────────────────────────
 
 app.set('view engine', 'ejs');
@@ -123,6 +132,7 @@ app.use(errorHandler);
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`fortnite listening on http://${config.host}:${config.port}`);
+  showcaseClips.refresh();
   startSyncLoop();
 });
 

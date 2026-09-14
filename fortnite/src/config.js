@@ -27,6 +27,10 @@ export const config = {
   /** Where uploaded wallpapers live. Preserved across deploys — see root.js. */
   wallpapersDir: path.resolve(root, process.env.WALLPAPERS_DIR || './wallpapers'),
 
+  /** Rendered showcase clips, one `<cosmetic id>.mp4` each. Under /storage,
+   *  which deploys preserve; the clips are regenerable, so not backed up. */
+  showcaseDir: path.resolve(root, process.env.SHOWCASE_DIR || './storage/showcase'),
+
   sessionSecret: process.env.SESSION_SECRET || 'insecure-development-secret',
 
   upstream: {
