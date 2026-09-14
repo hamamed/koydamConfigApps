@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -7,6 +7,9 @@ import { after, before, test } from 'node:test';
 import { createClipIndex } from '../src/showcase.js';
 
 let root;
+
+/** A clip link: the encoded id's file, versioned so a replaced clip gets a new URL. */
+const clipUrl = (encodedId) => new RegExp(`^/showcase/${encodedId}\\.mp4\\?v=[0-9a-z]+$`);
 
 before(async () => {
   root = await mkdtemp(path.join(os.tmpdir(), 'showcase-test-'));
@@ -22,7 +25,7 @@ test('returns the clip path for an outfit that has a rendered clip', async () =>
 
   await index.refresh();
 
-  assert.equal(index.pathFor('Character_AgentSherbert'), '/showcase/Character_AgentSherbert.mp4');
+  assert.match(index.pathFor('Character_AgentSherbert'), clipUrl('Character_AgentSherbert'));
 });
 
 test('returns null for an outfit without a clip', async () => {
@@ -50,7 +53,7 @@ test('encodes ids so an unusual character cannot break the URL', async () => {
 
   await index.refresh();
 
-  assert.equal(index.pathFor('Character_Odd Name#1'), '/showcase/Character_Odd%20Name%231.mp4');
+  assert.match(index.pathFor('Character_Odd Name#1'), clipUrl('Character_Odd%20Name%231'));
 });
 
 test('a missing clip directory means no clips rather than an error', async () => {
@@ -81,7 +84,25 @@ test('reload re-reads straight away, without waiting for the listing to go stale
   await writeFile(path.join(dir, 'Character_Fresh.mp4'), '');
   await index.reload();
 
-  assert.equal(index.pathFor('Character_Fresh'), '/showcase/Character_Fresh.mp4');
+  assert.match(index.pathFor('Character_Fresh'), clipUrl('Character_Fresh'));
+  await rm(dir, { recursive: true, force: true });
+});
+
+test('a replaced clip gets a new link, so a cached copy of the old one is not shown', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'showcase-version-'));
+  const file = path.join(dir, 'Character_Swap.mp4');
+  await writeFile(file, 'first render');
+  await utimes(file, new Date('2026-01-01T00:00:00Z'), new Date('2026-01-01T00:00:00Z'));
+  const index = createClipIndex(dir);
+  await index.refresh();
+  const first = index.pathFor('Character_Swap');
+
+  await writeFile(file, 'second render');
+  await utimes(file, new Date('2026-02-01T00:00:00Z'), new Date('2026-02-01T00:00:00Z'));
+  await index.reload();
+
+  assert.match(index.pathFor('Character_Swap'), clipUrl('Character_Swap'));
+  assert.notEqual(index.pathFor('Character_Swap'), first);
   await rm(dir, { recursive: true, force: true });
 });
 
@@ -96,5 +117,5 @@ test('picks up clips added after the last read once the index is stale', async (
   index.pathFor('Character_Late'); // a stale lookup starts the re-read
   await index.refresh();
 
-  assert.equal(index.pathFor('Character_Late'), '/showcase/Character_Late.mp4');
+  assert.match(index.pathFor('Character_Late'), clipUrl('Character_Late'));
 });

@@ -93,9 +93,11 @@ function whereClause(filters, clipIds) {
  * @param {import('better-sqlite3').Database} database
  * @param {ReturnType<typeof readFilters>} filters
  * @param {Set<string>} clipIds cosmetics that have a rendered clip
- * @param {{ pageSize?: number }} [options]
+ * @param {{ pageSize?: number, clipUrl?: (id: string) => string | null }} [options]
+ *   clipUrl builds a clip's link; pass the clip index's, so the link carries the
+ *   same version the API sends and a replaced clip is not served from cache.
  */
-export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE } = {}) {
+export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE, clipUrl = clipPath } = {}) {
   const { clause, params } = whereClause(filters, clipIds);
 
   const total = database.prepare(`SELECT COUNT(*) AS n FROM cosmetics ${clause}`).get(params).n;
@@ -130,7 +132,7 @@ export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE 
         // on a phone look like the same item.
         tier: resolveTier(row.rarity, real(row.series)),
         hasClip,
-        clip: hasClip ? clipPath(row.id) : null,
+        clip: hasClip ? clipUrl(row.id) : null,
         youtube: youtubeId(row.showcase_video),
       };
     }),

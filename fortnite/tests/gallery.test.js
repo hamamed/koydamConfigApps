@@ -74,6 +74,14 @@ test('search, rarity and type narrow the list together', () => {
   assert.deepEqual(ids(queryGallery(database, filters({ rarity: 'rare', type: 'emote' }), new Set())), ['EID_Wave']);
 });
 
+test('clip links come from the given clipUrl, so the panel links carry the same version as the API', () => {
+  const clipUrl = (id) => `/showcase/${id}.mp4?v=abc123`;
+
+  const [row] = queryGallery(database, filters({ video: 'clip' }), new Set(['Character_B']), { clipUrl }).rows;
+
+  assert.equal(row.clip, '/showcase/Character_B.mp4?v=abc123');
+});
+
 test('marks which rows have a clip', () => {
   const result = queryGallery(database, filters({ video: 'any' }), new Set(['Character_B']));
 
