@@ -30,24 +30,29 @@
   object-position: center 30%;
 }
 
-/* The same palette the clip renderer uses, so a card and its clip match. */
-.fg-rarity-common        { background: radial-gradient(circle at 50% 35%, #8a8d91, #2b2d31 75%); }
-.fg-rarity-uncommon      { background: radial-gradient(circle at 50% 35%, #69bb1e, #1b4a0c 75%); }
-.fg-rarity-rare          { background: radial-gradient(circle at 50% 35%, #2cc3fc, #0b3d7a 75%); }
-.fg-rarity-epic          { background: radial-gradient(circle at 50% 35%, #c359ff, #3b0f6b 75%); }
-.fg-rarity-legendary     { background: radial-gradient(circle at 50% 35%, #ea8d23, #6b2a08 75%); }
-.fg-rarity-mythic        { background: radial-gradient(circle at 50% 35%, #f8e14c, #7a5a06 75%); }
-.fg-rarity-exotic        { background: radial-gradient(circle at 50% 35%, #76d6e3, #145a66 75%); }
-.fg-rarity-marvel        { background: radial-gradient(circle at 50% 35%, #d7313b, #5e0b10 75%); }
-.fg-rarity-dc            { background: radial-gradient(circle at 50% 35%, #5475c7, #1a2a57 75%); }
-.fg-rarity-starwars      { background: radial-gradient(circle at 50% 35%, #3d5a8a, #0a1020 75%); }
-.fg-rarity-icon          { background: radial-gradient(circle at 50% 35%, #4bc7cf, #0f4a55 75%); }
-.fg-rarity-gaminglegends { background: radial-gradient(circle at 50% 35%, #7b6cf5, #1f0f5e 75%); }
-.fg-rarity-lava          { background: radial-gradient(circle at 50% 35%, #f0673a, #5a1508 75%); }
-.fg-rarity-frozen        { background: radial-gradient(circle at 50% 35%, #a9dcf5, #2d5b7a 75%); }
-.fg-rarity-slurp         { background: radial-gradient(circle at 50% 35%, #26d7e0, #0a4f6b 75%); }
-.fg-rarity-shadow        { background: radial-gradient(circle at 50% 35%, #6b6b75, #111114 75%); }
-.fg-rarity-dark          { background: radial-gradient(circle at 50% 35%, #a73bd6, #1c0526 75%); }
+/* The app's tier backdrop (Rarity.swift `backdrop`): the tier colour at 55%
+   down to its gradient end at 95%, over the app's canvas. Keyed by tier, which
+   is series first, not by rarity — src/tiers.js holds the palette, and
+   tests/gallery-css.test.js fails if these drift from it. */
+.fg-tier-common        { background: linear-gradient(to bottom, rgba(255, 255, 255, .55), rgba(185, 185, 198, .95)), #07070C; }
+.fg-tier-uncommon      { background: linear-gradient(to bottom, rgba(49, 146, 54, .55), rgba(24, 59, 14, .95)), #07070C; }
+.fg-tier-rare          { background: linear-gradient(to bottom, rgba(76, 81, 247, .55), rgba(33, 71, 160, .95)), #07070C; }
+.fg-tier-epic          { background: linear-gradient(to bottom, rgba(157, 77, 187, .55), rgba(63, 31, 100, .95)), #07070C; }
+.fg-tier-legendary     { background: linear-gradient(to bottom, rgba(255, 165, 0, .55), rgba(168, 63, 0, .95)), #07070C; }
+.fg-tier-mythic        { background: linear-gradient(to bottom, rgba(255, 215, 0, .55), rgba(168, 96, 0, .95)), #07070C; }
+.fg-tier-exotic        { background: linear-gradient(to bottom, rgba(0, 255, 255, .55), rgba(0, 168, 123, .95)), #07070C; }
+.fg-tier-dark          { background: linear-gradient(to bottom, rgba(139, 0, 255, .55), rgba(46, 0, 168, .95)), #07070C; }
+.fg-tier-frozen        { background: linear-gradient(to bottom, rgba(135, 206, 235, .55), rgba(70, 147, 148, .95)), #07070C; }
+.fg-tier-lava          { background: linear-gradient(to bottom, rgba(255, 69, 0, .55), rgba(168, 0, 0, .95)), #07070C; }
+.fg-tier-shadow        { background: linear-gradient(to bottom, rgba(47, 47, 47, .55), rgba(11, 11, 15, .95)), #07070C; }
+.fg-tier-slurp         { background: linear-gradient(to bottom, rgba(0, 206, 209, .55), rgba(0, 122, 91, .95)), #07070C; }
+.fg-tier-marvel        { background: linear-gradient(to bottom, rgba(237, 29, 36, .55), rgba(150, 3, 48, .95)), #07070C; }
+.fg-tier-dc            { background: linear-gradient(to bottom, rgba(24, 119, 242, .55), rgba(0, 110, 155, .95)), #07070C; }
+.fg-tier-starwars      { background: linear-gradient(to bottom, rgba(0, 180, 216, .55), rgba(0, 129, 116, .95)), #07070C; }
+.fg-tier-icon          { background: linear-gradient(to bottom, rgba(0, 240, 255, .55), rgba(0, 168, 133, .95)), #07070C; }
+.fg-tier-gaminglegends { background: linear-gradient(to bottom, rgba(75, 0, 130, .55), rgba(13, 0, 43, .95)), #07070C; }
+.fg-tier-crew          { background: linear-gradient(to bottom, rgba(245, 197, 66, .55), rgba(178, 95, 230, .95)), #07070C; }
+.fg-tier-unknown       { background: linear-gradient(to bottom, rgba(138, 138, 153, .55), rgba(53, 57, 66, .95)), #07070C; }
 
 /* Sits over artwork of any colour, so it carries its own dark ground. */
 .fg-chip {

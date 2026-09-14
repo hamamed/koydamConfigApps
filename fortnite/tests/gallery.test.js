@@ -130,6 +130,17 @@ test('filterOptions labels each type and rarity by its most common real name', (
   assert.deepEqual(rarities.find((r) => r.rarity === 'legendary'), { rarity: 'legendary', label: 'legendary', count: 1 });
 });
 
+test('each row carries the app tier, series first', () => {
+  database.prepare("UPDATE cosmetics SET series = 'Icon Series' WHERE id = 'Character_B'").run();
+  database.prepare("UPDATE cosmetics SET rarity = 'transcendent' WHERE id = 'Character_D'").run();
+
+  const tiers = Object.fromEntries(queryGallery(database, filters(), new Set()).rows.map((row) => [row.id, row.tier]));
+
+  assert.deepEqual(tiers, {
+    Character_A: 'epic', Character_B: 'icon', Character_C: 'epic', Character_D: 'unknown', EID_Wave: 'rare',
+  });
+});
+
 test('upstream placeholder "null" strings read as missing on a card', () => {
   database.prepare("UPDATE cosmetics SET name = 'null', type_name = 'null', set_name = 'null' WHERE id = 'EID_Wave'").run();
 

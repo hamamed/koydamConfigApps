@@ -1,4 +1,5 @@
 import { clipPath } from './showcase.js';
+import { resolveTier } from './tiers.js';
 
 /**
  * The query behind the catalogue and videos galleries.
@@ -125,6 +126,9 @@ export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE 
         rarity_name: real(row.rarity_name),
         series: real(row.series),
         set_name: real(row.set_name),
+        // The colour the app draws it in — series first — so a card here and
+        // on a phone look like the same item.
+        tier: resolveTier(row.rarity, real(row.series)),
         hasClip,
         clip: hasClip ? clipPath(row.id) : null,
         youtube: youtubeId(row.showcase_video),

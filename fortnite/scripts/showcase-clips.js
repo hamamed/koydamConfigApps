@@ -1,67 +1,52 @@
 #!/usr/bin/env node
 /**
- * Renders a short vertical showcase clip for each outfit from its official
- * Fortnite-API artwork — the render over a rarity-coloured background, with
- * the name, rarity and set.
+ * Renders a short vertical showcase clip for each outfit, drawn the way the
+ * Fortnite Companion app draws a cosmetic: the app's backdrop, the artwork
+ * large on its tier card with the border and glow, then the tier chip and the
+ * name in the app's display face.
  *
  * By default only outfits that have no upstream YouTube showcase get a clip;
  * the others already have a video. Clips are named by the exact cosmetic id,
  * so the API can find them without a lookup table.
  *
  *   node scripts/showcase-clips.js --out ./storage/showcase
- *   node scripts/showcase-clips.js --out /tmp/clips --ids Character_AgentSherbert
+ *   node scripts/showcase-clips.js --out /tmp/clips --ids Character_AgentSherbert --force
  *   node scripts/showcase-clips.js --out ./storage/showcase --all --concurrency 4
  *
- * Needs an ffmpeg built with libfreetype (drawtext). Homebrew's plain `ffmpeg`
- * is not; `ffmpeg-full` is, and is the default below. An existing clip is left
- * alone unless --force is given, so an interrupted run resumes where it stopped.
+ * Needs ffmpeg and Google Chrome. Headless Chrome draws the still layers from
+ * scripts/showcase/page.js with the app's own font files; ffmpeg animates them.
+ * An existing clip is left alone unless --force is given, so an interrupted run
+ * resumes where it stopped.
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+
+import { TIERS } from '../src/tiers.js';
+import { launchRenderer } from './showcase/chrome.js';
+import { composeArgs } from './showcase/compose.js';
+import { cardText } from './showcase/card.js';
+import { pageHtml, tierCss } from './showcase/page.js';
 
 const UPSTREAM = 'https://fortnite-api.com/v2/cosmetics/br';
 const ARTWORK_HOST = 'fortnite-api.com';
 const FETCH_TIMEOUT_MS = 30_000;
 const MAX_ARTWORK_BYTES = 10 * 1024 * 1024;
 
-// Upstream data becomes file names and filter arguments. Anything outside these
-// shapes is refused rather than escaped: a clip named `../../x` must not exist.
+// Upstream ids become file names. Anything outside this shape is refused
+// rather than escaped: a clip named `../../x` must not exist.
 const SAFE_ID = /^[A-Za-z0-9_-]+$/;
-const HEX_COLOR = /^[0-9a-fA-F]{6}$/;
-const WIDTH = 720;
-const HEIGHT = 1280;
-const FPS = 30;
-const DURATION = 6;
-const FADE_OUT = 0.4;
-// Wider than the frame on purpose: the featured renders carry a lot of empty
-// margin, and at frame width the character filled barely a third of it.
-const RENDER_WIDTH = 880;
-const RENDER_LIFT = 190; // px above centre, so the feet stay clear of the caption panel
-const MAX_NAME_SIZE = 84;
-const NAME_SIZE_BUDGET = 1280; // ≈ usable width ÷ average glyph width ratio
 
 const DEFAULTS = {
   out: './storage/showcase',
-  ffmpeg: '/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg',
-  titleFont: '/System/Library/Fonts/Supplemental/Impact.ttf',
-  bodyFont: '/System/Library/Fonts/Supplemental/DIN Alternate Bold.ttf',
+  ffmpeg: '/opt/homebrew/bin/ffmpeg',
+  chrome: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  // The app bundles Burbank; the build machine has the app checked out beside this repo.
+  displayFont: path.join(os.homedir(), 'Documents/FortniteCompanion/FortniteCompanion/Resources/Fonts/burbankbigcondensed_black.otf'),
   concurrency: 3,
 };
-
-/** Light and dark stop for each rarity, where upstream gives no series colours. */
-const RARITY_COLORS = {
-  common: ['8a8d91', '2b2d31'],
-  uncommon: ['69bb1e', '1b4a0c'],
-  rare: ['2cc3fc', '0b3d7a'],
-  epic: ['c359ff', '3b0f6b'],
-  legendary: ['ea8d23', '6b2a08'],
-  mythic: ['f8e14c', '7a5a06'],
-  exotic: ['76d6e3', '145a66'],
-};
-const FALLBACK_COLORS = RARITY_COLORS.common;
 
 function parseArgs(argv) {
   const options = { ...DEFAULTS, all: false, force: false, ids: null, limit: Infinity };
@@ -75,8 +60,8 @@ function parseArgs(argv) {
     };
     if (flag === '--out') options.out = value();
     else if (flag === '--ffmpeg') options.ffmpeg = value();
-    else if (flag === '--title-font') options.titleFont = value();
-    else if (flag === '--body-font') options.bodyFont = value();
+    else if (flag === '--chrome') options.chrome = value();
+    else if (flag === '--display-font') options.displayFont = value();
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -101,9 +86,9 @@ async function fetchOutfits() {
   return body.data.filter((item) => item?.type?.value === 'outfit');
 }
 
-/** The artwork to feature: the large render where there is one, from upstream's own host only. */
+/** The artwork the app's detail sheet shows — featured first — from upstream's own host only. */
 function artworkUrl(item) {
-  const raw = item.images?.featured || item.images?.icon;
+  const raw = item.images?.featured || item.images?.icon || item.images?.smallIcon;
   if (!raw) return null;
   try {
     const url = new URL(raw);
@@ -118,65 +103,10 @@ function selectOutfits(outfits, options) {
     .filter((item) => SAFE_ID.test(String(item.id ?? '')))
     .filter((item) => (options.ids ? options.ids.has(item.id) : true))
     .filter((item) => options.ids || options.all || !item.showcaseVideo)
+    // A small icon alone is too little to fill the hero; those are placeholders.
+    .filter((item) => item.images?.featured || item.images?.icon)
     .filter((item) => artworkUrl(item))
     .slice(0, options.limit);
-}
-
-/** Series items carry their own palette; everything else goes by rarity. */
-function colorsFor(item) {
-  const series = item.series?.colors;
-  if (Array.isArray(series) && series.length >= 4) {
-    const [light, dark] = [series[1], series[3]].map((color) => String(color).slice(0, 6));
-    if (HEX_COLOR.test(light) && HEX_COLOR.test(dark)) return [light, dark];
-  }
-  return RARITY_COLORS[item.rarity?.value] ?? FALLBACK_COLORS;
-}
-
-/** drawtext reads option values with ':' and '\'' as syntax. */
-function filterPath(p) {
-  return p.replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\\'");
-}
-
-function textLayer({ file, font, size, y, color = 'white', box = null, delay }) {
-  const parts = [
-    `textfile='${filterPath(file)}'`,
-    `fontfile='${filterPath(font)}'`,
-    'expansion=none',
-    `fontsize=${size}`,
-    `fontcolor=${color}`,
-    'x=(w-text_w)/2',
-    `y=${y}`,
-    'borderw=3',
-    'bordercolor=black@0.55',
-    `alpha='min(1,max(0,(t-${delay})/0.4))'`,
-  ];
-  if (box) parts.push('box=1', `boxcolor=0x${box}@0.95`, 'boxborderw=14');
-  return `drawtext=${parts.join(':')}`;
-}
-
-function buildFilter(item, texts, options) {
-  const [light, dark] = colorsFor(item);
-  const nameSize = Math.min(MAX_NAME_SIZE, Math.floor(NAME_SIZE_BUDGET / Math.max(1, texts.name.length)));
-  const zoom = `(1+0.06*t/${DURATION})`;
-
-  const background =
-    `gradients=s=${WIDTH}x${HEIGHT}:r=${FPS}:d=${DURATION}:type=radial:speed=0:nb_colors=2` +
-    `:c0=0x${light}:c1=0x${dark}:x0=${WIDTH / 2}:y0=${HEIGHT * 0.4}:x1=${WIDTH / 2}:y1=${HEIGHT * 1.15}[bg]`;
-  // A slow push-in, re-evaluated every frame, keeps a still render from reading as a slide.
-  const artwork = `[0:v]format=rgba,scale=w='trunc(${RENDER_WIDTH}*${zoom}/2)*2':h=-2:eval=frame[art]`;
-
-  const stage = [
-    `[bg][art]overlay=x='(W-w)/2':y='(H-h)/2-${RENDER_LIFT}+50*max(0,1-t/0.6)':format=auto`,
-    `drawbox=x=0:y=${HEIGHT - 380}:w=iw:h=380:color=black@0.35:t=fill`,
-    textLayer({ file: texts.nameFile, font: options.titleFont, size: nameSize, y: HEIGHT - 340, delay: 0.3 }),
-    textLayer({ file: texts.rarityFile, font: options.bodyFont, size: 32, y: HEIGHT - 225, box: light, delay: 0.6 }),
-  ];
-  if (texts.setFile) {
-    stage.push(textLayer({ file: texts.setFile, font: options.bodyFont, size: 30, y: HEIGHT - 150, color: 'white@0.85', delay: 0.9 }));
-  }
-  stage.push(`fade=t=in:d=0.3,fade=t=out:st=${DURATION - FADE_OUT}:d=${FADE_OUT},format=yuv420p[out]`);
-
-  return [background, artwork, stage.join(',')].join(';');
 }
 
 function run(command, args) {
@@ -187,54 +117,66 @@ function run(command, args) {
       stderr = (stderr + chunk).slice(-2000);
     });
     child.on('error', reject);
-    child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited ${code}: ${stderr.trim()}`))));
+    child.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${path.basename(command)} exited ${code}: ${stderr.trim()}`))));
   });
 }
 
-async function download(url, destination) {
+/**
+ * The artwork as a data URL.
+ *
+ * Handed to Chrome inline rather than as a file: a page may read the pixels of
+ * a data URL, and the card measures the render's transparent margin, but a
+ * file:// image is cross-origin to the page and its pixels are locked.
+ */
+async function downloadArtwork(url) {
   const response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`artwork ${response.status} for ${url}`);
+  const type = String(response.headers.get('content-type') ?? '').split(';')[0].trim();
+  if (!/^image\/(png|webp|jpeg)$/.test(type)) throw new Error(`artwork is ${type || 'untyped'}, not an image, for ${url}`);
   const declared = Number(response.headers.get('content-length'));
   if (declared > MAX_ARTWORK_BYTES) throw new Error(`artwork is ${declared} bytes, over the cap, for ${url}`);
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length > MAX_ARTWORK_BYTES) throw new Error(`artwork is ${bytes.length} bytes, over the cap, for ${url}`);
-  await writeFile(destination, bytes);
+  return `data:${type};base64,${bytes.toString('base64')}`;
 }
 
-async function renderClip(item, options) {
+/**
+ * Puts a finished clip in place without ever exposing a partial one: copied
+ * beside the target under a name the clip index ignores, then renamed in.
+ */
+async function moveInto(source, target) {
+  try {
+    await rename(source, target);
+  } catch (error) {
+    if (error.code !== 'EXDEV') throw error;
+    const staging = `${target}.partial`;
+    await copyFile(source, staging);
+    await rename(staging, target);
+  }
+}
+
+async function renderClip(item, options, renderer) {
   const target = path.join(options.out, `${item.id}.mp4`);
   if (!options.force && existsSync(target)) return 'skipped';
 
   const work = await mkdtemp(path.join(os.tmpdir(), 'showcase-'));
   try {
-    const art = path.join(work, 'art.png');
-    await download(artworkUrl(item), art);
-
-    const texts = {
-      name: String(item.name ?? item.id).toUpperCase(),
-      nameFile: path.join(work, 'name.txt'),
-      rarityFile: path.join(work, 'rarity.txt'),
-      setFile: item.set?.value ? path.join(work, 'set.txt') : null,
-    };
-    await writeFile(texts.nameFile, texts.name);
-    await writeFile(texts.rarityFile, String(item.rarity?.displayValue ?? 'Outfit').toUpperCase());
-    if (texts.setFile) await writeFile(texts.setFile, `${item.set.value} Set`);
-
-    // Rendered beside the target and renamed, so a killed run never leaves a
-    // truncated file that a resume would then skip as done.
-    const partial = path.join(work, 'clip.mp4');
-    await run(options.ffmpeg, [
-      '-hide_banner', '-loglevel', 'error', '-y',
-      '-loop', '1', '-t', String(DURATION), '-i', art,
-      '-filter_complex', buildFilter(item, texts, options),
-      '-map', '[out]', '-r', String(FPS),
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', '26', '-profile:v', 'high',
-      '-movflags', '+faststart', '-an', partial,
-    ]);
-    await rename(partial, target).catch(async (error) => {
-      if (error.code !== 'EXDEV') throw error;
-      await run('cp', [partial, target]);
+    const text = cardText(item);
+    const { layers, hero } = await renderer.render({
+      ...text,
+      css: tierCss(TIERS[text.tier]),
+      artUrl: await downloadArtwork(artworkUrl(item)),
     });
+
+    const files = {};
+    for (const [name, buffer] of Object.entries(layers)) {
+      files[name] = path.join(work, `${name}.png`);
+      await writeFile(files[name], buffer);
+    }
+
+    const partial = path.join(work, 'clip.mp4');
+    await run(options.ffmpeg, composeArgs(files, hero, partial));
+    await moveInto(partial, target);
     return 'rendered';
   } finally {
     await rm(work, { recursive: true, force: true });
@@ -243,12 +185,17 @@ async function renderClip(item, options) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  for (const file of [options.ffmpeg, options.titleFont, options.bodyFont]) {
+  for (const file of [options.ffmpeg, options.chrome, options.displayFont]) {
     if (!existsSync(file)) throw new Error(`Not found: ${file}`);
   }
   await mkdir(options.out, { recursive: true });
 
   const queue = selectOutfits(await fetchOutfits(), options);
+  const renderer = await launchRenderer({
+    chrome: options.chrome,
+    html: pageHtml({ displayFont: options.displayFont }),
+  });
+
   const counts = { rendered: 0, skipped: 0, failed: 0 };
   const failures = [];
   let next = 0;
@@ -259,7 +206,7 @@ async function main() {
       const item = queue[next];
       next += 1;
       try {
-        counts[await renderClip(item, options)] += 1;
+        counts[await renderClip(item, options, renderer)] += 1;
       } catch (error) {
         counts.failed += 1;
         failures.push(`${item.id}: ${error.message}`);
@@ -270,7 +217,12 @@ async function main() {
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(options.concurrency, queue.length) }, worker));
+
+  try {
+    await Promise.all(Array.from({ length: Math.min(options.concurrency, queue.length) }, worker));
+  } finally {
+    await renderer.close();
+  }
 
   for (const line of failures) process.stderr.write(`FAILED ${line}\n`);
   process.exitCode = counts.failed > 0 ? 1 : 0;

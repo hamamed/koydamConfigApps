@@ -7,7 +7,6 @@
   invalid and the click would open the viewer as well.
 %>
 <% const art = row.featured_url || row.icon_url || '';
-   const rarityClass = String(row.rarity || 'common').toLowerCase().replace(/[^a-z0-9]/g, '');
    const meta = [row.type_name, row.rarity_name || row.rarity, row.set_name, row.season].filter(Boolean).join(' · '); %>
 <div class="ad-skin-card-wrap">
   <button type="button" class="ad-skin-card fg-card" data-cosmetic
@@ -15,7 +14,7 @@
           data-description="<%= row.description || '' %>" data-image="<%= art %>"
           data-clip="<%= row.clip || '' %>" data-youtube="<%= row.youtube || '' %>"
           aria-label="<%= row.name %> — open">
-    <span class="ad-skin-thumb fg-thumb fg-rarity-<%= rarityClass %>">
+    <span class="ad-skin-thumb fg-thumb fg-tier-<%= row.tier %>">
       <% if (art) { %><img class="fg-art" src="<%= art %>" alt="" loading="lazy"><% } %>
     </span>
     <% if (row.clip || row.youtube) { %>
