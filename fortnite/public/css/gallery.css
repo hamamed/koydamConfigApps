@@ -21,6 +21,10 @@
 .fg-card:focus-visible { outline: 3px solid var(--kd-accent); outline-offset: 2px; }
 
 .fg-thumb { aspect-ratio: 3 / 4; }
+/* A clip is a whole vertical frame with its own chip and name along the
+   bottom. Filled from the top, the card shows the skin and crops that text,
+   which otherwise sat behind this card's own caption as a second name. */
+.fg-art.fg-clip { object-fit: cover; object-position: center top; pointer-events: none; }
 .fg-art {
   position: absolute;
   inset: 0;

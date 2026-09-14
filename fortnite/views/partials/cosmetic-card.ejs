@@ -15,7 +15,14 @@
           data-clip="<%= row.clip || '' %>" data-youtube="<%= row.youtube || '' %>"
           aria-label="<%= row.name %> — open">
     <span class="ad-skin-thumb fg-thumb fg-tier-<%= row.tier %>">
-      <% if (art) { %><img class="fg-art" src="<%= art %>" alt="" loading="lazy"><% } %>
+      <% if (row.clip) { %>
+        <%# Plays like a GIF once scrolled into view — muted, looping, no controls.
+            No src until then: gallery.js sets it, so a page does not fetch 48 clips at once. %>
+        <video class="fg-art fg-clip" data-autoplay-src="<%= row.clip %>" <% if (art) { %>poster="<%= art %>"<% } %>
+               muted loop playsinline preload="none" disablepictureinpicture aria-hidden="true"></video>
+      <% } else if (art) { %>
+        <img class="fg-art" src="<%= art %>" alt="" loading="lazy">
+      <% } %>
     </span>
     <% if (row.clip || row.youtube) { %>
       <span class="ad-skin-actions">

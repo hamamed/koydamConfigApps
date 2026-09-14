@@ -29,20 +29,24 @@
 
   function player(source) {
     if (source === 'clip') {
+      // Like a GIF: plays by itself, silent, looping, nothing to click.
       const video = document.createElement('video');
       video.className = 'fg-video';
       video.src = current.clip;
-      video.controls = true;
+      video.controls = false;
       video.autoplay = true;
       video.muted = true;
       video.loop = true;
       video.playsInline = true;
+      video.disablePictureInPicture = true;
       return video;
     }
     if (source === 'youtube') {
       const frame = document.createElement('iframe');
       frame.className = 'fg-youtube';
-      frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(current.youtube)}?autoplay=1&mute=1&rel=0`;
+      // YouTube only loops a video that is also its own one-item playlist.
+      const id = encodeURIComponent(current.youtube);
+      frame.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&rel=0&playsinline=1`;
       frame.title = `${current.name} — YouTube showcase`;
       frame.allow = 'autoplay; encrypted-media; picture-in-picture';
       frame.allowFullscreen = true;
@@ -120,6 +124,28 @@
     const source = event.target.closest('[data-source]');
     if (source && current) show(source.dataset.source);
   });
+
+  // Card clips: fetched and played only while on screen, paused when scrolled
+  // away. Someone who asked their system for less motion gets the still poster.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cardClips = Array.from(document.querySelectorAll('video[data-autoplay-src]'));
+  const start = (video) => {
+    if (!video.getAttribute('src')) video.src = video.dataset.autoplaySrc;
+    video.play().catch(() => {});
+  };
+  if (!reducedMotion && cardClips.length) {
+    if ('IntersectionObserver' in window) {
+      const watcher = new IntersectionObserver((entries) => {
+        entries.forEach(({ target, isIntersecting }) => {
+          if (isIntersecting) start(target);
+          else target.pause();
+        });
+      }, { rootMargin: '200px 0px' });
+      cardClips.forEach((video) => watcher.observe(video));
+    } else {
+      cardClips.forEach(start);
+    }
+  }
 
   const wanted = new URLSearchParams(window.location.search).get('open');
   if (wanted) {
