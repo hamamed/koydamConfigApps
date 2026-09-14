@@ -27,7 +27,11 @@
     <%# Only the clip is offered; the full YouTube showcase is not shown in the panel. %>
     <% if (row.clip) { %>
       <span class="ad-skin-actions">
-        <span class="fg-chip"><i data-lucide="clapperboard" width="11" height="11"></i>Clip</span>
+        <% if (row.clipSource === 'youtube') { %>
+          <span class="fg-chip"><i data-lucide="youtube" width="11" height="11"></i>YouTube clip</span>
+        <% } else { %>
+          <span class="fg-chip"><i data-lucide="clapperboard" width="11" height="11"></i>Clip</span>
+        <% } %>
       </span>
     <% } %>
     <span class="ad-skin-body">

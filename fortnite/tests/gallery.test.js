@@ -119,7 +119,23 @@ test('pageHref keeps the filters, drops empty ones and page 1', () => {
 test('videoTotals counts outfit coverage and videos across every type', () => {
   const totals = videoTotals(database, new Set(['Character_B', 'EID_Wave']));
 
-  assert.deepEqual(totals, { outfits: 4, youtube: 2, clips: 1, missing: 1, withVideo: 4 });
+  assert.deepEqual(totals, {
+    outfits: 4, youtube: 2, clips: 1, missing: 1, withVideo: 4,
+    youtubeClips: 0, otherClips: 1, youtubeToCut: 2,
+  });
+});
+
+test('videoTotals splits outfit clips by where they came from and counts YouTube clips still to cut', () => {
+  // Outfits: A and D link a YouTube showcase; A, B and C have clips; A's came from YouTube.
+  const totals = videoTotals(
+    database,
+    new Set(['Character_A', 'Character_B', 'Character_C', 'EID_Wave']),
+    new Set(['Character_A', 'EID_Wave']),
+  );
+
+  assert.equal(totals.youtubeClips, 1);
+  assert.equal(totals.otherClips, 2);
+  assert.equal(totals.youtubeToCut, 1);
 });
 
 test('filterOptions labels each type and rarity by its most common real name', () => {

@@ -81,6 +81,19 @@ test('creates the clip directory when it does not exist yet', async () => {
   assert.equal(result.ok, true);
 });
 
+test('replacing or deleting a clip by hand drops the note of where the old one came from', async () => {
+  const note = path.join(root, 'Character_Inferno.source.json');
+  await writeFile(path.join(root, 'Character_Inferno.mp4'), MP4);
+  await writeFile(note, '{"source":"youtube"}');
+
+  await store.storeClip({ buffer: MP4, filename: 'Character_Inferno.mp4' });
+  assert.equal(existsSync(note), false);
+
+  await writeFile(note, '{"source":"artwork"}');
+  await store.deleteClip('Character_Inferno');
+  assert.equal(existsSync(note), false);
+});
+
 test('deletes a clip', async () => {
   await writeFile(path.join(root, 'Character_Inferno.mp4'), MP4);
 

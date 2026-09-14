@@ -106,6 +106,44 @@ test('a replaced clip gets a new link, so a cached copy of the old one is not sh
   await rm(dir, { recursive: true, force: true });
 });
 
+test('sourceOf reads where a clip came from, from the file beside it', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'showcase-source-'));
+  await writeFile(path.join(dir, 'Character_Yt.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Yt.source.json'), JSON.stringify({ source: 'youtube', channel: 'Gnejs Gaming' }));
+  await writeFile(path.join(dir, 'Character_Art.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Art.source.json'), JSON.stringify({ source: 'artwork' }));
+  await writeFile(path.join(dir, 'Character_Plain.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Broken.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Broken.source.json'), '{not json');
+  await writeFile(path.join(dir, 'Character_Odd.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Odd.source.json'), JSON.stringify({ source: 'somewhere' }));
+  const index = createClipIndex(dir);
+
+  await index.refresh();
+
+  assert.equal(index.sourceOf('Character_Yt'), 'youtube');
+  assert.equal(index.sourceOf('Character_Art'), 'artwork');
+  assert.equal(index.sourceOf('Character_Plain'), null);
+  assert.equal(index.sourceOf('Character_Broken'), null);
+  assert.equal(index.sourceOf('Character_Odd'), null);
+  assert.equal(index.sourceOf('Character_NoClip'), null);
+  assert.deepEqual([...index.idsFrom('youtube')], ['Character_Yt']);
+  await rm(dir, { recursive: true, force: true });
+});
+
+test('a source file without its clip does not make a clip', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'showcase-orphan-'));
+  await writeFile(path.join(dir, 'Character_Orphan.source.json'), JSON.stringify({ source: 'youtube' }));
+  const index = createClipIndex(dir);
+
+  await index.refresh();
+
+  assert.equal(index.pathFor('Character_Orphan'), null);
+  assert.equal(index.sourceOf('Character_Orphan'), null);
+  assert.deepEqual([...index.ids()], []);
+  await rm(dir, { recursive: true, force: true });
+});
+
 test('picks up clips added after the last read once the index is stale', async () => {
   let clock = 0;
   const index = createClipIndex(root, { refreshMs: 1000, now: () => clock });

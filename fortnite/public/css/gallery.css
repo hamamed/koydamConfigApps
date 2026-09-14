@@ -80,6 +80,9 @@
 }
 .fg-stat-value { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
 
+.fg-progress { height: 10px; border-radius: 999px; background: var(--kd-surface-2, #eef0f4); }
+.fg-progress-bar { background: var(--kd-accent); border-radius: 999px; }
+
 /* ── Viewer ────────────────────────────────────────────────────────────── */
 
 .fg-player-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }

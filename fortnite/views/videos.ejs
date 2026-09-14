@@ -10,22 +10,40 @@
     <div class="ad-content">
       <%- include('partials/flash') %>
 
+      <% const cut = totals.youtubeClips;
+         const cuttable = totals.youtubeClips + totals.youtubeToCut;
+         const cutPercent = cuttable ? Math.floor((cut / cuttable) * 100) : 0; %>
+      <div class="ad-card ad-card-pad mb-3">
+        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+          <span class="fw-semibold">YouTube clips cut</span>
+          <span class="fg-stat-value"><%= Number(cut).toLocaleString() %></span>
+          <span class="kd-faint">of <%= Number(cuttable).toLocaleString() %> · <%= cutPercent %>%</span>
+          <span class="kd-faint small ms-auto">
+            <%= Number(totals.youtubeToCut).toLocaleString() %> still to cut · new clips show up here within minutes of upload
+          </span>
+        </div>
+        <div class="progress fg-progress" role="progressbar" aria-label="YouTube clips cut"
+             aria-valuenow="<%= cutPercent %>" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar fg-progress-bar" style="width: <%= cutPercent %>%"></div>
+        </div>
+      </div>
+
       <div class="fg-stats mb-3">
         <div class="ad-card ad-card-pad">
           <div class="kd-faint small">Outfits</div>
           <div class="fg-stat-value"><%= Number(totals.outfits).toLocaleString() %></div>
         </div>
         <div class="ad-card ad-card-pad">
-          <div class="kd-faint small">With a YouTube showcase</div>
-          <div class="fg-stat-value"><%= Number(totals.youtube).toLocaleString() %></div>
+          <div class="kd-faint small">Clips from YouTube</div>
+          <div class="fg-stat-value"><%= Number(totals.youtubeClips).toLocaleString() %></div>
         </div>
         <div class="ad-card ad-card-pad">
-          <div class="kd-faint small">With a rendered clip</div>
-          <div class="fg-stat-value"><%= Number(totals.clips).toLocaleString() %></div>
+          <div class="kd-faint small">Clips from artwork</div>
+          <div class="fg-stat-value"><%= Number(totals.otherClips).toLocaleString() %></div>
         </div>
         <div class="ad-card ad-card-pad">
-          <div class="kd-faint small">Outfits with no video</div>
-          <div class="fg-stat-value"><%= Number(totals.missing).toLocaleString() %></div>
+          <div class="kd-faint small">Outfits with no clip yet</div>
+          <div class="fg-stat-value"><%= Number(totals.outfits - totals.youtubeClips - totals.otherClips).toLocaleString() %></div>
         </div>
       </div>
 

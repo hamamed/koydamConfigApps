@@ -32,6 +32,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { CLIP_FRAME, footageClipArgs } from './showcase/compose.js';
+import { writeSource } from './showcase/source.js';
 import {
   PERMITTED_CHANNELS, applyVideoMap, clipTiming, cropWindow, fitCrop, isInside, isPermittedChannel, motionCenter,
   parseMotionBox,
@@ -209,6 +210,7 @@ async function cutClip(item, options) {
     const partial = path.join(work, 'clip.mp4');
     await capture(options.ffmpeg, footageClipArgs(source.file, window, timing, partial));
     await moveInto(partial, target);
+    await writeSource(options.out, item.id, { source: 'youtube', channel: source.channel, video: item.showcaseVideo });
     return 'rendered';
   } finally {
     await rm(work, { recursive: true, force: true });

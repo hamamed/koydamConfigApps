@@ -97,7 +97,9 @@ function whereClause(filters, clipIds) {
  *   clipUrl builds a clip's link; pass the clip index's, so the link carries the
  *   same version the API sends and a replaced clip is not served from cache.
  */
-export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE, clipUrl = clipPath } = {}) {
+export function queryGallery(
+  database, filters, clipIds, { pageSize = PAGE_SIZE, clipUrl = clipPath, clipSource = () => null } = {},
+) {
   const { clause, params } = whereClause(filters, clipIds);
 
   const total = database.prepare(`SELECT COUNT(*) AS n FROM cosmetics ${clause}`).get(params).n;
@@ -133,6 +135,7 @@ export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE,
         tier: resolveTier(row.rarity, real(row.series)),
         hasClip,
         clip: hasClip ? clipUrl(row.id) : null,
+        clipSource: hasClip ? clipSource(row.id) : null,
         youtube: youtubeId(row.showcase_video),
       };
     }),
@@ -146,17 +149,25 @@ export function queryGallery(database, filters, clipIds, { pageSize = PAGE_SIZE,
  * number of cosmetics with any video counts every type, since emotes and
  * pickaxes carry YouTube showcases too.
  */
-export function videoTotals(database, clipIds) {
+export function videoTotals(database, clipIds, youtubeClipIds = new Set()) {
+  // Progress on cutting clips from showcases: how many outfits have one, and
+  // how many that link a showcase still do not. Outfits whose showcase was
+  // matched on the channel rather than linked upstream count as cut, not as
+  // to-do, since upstream never said they had one.
+  const FROM_YOUTUBE = 'id IN (SELECT value FROM json_each(@youtubeClips))';
   return database
     .prepare(
       `SELECT COALESCE(SUM(type = 'outfit'), 0) AS outfits,
               COALESCE(SUM(type = 'outfit' AND showcase_video IS NOT NULL), 0) AS youtube,
               COALESCE(SUM(type = 'outfit' AND ${HAS_CLIP}), 0) AS clips,
               COALESCE(SUM(type = 'outfit' AND showcase_video IS NULL AND NOT ${HAS_CLIP}), 0) AS missing,
-              COALESCE(SUM(showcase_video IS NOT NULL OR ${HAS_CLIP}), 0) AS withVideo
+              COALESCE(SUM(showcase_video IS NOT NULL OR ${HAS_CLIP}), 0) AS withVideo,
+              COALESCE(SUM(type = 'outfit' AND ${FROM_YOUTUBE}), 0) AS youtubeClips,
+              COALESCE(SUM(type = 'outfit' AND ${HAS_CLIP} AND NOT ${FROM_YOUTUBE}), 0) AS otherClips,
+              COALESCE(SUM(type = 'outfit' AND showcase_video IS NOT NULL AND NOT ${FROM_YOUTUBE}), 0) AS youtubeToCut
          FROM cosmetics`,
     )
-    .get({ clips: JSON.stringify([...clipIds]) });
+    .get({ clips: JSON.stringify([...clipIds]), youtubeClips: JSON.stringify([...youtubeClipIds]) });
 }
 
 /**

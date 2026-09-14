@@ -26,6 +26,7 @@ import path from 'node:path';
 import { TIERS, resolveTier } from '../src/tiers.js';
 import { launchRenderer } from './showcase/chrome.js';
 import { renderedClipArgs } from './showcase/compose.js';
+import { writeSource } from './showcase/source.js';
 import { pageHtml, tierCss } from './showcase/page.js';
 
 const UPSTREAM = 'https://fortnite-api.com/v2/cosmetics/br';
@@ -166,6 +167,7 @@ async function renderClip(item, options, renderer) {
     const partial = path.join(work, 'clip.mp4');
     await run(options.ffmpeg, renderedClipArgs(files, art, partial));
     await moveInto(partial, target);
+    await writeSource(options.out, item.id, { source: 'artwork' });
     return 'rendered';
   } finally {
     await rm(work, { recursive: true, force: true });

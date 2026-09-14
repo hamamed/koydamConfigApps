@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { access, mkdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { isClipId } from './showcase.js';
+import { SOURCE_SUFFIX, isClipId } from './showcase.js';
 
 /** A rendered clip is well under a megabyte; this leaves room for a hand-made one. */
 export const MAX_CLIP_BYTES = 20 * 1024 * 1024;
@@ -33,6 +33,8 @@ export function createClipStore(root, { isKnownId, maxBytes = MAX_CLIP_BYTES } =
   if (typeof isKnownId !== 'function') throw new TypeError('createClipStore needs isKnownId');
 
   const target = (id) => path.join(root, `${id}.mp4`);
+  // A clip put in or taken out by hand is no longer the one its note describes.
+  const dropSource = (id) => rm(path.join(root, `${id}${SOURCE_SUFFIX}`), { force: true });
 
   /** @returns {Promise<{ ok: true, id: string, replaced: boolean } | { ok: false, reason: string }>} */
   async function storeClip({ buffer, filename }) {
@@ -52,6 +54,7 @@ export function createClipStore(root, { isKnownId, maxBytes = MAX_CLIP_BYTES } =
       const replaced = await exists(destination);
       await writeFile(partial, buffer);
       await rename(partial, destination);
+      await dropSource(id);
       return { ok: true, id, replaced };
     } catch (error) {
       await rm(partial, { force: true });
@@ -67,6 +70,7 @@ export function createClipStore(root, { isKnownId, maxBytes = MAX_CLIP_BYTES } =
 
     try {
       await unlink(target(clean));
+      await dropSource(clean);
       return { ok: true, id: clean };
     } catch (error) {
       if (error.code === 'ENOENT') return { ok: false, reason: `No clip for ${clean}.` };

@@ -58,7 +58,10 @@ function handleClipUploadErrors(err, req, res, next) {
 
 galleryRouter.get('/cosmetics', (req, res) => {
   const filters = readFilters(req.query);
-  const result = queryGallery(db, filters, showcaseClips.ids(), { clipUrl: showcaseClips.pathFor });
+  const result = queryGallery(db, filters, showcaseClips.ids(), {
+    clipUrl: showcaseClips.pathFor,
+    clipSource: showcaseClips.sourceOf,
+  });
 
   res.render('cosmetics', {
     title: 'Catalogue',
@@ -79,8 +82,8 @@ galleryRouter.get('/videos', (req, res) => {
   res.render('videos', {
     title: 'Videos',
     filters,
-    result: queryGallery(db, filters, clipIds, { clipUrl: showcaseClips.pathFor }),
-    totals: videoTotals(db, clipIds),
+    result: queryGallery(db, filters, clipIds, { clipUrl: showcaseClips.pathFor, clipSource: showcaseClips.sourceOf }),
+    totals: videoTotals(db, clipIds, showcaseClips.idsFrom('youtube')),
     options: filterOptions(db),
     tabs: VIDEO_TABS,
     hrefFor: (page) => pageHref('/admin/videos', filters, page),
