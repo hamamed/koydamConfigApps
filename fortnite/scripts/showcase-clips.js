@@ -1,22 +1,21 @@
 #!/usr/bin/env node
 /**
- * Renders a short vertical showcase clip for each outfit, drawn the way the
- * Fortnite Companion app draws a cosmetic: the app's backdrop, the artwork
- * large on its tier card with the border and glow, then the tier chip and the
- * name in the app's display face.
+ * Renders a short silent clip for each outfit from its official artwork: what
+ * sits inside the app's detail box — the tier backdrop with the skin on it —
+ * in a slow zoom that loops like a GIF. No frame and no text: the app and the
+ * panel draw their own box and name around it.
  *
- * By default only outfits that have no upstream YouTube showcase get a clip;
- * the others already have a video. Clips are named by the exact cosmetic id,
- * so the API can find them without a lookup table.
+ * By default only outfits that have no upstream YouTube showcase get one; the
+ * others are cut from that showcase by scripts/showcase-youtube.js. Clips are
+ * named by the exact cosmetic id, so the API finds them without a lookup table.
  *
  *   node scripts/showcase-clips.js --out ./storage/showcase
  *   node scripts/showcase-clips.js --out /tmp/clips --ids Character_AgentSherbert --force
  *   node scripts/showcase-clips.js --out ./storage/showcase --all --concurrency 4
  *
- * Needs ffmpeg and Google Chrome. Headless Chrome draws the still layers from
- * scripts/showcase/page.js with the app's own font files; ffmpeg animates them.
- * An existing clip is left alone unless --force is given, so an interrupted run
- * resumes where it stopped.
+ * Needs ffmpeg and Google Chrome: headless Chrome draws the two still layers
+ * (scripts/showcase/page.js), ffmpeg animates them. An existing clip is left
+ * alone unless --force, so an interrupted run resumes where it stopped.
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -24,10 +23,9 @@ import { copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promise
 import os from 'node:os';
 import path from 'node:path';
 
-import { TIERS } from '../src/tiers.js';
+import { TIERS, resolveTier } from '../src/tiers.js';
 import { launchRenderer } from './showcase/chrome.js';
-import { composeArgs } from './showcase/compose.js';
-import { cardText } from './showcase/card.js';
+import { renderedClipArgs } from './showcase/compose.js';
 import { pageHtml, tierCss } from './showcase/page.js';
 
 const UPSTREAM = 'https://fortnite-api.com/v2/cosmetics/br';
@@ -43,8 +41,6 @@ const DEFAULTS = {
   out: './storage/showcase',
   ffmpeg: '/opt/homebrew/bin/ffmpeg',
   chrome: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  // The app bundles Burbank; the build machine has the app checked out beside this repo.
-  displayFont: path.join(os.homedir(), 'Documents/FortniteCompanion/FortniteCompanion/Resources/Fonts/burbankbigcondensed_black.otf'),
   concurrency: 3,
 };
 
@@ -61,7 +57,6 @@ function parseArgs(argv) {
     if (flag === '--out') options.out = value();
     else if (flag === '--ffmpeg') options.ffmpeg = value();
     else if (flag === '--chrome') options.chrome = value();
-    else if (flag === '--display-font') options.displayFont = value();
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -86,7 +81,7 @@ async function fetchOutfits() {
   return body.data.filter((item) => item?.type?.value === 'outfit');
 }
 
-/** The artwork the app's detail sheet shows — featured first — from upstream's own host only. */
+/** The artwork the app's detail box shows — featured first — from upstream's own host only. */
 function artworkUrl(item) {
   const raw = item.images?.featured || item.images?.icon || item.images?.smallIcon;
   if (!raw) return null;
@@ -103,7 +98,7 @@ function selectOutfits(outfits, options) {
     .filter((item) => SAFE_ID.test(String(item.id ?? '')))
     .filter((item) => (options.ids ? options.ids.has(item.id) : true))
     .filter((item) => options.ids || options.all || !item.showcaseVideo)
-    // A small icon alone is too little to fill the hero; those are placeholders.
+    // A small icon alone is too little to fill the box; those are placeholders.
     .filter((item) => item.images?.featured || item.images?.icon)
     .filter((item) => artworkUrl(item))
     .slice(0, options.limit);
@@ -122,11 +117,9 @@ function run(command, args) {
 }
 
 /**
- * The artwork as a data URL.
- *
- * Handed to Chrome inline rather than as a file: a page may read the pixels of
- * a data URL, and the card measures the render's transparent margin, but a
- * file:// image is cross-origin to the page and its pixels are locked.
+ * The artwork as a data URL. Handed to Chrome inline rather than as a file: a
+ * page may read the pixels of a data URL, which the trim needs, while a file://
+ * image is cross-origin to the page and its pixels are locked.
  */
 async function downloadArtwork(url) {
   const response = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
@@ -140,10 +133,7 @@ async function downloadArtwork(url) {
   return `data:${type};base64,${bytes.toString('base64')}`;
 }
 
-/**
- * Puts a finished clip in place without ever exposing a partial one: copied
- * beside the target under a name the clip index ignores, then renamed in.
- */
+/** Puts a finished clip in place without ever exposing a partial one. */
 async function moveInto(source, target) {
   try {
     await rename(source, target);
@@ -161,10 +151,9 @@ async function renderClip(item, options, renderer) {
 
   const work = await mkdtemp(path.join(os.tmpdir(), 'showcase-'));
   try {
-    const text = cardText(item);
-    const { layers, hero } = await renderer.render({
-      ...text,
-      css: tierCss(TIERS[text.tier]),
+    const tier = resolveTier(item.rarity?.value, item.series?.value);
+    const { layers, art } = await renderer.render({
+      css: tierCss(TIERS[tier]),
       artUrl: await downloadArtwork(artworkUrl(item)),
     });
 
@@ -175,7 +164,7 @@ async function renderClip(item, options, renderer) {
     }
 
     const partial = path.join(work, 'clip.mp4');
-    await run(options.ffmpeg, composeArgs(files, hero, partial));
+    await run(options.ffmpeg, renderedClipArgs(files, art, partial));
     await moveInto(partial, target);
     return 'rendered';
   } finally {
@@ -185,16 +174,13 @@ async function renderClip(item, options, renderer) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  for (const file of [options.ffmpeg, options.chrome, options.displayFont]) {
+  for (const file of [options.ffmpeg, options.chrome]) {
     if (!existsSync(file)) throw new Error(`Not found: ${file}`);
   }
   await mkdir(options.out, { recursive: true });
 
   const queue = selectOutfits(await fetchOutfits(), options);
-  const renderer = await launchRenderer({
-    chrome: options.chrome,
-    html: pageHtml({ displayFont: options.displayFont }),
-  });
+  const renderer = await launchRenderer({ chrome: options.chrome, html: pageHtml() });
 
   const counts = { rendered: 0, skipped: 0, failed: 0 };
   const failures = [];

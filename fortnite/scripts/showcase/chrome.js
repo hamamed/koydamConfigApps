@@ -10,7 +10,7 @@ import { FRAME } from './page.js';
 const STARTUP_TIMEOUT_MS = 20_000;
 const CALL_TIMEOUT_MS = 30_000;
 const SHUTDOWN_TIMEOUT_MS = 5_000;
-const LAYERS = ['page', 'card', 'art', 'info'];
+const LAYERS = ['page', 'art'];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -158,23 +158,23 @@ export async function launchRenderer({ chrome, html }) {
 
     let queue = Promise.resolve();
 
-    /** Draws one card and returns its four layers as PNG buffers, plus where the hero sits. */
+    /** Draws one clip's backdrop and artwork as PNG buffers, plus where the artwork sits. */
     const render = (card) => {
       const job = queue.then(async () => {
         const layout = await evaluate(`window.renderCard(${JSON.stringify(card)})`);
         const full = { x: 0, y: 0, ...FRAME };
-        // The artwork layer is cut to the hero, so ffmpeg can scale it about its own centre.
-        const heroClip = {
-          x: Math.round(layout.hero.x), y: Math.round(layout.hero.y),
-          width: Math.round(layout.hero.width), height: Math.round(layout.hero.height),
+        // The artwork layer is cut to its box, so ffmpeg can scale it about its own centre.
+        const artClip = {
+          x: Math.round(layout.art.x), y: Math.round(layout.art.y),
+          width: Math.round(layout.art.width), height: Math.round(layout.art.height),
         };
         const layers = {};
         for (const layer of LAYERS) {
           await evaluate(`window.showLayer(${JSON.stringify(layer)})`);
-          layers[layer] = await capture(layer === 'art' ? heroClip : full);
+          layers[layer] = await capture(layer === 'art' ? artClip : full);
         }
         await evaluate('window.showLayer("all")');
-        return { layers, hero: heroClip, scale: layout.scale };
+        return { layers, art: artClip };
       });
       queue = job.catch(() => {});
       return job;

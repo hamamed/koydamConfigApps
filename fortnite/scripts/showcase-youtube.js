@@ -1,35 +1,32 @@
 #!/usr/bin/env node
 /**
- * Cuts a showcase clip from each outfit's YouTube showcase video, in the same
- * app style as scripts/showcase-clips.js: the tier-coloured frame, the footage
- * of the skin inside the tier card, then the rarity chip, the name, and a line
- * crediting the channel the footage came from.
+ * Cuts a silent clip from each outfit's YouTube showcase: the footage of the
+ * skin, cropped to the 3:4 shape of the app's detail box and the panel card,
+ * looping like a GIF. No frame and no text are added — the app and the panel
+ * draw their own box and name — and the channel's own watermark stays in the
+ * footage.
  *
  * Only channels listed in scripts/showcase/youtube.js are used — the ones that
  * gave permission. yt-dlp is told to download nothing else, and the channel it
- * reports is checked again before anything is rendered.
+ * reports is checked again before the video is used.
  *
  *   node scripts/showcase-youtube.js --out ./storage/showcase
  *   node scripts/showcase-youtube.js --out /tmp/clips --ids CID_349_Athena_Commando_M_Banana --force
  *
  * From each video it takes the part clipTiming() chooses (after the in-game
  * info popup), finds where the skin is by what moves — the menus around it are
- * still — and crops a card-shaped window above the channel's bottom banner.
- * Needs yt-dlp, ffmpeg, ffprobe and Google Chrome. Resumable: an existing clip
- * is skipped unless --force. If YouTube starts refusing downloads the run
- * stops, so it can be resumed later rather than failing every remaining video.
+ * still — and crops a 3:4 window above the channel's bottom banner. Needs
+ * yt-dlp, ffmpeg and ffprobe. Resumable: an existing clip is skipped unless
+ * --force. If YouTube starts refusing downloads the run stops, so it can be
+ * resumed later rather than failing every remaining video.
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { TIERS } from '../src/tiers.js';
-import { launchRenderer } from './showcase/chrome.js';
-import { cardText } from './showcase/card.js';
-import { composeVideoArgs, innerRect, maskArgs } from './showcase/compose.js';
-import { pageHtml, tierCss } from './showcase/page.js';
+import { CLIP_FRAME, footageClipArgs } from './showcase/compose.js';
 import {
   PERMITTED_CHANNELS, clipTiming, cropWindow, fitCrop, isInside, isPermittedChannel, motionCenter, parseMotionBox,
 } from './showcase/youtube.js';
@@ -46,17 +43,12 @@ const USABLE_HEIGHT_SHARE = 1005 / 1080;
 /** YouTube's answers when it wants a batch to stop. Every later download would fail the same way. */
 const BLOCKED = /not a bot|HTTP Error 429|Too Many Requests|confirm your age|Sign in to confirm/i;
 
-/** A transparent pixel: the card is drawn empty and the footage is laid into it. */
-const BLANK_ART = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-
 const DEFAULTS = {
   out: './storage/showcase',
   ffmpeg: '/opt/homebrew/bin/ffmpeg',
   ffprobe: '/opt/homebrew/bin/ffprobe',
   ytDlp: path.join(os.homedir(), '.local/bin/yt-dlp'),
-  chrome: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  displayFont: path.join(os.homedir(), 'Documents/FortniteCompanion/FortniteCompanion/Resources/Fonts/burbankbigcondensed_black.otf'),
-  concurrency: 2,
+  concurrency: 3,
 };
 
 function parseArgs(argv) {
@@ -73,8 +65,6 @@ function parseArgs(argv) {
     else if (flag === '--ffmpeg') options.ffmpeg = value();
     else if (flag === '--ffprobe') options.ffprobe = value();
     else if (flag === '--yt-dlp') options.ytDlp = value();
-    else if (flag === '--chrome') options.chrome = value();
-    else if (flag === '--display-font') options.displayFont = value();
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -170,19 +160,6 @@ async function skinCentre(file, usableHeight, timing, options) {
   return motionCenter(parseMotionBox(stderr));
 }
 
-/** The rounded mask for a card size, made once however many workers ask for it. */
-function maskCache(dir, options) {
-  const made = new Map();
-  return (size) => {
-    const key = `${size.width}x${size.height}`;
-    if (!made.has(key)) {
-      const file = path.join(dir, `mask-${key}.png`);
-      made.set(key, capture(options.ffmpeg, maskArgs(size, file)).then(() => file));
-    }
-    return made.get(key);
-  };
-}
-
 async function moveInto(source, target) {
   try {
     await rename(source, target);
@@ -195,7 +172,7 @@ async function moveInto(source, target) {
 }
 
 /** @returns {Promise<'rendered' | 'skipped' | 'refused' | 'short'>} */
-async function cutClip(item, options, renderer, maskFor) {
+async function cutClip(item, options) {
   const target = path.join(options.out, `${item.id}.mp4`);
   if (!options.force && existsSync(target)) return 'skipped';
 
@@ -210,27 +187,11 @@ async function cutClip(item, options, renderer, maskFor) {
 
     const usableHeight = Math.floor((video.height * USABLE_HEIGHT_SHARE) / 2) * 2;
     const centre = await skinCentre(source.file, usableHeight, timing, options);
-
-    const text = cardText(item);
-    const { layers, hero } = await renderer.render({
-      ...text,
-      credit: `Video: ${source.channel}`,
-      css: tierCss(TIERS[text.tier]),
-      artUrl: BLANK_ART,
-    });
-
-    const inner = innerRect(hero);
-    const crop = fitCrop(inner, usableHeight, video.width);
+    const crop = fitCrop(CLIP_FRAME, usableHeight, video.width);
     const window = { ...crop, x: cropWindow(centre, video.width, crop.width), y: 0 };
 
-    const files = { mask: await maskFor(inner) };
-    for (const name of ['page', 'card', 'info']) {
-      files[name] = path.join(work, `${name}.png`);
-      await writeFile(files[name], layers[name]);
-    }
-
     const partial = path.join(work, 'clip.mp4');
-    await capture(options.ffmpeg, composeVideoArgs(files, source.file, hero, window, timing, partial));
+    await capture(options.ffmpeg, footageClipArgs(source.file, window, timing, partial));
     await moveInto(partial, target);
     return 'rendered';
   } finally {
@@ -240,7 +201,7 @@ async function cutClip(item, options, renderer, maskFor) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  for (const file of [options.ffmpeg, options.ffprobe, options.ytDlp, options.chrome, options.displayFont]) {
+  for (const file of [options.ffmpeg, options.ffprobe, options.ytDlp]) {
     if (!existsSync(file)) throw new Error(`Not found: ${file}`);
   }
   await mkdir(options.out, { recursive: true });
@@ -251,36 +212,25 @@ async function main() {
   let next = 0;
   let done = 0;
   let blocked = null;
-  let masks = null;
-  let renderer = null;
 
-  try {
-    masks = await mkdtemp(path.join(os.tmpdir(), 'showcase-masks-'));
-    renderer = await launchRenderer({ chrome: options.chrome, html: pageHtml({ displayFont: options.displayFont }) });
-    const maskFor = maskCache(masks, options);
-
-    const worker = async () => {
-      while (next < queue.length && !blocked) {
-        const item = queue[next];
-        next += 1;
-        try {
-          counts[await cutClip(item, options, renderer, maskFor)] += 1;
-        } catch (error) {
-          counts.failed += 1;
-          failures.push(`${item.id}: ${error.message}`);
-          if (BLOCKED.test(error.message)) blocked = error.message;
-        }
-        done += 1;
-        if (done % 25 === 0 || done === queue.length) {
-          process.stdout.write(`${done}/${queue.length} ${summary(counts)}\n`);
-        }
+  const worker = async () => {
+    while (next < queue.length && !blocked) {
+      const item = queue[next];
+      next += 1;
+      try {
+        counts[await cutClip(item, options)] += 1;
+      } catch (error) {
+        counts.failed += 1;
+        failures.push(`${item.id}: ${error.message}`);
+        if (BLOCKED.test(error.message)) blocked = error.message;
       }
-    };
-    await Promise.all(Array.from({ length: Math.min(options.concurrency, queue.length) }, worker));
-  } finally {
-    await renderer?.close();
-    if (masks) await rm(masks, { recursive: true, force: true });
-  }
+      done += 1;
+      if (done % 25 === 0 || done === queue.length) {
+        process.stdout.write(`${done}/${queue.length} ${summary(counts)}\n`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(options.concurrency, queue.length) }, worker));
 
   for (const line of failures) process.stderr.write(`FAILED ${line}\n`);
   if (blocked) process.stderr.write('STOPPED: YouTube is refusing downloads. Run again later to resume.\n');
