@@ -11,6 +11,18 @@ const REFRESH_MS = 5 * 60_000;
 /** Where scripts/showcase-clips.js puts its output, resolved once. */
 export const SHOWCASE_ROOT = path.resolve(config.showcaseDir);
 
+const CLIP_ID = /^[A-Za-z0-9_-]+$/;
+
+/** Whether a value can name a clip file. Upstream ids all have this shape. */
+export function isClipId(id) {
+  return typeof id === 'string' && CLIP_ID.test(id);
+}
+
+/** The path a cosmetic's clip is served at on this host. */
+export function clipPath(id) {
+  return `/showcase/${encodeURIComponent(id)}${CLIP_EXTENSION}`;
+}
+
 /**
  * Which cosmetics have a rendered clip, answered from memory.
  *
@@ -21,7 +33,12 @@ export const SHOWCASE_ROOT = path.resolve(config.showcaseDir);
  *
  * @param {string} root directory holding `<cosmetic id>.mp4` files
  * @param {{ refreshMs?: number, now?: () => number }} [options]
- * @returns {{ refresh: () => Promise<void>, pathFor: (id: string) => string | null }}
+ * @returns {{
+ *   refresh: () => Promise<void>,
+ *   reload: () => Promise<void>,
+ *   pathFor: (id: string) => string | null,
+ *   ids: () => Set<string>,
+ * }}
  */
 export function createClipIndex(root, { refreshMs = REFRESH_MS, now = Date.now } = {}) {
   let ids = new Set();
@@ -53,13 +70,32 @@ export function createClipIndex(root, { refreshMs = REFRESH_MS, now = Date.now }
     return pending;
   };
 
-  /** The clip's path on this host, or null when there is none. */
-  const pathFor = (id) => {
-    if (now() - loadedAt > refreshMs) refresh();
-    return ids.has(id) ? `/showcase/${encodeURIComponent(id)}${CLIP_EXTENSION}` : null;
+  /**
+   * A read that starts after this call, for right after an upload or delete.
+   * Joining a read already in flight could return a listing taken before the change.
+   */
+  const reload = async () => {
+    if (pending) await pending;
+    return refresh();
   };
 
-  return { refresh, pathFor };
+  const refreshIfStale = () => {
+    if (now() - loadedAt > refreshMs) refresh();
+  };
+
+  /** The clip's path on this host, or null when there is none. */
+  const pathFor = (id) => {
+    refreshIfStale();
+    return ids.has(id) ? clipPath(id) : null;
+  };
+
+  /** Every cosmetic id that has a clip. A copy, so a caller cannot change the index. */
+  const listIds = () => {
+    refreshIfStale();
+    return new Set(ids);
+  };
+
+  return { refresh, reload, pathFor, ids: listIds };
 }
 
 export const showcaseClips = createClipIndex(SHOWCASE_ROOT);

@@ -11,6 +11,7 @@ import {
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { handleUploadErrors, uploadWallpaper } from '../middleware/upload.js';
 import { forgetGallery, gallery } from './wallpapers.js';
+import { galleryRouter } from './admin-gallery.js';
 import { deleteWallpaper, storeWallpaper } from '../wallpapers/store.js';
 import { syncCosmetics, syncNews, syncShop, syncStatus } from '../upstream.js';
 import { adoptPastedIslands, backfillIslandArt, syncIslandMetrics, syncIslands } from '../ecosystem.js';
@@ -242,47 +243,11 @@ adminRouter.post('/c/:slug/:id/delete', (req, res, next) => {
   res.redirect(`/admin/c/${req.params.slug}`);
 });
 
-// ── Catalogue browser ───────────────────────────────────────────────────────
+// ── Catalogue and videos ────────────────────────────────────────────────────
 //
-// Read-only on purpose: these rows are a mirror of upstream and any edit would
-// be overwritten by the next sync without warning.
+// One gallery query and one card behind both pages, so they live together.
 
-adminRouter.get('/cosmetics', (req, res) => {
-  const search = String(req.query.search ?? '').trim().toLowerCase();
-  const rarity = String(req.query.rarity ?? '').trim();
-
-  const where = [];
-  const params = {};
-  if (search) {
-    where.push('search_blob LIKE @search');
-    params.search = `%${search}%`;
-  }
-  if (rarity) {
-    where.push('rarity = @rarity');
-    params.rarity = rarity;
-  }
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-
-  const rows = db
-    .prepare(
-      `SELECT id, name, type_name, rarity, series, season, icon_url FROM cosmetics ${clause}
-        ORDER BY added_at IS NULL, added_at DESC LIMIT 120`,
-    )
-    .all(params);
-
-  const total = db.prepare(`SELECT COUNT(*) AS n FROM cosmetics ${clause}`).get(params).n;
-
-  res.render('cosmetics', {
-    title: 'Catalogue',
-    rows,
-    total,
-    search,
-    rarity,
-    rarities: db
-      .prepare('SELECT rarity, COUNT(*) AS count FROM cosmetics WHERE rarity IS NOT NULL GROUP BY rarity ORDER BY count DESC')
-      .all(),
-  });
-});
+adminRouter.use(galleryRouter);
 
 // ── Wallpapers ──────────────────────────────────────────────────────────────
 //

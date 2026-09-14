@@ -1,0 +1,91 @@
+/* The catalogue and videos galleries.
+ *
+ * Fortnite's own, not a copy of the shared stylesheet: it builds on admin.css's
+ * catalogue card (.ad-skin-*) and adds only what a cosmetic needs on top — the
+ * rarity backdrop, the video chips, and the viewer. Loaded after admin.css, so
+ * a rule here wins at equal specificity. */
+
+/* Narrow enough that four controls, Filter and Clear share one row on a laptop. */
+.fg-search { max-width: 250px; }
+.fg-select { max-width: 190px; }
+
+/* The card is a button so it can open the viewer; strip what a button brings. */
+.fg-card {
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.fg-card:focus-visible { outline: 3px solid var(--kd-accent); outline-offset: 2px; }
+
+.fg-thumb { aspect-ratio: 3 / 4; }
+.fg-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center 30%;
+}
+
+/* The same palette the clip renderer uses, so a card and its clip match. */
+.fg-rarity-common        { background: radial-gradient(circle at 50% 35%, #8a8d91, #2b2d31 75%); }
+.fg-rarity-uncommon      { background: radial-gradient(circle at 50% 35%, #69bb1e, #1b4a0c 75%); }
+.fg-rarity-rare          { background: radial-gradient(circle at 50% 35%, #2cc3fc, #0b3d7a 75%); }
+.fg-rarity-epic          { background: radial-gradient(circle at 50% 35%, #c359ff, #3b0f6b 75%); }
+.fg-rarity-legendary     { background: radial-gradient(circle at 50% 35%, #ea8d23, #6b2a08 75%); }
+.fg-rarity-mythic        { background: radial-gradient(circle at 50% 35%, #f8e14c, #7a5a06 75%); }
+.fg-rarity-exotic        { background: radial-gradient(circle at 50% 35%, #76d6e3, #145a66 75%); }
+.fg-rarity-marvel        { background: radial-gradient(circle at 50% 35%, #d7313b, #5e0b10 75%); }
+.fg-rarity-dc            { background: radial-gradient(circle at 50% 35%, #5475c7, #1a2a57 75%); }
+.fg-rarity-starwars      { background: radial-gradient(circle at 50% 35%, #3d5a8a, #0a1020 75%); }
+.fg-rarity-icon          { background: radial-gradient(circle at 50% 35%, #4bc7cf, #0f4a55 75%); }
+.fg-rarity-gaminglegends { background: radial-gradient(circle at 50% 35%, #7b6cf5, #1f0f5e 75%); }
+.fg-rarity-lava          { background: radial-gradient(circle at 50% 35%, #f0673a, #5a1508 75%); }
+.fg-rarity-frozen        { background: radial-gradient(circle at 50% 35%, #a9dcf5, #2d5b7a 75%); }
+.fg-rarity-slurp         { background: radial-gradient(circle at 50% 35%, #26d7e0, #0a4f6b 75%); }
+.fg-rarity-shadow        { background: radial-gradient(circle at 50% 35%, #6b6b75, #111114 75%); }
+.fg-rarity-dark          { background: radial-gradient(circle at 50% 35%, #a73bd6, #1c0526 75%); }
+
+/* Sits over artwork of any colour, so it carries its own dark ground. */
+.fg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .12rem .45rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .6);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.fg-delete { position: absolute; top: .55rem; left: .55rem; margin: 0; }
+
+.fg-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: .75rem;
+}
+.fg-stat-value { font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
+
+/* ── Viewer ────────────────────────────────────────────────────────────── */
+
+.fg-player-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+
+.fg-stage {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border-radius: var(--kd-radius-sm, 10px);
+  overflow: hidden;
+  background: #0b0b10;
+}
+.fg-video,
+.fg-picture { display: block; max-width: 100%; max-height: 70vh; }
+.fg-picture { object-fit: contain; }
+.fg-youtube { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.fg-stage-empty { color: rgba(255, 255, 255, .6); padding: 2rem; }

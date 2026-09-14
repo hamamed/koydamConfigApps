@@ -1,0 +1,43 @@
+<%#
+  Search and filters for the catalogue and videos galleries. On the videos page
+  the tabs choose which videos, so the video filter rides along hidden.
+%>
+<form class="d-flex flex-wrap gap-2 mb-3" method="get" action="<%= action %>">
+  <input class="form-control fg-search" name="search" value="<%= filters.search %>"
+         placeholder="Search by name or set" aria-label="Search">
+
+  <select class="form-select fg-select" name="rarity" aria-label="Rarity" data-auto-submit>
+    <option value="">Every rarity</option>
+    <% options.rarities.forEach((r) => { %>
+      <option value="<%= r.rarity %>" <%= filters.rarity === r.rarity ? 'selected' : '' %>>
+        <%= r.label %> (<%= Number(r.count).toLocaleString() %>)
+      </option>
+    <% }) %>
+  </select>
+
+  <select class="form-select fg-select" name="type" aria-label="Type" data-auto-submit>
+    <option value="">Every type</option>
+    <% options.types.forEach((t) => { %>
+      <option value="<%= t.type %>" <%= filters.type === t.type ? 'selected' : '' %>>
+        <%= t.label %> (<%= Number(t.count).toLocaleString() %>)
+      </option>
+    <% }) %>
+  </select>
+
+  <% if (lockVideo) { %>
+    <input type="hidden" name="video" value="<%= filters.video %>">
+  <% } else { %>
+    <select class="form-select fg-select" name="video" aria-label="Video" data-auto-submit>
+      <option value="" <%= filters.video === '' ? 'selected' : '' %>>With or without video</option>
+      <option value="any" <%= filters.video === 'any' ? 'selected' : '' %>>Has a video</option>
+      <option value="clip" <%= filters.video === 'clip' ? 'selected' : '' %>>Has a clip</option>
+      <option value="youtube" <%= filters.video === 'youtube' ? 'selected' : '' %>>Has a YouTube video</option>
+      <option value="none" <%= filters.video === 'none' ? 'selected' : '' %>>No video</option>
+    </select>
+  <% } %>
+
+  <button class="btn btn-kd-outline" type="submit">Filter</button>
+  <% if (filters.search || filters.rarity || filters.type || (!lockVideo && filters.video)) { %>
+    <a class="btn btn-kd-ghost" href="<%= lockVideo ? tabHref(filters.video, true) : action %>">Clear</a>
+  <% } %>
+</form>

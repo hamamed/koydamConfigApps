@@ -1,0 +1,82 @@
+<%- include('partials/head') %>
+<link href="/assets/css/gallery.css?v=<%= assetVersion %>" rel="stylesheet">
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Videos',
+          subheading: Number(totals.withVideo).toLocaleString() + ' cosmetics with a video · YouTube showcases from upstream, clips rendered here'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="fg-stats mb-3">
+        <div class="ad-card ad-card-pad">
+          <div class="kd-faint small">Outfits</div>
+          <div class="fg-stat-value"><%= Number(totals.outfits).toLocaleString() %></div>
+        </div>
+        <div class="ad-card ad-card-pad">
+          <div class="kd-faint small">With a YouTube showcase</div>
+          <div class="fg-stat-value"><%= Number(totals.youtube).toLocaleString() %></div>
+        </div>
+        <div class="ad-card ad-card-pad">
+          <div class="kd-faint small">With a rendered clip</div>
+          <div class="fg-stat-value"><%= Number(totals.clips).toLocaleString() %></div>
+        </div>
+        <div class="ad-card ad-card-pad">
+          <div class="kd-faint small">Outfits with no video</div>
+          <div class="fg-stat-value"><%= Number(totals.missing).toLocaleString() %></div>
+        </div>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="upload" width="16" height="16"></i>
+          <span class="fw-semibold">Add or replace clips</span>
+        </div>
+        <div class="ad-card-body">
+          <form method="post" action="/admin/videos/upload" enctype="multipart/form-data"
+                class="row g-2 align-items-end">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="col-md-9">
+              <label class="form-label small fw-semibold" for="clipFiles">MP4 clips</label>
+              <input class="form-control" type="file" id="clipFiles" name="file" accept=".mp4,video/mp4" multiple required>
+              <div class="form-text">
+                Name each file after its cosmetic id, for example <code>Character_AgentSherbert.mp4</code>.
+                Uploading the same name replaces that clip. Up to <%= maxClipMb %> MB each, <%= maxClipFiles %> per batch.
+                <code>npm run showcase-clips</code> renders them with the right names.
+              </div>
+            </div>
+            <div class="col-md-3">
+              <button class="btn btn-kd w-100" type="submit">Upload</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="ad-card mb-3">
+        <nav class="ad-tabs" aria-label="Which videos">
+          <% tabs.forEach((tab) => { %>
+            <a class="ad-tab <%= filters.video === tab.value ? 'is-active' : '' %>" href="<%= tabHref(tab.value) %>"
+               <%= filters.video === tab.value ? 'aria-current=page' : '' %>>
+              <i data-lucide="<%= tab.icon %>"></i>
+              <span><%= tab.label %></span>
+            </a>
+          <% }) %>
+        </nav>
+      </div>
+
+      <%- include('partials/gallery-filters', { action: '/admin/videos', lockVideo: true }) %>
+
+      <%- include('partials/gallery-grid', {
+            canDelete: true,
+            emptyText: filters.video === 'none'
+              ? 'Every cosmetic matching these filters has a video.'
+              : 'No videos match. Clear a filter or pick another tab.'
+          }) %>
+    </div>
+  </main>
+</div>
+<%- include('partials/cosmetic-modal') %>
+<script src="/assets/js/gallery.js?v=<%= assetVersion %>" defer></script>
+<%- include('partials/foot') %>

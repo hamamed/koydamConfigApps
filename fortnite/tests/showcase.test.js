@@ -61,6 +61,30 @@ test('a missing clip directory means no clips rather than an error', async () =>
   assert.equal(index.pathFor('Character_AgentSherbert'), null);
 });
 
+test('ids lists every cosmetic that has a clip', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'showcase-ids-'));
+  await writeFile(path.join(dir, 'Character_One.mp4'), '');
+  await writeFile(path.join(dir, 'Character_Two.mp4'), '');
+  const index = createClipIndex(dir);
+
+  await index.refresh();
+
+  assert.deepEqual([...index.ids()].sort(), ['Character_One', 'Character_Two']);
+  await rm(dir, { recursive: true, force: true });
+});
+
+test('reload re-reads straight away, without waiting for the listing to go stale', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'showcase-reload-'));
+  const index = createClipIndex(dir, { refreshMs: 60_000, now: () => 0 });
+  await index.refresh();
+
+  await writeFile(path.join(dir, 'Character_Fresh.mp4'), '');
+  await index.reload();
+
+  assert.equal(index.pathFor('Character_Fresh'), '/showcase/Character_Fresh.mp4');
+  await rm(dir, { recursive: true, force: true });
+});
+
 test('picks up clips added after the last read once the index is stale', async () => {
   let clock = 0;
   const index = createClipIndex(root, { refreshMs: 1000, now: () => clock });

@@ -1,0 +1,13 @@
+<% if (!result.rows.length) { %>
+  <div class="ad-empty">
+    <i data-lucide="search-x" width="28" height="28"></i>
+    <p class="mb-0"><%= emptyText %></p>
+  </div>
+<% } else { %>
+  <div class="ad-grid">
+    <% result.rows.forEach((row) => { %>
+      <%- include('cosmetic-card', { row }) %>
+    <% }) %>
+  </div>
+  <%- include('pager') %>
+<% } %>
