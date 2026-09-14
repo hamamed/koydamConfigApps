@@ -2,9 +2,37 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  PERMITTED_CHANNELS, clipTiming, cropSize, cropWindow, fitCrop, isPermittedChannel, isInside, motionCenter,
-  parseMotionBox,
+  PERMITTED_CHANNELS, applyVideoMap, clipTiming, cropSize, cropWindow, fitCrop, isPermittedChannel, isInside,
+  motionCenter, parseMotionBox,
 } from '../scripts/showcase/youtube.js';
+
+test('applyVideoMap gives an outfit without an upstream showcase the video matched to it', () => {
+  const outfits = [{ id: 'Character_ArcticIceBlue', name: 'Son Gohan' }];
+
+  const [outfit] = applyVideoMap(outfits, { Character_ArcticIceBlue: 'fD8dw6CWnKE' });
+
+  assert.equal(outfit.showcaseVideo, 'fD8dw6CWnKE');
+});
+
+test('applyVideoMap never replaces a showcase upstream already links', () => {
+  const [outfit] = applyVideoMap([{ id: 'CID_349', showcaseVideo: 'y1xhSqnMX-I' }], { CID_349: 'fD8dw6CWnKE' });
+
+  assert.equal(outfit.showcaseVideo, 'y1xhSqnMX-I');
+});
+
+test('applyVideoMap ignores a mapped value that is not a YouTube id', () => {
+  const [outfit] = applyVideoMap([{ id: 'Character_X' }], { Character_X: 'not a video id' });
+
+  assert.equal(outfit.showcaseVideo, undefined);
+});
+
+test('applyVideoMap leaves the outfits it was given unchanged', () => {
+  const outfits = [{ id: 'Character_ArcticIceBlue' }];
+
+  applyVideoMap(outfits, { Character_ArcticIceBlue: 'fD8dw6CWnKE' });
+
+  assert.deepEqual(outfits, [{ id: 'Character_ArcticIceBlue' }]);
+});
 
 test('clipTiming takes twelve seconds from two seconds in when the video is long enough', () => {
   assert.deepEqual(clipTiming(20.5), { start: 2, duration: 12 });

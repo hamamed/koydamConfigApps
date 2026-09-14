@@ -42,6 +42,25 @@ export function isPermittedChannel(channel) {
   return typeof channel === 'string' && PERMITTED_CHANNELS.includes(channel);
 }
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/**
+ * Showcases found for outfits upstream links none for — matched by name on a
+ * permitted channel — laid over the upstream list. Upstream's own link always
+ * wins, and a value that is not a YouTube id is ignored.
+ *
+ * @param {Array<{ id: string, showcaseVideo?: string }>} outfits
+ * @param {Record<string, string>} map cosmetic id → YouTube id
+ * @returns {Array<object>} new outfit objects; the input is not changed
+ */
+export function applyVideoMap(outfits, map) {
+  return outfits.map((item) => {
+    const mapped = map && Object.hasOwn(map, item.id) ? map[item.id] : null;
+    if (item.showcaseVideo || typeof mapped !== 'string' || !YOUTUBE_ID.test(mapped)) return item;
+    return { ...item, showcaseVideo: mapped };
+  });
+}
+
 /**
  * The area that moved, from ffmpeg cropdetect's log over a frame difference.
  *

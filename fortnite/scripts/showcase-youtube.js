@@ -12,6 +12,11 @@
  *
  *   node scripts/showcase-youtube.js --out ./storage/showcase
  *   node scripts/showcase-youtube.js --out /tmp/clips --ids CID_349_Athena_Commando_M_Banana --force
+ *   node scripts/showcase-youtube.js --out ./storage/showcase --video-map matches.json --ids ... --force
+ *
+ * --video-map takes a JSON object of cosmetic id → YouTube id, for outfits
+ * upstream links no showcase for but a permitted channel has one — found by
+ * matching his upload titles to outfit names. The channel check still applies.
  *
  * From each video it takes the part clipTiming() chooses (after the in-game
  * info popup), finds where the skin is by what moves — the menus around it are
@@ -22,13 +27,14 @@
  */
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, rename, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rename, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { CLIP_FRAME, footageClipArgs } from './showcase/compose.js';
 import {
-  PERMITTED_CHANNELS, clipTiming, cropWindow, fitCrop, isInside, isPermittedChannel, motionCenter, parseMotionBox,
+  PERMITTED_CHANNELS, applyVideoMap, clipTiming, cropWindow, fitCrop, isInside, isPermittedChannel, motionCenter,
+  parseMotionBox,
 } from './showcase/youtube.js';
 
 const UPSTREAM = 'https://fortnite-api.com/v2/cosmetics/br';
@@ -52,7 +58,7 @@ const DEFAULTS = {
 };
 
 function parseArgs(argv) {
-  const options = { ...DEFAULTS, force: false, ids: null, limit: Infinity };
+  const options = { ...DEFAULTS, force: false, ids: null, limit: Infinity, videoMap: null };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = () => {
@@ -65,6 +71,7 @@ function parseArgs(argv) {
     else if (flag === '--ffmpeg') options.ffmpeg = value();
     else if (flag === '--ffprobe') options.ffprobe = value();
     else if (flag === '--yt-dlp') options.ytDlp = value();
+    else if (flag === '--video-map') options.videoMap = value();
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -86,6 +93,15 @@ async function fetchOutfits() {
   const body = await response.json();
   if (!Array.isArray(body?.data)) throw new Error('Fortnite-API returned no cosmetics list');
   return body.data.filter((item) => item?.type?.value === 'outfit');
+}
+
+/** The --video-map file: a plain JSON object of cosmetic id → YouTube id, or an error. */
+async function readVideoMap(file) {
+  const parsed = JSON.parse(await readFile(file, 'utf8'));
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${file} must be a JSON object of cosmetic id to YouTube id`);
+  }
+  return parsed;
 }
 
 function selectOutfits(outfits, options) {
@@ -205,7 +221,8 @@ async function main() {
     if (!existsSync(file)) throw new Error(`Not found: ${file}`);
   }
   await mkdir(options.out, { recursive: true });
-  const queue = selectOutfits(await fetchOutfits(), options);
+  const videoMap = options.videoMap ? await readVideoMap(options.videoMap) : {};
+  const queue = selectOutfits(applyVideoMap(await fetchOutfits(), videoMap), options);
 
   const counts = { rendered: 0, skipped: 0, refused: 0, short: 0, failed: 0 };
   const failures = [];
