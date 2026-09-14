@@ -59,7 +59,7 @@ const DEFAULTS = {
 };
 
 function parseArgs(argv) {
-  const options = { ...DEFAULTS, force: false, ids: null, limit: Infinity, videoMap: null };
+  const options = { ...DEFAULTS, force: false, ids: null, limit: Infinity, videoMap: null, type: 'outfit' };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = () => {
@@ -73,6 +73,7 @@ function parseArgs(argv) {
     else if (flag === '--ffprobe') options.ffprobe = value();
     else if (flag === '--yt-dlp') options.ytDlp = value();
     else if (flag === '--video-map') options.videoMap = value();
+    else if (flag === '--type') options.type = clipType(value());
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -82,18 +83,26 @@ function parseArgs(argv) {
   return options;
 }
 
+/** Cosmetic types a clip can be cut for: the ones whose showcases show the item moving. */
+const CLIP_TYPES = new Set(['outfit', 'emote']);
+
+function clipType(raw) {
+  if (!CLIP_TYPES.has(raw)) throw new Error(`--type must be one of: ${[...CLIP_TYPES].join(', ')}`);
+  return raw;
+}
+
 function positiveInt(raw, flag) {
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1) throw new Error(`${flag} must be a positive integer`);
   return n;
 }
 
-async function fetchOutfits() {
+async function fetchCosmetics(type) {
   const response = await fetch(UPSTREAM, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`Fortnite-API answered ${response.status}`);
   const body = await response.json();
   if (!Array.isArray(body?.data)) throw new Error('Fortnite-API returned no cosmetics list');
-  return body.data.filter((item) => item?.type?.value === 'outfit');
+  return body.data.filter((item) => item?.type?.value === type);
 }
 
 /** The --video-map file: a plain JSON object of cosmetic id → YouTube id, or an error. */
@@ -224,7 +233,7 @@ async function main() {
   }
   await mkdir(options.out, { recursive: true });
   const videoMap = options.videoMap ? await readVideoMap(options.videoMap) : {};
-  const queue = selectOutfits(applyVideoMap(await fetchOutfits(), videoMap), options);
+  const queue = selectOutfits(applyVideoMap(await fetchCosmetics(options.type), videoMap), options);
 
   const counts = { rendered: 0, skipped: 0, refused: 0, short: 0, failed: 0 };
   const failures = [];

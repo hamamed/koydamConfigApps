@@ -46,7 +46,7 @@ const DEFAULTS = {
 };
 
 function parseArgs(argv) {
-  const options = { ...DEFAULTS, all: false, force: false, ids: null, limit: Infinity };
+  const options = { ...DEFAULTS, all: false, force: false, ids: null, limit: Infinity, type: 'outfit' };
   for (let i = 0; i < argv.length; i += 1) {
     const flag = argv[i];
     const value = () => {
@@ -58,6 +58,7 @@ function parseArgs(argv) {
     if (flag === '--out') options.out = value();
     else if (flag === '--ffmpeg') options.ffmpeg = value();
     else if (flag === '--chrome') options.chrome = value();
+    else if (flag === '--type') options.type = clipType(value());
     else if (flag === '--ids') options.ids = new Set(value().split(',').map((s) => s.trim()).filter(Boolean));
     else if (flag === '--limit') options.limit = positiveInt(value(), flag);
     else if (flag === '--concurrency') options.concurrency = positiveInt(value(), flag);
@@ -68,18 +69,26 @@ function parseArgs(argv) {
   return options;
 }
 
+/** Cosmetic types a clip is rendered for. */
+const CLIP_TYPES = new Set(['outfit', 'emote']);
+
+function clipType(raw) {
+  if (!CLIP_TYPES.has(raw)) throw new Error(`--type must be one of: ${[...CLIP_TYPES].join(', ')}`);
+  return raw;
+}
+
 function positiveInt(raw, flag) {
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1) throw new Error(`${flag} must be a positive integer`);
   return n;
 }
 
-async function fetchOutfits() {
+async function fetchCosmetics(type) {
   const response = await fetch(UPSTREAM, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!response.ok) throw new Error(`Fortnite-API answered ${response.status}`);
   const body = await response.json();
   if (!Array.isArray(body?.data)) throw new Error('Fortnite-API returned no cosmetics list');
-  return body.data.filter((item) => item?.type?.value === 'outfit');
+  return body.data.filter((item) => item?.type?.value === type);
 }
 
 /** The artwork the app's detail box shows — featured first — from upstream's own host only. */
@@ -181,7 +190,7 @@ async function main() {
   }
   await mkdir(options.out, { recursive: true });
 
-  const queue = selectOutfits(await fetchOutfits(), options);
+  const queue = selectOutfits(await fetchCosmetics(options.type), options);
   const renderer = await launchRenderer({ chrome: options.chrome, html: pageHtml() });
 
   const counts = { rendered: 0, skipped: 0, failed: 0 };

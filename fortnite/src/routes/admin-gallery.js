@@ -78,12 +78,14 @@ galleryRouter.get('/videos', (req, res) => {
   // The tabs are the video filter here, and the page opens on all of them.
   const filters = { ...read, video: read.video || 'any' };
   const clipIds = showcaseClips.ids();
+  const youtubeClipIds = showcaseClips.idsFrom('youtube');
 
   res.render('videos', {
     title: 'Videos',
     filters,
     result: queryGallery(db, filters, clipIds, { clipUrl: showcaseClips.pathFor, clipSource: showcaseClips.sourceOf }),
-    totals: videoTotals(db, clipIds, showcaseClips.idsFrom('youtube')),
+    totals: videoTotals(db, clipIds, youtubeClipIds, 'outfit'),
+    emoteTotals: videoTotals(db, clipIds, youtubeClipIds, 'emote'),
     options: filterOptions(db),
     tabs: VIDEO_TABS,
     hrefFor: (page) => pageHref('/admin/videos', filters, page),

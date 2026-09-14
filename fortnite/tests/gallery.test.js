@@ -120,9 +120,20 @@ test('videoTotals counts outfit coverage and videos across every type', () => {
   const totals = videoTotals(database, new Set(['Character_B', 'EID_Wave']));
 
   assert.deepEqual(totals, {
-    outfits: 4, youtube: 2, clips: 1, missing: 1, withVideo: 4,
+    total: 4, youtube: 2, clips: 1, missing: 1, withVideo: 4,
     youtubeClips: 0, otherClips: 1, youtubeToCut: 2,
   });
+});
+
+test('videoTotals counts the type it is asked for — emotes as well as outfits', () => {
+  const totals = videoTotals(database, new Set(['EID_Wave', 'Character_A']), new Set(), 'emote');
+
+  assert.equal(totals.total, 1);
+  assert.equal(totals.youtube, 0);
+  assert.equal(totals.clips, 1);
+  assert.equal(totals.otherClips, 1);
+  assert.equal(totals.youtubeClips, 0);
+  assert.equal(totals.youtubeToCut, 0);
 });
 
 test('videoTotals splits outfit clips by where they came from and counts YouTube clips still to cut', () => {

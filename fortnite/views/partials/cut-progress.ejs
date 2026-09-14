@@ -1,0 +1,24 @@
+<%#
+  How far cutting clips from YouTube showcases has got, for one cosmetic type.
+  Expects `label` (e.g. "Outfits") and `t`, that type's videoTotals.
+%>
+<% const cut = t.youtubeClips;
+   const cuttable = t.youtubeClips + t.youtubeToCut;
+   const cutPercent = cuttable ? Math.floor((cut / cuttable) * 100) : 0;
+   const noClip = t.total - t.youtubeClips - t.otherClips; %>
+<div class="ad-card ad-card-pad mb-3">
+  <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+    <span class="fw-semibold"><%= label %> · YouTube clips cut</span>
+    <span class="fg-stat-value"><%= Number(cut).toLocaleString() %></span>
+    <span class="kd-faint">of <%= Number(cuttable).toLocaleString() %> · <%= cutPercent %>%</span>
+    <span class="kd-faint small ms-auto">
+      <%= Number(t.youtubeToCut).toLocaleString() %> still to cut ·
+      <%= Number(t.otherClips).toLocaleString() %> clips from artwork ·
+      <%= Number(noClip).toLocaleString() %> of <%= Number(t.total).toLocaleString() %> with no clip yet
+    </span>
+  </div>
+  <div class="progress fg-progress" role="progressbar" aria-label="<%= label %> YouTube clips cut"
+       aria-valuenow="<%= cutPercent %>" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-bar fg-progress-bar" style="width: <%= cutPercent %>%"></div>
+  </div>
+</div>
