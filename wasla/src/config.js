@@ -13,14 +13,14 @@ const num = (value, fallback) => {
 
 export const config = {
   root,
-  port: num(process.env.PORT, 3400),
+  port: num(process.env.PORT, 3700),
 
   /** Loopback by default: nginx is the only thing that should reach it. */
   host: process.env.HOST || '127.0.0.1',
   env: process.env.NODE_ENV || 'development',
   isProduction: (process.env.NODE_ENV || 'development') === 'production',
 
-  publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3400').replace(/\/+$/, ''),
+  publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3700').replace(/\/+$/, ''),
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),
 
   /** Question pictures. Under /storage, which deploys preserve. */

@@ -32,8 +32,8 @@ else
 fi
 NODE_MAJOR="${NODE_MAJOR:-22}"
 # Each app on the box needs its own loopback port. 3000 is SkinCraft, 3100 MineBox,
-# 8080 Brawl, 8090 the platform panel; 3300 bdc; 3400 is Wasla.
-PORT="${PORT:-3400}"
+# 8080 Brawl, 8090 the platform panel; 3300 bdc, 3400 marches, 3500 portail, 3600 admin; 3700 is Wasla.
+PORT="${PORT:-3700}"
 # Set to 1 to leave an existing firewall completely alone.
 SKIP_FIREWALL="${SKIP_FIREWALL:-0}"
 

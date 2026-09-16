@@ -10,7 +10,7 @@ levels; the service lays each level out as a crossword and serves it to the app.
 npm install
 npm run seed                                  # the two sample levels
 npm run create-admin -- admin 'a-long-password'
-npm run dev                                   # http://localhost:3400/admin
+npm run dev                                   # http://localhost:3700/admin
 npm test
 ```
 
