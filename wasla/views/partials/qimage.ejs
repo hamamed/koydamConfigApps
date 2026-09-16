@@ -1,0 +1,10 @@
+<%# A question picture framed the way the app frames it: square, filled, zoomed around the focus point. %>
+<% if (q.imageFile) { %>
+  <span class="wz-frame <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"
+        style="--wz-zoom: <%= q.zoom %>; --wz-x: <%= (q.focusX * 100).toFixed(1) %>%; --wz-y: <%= (q.focusY * 100).toFixed(1) %>%">
+    <img src="<%= imageUrl(q.imageFile) %>" alt="" loading="lazy">
+    <% if (q.zoom > 1) { %><span class="wz-badge">×<%= q.zoom %></span><% } %>
+  </span>
+<% } else { %>
+  <span class="wz-frame wz-none <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"><i data-lucide="type" width="16" height="16"></i></span>
+<% } %>

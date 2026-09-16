@@ -98,6 +98,16 @@ const KNOWN_SERVICES = [
     notes: 'Cosmetics, item shop and news mirrored from fortnite-api.com, plus authored leaks, wallpapers, maps and weapons. SQLite.',
     sortOrder: 50,
   },
+  {
+    slug: 'wasla',
+    name: 'Wasla',
+    domain: 'wassla.hamaprojects.com',
+    healthUrl: 'https://wassla.hamaprojects.com/api/v1/health',
+    systemdUnit: 'wasla',
+    appSlug: 'wasla',
+    notes: 'Arabic crossword quiz: levels built from questions with pictures, and the API the iOS app plays. SQLite.',
+    sortOrder: 60,
+  },
 ];
 
 export async function seedServices() {

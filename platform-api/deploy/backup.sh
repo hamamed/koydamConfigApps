@@ -265,13 +265,14 @@ add() {
 sqlite_dump "skincraft"  /opt/skincraft/data/skincraft.db
 sqlite_dump "minebox"    /opt/minebox/data/minebox.db
 sqlite_dump "fortnite"   /opt/fortnite/data/fortnite.db
+sqlite_dump "wasla"      /opt/wasla/data/wasla.db
 # Everything bdc knows was crawled, and the portal will not hand it back: its
 # listing shows only avis that are currently open, so a consultation that has
 # closed exists nowhere but here.
 sqlite_dump "bdc"        /opt/bdc/data/marches.sqlite
 
 # Secrets first: these are unrecoverable, and were lost once already.
-for svc in brawl-vps platform-api skincraft minebox fortnite bdc; do
+for svc in brawl-vps platform-api skincraft minebox fortnite bdc wasla; do
   add "env/$svc.env" "/opt/$svc/.env"
 done
 
@@ -297,6 +298,9 @@ add "fortnite/data"      /opt/fortnite/data          media
 add "fortnite/wallpapers" /opt/fortnite/wallpapers
 add "systemd-minebox"    /etc/systemd/system/minebox.service
 add "systemd-fortnite"   /etc/systemd/system/fortnite.service
+# Wasla's question pictures: uploaded in the panel, no other copy.
+add "wasla/storage"      /opt/wasla/storage
+add "systemd-wasla"      /etc/systemd/system/wasla.service
 # bdc runs a service and three timers; the loop keeps them in step as they change.
 for unit in /etc/systemd/system/bdc*.service /etc/systemd/system/bdc*.timer; do
   [[ -e "$unit" ]] && add "systemd-bdc/$(basename "$unit")" "$unit"
@@ -370,7 +374,7 @@ if ! grep -q 'brawl-postgres.sql' <<< "$ARCHIVE_LISTING"; then
 fi
 # Every database this box holds, named. A dump that silently stopped being
 # written looks exactly like a smaller archive, and nothing else would say so.
-for db in skincraft minebox fortnite bdc; do
+for db in skincraft minebox fortnite bdc wasla; do
   grep -q "sqlite/$db.db" <<< "$ARCHIVE_LISTING" || warn "no $db database in this archive"
 done
 

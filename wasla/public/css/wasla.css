@@ -1,0 +1,219 @@
+/*
+ * Wasla's own components, on top of koydam.css tokens and admin.css.
+ * The game colours (teal tiles, indigo solved tiles) appear only where the
+ * panel shows what the app will draw.
+ */
+
+:root {
+  --wz-teal: #14a49e;
+  --wz-indigo: #4e4a8c;
+  --wz-board: #d6eeea;
+}
+
+.wz-ar, .wz-answer, .wz-answer-input { font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif; }
+.wz-ar { direction: rtl; unicode-bidi: plaintext; }
+.wz-answer { font-weight: 700; font-size: 1.05rem; direction: rtl; unicode-bidi: isolate; }
+.wz-answer-input { font-size: 1.4rem; font-weight: 700; }
+.wz-search { max-width: 22rem; }
+
+/* A question picture, framed and zoomed the way the app frames it. */
+.wz-frame {
+  --wz-size: 180px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: var(--wz-size);
+  max-width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface-2);
+  border: 1px solid var(--kd-line);
+  color: var(--kd-faint);
+  vertical-align: middle;
+}
+.wz-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(var(--wz-zoom, 1));
+  transform-origin: var(--wz-x, 50%) var(--wz-y, 50%);
+  transition: transform var(--kd-fast) var(--kd-ease), transform-origin var(--kd-fast) var(--kd-ease);
+}
+.wz-frame.wz-xs { --wz-size: 36px; border-radius: 8px; }
+.wz-frame.wz-sm { --wz-size: 48px; border-radius: 8px; }
+.wz-frame.wz-lg { --wz-size: 260px; }
+.wz-badge {
+  position: absolute; inset-inline-end: 3px; bottom: 3px;
+  padding: 0 4px; border-radius: 6px;
+  background: rgba(11, 18, 32, .72); color: #fff;
+  font-size: 10px; font-weight: 600; line-height: 1.5;
+}
+.wz-xs .wz-badge { display: none; }
+
+/* Zoom editor */
+.wz-editor { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: start; }
+.wz-source { position: relative; cursor: crosshair; border-radius: var(--kd-radius-sm); overflow: hidden; border: 1px solid var(--kd-line); background: var(--kd-surface-2); }
+.wz-source img { display: block; width: 100%; height: auto; }
+.wz-dot {
+  position: absolute; left: var(--wz-x, 50%); top: var(--wz-y, 50%);
+  width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  border: 3px solid #fff; border-radius: 50%;
+  background: var(--kd-accent);
+  box-shadow: 0 0 0 1px rgba(11, 18, 32, .35), 0 2px 6px rgba(11, 18, 32, .3);
+  pointer-events: none;
+}
+.wz-letters { font-weight: 600; color: var(--kd-ink-2); }
+
+/* Grid preview: column 1 is the right edge, as in the app. */
+.wz-board {
+  overflow-x: auto;
+  padding: 1.25rem;
+  border-radius: var(--kd-radius);
+  background: var(--wz-board);
+  display: grid;
+  justify-content: center;
+}
+.wz-grid {
+  direction: rtl;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(var(--wz-cols), 40px);
+  grid-template-rows: repeat(var(--wz-rows), 40px);
+}
+.wz-cell {
+  position: relative;
+  display: grid; place-items: center;
+  border-radius: 5px;
+  background: var(--wz-indigo);
+  color: #fff;
+  font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif;
+  font-size: 1.15rem; font-weight: 800;
+}
+.wz-cell small {
+  position: absolute; top: 1px; inset-inline-start: 3px;
+  font-family: var(--bs-font-sans-serif);
+  font-size: 9px; font-weight: 600; opacity: .75;
+}
+
+/* Question picker */
+.wz-picker { max-height: 32rem; overflow-y: auto; overflow-x: hidden; display: grid; gap: 2px; }
+.wz-pick {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .4rem .5rem;
+  border-radius: var(--kd-radius-sm);
+  cursor: pointer;
+}
+.wz-pick:hover { background: var(--kd-surface); }
+.wz-pick .form-check-input { flex-shrink: 0; margin: 0; }
+.wz-pick .min-w-0 { min-width: 0; flex: 1 1 auto; }
+.wz-pick .kd-tag, .wz-pick .wz-frame { flex-shrink: 0; }
+
+/* ── v2 ───────────────────────────────────────────────────────────────────── */
+
+/* How the answer is played, under the answer field. */
+.wz-play { min-height: 1.6rem; margin-top: .35rem; font-size: .9rem; color: var(--kd-muted); font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif; }
+.wz-play.is-folded { color: var(--kd-accent-ink); }
+.wz-fold-note {
+  display: block;
+  margin-top: .4rem; padding: .45rem .6rem;
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-accent-soft); color: var(--kd-accent-ink);
+  font-size: .8rem;
+}
+.wz-fold-note .lucide { vertical-align: -2px; margin-inline-end: .25rem; }
+
+.wz-emoji-input { font-size: 1.3rem; }
+.wz-emoji { font-size: 1.1rem; letter-spacing: .05em; }
+
+/* A blurred picture question, as the app first shows it. */
+.wz-frame.is-blurred img { filter: blur(10px); }
+
+.wz-audio { width: 100%; }
+.wz-audio-sm { width: 180px; height: 32px; vertical-align: middle; }
+
+/* Difficulty chip: kd-tag has ok and warn; hard needs red. */
+.wz-tag-hard { background: #fef2f2; border-color: #fecaca; color: var(--kd-danger); }
+
+/* Pack chip and tile, coloured by the pack. */
+.wz-pack-chip { gap: .35rem; }
+.wz-dot-color { width: 8px; height: 8px; border-radius: 50%; background: var(--wz-pack); flex-shrink: 0; }
+.wz-pack-tile {
+  display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 9px;
+  background: var(--wz-pack); color: #fff;
+}
+
+/* Pack form: colour swatches and icon picker, radio inputs underneath. */
+.wz-swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
+.wz-swatch { display: grid; justify-items: center; gap: .2rem; cursor: pointer; }
+.wz-swatch input, .wz-icon-option input { position: absolute; opacity: 0; pointer-events: none; }
+.wz-swatch span {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--wz-pack);
+  box-shadow: inset 0 0 0 1px rgba(11, 18, 32, .12);
+  transition: box-shadow var(--kd-fast) var(--kd-ease);
+}
+.wz-swatch small { font-size: .68rem; color: var(--kd-muted); }
+.wz-swatch input:checked + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kd-ink); }
+.wz-swatch input:focus-visible + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kd-accent); }
+
+.wz-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: .4rem; }
+.wz-icon-option { position: relative; cursor: pointer; }
+.wz-icon-face {
+  display: grid; justify-items: center; gap: .35rem;
+  padding: .7rem .35rem .5rem;
+  border: 1px solid var(--kd-line); border-radius: var(--kd-radius-sm);
+  color: var(--kd-ink-2); text-align: center;
+  transition: border-color var(--kd-fast) var(--kd-ease), background var(--kd-fast) var(--kd-ease);
+}
+.wz-icon-face small { font-size: .62rem; line-height: 1.25; color: var(--kd-muted); word-break: break-word; }
+.wz-icon-option:hover .wz-icon-face { background: var(--kd-surface); }
+.wz-icon-option input:checked + .wz-icon-face { border-color: var(--kd-accent); background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
+.wz-icon-option input:focus-visible + .wz-icon-face { outline: 2px solid var(--kd-accent); outline-offset: 2px; }
+
+/* Daily puzzle */
+.wz-daily-select { min-width: 14rem; }
+
+/* Settings: the 7-day reward cycle in one row. */
+.wz-reward-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: .4rem; }
+.wz-reward-day { display: grid; gap: .15rem; }
+.wz-reward-day small { font-size: .7rem; color: var(--kd-muted); }
+
+/* Stats */
+.wz-stats th a { color: inherit; text-decoration: none; white-space: nowrap; }
+.wz-stats th a:hover { color: var(--kd-ink); }
+.wz-stats-clue { max-width: 18rem; }
+.wz-stats a.wz-answer { color: var(--kd-ink); text-decoration: none; }
+.wz-stats a.wz-answer:hover { color: var(--kd-accent-ink); }
+.wz-help-mix { max-width: 15rem; margin-inline-start: auto; line-height: 1.35; }
+.wz-rate {
+  display: inline-block; width: 44px; height: 6px; margin-inline-end: .35rem;
+  border-radius: 99px; background: var(--kd-surface-2); overflow: hidden; vertical-align: middle;
+}
+.wz-rate-bar { display: block; height: 100%; width: var(--wz-rate); background: var(--wz-teal); }
+
+/* Import preview */
+.wz-import td { vertical-align: top; }
+.wz-row-error { background: #fffafa; }
+.wz-error-text { color: var(--kd-danger); max-width: 16rem; margin-top: .2rem; }
+
+/* Legal pages: koydam.css tokens, no admin shell. */
+.wz-legal-body { background: var(--kd-surface); color: var(--kd-ink-2); margin: 0; font-family: Inter, system-ui, sans-serif; }
+.wz-legal { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+.wz-legal-head { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: 1.5rem; font-weight: 800; color: var(--kd-ink); font-family: "Noto Kufi Arabic", Inter, sans-serif; }
+.wz-legal-head small { font-weight: 600; color: var(--kd-muted); font-family: Inter, sans-serif; }
+.wz-legal-nav { display: flex; gap: 1rem; margin-inline-start: auto; font-size: .85rem; font-weight: 600; }
+.wz-legal a { color: var(--kd-accent-ink); }
+.wz-legal-section {
+  background: var(--kd-bg); border: 1px solid var(--kd-line); border-radius: var(--kd-radius);
+  padding: 1.5rem 1.6rem; box-shadow: var(--kd-shadow); line-height: 1.75;
+}
+.wz-legal-section[lang="ar"] { font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif; line-height: 2; }
+.wz-legal-section h1 { font-size: 1.5rem; font-weight: 800; color: var(--kd-ink); margin: 0 0 .25rem; }
+.wz-legal-section h2 { font-size: 1.05rem; font-weight: 700; color: var(--kd-ink); margin: 1.4rem 0 .4rem; }
+.wz-legal-section ul { padding-inline-start: 1.3rem; }
+.wz-legal-meta { color: var(--kd-faint); font-size: .85rem; }
+.wz-legal-mail { font-size: 1.15rem; font-weight: 700; }
+.wz-legal-rule { border: 0; margin: 1.5rem 0; }
+.wz-legal-foot { margin-top: 2rem; text-align: center; font-size: .8rem; color: var(--kd-faint); }

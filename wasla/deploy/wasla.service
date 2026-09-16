@@ -1,0 +1,32 @@
+[Unit]
+Description=Wasla crossword API and admin panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=brawl
+Group=brawl
+WorkingDirectory=/opt/wasla
+EnvironmentFile=/opt/wasla/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+
+# The service writes to its database and its question media (storage/questions
+# and storage/audio, both under storage/), and nothing else on the box. ProtectSystem=strict makes the whole
+# filesystem read-only except what is named here — so a path left out of this
+# list is not a permissions problem to debug later, it is an EROFS at the
+# moment of writing.
+#
+# deploy.sh does not install this file; it is written by setup.sh on a first
+# install. A change here reaches a running box only by copying it into
+# /etc/systemd/system and running daemon-reload.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/wasla/data /opt/wasla/storage
+
+[Install]
+WantedBy=multi-user.target

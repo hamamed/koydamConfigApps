@@ -136,6 +136,7 @@ const UNITS = [
   { unit: 'skincraft', label: 'SkinCraft' },
   { unit: 'minebox', label: 'MineBox' },
   { unit: 'fortnite', label: 'Fortnite' },
+  { unit: 'wasla', label: 'Wasla' },
   { unit: 'postgresql', label: 'Postgres' },
   { unit: 'redis-server', label: 'Redis' },
   { unit: 'nginx', label: 'nginx' },

@@ -1,0 +1,74 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Import', subheading: 'Many questions at once, from a CSV and their pictures and sounds' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3">
+        <div class="col-xl-6">
+          <form class="ad-card" method="post" action="/admin/import" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="file-up" width="16" height="16"></i>
+              <span class="fw-semibold">Upload</span>
+            </div>
+            <div class="ad-card-body d-grid gap-3">
+              <div>
+                <label class="form-label small fw-semibold" for="csv">CSV file</label>
+                <input class="form-control" type="file" id="csv" name="csv" accept=".csv,text/csv" required>
+                <div class="form-text">UTF-8, comma-separated, with a header row.</div>
+              </div>
+              <div>
+                <label class="form-label small fw-semibold" for="media">Pictures and sounds</label>
+                <input class="form-control" type="file" id="media" name="media" multiple accept=".png,.jpg,.jpeg,.webp,.mp3,.m4a,.aac,.wav">
+                <div class="form-text">Up to <%= maxMedia %> files. The CSV's <span class="kd-mono">image</span> and <span class="kd-mono">audio</span> columns name them.</div>
+              </div>
+              <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-kd" type="submit">Upload and preview</button>
+                <span class="small kd-faint">Nothing is added until you confirm.</span>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-xl-6">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="table" width="16" height="16"></i>
+              <span class="fw-semibold">Columns</span>
+              <a class="btn btn-sm btn-kd-outline ms-auto" href="/assets/import-example.csv" download="wasla-import-example.csv">
+                <i data-lucide="download" width="14" height="14" class="me-1"></i>Example CSV
+              </a>
+            </div>
+            <div class="ad-card-body p-0">
+              <table class="ad-table">
+                <tbody>
+                  <% [
+                       ['answer', 'Required. As it is spelled, e.g. أسد — it is played as اسد.'],
+                       ['clue', 'Required. The question the player reads.'],
+                       ['category', 'Optional, free text.'],
+                       ['type', 'text, image, emoji or audio. Blank: follows the media.'],
+                       ['emoji', '1 to 8 emoji, for emoji questions.'],
+                       ['image', 'File name of a picture uploaded alongside.'],
+                       ['zoom', '1 to 5. Blank is 1.'],
+                       ['focus_x', '0 to 1, where the zoom centres. Blank is 0.5.'],
+                       ['focus_y', '0 to 1. Blank is 0.5.'],
+                       ['blurred', 'yes / 1 / true to start the picture blurred.'],
+                       ['audio', 'File name of a sound uploaded alongside.'],
+                       ['pack', 'Slug of an existing pack. Blank or general: none.'],
+                       ['level', 'Level title to add the question to; created in the pack if missing.'],
+                     ].forEach(([name, text]) => { %>
+                    <tr><td class="kd-mono small"><%= name %></td><td class="small"><%= text %></td></tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

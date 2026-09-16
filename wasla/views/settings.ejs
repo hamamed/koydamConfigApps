@@ -1,0 +1,81 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Settings', subheading: 'Game tuning the app reads at launch from /api/v1/config' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form method="post" action="/admin/settings">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="row g-3">
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="coins" width="16" height="16"></i>
+                <span class="fw-semibold">Rewards</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div>
+                  <span class="form-label small fw-semibold d-block">Daily reward, by day of the <%= rewardDays %>-day cycle</span>
+                  <div class="wz-reward-days">
+                    <% for (let i = 0; i < rewardDays; i++) { %>
+                      <label class="wz-reward-day">
+                        <small>Day <%= i + 1 %></small>
+                        <input class="form-control" type="number" name="dailyRewards" min="0" step="1" required
+                               value="<%= values.dailyRewards?.[i] ?? '' %>" placeholder="<%= defaults.dailyRewards[i] %>">
+                      </label>
+                    <% } %>
+                  </div>
+                </div>
+                <% [
+                     ['dailyPuzzleCoins', 'Coins for solving the daily puzzle', values.dailyPuzzleCoins, defaults.dailyPuzzleCoins],
+                     ['streakBonusPerDay', 'Streak bonus per day', values.streakBonusPerDay, defaults.streakBonusPerDay],
+                     ['streakBonusMax', 'Streak bonus cap', values.streakBonusMax, defaults.streakBonusMax],
+                   ].forEach(([name, label, value, fallback]) => { %>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                    <div class="col-sm-5">
+                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" step="1" required value="<%= value %>">
+                      <div class="form-text">Default <%= fallback %></div>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="timer" width="16" height="16"></i>
+                <span class="fw-semibold">Timer and reminders</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <% [
+                     ['timerSecondsPerWord', 'Seconds per word, timed mode', values.timer?.secondsPerWord, defaults.timer.secondsPerWord, 1, 600],
+                     ['timerBonusCoins', 'Bonus coins for beating the timer', values.timer?.bonusCoins, defaults.timer.bonusCoins, 0, null],
+                     ['reminderHour', 'Daily reminder hour (player\'s local time, 0–23)', values.reminderHour, defaults.reminderHour, 0, 23],
+                   ].forEach(([name, label, value, fallback, min, max]) => { %>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                    <div class="col-sm-5">
+                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" <% if (max !== null) { %>max="<%= max %>"<% } %> step="1" required value="<%= value %>">
+                      <div class="form-text">Default <%= fallback %></div>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-kd-accent" type="submit">Save settings</button>
+          <a class="btn btn-kd-ghost" href="/api/v1/config" target="_blank" rel="noopener">View the JSON</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

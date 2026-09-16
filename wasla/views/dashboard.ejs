@@ -1,0 +1,65 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Dashboard', subheading: 'What the Wasla app is serving right now' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <% [
+             ['Published levels', counts.published + ' / ' + counts.levels, 'grid-3x3'],
+             ['Questions', counts.questions, 'message-circle-question'],
+             ['With a picture', counts.withImages, 'image'],
+             ['Not in any level', counts.unused, 'inbox'],
+           ].forEach(([label, value, glyph]) => { %>
+          <div class="col-6 col-xl-3">
+            <div class="ad-card ad-kpi">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <span class="ad-kpi-label"><%= label %></span>
+              </div>
+              <div class="ad-kpi-value"><%= value %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="grid-3x3" width="16" height="16"></i>
+          <span class="fw-semibold">Levels</span>
+          <div class="ms-auto d-flex gap-2">
+            <a class="btn btn-sm btn-kd-outline" href="/admin/questions/new">New question</a>
+            <a class="btn btn-sm btn-kd" href="/admin/levels">Manage levels</a>
+          </div>
+        </div>
+        <div class="ad-card-body p-0">
+          <% if (!levels.length) { %>
+            <div class="ad-empty">
+              <i data-lucide="grid-3x3"></i>
+              <p class="mb-0">No levels yet. Add a few questions, then build a level from them.</p>
+            </div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>Level</th><th>Words</th><th>Grid</th><th>State</th></tr></thead>
+                <tbody>
+                  <% levels.forEach((l) => { %>
+                    <tr>
+                      <td><a class="fw-semibold wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a></td>
+                      <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
+                      <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>
+                      <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'Published' : 'Draft' %></span></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -1,0 +1,61 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Packs',
+          subheading: 'Themed groups of levels. Levels without a pack are in “عام” (general).',
+          actions: '<a class="btn btn-kd btn-sm" href="/admin/packs/new">New pack</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (!packs.length) { %>
+        <div class="ad-card ad-empty">
+          <i data-lucide="shapes"></i>
+          <p class="mb-2">No packs yet. Every level is in the general pack.</p>
+          <a class="btn btn-kd btn-sm" href="/admin/packs/new">Create the first pack</a>
+        </div>
+      <% } else { %>
+        <div class="ad-card">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead><tr><th>Pack</th><th>Slug</th><th>Icon</th><th>Levels</th><th>Order</th><th></th></tr></thead>
+              <tbody>
+                <% packs.forEach((p, i) => { %>
+                  <tr>
+                    <td>
+                      <a class="d-inline-flex align-items-center gap-2 fw-semibold" href="/admin/packs/<%= p.id %>">
+                        <span class="wz-pack-tile" style="--wz-pack: <%= p.color %>"><i data-lucide="<%= icons.get(p.icon) || 'square' %>" width="16" height="16"></i></span>
+                        <span class="wz-ar"><%= p.title %></span>
+                      </a>
+                    </td>
+                    <td class="kd-mono small"><%= p.slug %></td>
+                    <td class="kd-mono small kd-faint"><%= p.icon %></td>
+                    <td><%= p.publishedCount %> published<% if (p.levelCount > p.publishedCount) { %> <span class="kd-faint">/ <%= p.levelCount %></span><% } %></td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        <% [['up', 'arrow-up', i === 0], ['down', 'arrow-down', i === packs.length - 1]].forEach(([dir, glyph, disabled]) => { %>
+                          <form method="post" action="/admin/packs/<%= p.id %>/move" class="m-0">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="direction" value="<%= dir %>">
+                            <button class="btn btn-sm btn-kd-ghost" type="submit" <%= disabled ? 'disabled' : '' %> aria-label="Move <%= dir %>">
+                              <i data-lucide="<%= glyph %>" width="14" height="14"></i>
+                            </button>
+                          </form>
+                        <% }) %>
+                      </div>
+                    </td>
+                    <td class="text-end"><a class="btn btn-sm btn-kd-outline" href="/admin/packs/<%= p.id %>">Edit</a></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="small kd-faint mt-2">The app lists packs in this order, with “عام” last. A pack with no published level is not sent.</p>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

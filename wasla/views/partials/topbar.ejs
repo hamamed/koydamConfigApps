@@ -1,0 +1,19 @@
+<header class="ad-topbar">
+  <button class="btn btn-kd-ghost btn-sm d-lg-none" id="mbMenuToggle" type="button" aria-label="Open menu">
+    <i data-lucide="menu" width="16" height="16"></i>
+  </button>
+
+  <div class="min-w-0">
+    <h1 class="ad-page-title mb-0"><%= heading %></h1>
+    <% if (typeof subheading !== 'undefined' && subheading) { %>
+      <div class="ad-page-sub text-truncate"><%= subheading %></div>
+    <% } %>
+  </div>
+
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <% if (typeof user !== 'undefined' && user) { %>
+      <span class="kd-tag d-none d-md-inline"><%= user.username %></span>
+    <% } %>
+    <% if (typeof actions !== 'undefined' && actions) { %><%- actions %><% } %>
+  </div>
+</header>

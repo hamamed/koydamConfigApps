@@ -1,0 +1,6 @@
+<% if (flash) { %>
+  <div class="alert alert-<%= flash.type === 'warning' ? 'warning' : flash.type === 'danger' || flash.type === 'error' ? 'danger' : 'success' %> d-flex align-items-start gap-2 mb-4" role="alert">
+    <i data-lucide="<%= flash.type === 'warning' ? 'triangle-alert' : flash.type === 'danger' || flash.type === 'error' ? 'circle-alert' : 'circle-check' %>" width="17" height="17" class="flex-shrink-0 mt-1"></i>
+    <span><%= flash.message %></span>
+  </div>
+<% } %>

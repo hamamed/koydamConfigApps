@@ -133,6 +133,15 @@ const APPS = [
       news: true,
     },
   },
+  {
+    slug: 'wasla',
+    name: 'Wasla',
+    notes: 'Arabic crossword quiz. Backend: wassla.hamaprojects.com',
+    platforms: {
+      ios: { bundleId: 'koydam.wasla.crosswords' },
+    },
+    flags: {},
+  },
 ];
 
 async function seed() {

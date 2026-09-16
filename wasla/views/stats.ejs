@@ -1,0 +1,141 @@
+<%
+  const pct = (n) => (n === null || n === undefined ? '—' : `${Math.round(n * 100)}%`);
+  const secs = (n) => (n === null || n === undefined ? '—' : `${Math.round(n)} s`);
+  const helpNames = { revealLetter: 'Reveal', removeLetters: 'Remove', solveWord: 'Solve', unzoomImage: 'Unzoom', unblurImage: 'Unblur', askFriend: 'Friend' };
+  const link = (key) => {
+    const nextDir = sort === key && dir === 'desc' ? 'asc' : 'desc';
+    return `/admin/stats?sort=${key}&dir=${nextDir}${hard ? '&hard=1' : ''}`;
+  };
+  const arrow = (key) => (sort === key ? (dir === 'desc' ? ' ↓' : ' ↑') : '');
+%>
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Stats', subheading: 'Anonymous gameplay events from the app, kept ' + retentionDays + ' days' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <% [
+             ['Players', overview.devices, 'users'],
+             ['Players, last 7 days', overview.devicesWeek, 'user-check'],
+             ['Events stored', overview.events, 'activity'],
+             ['Since', overview.since ? overview.since.slice(0, 10) : '—', 'calendar-days'],
+           ].forEach(([label, value, glyph]) => { %>
+          <div class="col-6 col-xl-3">
+            <div class="ad-card ad-kpi">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <span class="ad-kpi-label"><%= label %></span>
+              </div>
+              <div class="ad-kpi-value"><%= value %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="message-circle-question" width="16" height="16"></i>
+          <span class="fw-semibold">Questions</span>
+          <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Filter">
+            <a class="btn <%= hard ? 'btn-kd-outline' : 'btn-kd' %>" href="/admin/stats?sort=<%= sort %>&dir=<%= dir %>">All</a>
+            <a class="btn <%= hard ? 'btn-kd' : 'btn-kd-outline' %>" href="/admin/stats?sort=solveRate&dir=asc&hard=1">Hard questions</a>
+          </div>
+        </div>
+        <% if (hard) { %>
+          <p class="small kd-muted mx-3 mt-2 mb-0">Solved in under <%= Math.round(hardRule.rate * 100) %>% of opens, with at least <%= hardRule.opens %> opens.</p>
+        <% } %>
+        <div class="ad-card-body p-0">
+          <% if (!questions.length) { %>
+            <div class="ad-empty">
+              <i data-lucide="chart-column"></i>
+              <p class="mb-0"><%= hard ? 'No question is hard by that rule yet.' : 'No questions yet.' %></p>
+            </div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table wz-stats">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th><a href="<%= link('answer') %>">Answer<%= arrow('answer') %></a></th>
+                    <th class="text-end"><a href="<%= link('opens') %>">Opens<%= arrow('opens') %></a></th>
+                    <th class="text-end"><a href="<%= link('solves') %>">Solves<%= arrow('solves') %></a></th>
+                    <th class="text-end"><a href="<%= link('solveRate') %>">Solve rate<%= arrow('solveRate') %></a></th>
+                    <th class="text-end"><a href="<%= link('avgSeconds') %>">Avg time<%= arrow('avgSeconds') %></a></th>
+                    <th class="text-end"><a href="<%= link('helps') %>">Helps / open<%= arrow('helps') %></a></th>
+                    <th class="text-end"><a href="<%= link('left') %>">Left unsolved<%= arrow('left') %></a></th>
+                    <th class="text-end"><a href="<%= link('devices') %>">Players<%= arrow('devices') %></a></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% questions.forEach((q) => { %>
+                    <tr>
+                      <td><%- include('partials/qimage', { q, size: 'xs' }) %></td>
+                      <td>
+                        <a class="wz-answer" href="/admin/questions/<%= q.questionId %>"><%= q.answer %></a>
+                        <% if (q.isHard) { %><span class="kd-tag wz-tag-hard">hard</span><% } %>
+                        <div class="wz-ar small kd-faint text-truncate wz-stats-clue"><%= q.clue %></div>
+                      </td>
+                      <td class="text-end"><%= q.opens %></td>
+                      <td class="text-end"><%= q.solves %></td>
+                      <td class="text-end">
+                        <% if (q.solveRate !== null) { %>
+                          <span class="wz-rate"><span class="wz-rate-bar" style="--wz-rate: <%= Math.min(1, q.solveRate) * 100 %>%"></span></span>
+                        <% } %>
+                        <%= pct(q.solveRate) %>
+                      </td>
+                      <td class="text-end"><%= secs(q.avgSeconds) %></td>
+                      <td class="text-end">
+                        <%= q.opens ? (q.helps / q.opens).toFixed(2) : '—' %>
+                        <% const used = helps.filter((h) => q.helpsPerOpen[h] > 0); if (used.length) { %>
+                          <div class="small kd-faint wz-help-mix"><%= used.map((h) => `${helpNames[h]} ${q.helpsPerOpen[h].toFixed(2)}`).join(' · ') %></div>
+                        <% } %>
+                      </td>
+                      <td class="text-end"><%= q.left %></td>
+                      <td class="text-end"><%= q.devices %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="grid-3x3" width="16" height="16"></i>
+          <span class="fw-semibold">Levels</span>
+        </div>
+        <div class="ad-card-body p-0">
+          <% if (!levels.length) { %>
+            <div class="ad-empty"><i data-lucide="grid-3x3"></i><p class="mb-0">No levels yet.</p></div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>Level</th><th class="text-end">Completions</th><th class="text-end">Avg time</th><th class="text-end">Avg stars</th><th class="text-end">Players</th></tr></thead>
+                <tbody>
+                  <% levels.forEach((l) => { %>
+                    <tr>
+                      <td>
+                        <% if (l.levelId) { %><a class="wz-ar fw-semibold" href="/admin/levels/<%= l.levelId %>"><%= l.title %></a><% } else { %><span class="fw-semibold"><%= l.title %></span><% } %>
+                        <% if (!l.published) { %><span class="ad-status ad-status-draft">Draft</span><% } %>
+                      </td>
+                      <td class="text-end"><%= l.completions %></td>
+                      <td class="text-end"><%= secs(l.avgSeconds) %></td>
+                      <td class="text-end"><%= l.avgStars === null ? '—' : l.avgStars.toFixed(1) + ' ★' %></td>
+                      <td class="text-end"><%= l.devices %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

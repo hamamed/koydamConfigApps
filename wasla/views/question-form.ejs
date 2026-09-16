@@ -1,0 +1,169 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: question.id ? 'Edit question' : 'New question',
+          subheading: question.id ? 'Changes reach every level that uses it' : 'A word, its clue, and an optional picture'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form method="post" enctype="multipart/form-data"
+            action="<%= question.id ? '/admin/questions/' + question.id : '/admin/questions' %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (levelId) { %><input type="hidden" name="level" value="<%= levelId %>"><% } %>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="type" width="16" height="16"></i>
+                <span class="fw-semibold me-auto">Word and clue</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div>
+                  <label class="form-label small fw-semibold" for="answer">Answer</label>
+                  <input class="form-control wz-answer-input" id="answer" name="answer" dir="rtl" lang="ar"
+                         value="<%= question.answer %>" maxlength="40" required data-letters="#answerLetters" data-play="#answerPlay">
+                  <div class="form-text">Arabic letters only, 2 to 12. Harakat and spaces are removed. <span id="answerLetters" class="wz-letters"></span></div>
+                  <div class="wz-play" id="answerPlay" lang="ar" dir="rtl" aria-live="polite">
+                    <% if (question.answer) { %>يُلعب: <span class="wz-answer"><%= question.playAnswer %></span><% } %>
+                  </div>
+                  <% if (question.id && question.playAnswer !== question.answer) { %>
+                    <div class="wz-fold-note" data-fold-note>
+                      <i data-lucide="info" width="14" height="14"></i>
+                      Written <span class="wz-answer"><%= question.answer %></span>, played as <span class="wz-answer"><%= question.playAnswer %></span>: hamza and alef forms are folded in the grid, and the app shows the written spelling once the word is solved.
+                    </div>
+                  <% } %>
+                </div>
+                <div>
+                  <label class="form-label small fw-semibold" for="clue">Question / clue</label>
+                  <textarea class="form-control wz-ar" id="clue" name="clue" dir="rtl" rows="3" maxlength="200" required><%= question.clue %></textarea>
+                  <div class="form-text">What the player reads above the picture.</div>
+                </div>
+                <div>
+                  <label class="form-label small fw-semibold" for="category">Category</label>
+                  <input class="form-control wz-ar" id="category" name="category" dir="rtl" list="known" value="<%= question.category %>" maxlength="60" placeholder="بلدان، حيوانات، ماركات…">
+                  <datalist id="known"><% categories.forEach((c) => { %><option value="<%= c %>"></option><% }) %></datalist>
+                </div>
+                <div class="row g-2">
+                  <div class="col-sm-6">
+                    <label class="form-label small fw-semibold" for="type">Question type</label>
+                    <select class="form-select" id="type" name="type" data-type-select>
+                      <option value="" <%= question.id ? '' : 'selected' %>>Automatic — from the media</option>
+                      <% types.forEach((t) => { %>
+                        <option value="<%= t %>" <%= question.id && question.type === t ? 'selected' : '' %>><%= { text: 'Text', image: 'Picture', emoji: 'Emoji', audio: 'Audio' }[t] %></option>
+                      <% }) %>
+                    </select>
+                    <div class="form-text">What the app shows above the clue.</div>
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="form-label small fw-semibold" for="emoji">Emoji</label>
+                    <input class="form-control wz-emoji-input" id="emoji" name="emoji" value="<%= question.emoji || '' %>" maxlength="80" placeholder="🦁👑" data-emoji>
+                    <div class="form-text">1 to <%= maxEmoji %> emoji, no letters. For emoji questions.</div>
+                  </div>
+                </div>
+                <% if (levels.length) { %>
+                  <div class="small kd-muted">
+                    Used in:
+                    <% levels.forEach((l) => { %><a class="kd-tag wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a> <% }) %>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="ad-card h-100" data-zoom-editor <%= question.imageFile ? 'data-has-file' : '' %>>
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="image" width="16" height="16"></i>
+                <span class="fw-semibold">Picture</span>
+                <span class="kd-faint small ms-auto">optional</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <input class="form-control" type="file" name="image" accept=".png,.jpg,.jpeg,.webp" data-zoom-file>
+                <div class="form-text mt-n2">PNG, JPEG or WebP, up to <%= maxImageMb %> MB. Choosing a new one replaces the current picture.</div>
+
+                <div class="wz-editor <%= question.imageFile ? '' : 'd-none' %>" data-zoom-panes>
+                  <div>
+                    <div class="small fw-semibold mb-1">Whole picture <span class="kd-faint fw-normal">— click to set the focus</span></div>
+                    <div class="wz-source" data-zoom-source>
+                      <img src="<%= question.imageFile ? imageUrl(question.imageFile) : '' %>" alt="" data-zoom-img>
+                      <span class="wz-dot" data-zoom-dot></span>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="small fw-semibold mb-1">What the player sees</div>
+                    <span class="wz-frame wz-lg" data-zoom-preview
+                          style="--wz-zoom: <%= question.zoom %>; --wz-x: <%= question.focusX * 100 %>%; --wz-y: <%= question.focusY * 100 %>%">
+                      <img src="<%= question.imageFile ? imageUrl(question.imageFile) : '' %>" alt="" data-zoom-img>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="<%= question.imageFile ? '' : 'd-none' %>" data-zoom-controls>
+                  <label class="form-label small fw-semibold d-flex" for="zoom">
+                    Zoom <span class="ms-auto kd-mono" data-zoom-value>×<%= question.zoom %></span>
+                  </label>
+                  <input class="form-range" type="range" id="zoom" name="zoom" min="1" max="<%= maxZoom %>" step="0.1" value="<%= question.zoom %>">
+                  <div class="form-text">×1 shows the whole picture. Higher is a close-up — a “guess the zoomed picture” question.</div>
+                  <input type="hidden" name="focusX" value="<%= question.focusX %>">
+                  <input type="hidden" name="focusY" value="<%= question.focusY %>">
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="blurred" name="blurred" value="1" <%= question.blurred ? 'checked' : '' %> data-blur-toggle>
+                    <label class="form-check-label small" for="blurred">Start blurred <span class="kd-faint">— the player can pay a help to sharpen it</span></label>
+                  </div>
+                  <% if (question.imageFile) { %>
+                    <div class="form-check mt-2">
+                      <input class="form-check-input" type="checkbox" id="removeImage" name="removeImage" value="1">
+                      <label class="form-check-label small" for="removeImage">Remove the picture</label>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="ad-card h-100" data-audio-editor <%= question.audioFile ? 'data-has-file' : '' %>>
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="audio-lines" width="16" height="16"></i>
+                <span class="fw-semibold">Sound</span>
+                <span class="kd-faint small ms-auto">optional</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <input class="form-control" type="file" name="audio" accept=".mp3,.m4a,.aac,.wav,audio/mpeg,audio/mp4,audio/aac,audio/wav" data-audio-file>
+                <div class="form-text mt-n2">MP3, M4A, AAC or WAV, up to <%= maxAudioMb %> MB. For “what makes this sound?” questions.</div>
+                <audio class="wz-audio <%= question.audioFile ? '' : 'd-none' %>" controls preload="none" data-audio-preview
+                       <% if (question.audioFile) { %>src="<%= audioUrl(question.audioFile) %>"<% } %>></audio>
+                <% if (question.audioFile) { %>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="removeAudio" name="removeAudio" value="1">
+                    <label class="form-check-label small" for="removeAudio">Remove the sound</label>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-kd-accent" type="submit"><%= question.id ? 'Save changes' : (levelId ? 'Save and add to level' : 'Save question') %></button>
+          <a class="btn btn-kd-ghost" href="<%= levelId ? '/admin/levels/' + levelId : '/admin/questions' %>">Cancel</a>
+        </div>
+      </form>
+
+      <% if (question.id) { %>
+        <form method="post" action="/admin/questions/<%= question.id %>/delete" class="mt-4"
+              onsubmit="return confirm('Delete this question?')">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-sm btn-kd-danger" type="submit" <%= levels.length ? 'disabled' : '' %>>Delete question</button>
+          <% if (levels.length) { %><span class="small kd-faint ms-2">Remove it from its levels first.</span><% } %>
+        </form>
+      <% } %>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/wasla.js?v=<%= assetVersion %>"></script>
+<%- include('partials/foot') %>

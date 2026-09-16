@@ -1,0 +1,92 @@
+/**
+ * Game tuning the app reads at launch (GET /api/v1/config), edited on the
+ * Settings page.
+ *
+ * One row per top-level key, holding JSON. A key without a row, or with a row
+ * that no longer validates, reads as its default — the app always gets a
+ * complete object.
+ */
+
+export const DEFAULT_CONFIG = Object.freeze({
+  dailyRewards: Object.freeze([10, 15, 20, 25, 30, 40, 60]),
+  dailyPuzzleCoins: 30,
+  streakBonusPerDay: 5,
+  streakBonusMax: 50,
+  timer: Object.freeze({ secondsPerWord: 25, bonusCoins: 15 }),
+  reminderHour: 10,
+});
+
+export const REWARD_DAYS = 7;
+const MAX_COINS = 100_000;
+
+/** A whole number in [min, max] from a number or a numeric string, else null. */
+function whole(value, min, max) {
+  if (typeof value === 'string' && !/^\s*-?\d+\s*$/.test(value)) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= min && n <= max ? n : null;
+}
+
+/** Each key's validator: the clean value, or null when it is not acceptable. */
+const FIELDS = {
+  dailyRewards: (v) => {
+    if (!Array.isArray(v) || v.length !== REWARD_DAYS) return null;
+    const list = v.map((x) => whole(x, 0, MAX_COINS));
+    return list.includes(null) ? null : list;
+  },
+  dailyPuzzleCoins: (v) => whole(v, 0, MAX_COINS),
+  streakBonusPerDay: (v) => whole(v, 0, MAX_COINS),
+  streakBonusMax: (v) => whole(v, 0, MAX_COINS),
+  timer: (v) => {
+    const secondsPerWord = whole(v?.secondsPerWord, 1, 600);
+    const bonusCoins = whole(v?.bonusCoins, 0, MAX_COINS);
+    return secondsPerWord === null || bonusCoins === null ? null : { secondsPerWord, bonusCoins };
+  },
+  reminderHour: (v) => whole(v, 0, 23),
+};
+
+const MESSAGES = {
+  dailyRewards: `Daily rewards need ${REWARD_DAYS} whole numbers of coins, none negative.`,
+  dailyPuzzleCoins: 'Daily puzzle coins must be a whole number, 0 or more.',
+  streakBonusPerDay: 'Streak bonus per day must be a whole number, 0 or more.',
+  streakBonusMax: 'The streak bonus cap must be a whole number, 0 or more.',
+  timer: 'The timer needs 1 to 600 seconds per word and a whole number of bonus coins.',
+  reminderHour: 'The reminder hour is a whole number from 0 to 23.',
+};
+
+export function createAppConfig(db) {
+  function get() {
+    const stored = new Map(db.prepare('SELECT key, value FROM settings').all().map((r) => [r.key, r.value]));
+    const config = {};
+    for (const [key, check] of Object.entries(FIELDS)) {
+      let value = null;
+      try {
+        value = stored.has(key) ? check(JSON.parse(stored.get(key))) : null;
+      } catch {
+        value = null; // unreadable JSON reads as the default, like a missing row
+      }
+      config[key] = value ?? structuredClone(DEFAULT_CONFIG[key]);
+    }
+    return config;
+  }
+
+  /** Validates every key, then writes all or nothing. */
+  function save(input) {
+    const clean = {};
+    for (const [key, check] of Object.entries(FIELDS)) {
+      const value = check(input?.[key]);
+      if (value === null) return { error: MESSAGES[key] };
+      clean[key] = value;
+    }
+    if (clean.streakBonusMax < clean.streakBonusPerDay) {
+      return { error: 'The streak bonus cap cannot be lower than the bonus for one day.' };
+    }
+    const write = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`);
+    db.transaction(() => {
+      for (const [key, value] of Object.entries(clean)) write.run(key, JSON.stringify(value));
+    })();
+    return { config: get() };
+  }
+
+  return { get, save };
+}

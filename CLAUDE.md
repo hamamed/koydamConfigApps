@@ -14,6 +14,7 @@ breaking them took a service down.
 | `minebox/` | Minecraft skins, addons, texture packs, worlds, seeds | minebox.hamaprojects.com | 3100 | SQLite |
 | `fortnite/` | Fortnite companion — shop, news, cosmetics, wallpapers | fortnite.hamaprojects.com | 3200 | SQLite |
 | `bdc/` | Moroccan public procurement — scraper, award analysis, invoicing | bdc.civictrust.ma | 3300 | SQLite |
+| `wasla/` | Wasla Arabic crossword — questions with pictures, levels, iOS API | wassla.hamaprojects.com | 3400 | SQLite |
 
 The VPS is `46.224.86.198`, root over SSH. The Flutter app (`brawlStar`) is a
 separate project and **not in this repository**.

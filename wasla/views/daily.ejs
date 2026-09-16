@@ -1,0 +1,127 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Daily puzzle', subheading: 'One level per date, the same for every player' }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (!levels.length) { %>
+        <div class="ad-card ad-empty">
+          <i data-lucide="calendar-days"></i>
+          <p class="mb-0">Publish a level first — the daily puzzle is chosen from published levels.</p>
+        </div>
+      <% } else { %>
+        <p class="small kd-muted">
+          A date without a chosen level gets an automatic pick from the published levels, the same for everyone.
+          Dates are the player's own calendar day; today in UTC is <span class="kd-mono"><%= today %></span>.
+        </p>
+
+        <div class="ad-card mb-3">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead><tr><th>Date</th><th>Puzzle</th><th>Choose a level</th><th></th></tr></thead>
+              <tbody>
+                <% days.forEach((d) => { const level = byId.get(d.levelId); %>
+                  <tr>
+                    <td class="text-nowrap">
+                      <span class="kd-mono"><%= d.date %></span>
+                      <span class="kd-faint small ms-1"><%= new Date(d.date + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }) %></span>
+                      <% if (d.date === today) { %><span class="kd-tag kd-tag-accent ms-1">today</span><% } %>
+                    </td>
+                    <td>
+                      <% if (level) { %><span class="wz-ar fw-semibold"><%= level.title %></span> <span class="kd-faint small">level <%= level.number %></span><% } %>
+                      <% if (d.source === 'scheduled') { %>
+                        <span class="ad-status ad-status-published">Chosen</span>
+                      <% } else { %>
+                        <span class="ad-status ad-status-draft">Automatic</span>
+                        <% if (d.scheduledId) { %><span class="kd-tag kd-tag-warn">chosen level is unpublished</span><% } %>
+                      <% } %>
+                    </td>
+                    <td>
+                      <form method="post" action="/admin/daily/<%= d.date %>" class="d-flex gap-2 m-0">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <select class="form-select form-select-sm wz-daily-select" name="levelId" aria-label="Level for <%= d.date %>">
+                          <option value="">Automatic</option>
+                          <% levels.forEach((l) => { %>
+                            <option value="<%= l.id %>" <%= d.scheduledId === l.id ? 'selected' : '' %>><%= l.number %> · <%= l.title %></option>
+                          <% }) %>
+                        </select>
+                        <button class="btn btn-sm btn-kd-accent" type="submit">Save</button>
+                      </form>
+                    </td>
+                    <td class="text-end">
+                      <% if (d.scheduledId) { %>
+                        <form method="post" action="/admin/daily/<%= d.date %>/clear" class="m-0">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button class="btn btn-sm btn-kd-ghost" type="submit">Clear</button>
+                        </form>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <form class="ad-card" method="post" action="/admin/daily">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="calendar-plus" width="16" height="16"></i>
+                <span class="fw-semibold">Another date</span>
+              </div>
+              <div class="ad-card-body d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                  <label class="form-label small fw-semibold" for="date">Date</label>
+                  <input class="form-control" type="date" id="date" name="date" min="<%= today %>" required>
+                </div>
+                <div class="flex-grow-1">
+                  <label class="form-label small fw-semibold" for="levelId">Level</label>
+                  <select class="form-select" id="levelId" name="levelId" required>
+                    <% levels.forEach((l) => { %><option value="<%= l.id %>"><%= l.number %> · <%= l.title %></option><% }) %>
+                  </select>
+                </div>
+                <button class="btn btn-kd" type="submit">Schedule</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="ad-card">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="calendar-days" width="16" height="16"></i>
+                <span class="fw-semibold">Scheduled later</span>
+              </div>
+              <div class="ad-card-body p-0">
+                <% if (!later.length) { %>
+                  <p class="small kd-faint m-3">Nothing scheduled beyond the next <%= days.length %> days.</p>
+                <% } else { %>
+                  <table class="ad-table">
+                    <tbody>
+                      <% later.forEach((d) => { %>
+                        <tr>
+                          <td class="kd-mono"><%= d.date %></td>
+                          <td class="wz-ar"><%= d.title %><% if (!d.published) { %> <span class="kd-tag kd-tag-warn">unpublished</span><% } %></td>
+                          <td class="text-end">
+                            <form method="post" action="/admin/daily/<%= d.date %>/clear" class="m-0">
+                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                              <button class="btn btn-sm btn-kd-ghost" type="submit">Clear</button>
+                            </form>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

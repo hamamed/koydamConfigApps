@@ -27,6 +27,8 @@ SOURCES=(
   minebox/views
   minebox/public/js
   fortnite/views
+  wasla/views
+  wasla/public/js
 )
 
 [[ -f "$CSS" ]] || { echo "  no stylesheet at $CSS"; exit 1; }

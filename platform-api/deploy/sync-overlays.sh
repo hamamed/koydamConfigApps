@@ -20,6 +20,7 @@ declare -A REPO_DIR=(
   [skincraft]="$SIBLINGS/skincraft-work"
   [minebox]="$SIBLINGS/minebox"
   [fortnite]="$SIBLINGS/fortnite"
+  [wasla]="$SIBLINGS/wasla"
 )
 
 WRITE=0
@@ -28,7 +29,7 @@ WRITE=0
 changed=0
 missing=0
 
-for name in brawl skincraft minebox fortnite; do
+for name in brawl skincraft minebox fortnite wasla; do
   manifest="$HERE/overlays/$name/manifest"
   repo="${REPO_DIR[$name]}"
 

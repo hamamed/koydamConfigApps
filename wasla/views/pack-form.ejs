@@ -1,0 +1,87 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: pack.id ? 'Edit pack' : 'New pack',
+          subheading: 'Title, slug, colour and icon as the app shows them'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form method="post" action="<%= pack.id ? '/admin/packs/' + pack.id : '/admin/packs' %>">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="type" width="16" height="16"></i>
+                <span class="fw-semibold me-auto">Details</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div>
+                  <label class="form-label small fw-semibold" for="title">Title</label>
+                  <input class="form-control wz-ar" id="title" name="title" dir="rtl" value="<%= pack.title %>" maxlength="60" required placeholder="بلدان وعواصم">
+                </div>
+                <div>
+                  <label class="form-label small fw-semibold" for="slug">Slug</label>
+                  <input class="form-control kd-mono" id="slug" name="slug" value="<%= pack.slug %>" maxlength="40" required pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="countries">
+                  <div class="form-text">Lowercase letters, digits and hyphens. The app filters levels by it — changing it later breaks nothing on the server, but an app that cached the old slug sees an empty pack until it refreshes.</div>
+                </div>
+                <div>
+                  <span class="form-label small fw-semibold d-block">Colour</span>
+                  <div class="wz-swatches">
+                    <% colors.forEach(([hex, name]) => { %>
+                      <label class="wz-swatch" title="<%= name %> <%= hex %>">
+                        <input type="radio" name="color" value="<%= hex %>" <%= pack.color === hex ? 'checked' : '' %> required>
+                        <span style="--wz-pack: <%= hex %>"></span>
+                        <small><%= name %></small>
+                      </label>
+                    <% }) %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-7">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="shapes" width="16" height="16"></i>
+                <span class="fw-semibold">Icon</span>
+                <span class="kd-faint small ms-auto">SF Symbol name — the drawing is a look-alike</span>
+              </div>
+              <div class="ad-card-body">
+                <div class="wz-icons">
+                  <% icons.forEach(([symbol, lucide]) => { %>
+                    <label class="wz-icon-option">
+                      <input type="radio" name="icon" value="<%= symbol %>" <%= pack.icon === symbol ? 'checked' : '' %> required>
+                      <span class="wz-icon-face">
+                        <i data-lucide="<%= lucide %>" width="22" height="22"></i>
+                        <small class="kd-mono"><%= symbol %></small>
+                      </span>
+                    </label>
+                  <% }) %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-kd-accent" type="submit"><%= pack.id ? 'Save changes' : 'Create pack' %></button>
+          <a class="btn btn-kd-ghost" href="/admin/packs">Cancel</a>
+        </div>
+      </form>
+
+      <% if (pack.id) { %>
+        <form method="post" action="/admin/packs/<%= pack.id %>/delete" class="mt-4"
+              data-confirm="Delete this pack? Its levels move to the general pack; nothing else is deleted.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-sm btn-kd-danger" type="submit">Delete pack</button>
+        </form>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
