@@ -139,7 +139,7 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
   router.get('/import/:id', (req, res, next) => {
     const payload = pendingImports.get(req.params.id);
     if (!payload) return next();
-    // Checked again on every view: a pack or level may have changed since the upload.
+    // Checked again on every view: a level may have changed since the upload.
     const plan = planImport(repo, payload.rows, mediaMap(payload.media));
     const named = new Set(plan.flatMap((p) => [p.input?.imageFile, p.input?.audioFile]).filter(Boolean));
     res.render('import-preview', {

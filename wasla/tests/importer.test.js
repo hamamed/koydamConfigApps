@@ -9,10 +9,9 @@ let repo;
 
 beforeEach(() => {
   repo = createRepository(openDatabase(':memory:'));
-  repo.createPack({ title: 'بلدان', slug: 'countries', color: '#14A49E', icon: 'globe.europe.africa.fill' });
 });
 
-const HEADER = 'answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,pack,level';
+const HEADER = 'answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,level';
 const media = new Map([
   ['lion.jpg', { kind: 'image', file: 'aaaaaaaaaaaaaaaaaaaaaaaa.jpg' }],
   ['roar.m4a', { kind: 'audio', file: 'bbbbbbbbbbbbbbbbbbbbbbbb.m4a' }],
@@ -32,44 +31,42 @@ test('the CSV needs a header with at least answer and clue, and no unknown colum
 test('each row is checked with the same rules as the question form', () => {
   const { rows } = readImportCsv([
     HEADER,
-    'أسد,ملك الغابة,حيوانات,,,lion.jpg,2,0.3,0.4,yes,,countries,حيوانات',
-    'Lion,x,,,,,,,,,,,',
-    'قمر,x,,,,missing.jpg,,,,,,,',
-    'قمر,x,,,,roar.m4a,,,,,,,',
-    'قمر,x,,,,,,,,,,nope,',
-    'زئير,صوت الأسد,,audio,,,,,,,roar.m4a,,حيوانات',
-    'مصر,x,,emoji,🇪🇬,,,,,,,,',
+    'أسد,ملك الغابة,حيوانات,,,lion.jpg,2,0.3,0.4,yes,,حيوانات',
+    'Lion,x,,,,,,,,,,',
+    'قمر,x,,,,missing.jpg,,,,,,',
+    'قمر,x,,,,roar.m4a,,,,,,',
+    'زئير,صوت الأسد,,audio,,,,,,,roar.m4a,حيوانات',
+    'مصر,x,,emoji,🇪🇬,,,,,,,',
   ].join('\n'));
 
   const plan = planImport(repo, rows, media);
-  assert.equal(plan.length, 7);
+  assert.equal(plan.length, 6);
 
-  const [lion, latin, missing, wrongKind, badPack, roar, egypt] = plan;
+  const [lion, latin, missing, wrongKind, roar, egypt] = plan;
   assert.equal(lion.error, null);
-  assert.deepEqual([lion.playAnswer, lion.type, lion.levelTitle, lion.levelIsNew, lion.packSlug],
-    ['اسد', 'image', 'حيوانات', true, 'countries']);
+  assert.deepEqual([lion.playAnswer, lion.type, lion.levelTitle, lion.levelIsNew],
+    ['اسد', 'image', 'حيوانات', true]);
   assert.deepEqual([lion.input.zoom, lion.input.focusX, lion.input.blurred], ['2', '0.3', 'yes']);
   assert.match(latin.error, /Arabic letters/);
   assert.match(missing.error, /missing\.jpg/);
   assert.match(wrongKind.error, /picture/);
-  assert.match(badPack.error, /nope/);
   assert.equal(roar.error, null);
   assert.equal(roar.type, 'audio');
   assert.equal(egypt.type, 'emoji');
 });
 
-test('confirming imports only the valid rows, creates missing levels in their pack and lays them out', () => {
+test('confirming imports only the valid rows, creates missing levels and lays them out', () => {
   const existing = repo.createLevel('قديم');
   const old = repo.createQuestion({ answer: 'مصر', clue: 'x' }).question.id;
   repo.setLevelQuestions(existing.id, [old]);
 
   const { rows } = readImportCsv([
     HEADER,
-    'أسد,ملك الغابة,,,,lion.jpg,,,,,,countries,حيوانات',
-    'دب,حيوان,,,,,,,,,,countries,حيوانات',
-    'Bad,x,,,,,,,,,,,حيوانات',
-    'مرس,x,,,,,,,,,,,قديم',
-    'قمر,بلا مستوى,,,,,,,,,,,',
+    'أسد,ملك الغابة,,,,lion.jpg,,,,,,حيوانات',
+    'دب,حيوان,,,,,,,,,,حيوانات',
+    'Bad,x,,,,,,,,,,حيوانات',
+    'مرس,x,,,,,,,,,,قديم',
+    'قمر,بلا مستوى,,,,,,,,,,',
   ].join('\n'));
 
   const result = commitImport(repo, planImport(repo, rows, media));
@@ -77,7 +74,6 @@ test('confirming imports only the valid rows, creates missing levels in their pa
   assert.equal(result.imported, 4);
   assert.deepEqual(result.usedFiles, ['aaaaaaaaaaaaaaaaaaaaaaaa.jpg']);
   const animals = repo.findLevelByTitle('حيوانات');
-  assert.equal(animals.packSlug, 'countries');
   assert.equal(animals.words.length + animals.unplaced.length, 2);
   assert.equal(repo.getLevel(existing.id).words.length, 2);
   assert.equal(repo.listQuestions().length, 5);
@@ -85,11 +81,30 @@ test('confirming imports only the valid rows, creates missing levels in their pa
 });
 
 test('nothing is imported when a row fails at confirm time', () => {
-  const { rows } = readImportCsv(`${HEADER}\nأسد,x,,,,,,,,,,,\nقمر,x,,,,,,,,,,,`);
+  const { rows } = readImportCsv(`${HEADER}\nأسد,x,,,,,,,,,,\nقمر,x,,,,,,,,,,`);
   const plan = planImport(repo, rows, media);
   // Something changed between preview and confirm that the checks did not see.
   const broken = plan.map((p, i) => (i === 1 ? { ...p, input: { ...p.input, zoom: 99 } } : p));
 
   assert.throws(() => commitImport(repo, broken), /zoom/i);
   assert.equal(repo.listQuestions().length, 0);
+});
+
+test('a pack column from an older CSV is accepted and ignored', () => {
+  const parsed = readImportCsv([
+    'answer,clue,pack,level',
+    'أسد,ملك الغابة,animals,حيوانات',
+    'دب,حيوان,no-such-pack,حيوانات',
+  ].join('\n'));
+  assert.equal(parsed.error, undefined);
+
+  const plan = planImport(repo, parsed.rows, media);
+  assert.deepEqual(plan.map((p) => p.error), [null, null]);
+  plan.forEach((p) => assert.equal('packSlug' in p, false));
+
+  const result = commitImport(repo, plan);
+  assert.equal(result.imported, 2);
+  assert.deepEqual(result.levels.map((l) => [l.title, l.created, l.added]), [['حيوانات', true, 2]]);
+  const level = repo.findLevelByTitle('حيوانات');
+  assert.equal('packId' in level, false);
 });

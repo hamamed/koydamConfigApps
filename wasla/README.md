@@ -47,14 +47,14 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 (an older app shows it; an audio question may use it as a cover); `emoji` and
 `audio` only for their own type.
 
-## Packs, difficulty, daily puzzle
+## Level order, difficulty, daily puzzle
 
-- **Packs** group levels, with a colour from the game palette and an SF Symbol
-  from a fixed list (the panel draws a Lucide look-alike). Levels without one
-  are in the built-in `general` pack.
+- **Levels are one numbered run** (1, 2, 3 …) in the order set on the Levels
+  page. There are no packs or categories. (The `packs` table and
+  `levels.pack_id` column still exist in older databases and are unused.)
 - **Difficulty** is easy / medium / hard per level. **Order by difficulty** on
-  the Levels page sorts inside each pack (difficulty, then word count, then the
-  current order) while every pack keeps its slots in the overall order.
+  the Levels page sorts every level together: easy → medium → hard, then fewer
+  words, then the current order.
 - **Daily puzzle**: a level chosen per date, otherwise level
   `days since 1970-01-01 mod published count` — the same for everyone.
 
@@ -62,10 +62,11 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 
 **Import** takes one UTF-8 CSV plus any number of pictures and sounds in one
 upload (example at `/assets/import-example.csv`). Columns:
-`answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,pack,level`.
+`answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,level`.
+A `pack` column from an older CSV is accepted and ignored.
 Every row is checked with the question form's rules and previewed; confirming
 imports the valid rows in one transaction and lays out each level they were
-added to (a missing level is created in the row's pack). Unconfirmed imports
+added to (a missing level is created). Unconfirmed imports
 and their unused files are removed after 24 hours.
 
 ## Stats
@@ -83,9 +84,8 @@ contract is `docs/wasla-v2-contract.md` in the iOS repository.
 
 | | |
 |---|---|
-| `GET /api/v1/levels[?pack=slug]` | Published levels: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `pack`, `difficulty`, `packPosition` |
+| `GET /api/v1/levels` | Published levels, one numbered run: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `difficulty` |
 | `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
-| `GET /api/v1/packs` | Packs with published levels, `general` last |
 | `GET /api/v1/daily?date=YYYY-MM-DD` | A level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
 | `GET /api/v1/config` | Rewards, streak bonus, timer, reminder hour (Settings page) |
 | `POST /api/v1/events` | `{ device, events[] }`, ≤ 100 events, 64 kB, 30 batches/min per IP → `202 { accepted }` |

@@ -69,8 +69,8 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 -- EXISTS never adds a column to a table that already exists, so they are
 -- listed in src/db/index.js, which adds whatever a database is missing.
 
--- A themed group of levels in the app. Levels without one are in the built-in
--- "general" pack, which is not a row.
+-- Unused legacy: level packs were removed (levels are one numbered run). The
+-- table stays so databases that have it keep booting; nothing reads or writes it.
 CREATE TABLE IF NOT EXISTS packs (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   slug        TEXT NOT NULL UNIQUE,

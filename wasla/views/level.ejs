@@ -23,15 +23,6 @@
           <form method="post" action="/admin/levels/<%= level.id %>/details" class="d-flex gap-2 align-items-end m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div>
-              <label class="form-label small fw-semibold" for="packId">Pack</label>
-              <select class="form-select" id="packId" name="packId">
-                <option value="">عام — general</option>
-                <% packs.forEach((p) => { %>
-                  <option value="<%= p.id %>" <%= level.packId === p.id ? 'selected' : '' %>><%= p.title %> — <%= p.slug %></option>
-                <% }) %>
-              </select>
-            </div>
-            <div>
               <label class="form-label small fw-semibold" for="difficulty">Difficulty</label>
               <select class="form-select" id="difficulty" name="difficulty">
                 <% difficulties.forEach((d) => { %>

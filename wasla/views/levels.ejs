@@ -23,12 +23,12 @@
 
       <% if (levels.length > 1) { %>
         <form method="post" action="/admin/levels/order-by-difficulty" class="d-flex flex-wrap align-items-center gap-2 mb-3"
-              data-confirm="Reorder levels by difficulty? Inside each pack, easy levels move first, then levels with fewer words. Packs keep their places in the overall order. This changes the level numbers players see.">
+              data-confirm="Reorder all levels by difficulty? Easy levels move first, then medium, then hard; within each, levels with fewer words come first. This changes the level numbers players see.">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button class="btn btn-sm btn-kd-outline" type="submit">
             <i data-lucide="arrow-up-down" width="14" height="14" class="me-1"></i>Order by difficulty
           </button>
-          <span class="small kd-faint">Within each pack: easy → hard, then fewer words, then the current order.</span>
+          <span class="small kd-faint">All levels: easy → medium → hard, then fewer words, then the current order.</span>
         </form>
       <% } %>
 
@@ -41,13 +41,12 @@
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>#</th><th>Title</th><th>Pack</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
+              <thead><tr><th>#</th><th>Title</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
               <tbody>
                 <% let shown = 0; levels.forEach((l, i) => { if (l.published) shown++; %>
                   <tr>
                     <td class="kd-faint"><%= l.published ? shown : '—' %></td>
                     <td><a class="fw-semibold wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a></td>
-                    <td><%- include('partials/pack-chip', { color: l.packColor, title: l.packTitle }) %></td>
                     <td><%- include('partials/difficulty', { difficulty: l.difficulty }) %></td>
                     <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
                     <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>

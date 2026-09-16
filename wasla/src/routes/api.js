@@ -55,16 +55,8 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events }) {
     res.json(appConfig.get());
   });
 
-  router.get('/packs', cacheable, (_req, res) => {
-    res.json({ packs: repo.publishedPacks() });
-  });
-
-  router.get('/levels', cacheable, (req, res) => {
-    const { pack } = req.query;
-    if (pack !== undefined && typeof pack !== 'string') return res.status(400).json({ error: 'Give one pack slug.' });
-    // An unknown pack is an empty list, not an error: a pack the app cached
-    // may since have lost its last published level.
-    res.json({ levels: repo.publishedLevels(pack === undefined ? {} : { pack }) });
+  router.get('/levels', cacheable, (_req, res) => {
+    res.json({ levels: repo.publishedLevels() });
   });
 
   router.get('/levels/:number', cacheable, (req, res) => {

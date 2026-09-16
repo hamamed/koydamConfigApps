@@ -38,7 +38,7 @@
       <div class="ad-card">
         <div class="ad-table-wrap">
           <table class="ad-table wz-import">
-            <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Clue</th><th>Type</th><th>Media</th><th>Pack</th><th>Level</th></tr></thead>
+            <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
             <tbody>
               <% plan.forEach((p) => { %>
                 <tr class="<%= p.error ? 'wz-row-error' : '' %>">
@@ -69,7 +69,6 @@
                       <audio class="wz-audio-sm" controls preload="none" src="<%= audioUrl(p.input.audioFile) %>"></audio>
                     <% } %>
                   </td>
-                  <td><% if (!p.error) { %><span class="kd-mono small"><%= p.packSlug || 'general' %></span><% } %></td>
                   <td>
                     <% if (!p.error && p.levelTitle) { %>
                       <span class="wz-ar"><%= p.levelTitle %></span>

@@ -19,14 +19,13 @@ let level;
 before(async () => {
   db = openDatabase(':memory:');
   repo = createRepository(db);
-  const pack = repo.createPack({ title: 'بلدان وعواصم', slug: 'countries', color: '#14A49E', icon: 'globe.europe.africa.fill' }).pack;
   const ids = [
     repo.createQuestion({ answer: 'المغرب', clue: 'بلد عاصمته الرباط', imageFile: 'aaaaaaaaaaaaaaaaaaaaaaaa.jpg', zoom: 2, focusX: 0.25, focusY: 0.75, blurred: true }),
     repo.createQuestion({ answer: 'مصر', clue: 'بلد الأهرامات', emoji: '🇪🇬🐪' }),
     repo.createQuestion({ answer: 'باريس', clue: 'عاصمة فرنسا', audioFile: 'bbbbbbbbbbbbbbbbbbbbbbbb.m4a' }),
     repo.createQuestion({ answer: 'أسد', clue: 'ملك الغابة' }),
   ].map((r) => r.question.id);
-  level = repo.createLevel('بلدان', { packId: pack.id, difficulty: 'easy' });
+  level = repo.createLevel('بلدان', { difficulty: 'easy' });
   repo.setLevelQuestions(level.id, ids);
   assert.equal(repo.setPublished(level.id, true).error, undefined);
   repo.createLevel('مسودة');
@@ -59,22 +58,23 @@ test('lists published levels only', async () => {
   assert.deepEqual(body.levels.map((l) => [l.number, l.title, l.wordCount]), [[1, 'بلدان', 4]]);
 });
 
-test('level summaries carry their pack, difficulty and position in the pack', async () => {
+test('level summaries carry difficulty and no pack fields', async () => {
   const all = await (await fetch(`${base}/levels`)).json();
-  assert.deepEqual([all.levels[0].pack, all.levels[0].difficulty], ['countries', 'easy']);
+  assert.deepEqual(Object.keys(all.levels[0]).sort(), ['cols', 'difficulty', 'number', 'rows', 'title', 'updatedAt', 'wordCount']);
+  assert.equal(all.levels[0].difficulty, 'easy');
 
-  const inPack = await (await fetch(`${base}/levels?pack=countries`)).json();
-  assert.deepEqual(inPack.levels.map((l) => [l.number, l.packPosition]), [[1, 1]]);
-
-  const none = await (await fetch(`${base}/levels?pack=general`)).json();
-  assert.deepEqual(none.levels, []);
+  // A leftover ?pack= from an old app is ignored: the same single run comes back.
+  const filtered = await (await fetch(`${base}/levels?pack=countries`)).json();
+  assert.deepEqual(filtered, all);
 });
 
 test('a level carries its grid, clues and image framing', async () => {
   const body = await (await fetch(`${base}/levels/1`)).json();
 
   assert.equal(body.number, 1);
-  assert.deepEqual([body.pack, body.difficulty], ['countries', 'easy']);
+  assert.equal(body.difficulty, 'easy');
+  assert.equal('pack' in body, false);
+  assert.equal('packPosition' in body, false);
   assert.ok(body.rows > 0 && body.cols > 0);
   const morocco = body.words.find((w) => w.answer === 'المغرب');
   assert.deepEqual(morocco.image, {
@@ -113,11 +113,9 @@ test('an unknown or unpublished level is a 404 with a message', async () => {
   }
 });
 
-test('packs lists only packs with published levels', async () => {
-  const body = await (await fetch(`${base}/packs`)).json();
-  assert.deepEqual(body, { packs: [
-    { slug: 'countries', title: 'بلدان وعواصم', color: '#14A49E', icon: 'globe.europe.africa.fill', levelCount: 1, position: 1 },
-  ] });
+test('there is no packs endpoint', async () => {
+  const res = await fetch(`${base}/packs`);
+  assert.equal(res.status, 404);
 });
 
 test('config returns the contract defaults', async () => {

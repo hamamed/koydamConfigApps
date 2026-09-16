@@ -6,12 +6,10 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
-import { PACK_COLORS } from '../packs.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
 import { DIFFICULTIES, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerImport } from './admin-import.js';
-import { registerPacks } from './admin-packs.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
 
@@ -246,13 +244,13 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
   // ── Levels ────────────────────────────────────────────────────────────────
 
   router.get('/levels', (_req, res) => {
-    res.render('levels', { title: 'Levels', levels: repo.listLevels(), packColors: PACK_COLORS });
+    res.render('levels', { title: 'Levels', levels: repo.listLevels() });
   });
 
   router.post('/levels/order-by-difficulty', (req, res) => {
     const moved = repo.orderByDifficulty();
     req.flash('success', moved
-      ? `Reordered: ${moved} level(s) moved. Inside each pack, easy levels come first, then fewer words.`
+      ? `Reordered: ${moved} level(s) moved. Easy levels come first, then medium, then hard; fewer words first within each.`
       : 'Already in order — nothing moved.');
     res.redirect('/admin/levels');
   });
@@ -280,7 +278,6 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
       level,
       cells: [...cells.values()],
       questions: repo.listQuestions(),
-      packs: repo.listPacks(),
       difficulties: DIFFICULTIES,
       chosen,
       number: level.published ? repo.listLevels().filter((l) => l.published).findIndex((l) => l.id === level.id) + 1 : null,
@@ -303,8 +300,8 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
   });
 
   levelAction('details', (id, req) => {
-    const result = repo.setLevelDetails(id, { packId: req.body.packId, difficulty: req.body.difficulty });
-    req.flash(result.error ? 'danger' : 'success', result.error ?? 'Pack and difficulty saved.');
+    const result = repo.setLevelDetails(id, { difficulty: req.body.difficulty });
+    req.flash(result.error ? 'danger' : 'success', result.error ?? 'Difficulty saved.');
   });
 
   levelAction('words', (id, req) => {
@@ -338,7 +335,6 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     return '/admin/levels';
   });
 
-  registerPacks(router, { repo });
   registerDaily(router, { repo, daily });
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports });

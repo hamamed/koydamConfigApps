@@ -149,99 +149,66 @@ test('the blur flag is kept only with a picture', () => {
   assert.equal(without.blurred, false);
 });
 
-// ── Packs ───────────────────────────────────────────────────────────────────
+// ── Level details ───────────────────────────────────────────────────────────
 
-const packInput = (over = {}) => ({ title: 'بلدان وعواصم', slug: 'countries', color: '#14A49E', icon: 'globe.europe.africa.fill', ...over });
-
-test('a pack is created from the fixed colours and icons, with a unique slug', () => {
-  const { pack } = repo.createPack(packInput());
-  assert.deepEqual([pack.slug, pack.color, pack.icon, pack.position], ['countries', '#14A49E', 'globe.europe.africa.fill', 1]);
-
-  assert.match(repo.createPack(packInput()).error, /slug/i);
-  assert.match(repo.createPack(packInput({ slug: 'general' })).error, /reserved/i);
-  assert.match(repo.createPack(packInput({ slug: 'Bad Slug' })).error, /slug/i);
-  assert.match(repo.createPack(packInput({ slug: 'other', color: '#123456' })).error, /colour/i);
-  assert.match(repo.createPack(packInput({ slug: 'other', icon: 'nope' })).error, /icon/i);
-  assert.match(repo.createPack(packInput({ slug: 'other', title: ' ' })).error, /title/i);
-});
-
-test('packs can be edited, reordered and deleted, and deleting one leaves its levels unassigned', () => {
-  const one = repo.createPack(packInput()).pack;
-  const two = repo.createPack(packInput({ slug: 'animals', title: 'حيوانات' })).pack;
-  const level = repo.createLevel('x', { packId: two.id });
-
-  assert.equal(repo.updatePack(one.id, packInput({ title: 'دول' })).pack.title, 'دول');
-  repo.movePack(two.id, 'up');
-  assert.deepEqual(repo.listPacks().map((p) => p.slug), ['animals', 'countries']);
-
-  repo.deletePack(two.id);
-  assert.equal(repo.getLevel(level.id).packId, null);
-});
-
-test('only packs with published levels reach the app, with the built-in general pack for the rest', () => {
-  const countries = repo.createPack(packInput()).pack;
-  repo.createPack(packInput({ slug: 'empty', title: 'فارغ' }));
-  const { level } = sampleLevel();
-  repo.setLevelDetails(level.id, { packId: countries.id, difficulty: 'easy' });
-  repo.setPublished(level.id, true);
-
-  assert.deepEqual(repo.publishedPacks(), [
-    { slug: 'countries', title: 'بلدان وعواصم', color: '#14A49E', icon: 'globe.europe.africa.fill', levelCount: 1, position: 1 },
-  ]);
-
-  const other = sampleLevel().level;
-  repo.setPublished(other.id, true);
-  const general = repo.publishedPacks().find((p) => p.slug === 'general');
-  assert.deepEqual(general, { slug: 'general', title: 'عام', color: '#4E4A8C', icon: 'square.grid.3x3.fill', levelCount: 1, position: 3 });
-});
-
-test('published levels carry their pack and difficulty, and filter by pack with a position inside it', () => {
-  const countries = repo.createPack(packInput()).pack;
+test('published levels are one numbered run carrying their difficulty and no pack', () => {
   const a = sampleLevel().level;
   const b = sampleLevel().level;
-  const c = sampleLevel().level;
-  repo.setLevelDetails(a.id, { packId: countries.id, difficulty: 'hard' });
-  repo.setLevelDetails(c.id, { packId: countries.id, difficulty: 'easy' });
-  [a, b, c].forEach((l) => repo.setPublished(l.id, true));
+  repo.setLevelDetails(a.id, { difficulty: 'hard' });
+  [a, b].forEach((l) => repo.setPublished(l.id, true));
 
-  assert.deepEqual(repo.publishedLevels().map((l) => [l.number, l.pack, l.difficulty]),
-    [[1, 'countries', 'hard'], [2, 'general', 'medium'], [3, 'countries', 'easy']]);
-  assert.deepEqual(repo.publishedLevels({ pack: 'countries' }).map((l) => [l.number, l.packPosition]), [[1, 1], [3, 2]]);
-  assert.deepEqual(repo.publishedLevels({ pack: 'general' }).map((l) => [l.number, l.packPosition]), [[2, 1]]);
-  assert.deepEqual(repo.publishedLevels({ pack: 'nope' }), []);
+  const levels = repo.publishedLevels();
+  assert.deepEqual(levels.map((l) => [l.number, l.difficulty]), [[1, 'hard'], [2, 'medium']]);
+  for (const level of levels) {
+    assert.equal('pack' in level, false);
+    assert.equal('packPosition' in level, false);
+  }
+  assert.equal('pack' in repo.publishedLevel(1), false);
 });
 
-test('a level refuses an unknown pack or difficulty', () => {
+test('a level refuses an unknown difficulty', () => {
   const level = repo.createLevel('x');
-  assert.match(repo.setLevelDetails(level.id, { packId: 999, difficulty: 'easy' }).error, /pack/i);
-  assert.match(repo.setLevelDetails(level.id, { packId: null, difficulty: 'extreme' }).error, /difficulty/i);
+  assert.match(repo.setLevelDetails(level.id, { difficulty: 'extreme' }).error, /difficulty/i);
+  assert.equal(repo.setLevelDetails(level.id, { difficulty: 'easy' }).level.difficulty, 'easy');
+});
+
+test('a level still assigned to a legacy pack row reads and publishes normally', () => {
+  const db = openDatabase(':memory:');
+  const legacy = createRepository(db);
+  db.prepare("INSERT INTO packs (slug, title, color, icon, position) VALUES ('old', 'قديم', '#14A49E', 'star.fill', 1)").run();
+  const ids = ['مصر', 'مرس'].map((answer) => legacy.createQuestion({ answer, clue: 'x' }).question.id);
+  const level = legacy.createLevel('x');
+  legacy.setLevelQuestions(level.id, ids);
+  db.prepare('UPDATE levels SET pack_id = 1 WHERE id = ?').run(level.id);
+  legacy.setPublished(level.id, true);
+
+  assert.deepEqual(legacy.publishedLevels().map((l) => [l.number, l.title]), [[1, 'x']]);
 });
 
 // ── Difficulty ordering ─────────────────────────────────────────────────────
 
-test('ordering by difficulty sorts inside each pack by difficulty, then word count, then position', () => {
-  const p = repo.createPack(packInput()).pack;
-  const make = (title, packId, difficulty, words) => {
-    const level = repo.createLevel(title, { packId, difficulty });
+test('ordering by difficulty sorts all levels together by difficulty, then word count, then position', () => {
+  const make = (title, difficulty, words) => {
+    const level = repo.createLevel(title, { difficulty });
     const ids = ['مصر', 'مرس', 'سمر', 'رسم'].slice(0, words)
       .map((answer) => repo.createQuestion({ answer, clue: 'x' }).question.id);
     repo.setLevelQuestions(level.id, ids);
     return level;
   };
-  make('p-hard', p.id, 'hard', 2);
-  make('g-medium', null, 'medium', 2);
-  make('p-easy-big', p.id, 'easy', 3);
-  make('g-easy', null, 'easy', 2);
-  make('p-easy-small', p.id, 'easy', 2);
-  make('p-medium', p.id, 'medium', 2);
-  make('p-easy-small-later', p.id, 'easy', 2);
+  make('hard', 'hard', 2);
+  make('medium-a', 'medium', 2);
+  make('easy-big', 'easy', 3);
+  make('easy-a', 'easy', 2);
+  make('easy-b', 'easy', 2);
+  make('medium-small', 'medium', 1);
+  make('easy-c', 'easy', 2);
 
   const moved = repo.orderByDifficulty();
 
-  // Each pack keeps the slots it had; only the order inside it changes.
   assert.deepEqual(repo.listLevels().map((l) => l.title), [
-    'p-easy-small', 'g-easy', 'p-easy-small-later', 'g-medium', 'p-easy-big', 'p-medium', 'p-hard',
+    'easy-a', 'easy-b', 'easy-c', 'easy-big', 'medium-small', 'medium-a', 'hard',
   ]);
+  assert.deepEqual(repo.listLevels().map((l) => l.position), [1, 2, 3, 4, 5, 6, 7]);
   assert.ok(moved > 0);
   assert.equal(repo.orderByDifficulty(), 0);
 });

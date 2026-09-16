@@ -8,9 +8,10 @@
  */
 
 import { parseCsv } from './csv.js';
-import { GENERAL_PACK } from './packs.js';
 
-export const IMPORT_COLUMNS = ['answer', 'clue', 'category', 'type', 'emoji', 'image', 'zoom', 'focus_x', 'focus_y', 'blurred', 'audio', 'pack', 'level'];
+export const IMPORT_COLUMNS = ['answer', 'clue', 'category', 'type', 'emoji', 'image', 'zoom', 'focus_x', 'focus_y', 'blurred', 'audio', 'level'];
+/** Columns older CSVs may still carry; read past without complaint. `pack` is from removed level packs. */
+const IGNORED_COLUMNS = ['pack'];
 export const MAX_IMPORT_ROWS = 1000;
 const MAX_LEVEL_TITLE = 80;
 
@@ -25,7 +26,7 @@ export function readImportCsv(text) {
   if (!table.length) return { error: 'The CSV is empty. The first line must name the columns.' };
 
   const header = table[0].map((name) => name.trim().toLowerCase());
-  const unknown = header.filter((name) => !IMPORT_COLUMNS.includes(name));
+  const unknown = header.filter((name) => !IMPORT_COLUMNS.includes(name) && !IGNORED_COLUMNS.includes(name));
   if (unknown.length) return { error: `Unknown column${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. The columns are: ${IMPORT_COLUMNS.join(', ')}.` };
   const repeated = header.filter((name, i) => header.indexOf(name) !== i);
   if (repeated.length) return { error: `Column named twice: ${repeated.join(', ')}.` };
@@ -61,7 +62,6 @@ function mediaFor(name, kind, media) {
  * `{ kind: 'image' | 'audio', file }`, the name it was stored under.
  */
 export function planImport(repo, rows, media) {
-  const packs = new Map(repo.listPacks().map((p) => [p.slug, p]));
   const levelsNamed = new Map();
 
   return rows.map(({ row, values, extra }) => {
@@ -73,10 +73,6 @@ export function planImport(repo, rows, media) {
     if (image.error) return fail(image.error);
     const audio = mediaFor(values.audio, 'audio', media);
     if (audio.error) return fail(audio.error);
-
-    const slug = (values.pack ?? '').toLowerCase();
-    const pack = slug && slug !== GENERAL_PACK.slug ? packs.get(slug) : null;
-    if (slug && slug !== GENERAL_PACK.slug && !pack) return fail(`There is no pack with the slug “${values.pack}”.`);
 
     const levelTitle = (values.level ?? '').slice(0, MAX_LEVEL_TITLE);
     if (levelTitle && !levelsNamed.has(levelTitle)) levelsNamed.set(levelTitle, repo.findLevelByTitle(levelTitle));
@@ -105,8 +101,6 @@ export function planImport(repo, rows, media) {
       playAnswer: check.question.playAnswer,
       storedAnswer: check.question.answer,
       type: check.question.type,
-      packId: pack?.id ?? null,
-      packSlug: pack?.slug ?? null,
       levelTitle: levelTitle || null,
       levelIsNew: Boolean(levelTitle) && !levelsNamed.get(levelTitle),
     };
@@ -127,15 +121,14 @@ export function commitImport(repo, plan) {
       const created = repo.createQuestion(p.input);
       if (created.error) throw Object.assign(new Error(`Row ${p.row}: ${created.error}`), { status: 400 });
       if (p.levelTitle) {
-        const entry = byLevel.get(p.levelTitle) ?? { packId: p.packId, ids: [] };
-        byLevel.set(p.levelTitle, { ...entry, ids: [...entry.ids, created.question.id] });
+        const ids = byLevel.get(p.levelTitle) ?? [];
+        byLevel.set(p.levelTitle, [...ids, created.question.id]);
       }
     }
 
-    const levels = [...byLevel].map(([title, { packId, ids }]) => {
+    const levels = [...byLevel].map(([title, ids]) => {
       const existing = repo.findLevelByTitle(title);
-      // An existing level keeps its pack; a new one goes in the pack its first row named.
-      const level = existing ?? repo.createLevel(title, { packId });
+      const level = existing ?? repo.createLevel(title);
       const current = [...level.words, ...level.unplaced].map((w) => w.id);
       const { layout, unpublished } = repo.setLevelQuestions(level.id, [...current, ...ids]);
       return { id: level.id, title, created: !existing, added: ids.length, unplaced: layout.unplaced.length, unpublished };

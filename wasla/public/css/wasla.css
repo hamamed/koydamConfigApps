@@ -135,43 +135,6 @@
 /* Difficulty chip: kd-tag has ok and warn; hard needs red. */
 .wz-tag-hard { background: #fef2f2; border-color: #fecaca; color: var(--kd-danger); }
 
-/* Pack chip and tile, coloured by the pack. */
-.wz-pack-chip { gap: .35rem; }
-.wz-dot-color { width: 8px; height: 8px; border-radius: 50%; background: var(--wz-pack); flex-shrink: 0; }
-.wz-pack-tile {
-  display: inline-grid; place-items: center;
-  width: 30px; height: 30px; border-radius: 9px;
-  background: var(--wz-pack); color: #fff;
-}
-
-/* Pack form: colour swatches and icon picker, radio inputs underneath. */
-.wz-swatches { display: flex; flex-wrap: wrap; gap: .5rem; }
-.wz-swatch { display: grid; justify-items: center; gap: .2rem; cursor: pointer; }
-.wz-swatch input, .wz-icon-option input { position: absolute; opacity: 0; pointer-events: none; }
-.wz-swatch span {
-  width: 36px; height: 36px; border-radius: 10px;
-  background: var(--wz-pack);
-  box-shadow: inset 0 0 0 1px rgba(11, 18, 32, .12);
-  transition: box-shadow var(--kd-fast) var(--kd-ease);
-}
-.wz-swatch small { font-size: .68rem; color: var(--kd-muted); }
-.wz-swatch input:checked + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kd-ink); }
-.wz-swatch input:focus-visible + span { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--kd-accent); }
-
-.wz-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: .4rem; }
-.wz-icon-option { position: relative; cursor: pointer; }
-.wz-icon-face {
-  display: grid; justify-items: center; gap: .35rem;
-  padding: .7rem .35rem .5rem;
-  border: 1px solid var(--kd-line); border-radius: var(--kd-radius-sm);
-  color: var(--kd-ink-2); text-align: center;
-  transition: border-color var(--kd-fast) var(--kd-ease), background var(--kd-fast) var(--kd-ease);
-}
-.wz-icon-face small { font-size: .62rem; line-height: 1.25; color: var(--kd-muted); word-break: break-word; }
-.wz-icon-option:hover .wz-icon-face { background: var(--kd-surface); }
-.wz-icon-option input:checked + .wz-icon-face { border-color: var(--kd-accent); background: var(--kd-accent-soft); color: var(--kd-accent-ink); }
-.wz-icon-option input:focus-visible + .wz-icon-face { outline: 2px solid var(--kd-accent); outline-offset: 2px; }
-
 /* Daily puzzle */
 .wz-daily-select { min-width: 14rem; }
 

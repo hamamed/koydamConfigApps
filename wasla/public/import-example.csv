@@ -1,7 +1,7 @@
-answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,pack,level
-المغرب,بلد عاصمته الرباط,بلدان,,,,,,,,,countries,بلدان وعواصم
-أسد,ملك الغابة,حيوانات,image,,lion.jpg,2.5,0.4,0.35,yes,,animals,حيوانات
-مصر,"بلد فيه الأهرامات، ونهر ""النيل""",بلدان,emoji,🇪🇬🐪,,,,,,,countries,بلدان وعواصم
+answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,level
+المغرب,بلد عاصمته الرباط,بلدان,,,,,,,,,بلدان وعواصم
+أسد,ملك الغابة,حيوانات,image,,lion.jpg,2.5,0.4,0.35,yes,,حيوانات
+مصر,"بلد فيه الأهرامات، ونهر ""النيل""",بلدان,emoji,🇪🇬🐪,,,,,,,بلدان وعواصم
 ديك,"صوت يوقظنا
-في الصباح",حيوانات,audio,,,,,,,rooster.m4a,animals,حيوانات
-قمر,يضيء السماء ليلًا,طبيعة,text,,,,,,,,,
+في الصباح",حيوانات,audio,,,,,,,rooster.m4a,حيوانات
+قمر,يضيء السماء ليلًا,طبيعة,text,,,,,,,,

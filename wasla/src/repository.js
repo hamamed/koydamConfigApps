@@ -7,7 +7,6 @@
 
 import { answerProblem, foldForPlay, normalizeAnswer } from './arabic.js';
 import { generateLayout } from './layout.js';
-import { createPackStore, GENERAL_PACK } from './packs.js';
 import { deriveType, emojiProblem, normalizeEmoji, QUESTION_TYPES, TYPE_NEEDS } from './question-types.js';
 
 export const MAX_CLUE = 200;
@@ -118,7 +117,6 @@ function readQuestion(input, current = {}) {
 
 export function createRepository(db) {
   const tx = (fn) => db.transaction(fn)();
-  const packs = createPackStore(db);
 
   // ── Questions ──────────────────────────────────────────────────────────────
 
@@ -235,17 +233,14 @@ export function createRepository(db) {
     updatedAt: iso(row.updated_at),
     wordCount: row.word_count ?? 0,
     unplacedCount: row.unplaced_count ?? 0,
-    packId: row.pack_id ?? null,
-    packSlug: row.pack_slug ?? GENERAL_PACK.slug,
-    packTitle: row.pack_title ?? GENERAL_PACK.title,
-    packColor: row.pack_color ?? GENERAL_PACK.color,
     difficulty: DIFFICULTIES.includes(row.difficulty) ? row.difficulty : 'medium',
   });
 
-  const LEVEL_SELECT = `SELECT l.*, p.slug AS pack_slug, p.title AS pack_title, p.color AS pack_color,
+  // levels.pack_id is a legacy column from removed packs; nothing reads it.
+  const LEVEL_SELECT = `SELECT l.*,
       (SELECT COUNT(*) FROM level_words lw WHERE lw.level_id = l.id) AS word_count,
       (SELECT COUNT(*) FROM level_words lw WHERE lw.level_id = l.id AND lw.direction IS NULL) AS unplaced_count
-    FROM levels l LEFT JOIN packs p ON p.id = l.pack_id`;
+    FROM levels l`;
 
   function listLevels() {
     return db.prepare(`${LEVEL_SELECT} ORDER BY l.position, l.id`).all().map(toLevel);
@@ -263,23 +258,21 @@ export function createRepository(db) {
     return row ? getLevel(row.id) : null;
   }
 
-  /** A validated pack id (null for general) and difficulty, or `{ error }`. */
-  function readLevelDetails({ packId, difficulty } = {}) {
-    const id = packId === undefined || packId === null || packId === '' || Number(packId) === 0 ? null : Number(packId);
-    if (id !== null && !packs.getPack(id)) return { error: 'That pack no longer exists.' };
+  /** A validated difficulty, or `{ error }`. */
+  function readLevelDetails({ difficulty } = {}) {
     const level = difficulty ?? 'medium';
     if (!DIFFICULTIES.includes(level)) return { error: `The difficulty is one of: ${DIFFICULTIES.join(', ')}.` };
-    return { packId: id, difficulty: level };
+    return { difficulty: level };
   }
 
   function createLevel(title, details = {}) {
-    const { packId, difficulty, error } = readLevelDetails(details);
+    const { difficulty, error } = readLevelDetails(details);
     // Callers check details first; reaching here with bad ones is a bug, not input.
     if (error) throw new Error(error);
     const clean = String(title ?? '').trim().slice(0, 80) || 'مستوى جديد';
     const { next } = db.prepare('SELECT IFNULL(MAX(position), 0) + 1 AS next FROM levels').get();
-    const { lastInsertRowid } = db.prepare('INSERT INTO levels (title, position, pack_id, difficulty) VALUES (?, ?, ?, ?)')
-      .run(clean, next, packId, difficulty);
+    const { lastInsertRowid } = db.prepare('INSERT INTO levels (title, position, difficulty) VALUES (?, ?, ?)')
+      .run(clean, next, difficulty);
     return getLevel(lastInsertRowid);
   }
 
@@ -291,10 +284,10 @@ export function createRepository(db) {
   }
 
   function setLevelDetails(id, details) {
-    const { packId, difficulty, error } = readLevelDetails(details);
+    const { difficulty, error } = readLevelDetails(details);
     if (error) return { error };
-    db.prepare("UPDATE levels SET pack_id = ?, difficulty = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(packId, difficulty, id);
+    db.prepare("UPDATE levels SET difficulty = ?, updated_at = datetime('now') WHERE id = ?")
+      .run(difficulty, id);
     return { level: getLevel(id) };
   }
 
@@ -389,29 +382,21 @@ export function createRepository(db) {
   }
 
   /**
-   * Sorts the levels of each pack: easy first, then fewer words, then the order
-   * they were already in. Each pack keeps the slots it held in the overall
-   * order, so packs stay interleaved the way the admin arranged them.
+   * Sorts every level together: easy, then medium, then hard; within each,
+   * fewer words first, then the order they were already in.
    *
    * Returns how many levels changed place.
    */
   function orderByDifficulty() {
     const levels = listLevels();
-    const slots = new Map();
-    levels.forEach((level, index) => {
-      const key = level.packId ?? 0;
-      slots.set(key, [...(slots.get(key) ?? []), { level, index }]);
-    });
-
-    const order = levels.map((l) => l.id);
     const rank = (d) => DIFFICULTIES.indexOf(d);
-    for (const entries of slots.values()) {
-      const sorted = [...entries].sort((a, b) =>
+    const order = levels
+      .map((level, index) => ({ level, index }))
+      .sort((a, b) =>
         rank(a.level.difficulty) - rank(b.level.difficulty)
         || a.level.wordCount - b.level.wordCount
-        || a.index - b.index);
-      entries.forEach(({ index }, k) => { order[index] = sorted[k].level.id; });
-    }
+        || a.index - b.index)
+      .map(({ level }) => level.id);
 
     const moved = order.filter((levelId, k) => levelId !== levels[k].id).length;
     tx(() => writeOrder(order));
@@ -423,34 +408,23 @@ export function createRepository(db) {
   /** Published levels in app order, each with its public summary. */
   function publishedEntries() {
     const rows = db.prepare(`${LEVEL_SELECT} WHERE l.published = 1 ORDER BY l.position, l.id`).all().map(toLevel);
-    const inPack = new Map();
-    return rows.map((level, i) => {
-      const packPosition = (inPack.get(level.packSlug) ?? 0) + 1;
-      inPack.set(level.packSlug, packPosition);
-      return {
-        id: level.id,
-        summary: {
-          number: i + 1,
-          title: level.title,
-          wordCount: level.wordCount,
-          rows: level.rows,
-          cols: level.cols,
-          updatedAt: level.updatedAt,
-          pack: level.packSlug,
-          difficulty: level.difficulty,
-          packPosition,
-        },
-      };
-    });
+    return rows.map((level, i) => ({
+      id: level.id,
+      summary: {
+        number: i + 1,
+        title: level.title,
+        wordCount: level.wordCount,
+        rows: level.rows,
+        cols: level.cols,
+        updatedAt: level.updatedAt,
+        difficulty: level.difficulty,
+      },
+    }));
   }
 
-  /** Summaries in app order; with `pack`, only that pack's, by position inside it. */
-  function publishedLevels({ pack } = {}) {
-    const summaries = publishedEntries().map((e) => e.summary);
-    if (pack === undefined) return summaries;
-    return summaries
-      .filter((s) => s.pack === pack)
-      .sort((a, b) => a.packPosition - b.packPosition || a.number - b.number);
+  /** Summaries in app order: one numbered run. */
+  function publishedLevels() {
+    return publishedEntries().map((e) => e.summary);
   }
 
   /** Level ids in public number order: index 0 is level 1. */
@@ -480,7 +454,6 @@ export function createRepository(db) {
   }
 
   return {
-    ...packs,
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
     listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,

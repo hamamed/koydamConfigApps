@@ -57,8 +57,7 @@
                        ['focus_y', '0 to 1. Blank is 0.5.'],
                        ['blurred', 'yes / 1 / true to start the picture blurred.'],
                        ['audio', 'File name of a sound uploaded alongside.'],
-                       ['pack', 'Slug of an existing pack. Blank or general: none.'],
-                       ['level', 'Level title to add the question to; created in the pack if missing.'],
+                       ['level', 'Level title to add the question to; created if missing.'],
                      ].forEach(([name, text]) => { %>
                     <tr><td class="kd-mono small"><%= name %></td><td class="small"><%= text %></td></tr>
                   <% }) %>

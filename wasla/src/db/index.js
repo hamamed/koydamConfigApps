@@ -24,7 +24,7 @@ const ADDITIVE_COLUMNS = [
   ['questions', 'image_blurred', 'INTEGER NOT NULL DEFAULT 0'],
   // A generated name under the audio directory, never a path.
   ['questions', 'audio_file', 'TEXT'],
-  // NULL is the built-in "general" pack.
+  // Unused legacy from removed level packs; kept so existing databases match. Nothing reads or writes it.
   ['levels', 'pack_id', 'INTEGER REFERENCES packs(id) ON DELETE SET NULL'],
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],
 ];
@@ -52,7 +52,7 @@ export function openDatabase(file) {
       database.exec("UPDATE questions SET type = 'image' WHERE image_file IS NOT NULL");
     }
   }
-  // Indexes on added columns can only be made once the columns exist.
+  // Indexes on added columns can only be made once the columns exist. (idx_levels_pack: unused legacy.)
   database.exec('CREATE INDEX IF NOT EXISTS idx_levels_pack ON levels(pack_id)');
   return database;
 }
