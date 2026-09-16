@@ -304,11 +304,8 @@ else
 fi
 
 # ── Backups ──────────────────────────────────────────────────────────────────
-say "Scheduling nightly backups"
-chmod +x "$APP_DIR/deploy/backup.sh"
-cat > /etc/cron.d/wasla-backup <<CRON
-0 3 * * * root APP_DIR=${APP_DIR} ${APP_DIR}/deploy/backup.sh >> /var/log/wasla-backup.log 2>&1
-CRON
+# No backup job of its own: the box's /opt/backup.sh names every service, and
+# Wasla has to be added there (database, .env, storage, unit) — see CLAUDE.md.
 
 say "Done"
 cat <<SUMMARY
