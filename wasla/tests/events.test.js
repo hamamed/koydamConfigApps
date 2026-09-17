@@ -144,6 +144,26 @@ test('word search events need level 0; found needs a word id, completed needs se
   ]);
 });
 
+test('daily game events need level 0, seconds and stars', () => {
+  const batch = readEventBatch({ device: DEVICE, events: [
+    { type: 'scramble_completed', level: 0, seconds: 40, stars: 3, at: AT },
+    { type: 'bubbles_completed', level: 0, seconds: 50, stars: 2, at: AT },
+    { type: 'groups_completed', level: 0, seconds: 60, stars: 0, at: AT },
+    { type: 'wheel_completed', level: 0, seconds: 70, stars: 1, at: AT },
+    { type: 'guess_completed', level: 0, seconds: 80, stars: 3, at: AT },
+    { type: 'guess_completed', level: 2, seconds: 80, stars: 3, at: AT },
+    { type: 'wheel_completed', level: 0, stars: 1, at: AT },
+    { type: 'groups_completed', level: 0, seconds: 60, stars: 5, at: AT },
+  ] });
+  assert.deepEqual(batch.events.map((e) => [e.type, e.seconds, e.stars]), [
+    ['scramble_completed', 40, 3],
+    ['bubbles_completed', 50, 2],
+    ['groups_completed', 60, 0],
+    ['wheel_completed', 70, 1],
+    ['guess_completed', 80, 3],
+  ]);
+});
+
 test('word search events stay out of question stats and get their own row in level stats', () => {
   record([
     open(words[0]),

@@ -33,6 +33,8 @@
                      ['streakBonusPerDay', 'Streak bonus per day', values.streakBonusPerDay, defaults.streakBonusPerDay],
                      ['streakBonusMax', 'Streak bonus cap', values.streakBonusMax, defaults.streakBonusMax],
                      ['streakFreezeCost', 'Streak freeze cost (coins to keep a streak after missing one day, 0 = off)', values.streakFreezeCost, defaults.streakFreezeCost],
+                     ['dailyGameCoins', 'Coins for each of the five daily games', values.dailyGameCoins, defaults.dailyGameCoins],
+                     ['dailyAllGamesBonus', 'Bonus for finishing all six daily games', values.dailyAllGamesBonus, defaults.dailyAllGamesBonus],
                    ].forEach(([name, label, value, fallback]) => { %>
                   <div class="row g-2 align-items-center">
                     <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>

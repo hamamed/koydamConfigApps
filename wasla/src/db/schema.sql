@@ -189,6 +189,13 @@ CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- The daily games' word lists (guess, wheel) once edited in the panel; a missing row reads as the built-in list.
+CREATE TABLE IF NOT EXISTS daily_game_lists (
+  name        TEXT PRIMARY KEY,
+  body        TEXT NOT NULL,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ── v5 ──────────────────────────────────────────────────────────────────────
 
 -- The daily word search planned in the panel: one frozen board per date. A

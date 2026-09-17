@@ -12,7 +12,7 @@ import { DAILY_TITLE } from '../level-label.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -95,6 +95,18 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     const board = wordSearchDays ? wordSearchDays.boardFor(parsed.date) : wordSearch.forDate(parsed.date);
     if (!board) return res.status(404).json({ error: 'There is no word search yet: no theme has enough words.' });
     res.json(board);
+  });
+
+  // The five daily games beside the word search (contract §6).
+  router.get('/daily-games', cacheable, (req, res) => {
+    const raw = req.query.date;
+    const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
+    if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
+    if (!dailyGames) return res.status(503).json({ error: 'The daily games are not available.' });
+
+    const set = dailyGames.forDate(parsed.date);
+    if (!set) return res.status(404).json({ error: 'There are no daily games yet.' });
+    res.json(set);
   });
 
   // ── Events ────────────────────────────────────────────────────────────────

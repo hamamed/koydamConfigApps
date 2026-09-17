@@ -31,6 +31,8 @@ export function registerSettings(router, { appConfig, siteSettings }) {
       starsPerLevel: body.starsPerLevel,
       streakFreezeCost: body.streakFreezeCost,
       wordSearchHelpCosts: { revealLetter: body.wordSearchRevealLetter, revealWord: body.wordSearchRevealWord },
+      dailyGameCoins: body.dailyGameCoins,
+      dailyAllGamesBonus: body.dailyAllGamesBonus,
     };
     const appStoreUrl = String(body.appStoreUrl ?? '');
     const link = readAppStoreUrl(appStoreUrl);

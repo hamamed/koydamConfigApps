@@ -17,6 +17,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   starsPerLevel: 2,
   streakFreezeCost: 50,
   wordSearchHelpCosts: Object.freeze({ revealLetter: 15, revealWord: 40 }),
+  dailyGameCoins: 15,
+  dailyAllGamesBonus: 50,
 });
 
 export const REWARD_DAYS = 7;
@@ -58,6 +60,10 @@ const FIELDS = {
     const revealWord = whole(v?.revealWord, 0, MAX_WORD_SEARCH_HELP_COST);
     return revealLetter === null || revealWord === null ? null : { revealLetter, revealWord };
   },
+  // Coins for each of the five daily games (contract §6), once per date.
+  dailyGameCoins: (v) => whole(v, 0, MAX_COINS),
+  // Once per date, for finishing the word search and all five games.
+  dailyAllGamesBonus: (v) => whole(v, 0, MAX_COINS),
 };
 
 const MESSAGES = {
@@ -70,6 +76,8 @@ const MESSAGES = {
   starsPerLevel: `Stars per level is a whole number from 0 to ${MAX_STARS_PER_LEVEL}.`,
   streakFreezeCost: `The streak freeze cost is a whole number of coins from 0 to ${MAX_STREAK_FREEZE_COST}.`,
   wordSearchHelpCosts: `Each word search help costs a whole number of coins from 0 to ${MAX_WORD_SEARCH_HELP_COST}.`,
+  dailyGameCoins: 'Daily game coins must be a whole number, 0 or more.',
+  dailyAllGamesBonus: 'The all-games bonus must be a whole number, 0 or more.',
 };
 
 export function createAppConfig(db) {

@@ -1,0 +1,143 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Daily games · ' + date,
+          subheading: 'The five games beside the word search, the same for every player on a date',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/daily-games?date=' + date + '" target="_blank" rel="noopener">View the JSON</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games?date=<%= previous %>">← <%= previous %></a>
+        <% if (date !== today) { %><a class="btn btn-sm btn-kd-outline" href="/admin/daily-games">Today</a><% } %>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games?date=<%= next %>"><%= next %> →</a>
+        <span class="small kd-muted ms-auto">Scramble, bubbles and groups come from the questions and their titles; wheel and guess from the lists below.</span>
+      </div>
+
+      <% if (!set) { %>
+        <div class="ad-card mb-3"><div class="ad-card-body">
+          <div class="ad-empty"><i data-lucide="gamepad-2"></i><p class="mb-0">No game can be built for <%= date %> yet.</p></div>
+        </div></div>
+      <% } else { %>
+        <div class="row g-3 mb-3">
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="shuffle" width="16" height="16"></i><span class="fw-semibold">Scramble · <span class="wz-ar">رتّب الحروف</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.scramble) { %><p class="small kd-muted mb-0">Needs 5 questions with a clue and a 3–7 letter answer.</p><% } else { %>
+                  <ul class="list-unstyled d-grid gap-2 mb-0">
+                    <% set.scramble.words.forEach((w) => { %>
+                      <li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-tag wz-ar"><%= w.letters %></span><div class="small kd-muted wz-ar"><%= w.clue %></div></li>
+                    <% }) %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="circle-dot" width="16" height="16"></i><span class="fw-semibold">Bubbles · <span class="wz-ar">فقاعات الكلمات</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.bubbles) { %><p class="small kd-muted mb-0">Needs a title with 5 answers of 4–8 letters.</p><% } else { %>
+                  <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= set.bubbles.theme %></span></div>
+                  <ul class="list-unstyled d-grid gap-1 mb-2">
+                    <% set.bubbles.words.forEach((w) => { %>
+                      <li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-faint small wz-ar"><%= w.parts.join(' · ') %></span></li>
+                    <% }) %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="layout-grid" width="16" height="16"></i><span class="fw-semibold">Groups · <span class="wz-ar">صِل المجموعات</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.groups) { %><p class="small kd-muted mb-0">Needs 4 titles with 4 different answers of 3–8 letters each.</p><% } else { %>
+                  <ul class="list-unstyled d-grid gap-2 mb-0">
+                    <% set.groups.groups.forEach((g) => { %>
+                      <li><span class="kd-tag kd-tag-accent wz-ar"><%= g.title %></span> <span class="wz-ar"><%= g.words.map((w) => w.display).join('، ') %></span></li>
+                    <% }) %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="circle-dashed" width="16" height="16"></i><span class="fw-semibold">Wheel · <span class="wz-ar">عجلة الحروف</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.wheel) { %><p class="small kd-muted mb-0">The wheel list is empty.</p><% } else { %>
+                  <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...set.wheel.letters].join(' ') %></span></div>
+                  <div class="wz-ar"><%= set.wheel.words.join('، ') %></div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="square-asterisk" width="16" height="16"></i><span class="fw-semibold">Guess · <span class="wz-ar">خمّن الكلمة</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.guess) { %><p class="small kd-muted mb-0">The guess list is empty.</p><% } else { %>
+                  <div class="wz-ar fw-semibold fs-4"><%= set.guess.display %></div>
+                  <div class="small kd-muted"><%= set.guess.tries %> tries</div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="coins" width="16" height="16"></i><span class="fw-semibold">Rewards</span></div>
+              <div class="ad-card-body small">
+                <p class="mb-1"><strong><%= set.coins %></strong> coins for each game, once a day.</p>
+                <p class="mb-1"><strong><%= set.allBonus %></strong> bonus coins for the word search and all five games.</p>
+                <p class="kd-muted mb-0">Change both on <a href="/admin/settings">Settings</a>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="row g-3">
+        <% ['guess', 'wheel'].forEach((name) => { const list = lists[name]; %>
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="list" width="16" height="16"></i>
+                <span class="fw-semibold me-auto"><%= labels[name] %></span>
+                <span class="kd-faint small"><%= list.count %> in use · <%= list.edited ? 'edited' : 'built-in' %></span>
+              </div>
+              <div class="ad-card-body">
+                <p class="small kd-muted">
+                  <% if (name === 'guess') { %>One word per line, exactly 5 letters once hamza forms are folded (أ → ا). One word a day, in a fixed shuffled order.<% } else { %>One set per line: <span class="kd-mono">letters: word word word</span>. 4–7 letters, 3–8 words, each spelled from the letters.<% } %>
+                </p>
+                <% if (list.problems.length) { %>
+                  <ul class="small text-danger mb-2">
+                    <% list.problems.slice(0, 12).forEach((p) => { %><li>Line <%= p.line %> <span class="wz-ar">“<%= p.text %>”</span>: <%= p.reason %></li><% }) %>
+                  </ul>
+                <% } %>
+                <form method="post" action="/admin/daily-games/lists/<%= name %>" class="d-grid gap-2">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <textarea class="form-control wz-ar ws-words-input" name="body" rows="14" spellcheck="false"><%= list.text %></textarea>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-kd-accent" type="submit">Save</button>
+                  </div>
+                </form>
+                <% if (list.edited) { %>
+                  <form method="post" action="/admin/daily-games/lists/<%= name %>/reset" class="mt-2" data-confirm="Replace this list with the built-in one?">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-kd-ghost" type="submit">Back to the built-in list</button>
+                  </form>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

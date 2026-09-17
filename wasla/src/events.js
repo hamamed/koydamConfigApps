@@ -12,7 +12,10 @@ import { levelLabel } from './level-label.js';
 export const EVENT_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left', 'level_completed'];
 /** The daily word search (contract §5). Always `level: 0`; `word` is a question id. */
 export const WORD_SEARCH_TYPES = ['wordsearch_started', 'wordsearch_word_found', 'wordsearch_completed'];
-const KNOWN_TYPES = [...EVENT_TYPES, ...WORD_SEARCH_TYPES];
+/** The five daily games (contract §6): one event each when finished, `level: 0`, with `seconds` and `stars`. */
+export const DAILY_GAME_TYPES = ['scramble_completed', 'bubbles_completed', 'groups_completed', 'wheel_completed', 'guess_completed'];
+const DAILY_TYPES = [...WORD_SEARCH_TYPES, ...DAILY_GAME_TYPES];
+const KNOWN_TYPES = [...EVENT_TYPES, ...DAILY_TYPES];
 /** The crossword's per-question events, which the question stats count. */
 const QUESTION_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left'];
 export const HELPS = ['revealLetter', 'removeLetters', 'solveWord', 'unzoomImage', 'unblurImage', 'askFriend'];
@@ -36,14 +39,14 @@ function readEvent(raw) {
   if (!isObject(raw) || !KNOWN_TYPES.includes(raw.type)) return null;
   if (!intIn(raw.level, 0, MAX_LEVEL)) return null;
   // The word search is only ever the daily puzzle.
-  if (WORD_SEARCH_TYPES.includes(raw.type) && raw.level !== 0) return null;
+  if (DAILY_TYPES.includes(raw.type) && raw.level !== 0) return null;
 
   const at = typeof raw.at === 'string' && !Number.isNaN(Date.parse(raw.at)) ? new Date(raw.at).toISOString() : null;
   const event = { type: raw.type, level: raw.level, word: null, help: null, seconds: null, stars: null, at };
 
   if (raw.type === 'wordsearch_started') return event;
 
-  if (raw.type === 'level_completed' || raw.type === 'wordsearch_completed') {
+  if (raw.type === 'level_completed' || raw.type === 'wordsearch_completed' || DAILY_GAME_TYPES.includes(raw.type)) {
     if (!secondsOk(raw.seconds) || !intIn(raw.stars, 0, 3)) return null;
     return { ...event, seconds: raw.seconds, stars: raw.stars };
   }

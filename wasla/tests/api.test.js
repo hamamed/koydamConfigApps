@@ -5,6 +5,7 @@ import express from 'express';
 
 import { createAppConfig } from '../src/app-config.js';
 import { createDaily } from '../src/daily.js';
+import { createDailyGames } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
 import { createEvents } from '../src/events.js';
 import { createRepository } from '../src/repository.js';
@@ -46,6 +47,7 @@ before(async () => {
     events: createEvents(db, repo),
     wordSearch,
     wordSearchDays,
+    dailyGames: createDailyGames(db, { appConfig: createAppConfig(db) }),
   }));
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -158,6 +160,8 @@ test('config returns the contract defaults', async () => {
     starsPerLevel: 2,
     streakFreezeCost: 50,
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
+    dailyGameCoins: 15,
+    dailyAllGamesBonus: 50,
   });
 });
 
@@ -299,4 +303,24 @@ test('events refuse a bad batch, a body over 64 kB and malformed JSON', async ()
   const broken = await post('/events', '{"device":');
   assert.equal(broken.status, 400);
   assert.ok((await broken.json()).error);
+});
+
+test('daily games: one set per date with the reward numbers; wheel and guess from the built-in lists', async () => {
+  const res = await fetch(`${base}/daily-games?date=2026-09-18`);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get('cache-control'), /max-age=60/);
+  assert.deepEqual([body.date, body.coins, body.allBonus], ['2026-09-18', 15, 50]);
+  // Only two titles have questions here: never enough for four groups.
+  assert.equal(body.groups, null);
+  assert.equal(body.guess.tries, 6);
+  assert.equal([...body.guess.word].length, 5);
+  assert.ok(body.wheel.words.length >= 3);
+  assert.deepEqual(await (await fetch(`${base}/daily-games?date=2026-09-18`)).json(), body);
+});
+
+test('daily games refuse a malformed date', async () => {
+  const res = await fetch(`${base}/daily-games?date=2026-13-01`);
+  assert.equal(res.status, 400);
+  assert.ok((await res.json()).error);
 });

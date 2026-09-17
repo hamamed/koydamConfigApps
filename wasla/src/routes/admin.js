@@ -10,6 +10,7 @@ import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
 import { previewLevel, STARTING_COINS } from '../preview.js';
 import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
+import { registerDailyGames } from './admin-daily-games.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { registerPlayers } from './admin-players.js';
@@ -24,7 +25,7 @@ const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames,
 }) {
   const router = express.Router();
 
@@ -355,6 +356,7 @@ export function adminRouter({
     registerDaily(router, { wordSearch, wordSearchDays });
     registerWordSearch(router, { wordSearch });
   }
+  if (dailyGames) registerDailyGames(router, { dailyGames });
   registerNotifications(router, { repo, devices, notifications, apnsCredentials });
 
   return router;
