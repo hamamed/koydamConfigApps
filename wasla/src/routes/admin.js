@@ -284,7 +284,8 @@ export function adminRouter({
       title: level.name,
       level,
       cells: [...cells.values()],
-      questions: repo.listQuestions(),
+      // A question belongs to one level: others' questions are not offered here.
+      questions: repo.questionsForLevel(level.id),
       difficulties: DIFFICULTIES,
       chosen,
     });
@@ -315,8 +316,10 @@ export function adminRouter({
   levelAction('words', (id, req) => {
     const raw = req.body.questions;
     const ids = Array.isArray(raw) ? raw : raw ? [raw] : [];
-    const { layout, unpublished } = repo.setLevelQuestions(id, ids);
-    if (unpublished) req.flash('warning', 'Saved, and unpublished: the grid can no longer be published as it is.');
+    const { layout, unpublished, skipped } = repo.setLevelQuestions(id, ids);
+    if (skipped.length) {
+      req.flash('warning', `${skipped.length} question(s) were left out because they are already in another level.`);
+    } else if (unpublished) req.flash('warning', 'Saved, and unpublished: the grid can no longer be published as it is.');
     else if (layout.unplaced.length) req.flash('warning', `Saved. ${layout.unplaced.length} word(s) do not cross the others yet.`);
     else req.flash('success', `Grid built from ${layout.placements.length} words.`);
   });

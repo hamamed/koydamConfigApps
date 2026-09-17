@@ -124,7 +124,7 @@
               </div>
               <div class="wz-picker">
                 <% if (!questions.length) { %>
-                  <p class="kd-faint small m-0">No questions in the bank yet.</p>
+                  <p class="kd-faint small m-0">No free questions: every question is already in a level. Add a new one.</p>
                 <% } %>
                 <% questions.forEach((q) => { %>
                   <label class="wz-pick" data-picker-item data-text="<%= q.answer %> <%= q.clue %> <%= q.title %>">
@@ -134,7 +134,6 @@
                       <span class="d-flex align-items-center gap-2"><span class="wz-answer"><%= q.answer %></span><% if (q.title) { %><span class="kd-tag wz-ar text-truncate"><%= q.title %></span><% } %></span>
                       <span class="wz-ar small kd-faint d-block text-truncate"><%= q.clue %></span>
                     </span>
-                    <% if (q.levelCount && !chosen.has(q.id)) { %><span class="kd-tag ms-auto">in <%= q.levelCount %></span><% } %>
                   </label>
                 <% }) %>
               </div>

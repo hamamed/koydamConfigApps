@@ -285,3 +285,29 @@ test('ordering by difficulty sorts all levels together by difficulty, then word 
   assert.ok(moved > 0);
   assert.equal(repo.orderByDifficulty(), 0);
 });
+
+// ── One level per question ──────────────────────────────────────────────────
+
+test('a question already in one level is not added to another', () => {
+  const ids = ['مصر', 'مرس', 'سمر'].map((answer) => repo.createQuestion({ answer, title: 'بلدان', clue: 'x' }).question.id);
+  const first = repo.createLevel();
+  const second = repo.createLevel();
+  repo.setLevelQuestions(first.id, [ids[0], ids[1]]);
+
+  const { skipped } = repo.setLevelQuestions(second.id, [ids[1], ids[2]]);
+
+  assert.deepEqual(skipped, [ids[1]]);
+  assert.deepEqual([...repo.getLevel(second.id).words, ...repo.getLevel(second.id).unplaced].map((w) => w.id), [ids[2]]);
+  // Saving the first level again with its own questions still works.
+  assert.deepEqual(repo.setLevelQuestions(first.id, [ids[0], ids[1]]).skipped, []);
+});
+
+test('questions free for a level: unused ones and its own, never another level\'s', () => {
+  const ids = ['مصر', 'مرس', 'سمر'].map((answer) => repo.createQuestion({ answer, title: 'بلدان', clue: 'x' }).question.id);
+  const first = repo.createLevel();
+  const second = repo.createLevel();
+  repo.setLevelQuestions(first.id, [ids[0]]);
+  repo.setLevelQuestions(second.id, [ids[1]]);
+
+  assert.deepEqual(repo.questionsForLevel(second.id).map((q) => q.id).sort(), [ids[1], ids[2]].sort());
+});

@@ -320,9 +320,28 @@ export function createRepository(db) {
     return layout;
   }
 
+  /** Ids of questions already placed in a level other than `levelId`. */
+  function usedElsewhere(levelId) {
+    return new Set(db.prepare('SELECT question_id FROM level_words WHERE level_id <> ?')
+      .all(levelId).map((r) => r.question_id));
+  }
+
+  /** The questions a level may use: those in no level yet, plus its own. */
+  function questionsForLevel(levelId) {
+    const taken = usedElsewhere(levelId);
+    return listQuestions().filter((q) => !taken.has(q.id));
+  }
+
+  /**
+   * Sets a level's questions. A question belongs to one level only, so any id
+   * already in another level is left out and reported in `skipped`.
+   */
   function setLevelQuestions(id, questionIds) {
-    const ids = [...new Set(questionIds.map(Number).filter(Number.isInteger))];
+    const requested = [...new Set(questionIds.map(Number).filter(Number.isInteger))];
     return tx(() => {
+      const taken = usedElsewhere(id);
+      const skipped = requested.filter((qid) => taken.has(qid));
+      const ids = requested.filter((qid) => !taken.has(qid));
       db.prepare('DELETE FROM level_words WHERE level_id = ?').run(id);
       const add = db.prepare('INSERT INTO level_words (level_id, question_id) SELECT ?, id FROM questions WHERE id = ?');
       for (const qid of ids) add.run(id, qid);
@@ -333,7 +352,7 @@ export function createRepository(db) {
         setPublishedRow(id, false);
         unpublished = true;
       }
-      return { layout, unpublished };
+      return { layout, unpublished, skipped };
     });
   }
 
@@ -469,7 +488,7 @@ export function createRepository(db) {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
     listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
-    listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, shuffleLevel,
+    listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty,
     publishedLevels, publishedLevelIds, publishedLevel, publishedLevelById, counts,
   };
