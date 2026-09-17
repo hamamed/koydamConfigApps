@@ -1,7 +1,7 @@
 /**
  * Player profiles and the leaderboards built on them (contract §7).
  *
- * A profile is a public username and an emoji avatar — no email, no password.
+ * A profile is a public username and an avatar icon — no email, no password.
  * Creating one returns a random token that the app keeps in the keychain and
  * sends as `Authorization: Bearer …`; only its SHA-256 is stored, so the
  * database alone cannot act as a player.
@@ -28,10 +28,11 @@ const MAX_TOTAL = 1_000_000_000;
 const MAX_BADGES = 100;
 const BADGE_ID = /^[a-z0-9][a-z0-9._-]{1,48}$/;
 
-/** The avatars a player can pick from. */
+/** The avatars a player can pick from: icon ids the app draws (asset `avatar-<id>`). */
 export const AVATARS = Object.freeze([
-  '🦁', '🐯', '🦊', '🐼', '🐨', '🐸', '🐵', '🦉', '🐧', '🐢', '🐬', '🦋',
-  '🐪', '🦅', '🐴', '🐙', '🌵', '🌴', '⭐', '🌙', '🔥', '⚡', '🎯', '🧠',
+  'paw', 'pet', 'fish', 'clownfish', 'blue-tang', 'rubber-duck', 'teddy-bear', 'cactus',
+  'palm-tree', 'flower', 'mushroom', 'tree', 'moon', 'planet', 'rainbow', 'volcano',
+  'star-gem', 'crystal-ball', 'dice', 'brain', 'anchor', 'balloon', 'paper-plane', 'seashell',
 ]);
 
 // Arabic letters, Arabic-Indic digits, Latin letters, digits and underscore.

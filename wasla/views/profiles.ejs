@@ -16,7 +16,7 @@
       </form>
 
       <p class="small kd-muted">
-        Players pick a public username and an emoji; nothing else identifies them. <strong>Ban</strong> hides a player from every
+        Players pick a public username and an avatar icon; nothing else identifies them. <strong>Ban</strong> hides a player from every
         leaderboard and stops new scores; <strong>Rename</strong> fixes a name that breaks the rules without losing their scores.
       </p>
 
@@ -31,7 +31,7 @@
                 <tbody>
                   <% rows.forEach((p) => { %>
                     <tr>
-                      <td><span class="me-1"><%= p.avatar %></span><span class="wz-ar fw-semibold"><%= p.username %></span></td>
+                      <td><span class="kd-tag me-1"><%= p.avatar %></span><span class="wz-ar fw-semibold"><%= p.username %></span></td>
                       <td class="text-end"><%= p.points %></td>
                       <td class="text-end"><%= p.streak %> <span class="kd-faint small">/ <%= p.best_streak %></span></td>
                       <td class="text-end"><%= p.levels_completed %></td>
