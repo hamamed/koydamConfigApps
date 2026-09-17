@@ -1,0 +1,28 @@
+<%- include('_head') %>
+  <meta name="robots" content="noindex">
+</head>
+<body class="wz-challenge-body">
+  <main class="wz-challenge">
+    <div class="wz-challenge-brand">
+      <img src="/assets/logo/logo.png" alt="" width="40" height="46">
+      <span>وصلة</span>
+    </div>
+
+    <section class="wz-challenge-card">
+      <p class="wz-challenge-kicker">عذراً</p>
+      <h1 class="wz-challenge-title">لم نجد هذا اللغز</h1>
+      <p class="wz-challenge-text">ربما الرابط ناقص، أو أن اللغز لم يُنشر بعد. افتح وصلة واختر لغزاً من القائمة.</p>
+      <div class="wz-challenge-actions">
+        <a class="wz-challenge-btn wz-challenge-btn-primary" href="wasla://">افتح وصلة</a>
+        <% if (appStoreUrl) { %>
+          <a class="wz-challenge-btn wz-challenge-btn-store" href="<%= appStoreUrl %>" rel="noopener">حمّل وصلة من App Store</a>
+        <% } %>
+      </div>
+    </section>
+
+    <footer class="wz-challenge-foot">
+      <a href="/privacy">الخصوصية</a> · <a href="/support">الدعم</a>
+    </footer>
+  </main>
+</body>
+</html>

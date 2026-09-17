@@ -134,3 +134,48 @@ CREATE TABLE IF NOT EXISTS imports (
   payload     TEXT NOT NULL,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ── v3 ──────────────────────────────────────────────────────────────────────
+
+-- The players dashboard: distinct devices per day, first-seen day per device
+-- (retention) and help counts over a window. Covering, so none reads the rows.
+CREATE INDEX IF NOT EXISTS idx_events_received_device ON events(received_at, device);
+CREATE INDEX IF NOT EXISTS idx_events_device_received ON events(device, received_at);
+CREATE INDEX IF NOT EXISTS idx_events_type_received ON events(type, received_at);
+CREATE INDEX IF NOT EXISTS idx_events_level_device ON events(type, level_id, device);
+
+-- Where to push. One row per install (`device` is the same random id events
+-- carry). `enabled` 0 means the player turned notifications off: the row stays,
+-- nothing is sent. APNs saying the token is dead also sets it to 0.
+CREATE TABLE IF NOT EXISTS devices (
+  device       TEXT PRIMARY KEY,
+  token        TEXT NOT NULL,             -- APNs device token, lower-case hex
+  platform     TEXT NOT NULL DEFAULT 'ios',
+  environment  TEXT NOT NULL CHECK (environment IN ('production', 'sandbox')),
+  enabled      INTEGER NOT NULL DEFAULT 1,
+  locale       TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  last_error   TEXT,                      -- APNs' reason on the last failed send
+  failures     INTEGER NOT NULL DEFAULT 0 -- failed sends since the last success
+);
+
+CREATE INDEX IF NOT EXISTS idx_devices_enabled ON devices(enabled, environment);
+CREATE INDEX IF NOT EXISTS idx_devices_token ON devices(token);
+
+-- Every notification sent from the panel, with what came of it.
+CREATE TABLE IF NOT EXISTS notifications (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  level       INTEGER,                    -- public level number the tap opens, or NULL
+  target      TEXT NOT NULL,              -- all | sandbox | device
+  device      TEXT,                       -- the one device, for a test send
+  total       INTEGER NOT NULL DEFAULT 0,
+  sent        INTEGER NOT NULL DEFAULT 0,
+  failed      INTEGER NOT NULL DEFAULT 0,
+  disabled    INTEGER NOT NULL DEFAULT 0,
+  errors      TEXT,                       -- JSON: APNs reason → count
+  created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

@@ -1,0 +1,45 @@
+<%
+  const targetLabel = { all: 'all devices with notifications on', sandbox: 'sandbox devices', device: 'one device (test)' };
+%>
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Send notification?', subheading: 'Check it once more — a push cannot be taken back' }) %>
+    <div class="ad-content">
+      <%- include('partials/notifications-tabs', { active: 'compose' }) %>
+      <div class="row g-3">
+        <div class="col-xl-6">
+          <div class="ad-card">
+            <div class="ad-card-body d-grid gap-3">
+              <div class="wz-push-preview" dir="rtl">
+                <img src="/assets/logo/logo.png" alt="" width="34" height="38">
+                <div class="min-w-0">
+                  <div class="wz-push-title"><%= message.title %></div>
+                  <div class="wz-push-body"><%= message.body %></div>
+                </div>
+              </div>
+              <dl class="row small mb-0">
+                <dt class="col-4">Goes to</dt>
+                <dd class="col-8"><strong><%= audience %></strong> <%= targetLabel[message.target] %><% if (message.device) { %> <span class="font-monospace"><%= message.device %></span><% } %></dd>
+                <dt class="col-4">Opens</dt>
+                <dd class="col-8"><%= message.level ? 'Level ' + message.level : 'The home screen' %></dd>
+              </dl>
+              <form method="post" action="/admin/notifications/send" class="d-flex gap-2 m-0">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="confirmed" value="1">
+                <% ['title', 'body', 'target', 'device'].forEach((key) => { %>
+                  <input type="hidden" name="<%= key %>" value="<%= message[key] ?? '' %>">
+                <% }) %>
+                <input type="hidden" name="level" value="<%= message.level ?? '' %>">
+                <button class="btn btn-kd" type="submit">Send to <%= audience %> device<%= audience === 1 ? '' : 's' %></button>
+                <a class="btn btn-kd-ghost" href="/admin/notifications">Cancel</a>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

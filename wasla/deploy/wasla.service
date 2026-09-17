@@ -13,8 +13,9 @@ ExecStart=/usr/bin/node src/server.js
 Restart=always
 RestartSec=3
 
-# The service writes to its database and its question media (storage/questions
-# and storage/audio, both under storage/), and nothing else on the box. ProtectSystem=strict makes the whole
+# The service writes to its database and the APNs key uploaded in the panel
+# (both under data/), its question media (storage/questions and storage/audio,
+# both under storage/), and nothing else on the box. ProtectSystem=strict makes the whole
 # filesystem read-only except what is named here — so a path left out of this
 # list is not a permissions problem to debug later, it is an EROFS at the
 # moment of writing.

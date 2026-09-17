@@ -3,6 +3,12 @@ node_modules/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+# The APNs signing key uploaded in the panel. Never in git.
+data/apns/
+*.p8
 .DS_Store
 storage/*
 !storage/.gitkeep
+
+# Icons from the licensed pack used by the iOS app must never be committed (public repo).
+public/preview-icons/

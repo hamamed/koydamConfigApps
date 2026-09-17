@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 
 import { parseDay, todayUtc } from '../daily.js';
+import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
 import { DAILY_TITLE } from '../level-label.js';
 
@@ -11,7 +12,7 @@ import { DAILY_TITLE } from '../level-label.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -100,12 +101,33 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events }) {
     res.status(202).json({ accepted: events.record(batch) });
   });
 
+  // ── Push registration ─────────────────────────────────────────────────────
+
+  // The app posts when its token or permission changes, which is rare; the
+  // same allowance as events is plenty.
+  const devicesLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 30,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: 'Too many registrations. Try again in a minute.' }),
+  });
+
+  router.post('/devices', devicesLimiter, express.json({ limit: '4kb' }), (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (!devices) return res.status(503).json({ error: 'Push registration is not available.' });
+    const { registration, error } = readDeviceRegistration(req.body);
+    if (error) return res.status(400).json({ error });
+    devices.register(registration);
+    res.status(204).end();
+  });
+
   // Body-parser errors (too large, not JSON) arrive here, and must still be JSON.
   // eslint-disable-next-line no-unused-vars
   router.use((err, _req, res, _next) => {
     const status = err.status || err.statusCode || 500;
     if (status >= 500) console.error(err);
-    const message = status === 413 ? 'The body is larger than 64 kB.'
+    const message = status === 413 ? `The body is larger than ${Math.round((err.limit || 64 * 1024) / 1024)} kB.`
       : err.type === 'entity.parse.failed' ? 'The body is not valid JSON.'
         : status >= 500 ? 'Something went wrong.' : err.message;
     res.status(status).json({ error: message });

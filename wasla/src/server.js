@@ -8,21 +8,28 @@ import session from 'express-session';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
+import { createApnsSender } from './apns.js';
+import { createApnsCredentials } from './apns-credentials.js';
 import { createAppConfig } from './app-config.js';
 import { createAudioStore } from './audio.js';
 import { config } from './config.js';
 import { createDaily } from './daily.js';
+import { createDevices } from './devices.js';
 import { db } from './db/index.js';
 import { createEvents } from './events.js';
 import { createImageStore } from './images.js';
 import { createMaintenance } from './maintenance.js';
+import { createNotifications } from './notifications.js';
+import { createPlayers } from './players.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { createPendingImports } from './pending-imports.js';
 import { createRepository } from './repository.js';
+import { createSiteSettings } from './site-settings.js';
 import { adminRouter } from './routes/admin.js';
 import { apiRouter } from './routes/api.js';
+import { challengeRouter } from './routes/challenge.js';
 import { legalRouter } from './routes/legal.js';
 
 const repo = createRepository(db);
@@ -32,6 +39,11 @@ const daily = createDaily(db, repo);
 const appConfig = createAppConfig(db);
 const events = createEvents(db, repo);
 const pendingImports = createPendingImports(db);
+const devices = createDevices(db);
+const siteSettings = createSiteSettings(db, { envAppStoreUrl: config.appStoreUrl });
+const apnsCredentials = createApnsCredentials(db, { dir: config.apnsDir });
+const notifications = createNotifications(db, { devices, credentials: apnsCredentials, sender: createApnsSender() });
+const players = createPlayers(db, { repo });
 
 const app = express();
 
@@ -51,7 +63,7 @@ app.use('/api', rateLimit({
   legacyHeaders: false,
   handler: (_req, res) => res.status(429).json({ error: 'Too many requests. Try again in a minute.' }),
 }));
-app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events }));
+app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events, devices }));
 
 // Question pictures and sounds. A replaced file gets a new generated name, so
 // a file at a given name never changes and can be cached for a long time.
@@ -67,6 +79,10 @@ app.set('view engine', 'ejs');
 app.locals.assetVersion = config.assetVersion;
 app.set('views', path.join(config.root, 'views'));
 app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '7d' }));
+
+// Challenge links and the apple-app-site-association file iOS fetches for
+// them. Public, no session, and ahead of the 404 handler.
+app.use(challengeRouter({ repo, publicUrl: config.publicUrl, siteSettings, assetVersion: config.assetVersion }));
 
 // Public pages the App Store listing links to. No session needed.
 app.use(legalRouter({ assetVersion: config.assetVersion }));
@@ -84,7 +100,9 @@ app.use(session({
 app.use(flash);
 app.use(loadUser);
 
-app.use('/admin', adminRouter({ repo, images, audio, daily, appConfig, events, pendingImports }));
+app.use('/admin', adminRouter({
+  repo, images, audio, daily, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players,
+}));
 app.get('/', (_req, res) => res.redirect('/admin'));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

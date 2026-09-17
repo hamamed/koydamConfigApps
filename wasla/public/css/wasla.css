@@ -180,3 +180,82 @@
 .wz-legal-mail { font-size: 1.15rem; font-weight: 700; }
 .wz-legal-rule { border: 0; margin: 1.5rem 0; }
 .wz-legal-foot { margin-top: 2rem; text-align: center; font-size: .8rem; color: var(--kd-faint); }
+
+/* ── v3 ───────────────────────────────────────────────────────────────────── */
+
+/* Challenge landing page (/c/:level): standalone, phone-first, the game's colours. */
+.wz-challenge-body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, .28) 0 38%, transparent 38%),
+    linear-gradient(62deg, transparent 55%, rgba(255, 255, 255, .2) 55%),
+    #d6eeea;
+  color: #1f2d3a;
+  font-family: Tajawal, "Geeza Pro", Tahoma, sans-serif;
+}
+.wz-challenge { max-width: 26rem; margin: 0 auto; padding: 1.5rem 1rem 2rem; display: grid; gap: 1.1rem; }
+.wz-challenge-brand { display: flex; align-items: center; justify-content: center; gap: .5rem; font-family: Lalezar, Tajawal, sans-serif; font-size: 2rem; color: #0e7f7a; }
+.wz-challenge-card {
+  background: #fff; border-radius: 26px; padding: 1.6rem 1.25rem 1.4rem; text-align: center;
+  box-shadow: 0 8px 16px rgba(14, 127, 122, .16);
+}
+.wz-challenge-kicker {
+  display: inline-block; margin: 0 0 .6rem; padding: .25rem 1rem .15rem;
+  border: 2.5px solid #1f2d3a; border-radius: 99px; background: #14a49e; color: #fff;
+  font-weight: 800; box-shadow: 0 3px 0 #1f2d3a;
+}
+.wz-challenge-title { margin: 0 0 1rem; font-family: Lalezar, Tajawal, sans-serif; font-weight: 400; font-size: 2.3rem; line-height: 1.2; color: #0e7f7a; }
+.wz-challenge-score { display: flex; justify-content: center; gap: .75rem; margin-bottom: 1rem; }
+.wz-challenge-stat { flex: 1 1 0; display: grid; gap: .2rem; padding: .7rem .5rem; border-radius: 16px; background: #eeedfb; }
+.wz-challenge-stat-value { font-size: 1.8rem; font-weight: 900; color: #4e4a8c; line-height: 1.2; }
+.wz-challenge-stat-label { font-size: .85rem; font-weight: 700; color: #5d7c80; }
+.wz-challenge-stars { font-size: 1.7rem; line-height: 1.25; letter-spacing: .1em; color: #c9c6ec; }
+.wz-challenge-star.is-earned { color: #f5c33b; }
+.wz-challenge-text { margin: 0 0 1.2rem; font-size: 1.15rem; font-weight: 700; }
+.wz-challenge-actions { display: grid; gap: .8rem; }
+.wz-challenge-btn {
+  display: block; padding: .85rem 1rem .7rem; border: 2.5px solid #1f2d3a; border-radius: 18px;
+  font-size: 1.2rem; font-weight: 800; text-decoration: none; box-shadow: 0 4px 0 #1f2d3a;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.wz-challenge-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #1f2d3a; }
+.wz-challenge-btn-primary { background: #f5c33b; color: #1f2d3a; }
+.wz-challenge-btn-store { background: #fff; color: #1f2d3a; font-size: 1rem; }
+.wz-challenge-foot { text-align: center; font-size: .85rem; color: #5d7c80; }
+.wz-challenge-foot a { color: #0e7f7a; }
+
+/* Notifications */
+.wz-tabs { border-radius: var(--kd-radius-sm); overflow: hidden; max-width: 22rem; border: 1px solid var(--kd-line); }
+.wz-level-input { max-width: 9rem; }
+.wz-notification-cell { max-width: 20rem; }
+.wz-device-id { max-width: 9rem; }
+.wz-push-preview {
+  display: flex; gap: .7rem; align-items: flex-start;
+  padding: .75rem .9rem; border-radius: 18px; background: var(--kd-surface-2);
+  font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif;
+}
+.wz-push-preview img { border-radius: 8px; flex-shrink: 0; }
+.wz-push-title { font-weight: 700; color: var(--kd-ink); }
+.wz-push-body { font-size: .9rem; color: var(--kd-ink-2); white-space: pre-wrap; }
+
+/* Players */
+.wz-chart-wrap { width: 100%; overflow-x: auto; }
+.wz-chart { display: block; width: 100%; min-width: 520px; height: auto; }
+.wz-chart-bar { fill: var(--wz-teal); }
+.wz-chart-bar:hover { fill: #0e7f7a; }
+.wz-chart-grid { stroke: var(--kd-line); stroke-width: 1; }
+.wz-chart-base { stroke: var(--kd-muted); stroke-width: 1; }
+.wz-chart-axis { fill: var(--kd-muted); font-size: 11px; font-family: Inter, system-ui, sans-serif; }
+.wz-funnel-col { width: 38%; min-width: 9rem; }
+.wz-funnel { position: relative; display: block; height: 14px; border-radius: 99px; background: var(--kd-surface-2); overflow: hidden; }
+.wz-funnel-open, .wz-funnel-done { position: absolute; inset-block: 0; inset-inline-start: 0; width: var(--wz-share, 0%); border-radius: 99px; }
+.wz-funnel-open { background: #b8e3df; }
+.wz-funnel-done { background: var(--wz-teal); }
+.wz-drop-row { background: #fffbeb; }
+.wz-drop-cell { color: var(--kd-danger); font-weight: 700; }
+.wz-help-row { display: grid; grid-template-columns: 9.5rem 1fr 5.5rem; align-items: center; gap: .6rem; }
+.wz-help-row .ad-meter, .wz-share-fill { display: block; }
+.wz-share-fill { width: var(--wz-share, 0%); background: var(--wz-teal); }
+/* KPI cards whose label wraps keep their number on the same baseline as the rest. */
+.wz-kpi { display: flex; flex-direction: column; justify-content: space-between; }

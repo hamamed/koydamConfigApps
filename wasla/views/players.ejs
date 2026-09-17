@@ -1,0 +1,145 @@
+<%
+  const pct = (n) => (n === null || n === undefined ? '—' : `${Math.round(n * 100)}%`);
+  const dropAt = (i, stage) => funnel.drop && funnel.drop.index === i && funnel.drop.stage === stage;
+%>
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Players', subheading: 'From anonymous gameplay events · days are UTC · today is ' + today }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <% [
+             ['Players today', kpis.today, 'user-check'],
+             ['Last 7 days', kpis.week, 'users'],
+             ['Last 30 days', kpis.month, 'users-round'],
+             ['Levels completed today', kpis.levelsCompletedToday, 'trophy'],
+             ['Daily puzzles today', kpis.dailyCompletedToday, 'calendar-check'],
+             ['Notifications on', kpis.notificationsEnabled, 'bell-ring'],
+           ].forEach(([label, value, glyph]) => { %>
+          <div class="col-6 col-md-4 col-xl-2">
+            <div class="ad-card ad-kpi wz-kpi h-100">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <span class="ad-kpi-label"><%= label %></span>
+              </div>
+              <div class="ad-kpi-value"><%= value %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="chart-column" width="16" height="16"></i>
+          <span class="fw-semibold">Players per day</span>
+          <span class="kd-faint small ms-auto">distinct devices, last 30 days</span>
+        </div>
+        <div class="ad-card-body">
+          <div class="wz-chart-wrap"><%- chart %></div>
+          <details class="mt-2">
+            <summary class="small kd-muted">Show as a table</summary>
+            <div class="ad-table-wrap mt-2">
+              <table class="ad-table">
+                <thead><tr><th>Day</th><th class="text-end">Players</th></tr></thead>
+                <tbody>
+                  <% [...perDay].reverse().forEach((d) => { %>
+                    <tr><td><%= d.date %></td><td class="text-end"><%= d.players %></td></tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-xl-7">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="filter" width="16" height="16"></i>
+              <span class="fw-semibold">Level funnel</span>
+              <span class="kd-faint small ms-auto">distinct devices, every retained event</span>
+            </div>
+            <div class="ad-card-body p-0">
+              <% if (!funnel.rows.length) { %>
+                <div class="ad-empty"><i data-lucide="filter"></i><p class="mb-0">No published levels.</p></div>
+              <% } else { %>
+                <% if (funnel.drop) { %>
+                  <p class="small mx-3 mt-3 mb-2">
+                    <span class="kd-tag kd-tag-warn">Biggest drop</span>
+                    <%= funnel.drop.lost %> player(s)
+                    <%= funnel.drop.stage === 'within'
+                        ? 'opened level ' + funnel.rows[funnel.drop.index].number + ' and did not complete it'
+                        : 'completed level ' + funnel.rows[funnel.drop.index].number + ' and did not open level ' + (funnel.rows[funnel.drop.index].number + 1) %>.
+                  </p>
+                <% } %>
+                <div class="ad-table-wrap">
+                  <table class="ad-table">
+                    <thead><tr><th>Level</th><th class="text-end">Opened</th><th class="text-end">Completed</th><th class="wz-funnel-col">of level 1 openers</th></tr></thead>
+                    <tbody>
+                      <% funnel.rows.forEach((r, i) => { %>
+                        <tr class="<%= dropAt(i, 'within') || dropAt(i, 'between') ? 'wz-drop-row' : '' %>">
+                          <td class="text-nowrap">Level <%= r.number %></td>
+                          <td class="text-end <%= dropAt(i - 1, 'between') ? 'wz-drop-cell' : '' %>"><%= r.opened %> <span class="kd-faint small"><%= pct(r.openedShare) %></span></td>
+                          <td class="text-end <%= dropAt(i, 'within') ? 'wz-drop-cell' : '' %>"><%= r.completed %> <span class="kd-faint small"><%= pct(r.completedShare) %></span></td>
+                          <td class="wz-funnel-col">
+                            <span class="wz-funnel" title="Opened <%= pct(r.openedShare) %>, completed <%= pct(r.completedShare) %>">
+                              <span class="wz-funnel-open" style="--wz-share: <%= Math.round((r.openedShare || 0) * 100) %>%"></span>
+                              <span class="wz-funnel-done" style="--wz-share: <%= Math.round((r.completedShare || 0) * 100) %>%"></span>
+                            </span>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-5 d-grid gap-3 align-content-start">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="life-buoy" width="16" height="16"></i>
+              <span class="fw-semibold">Helps</span>
+              <span class="kd-faint small ms-auto"><%= helps.total %> used, last 30 days</span>
+            </div>
+            <div class="ad-card-body d-grid gap-2">
+              <% helps.rows.forEach((h) => { %>
+                <div class="wz-help-row">
+                  <span class="small"><%= helpLabels[h.help] || h.help %></span>
+                  <span class="ad-meter"><span class="ad-meter-fill wz-share-fill" style="--wz-share: <%= Math.round(h.share * 100) %>%"></span></span>
+                  <span class="small text-end"><%= h.count %> <span class="kd-faint"><%= pct(h.share) %></span></span>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="repeat" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">Retention</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-3">
+                <% [['Day 1', retention.d1], ['Day 7', retention.d7]].forEach(([label, r]) => { %>
+                  <div class="col-6">
+                    <div class="ad-kpi-label"><%= label %></div>
+                    <div class="ad-kpi-value"><%= pct(r.rate) %></div>
+                    <div class="small kd-faint"><%= r.returned %> of <%= r.cohort %> new players came back on day <%= r.days %></div>
+                  </div>
+                <% }) %>
+              </div>
+              <p class="small kd-muted mt-3 mb-0">Players first seen on day X who played again on day X + 1 (or X + 7), over the last 30 first days whose return day has ended. "First seen" is the earliest event kept (<%= retentionDays %> days).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

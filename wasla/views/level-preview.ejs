@@ -1,0 +1,165 @@
+<%
+  const appTitle = 'لغز رقم ' + (level.publishedNumber ?? level.number);
+  // Stand-ins for the app's icons. The app uses a licensed icon pack that must not
+  // be redistributed, and this repository is public, so the panel draws emoji instead.
+  const glyphs = { back: '↩️', coin: '🪙', eye: '👁️', friends: '👥', lightbulb: '💡', magnifier: '🔍', 'pointing-hand': '👆', shrink: '↘️', trash: '🗑️' };
+  const icon = (name, size, cls = '') => `<span class="wp-icon wp-glyph ${cls}" aria-hidden="true" style="font-size:${Math.round(size * 0.8)}px;width:${size}px;height:${size}px">${glyphs[name] || '•'}</span>`;
+  const tile = preview.tile;
+  const radius = (tile * 0.2).toFixed(1);
+  const depth = Math.max(2, tile * 0.07).toFixed(1);
+%>
+<%- include('partials/head') %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=Lalezar&display=swap" rel="stylesheet">
+<link href="/assets/css/wasla-preview.css?v=<%= assetVersion %>" rel="stylesheet">
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Preview · Level ' + level.number,
+          subheading: (level.published ? 'Level ' + level.publishedNumber + ' in the app' : 'Draft — shown as it would look once published') + ' · iPhone 390 × 844',
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/levels/' + level.id + '">Back to level</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (!preview.words.length) { %>
+        <div class="ad-card ad-empty">
+          <i data-lucide="smartphone"></i>
+          <p class="mb-0">This level has no grid yet. Pick questions that cross, then preview it.</p>
+        </div>
+      <% } else { %>
+      <div class="wp-layout" data-preview>
+        <div class="wp-stage">
+          <div class="wp-phone">
+            <div class="wp-screen" dir="rtl" lang="ar">
+              <div class="wp-ground" aria-hidden="true">
+                <svg viewBox="0 0 1 1" preserveAspectRatio="none">
+                  <% [
+                       [[0.34, -0.05], [0.42, -0.05], [0.38, 0.1], 0.10],
+                       [[0.03, 1.05], [0.39, 0.1], [0.75, 1.05], 0.28],
+                       [[0.24, 1.05], [0.63, -0.05], [1.02, 1.05], 0.22],
+                       [[0.42, -0.05], [0.63, -0.05], [0.5, 0.25], 0.30],
+                       [[0.63, -0.05], [1.1, -0.05], [1.1, 0.72], 0.12],
+                       [[-0.1, 0.2], [0.25, 0.62], [-0.1, 1.05], 0.16],
+                     ].forEach(([a, b, c, white]) => { %>
+                    <polygon points="<%= [a, b, c].map((p) => p.join(',')).join(' ') %>" fill="#fff" fill-opacity="<%= white %>"/>
+                  <% }) %>
+                </svg>
+              </div>
+
+              <div class="wp-status" dir="ltr"><span>9:41</span><span class="wp-island"></span><span class="wp-status-icons">●●● ▮</span></div>
+
+              <header class="wp-nav">
+                <button class="wp-back" type="button" data-back aria-label="رجوع"><%- icon('back', 24, 'wp-mirror') %></button>
+                <h2 class="wp-title"><%= appTitle %></h2>
+                <span class="wp-coins"><%- icon('coin', 20) %><span><%= coins %></span></span>
+              </header>
+
+              <!-- Grid page -->
+              <section class="wp-page wp-board is-shown" data-page="grid">
+                <div class="wp-board-space">
+                  <div class="wp-grid" style="--rows: <%= level.rows %>; --cols: <%= level.cols %>; --tile: <%= tile %>px; --tile-radius: <%= radius %>px; --tile-depth: <%= depth %>px">
+                    <% preview.cells.forEach((cell) => { %>
+                      <button class="wp-tile" type="button" style="grid-row: <%= cell.row + 1 %>; grid-column: <%= cell.col + 1 %>"
+                              data-words="<%= cell.words.join(',') %>" aria-label="خانة من <%= cell.words.map((i) => preview.words[i].answer).join(' و ') %>"></button>
+                    <% }) %>
+                  </div>
+                </div>
+                <div class="wp-card wp-footer">
+                  <div class="wp-progress"><span></span></div>
+                  <div class="wp-footer-count">0 من <%= preview.words.length %> محلولة</div>
+                  <div class="wp-footer-hint"><%- icon('pointing-hand', 16) %><span>اسحب فوق مربعين من الكلمة لاختيار سؤالها</span></div>
+                </div>
+              </section>
+
+              <!-- Question pages -->
+              <% preview.words.forEach((w) => { const L = w.layout; %>
+                <section class="wp-page wp-question" data-page="word-<%= w.index %>"
+                         style="--gap: <%= L.spacing %>px; --outer: <%= L.outerPadding %>px; --card-pad: <%= L.cardPadding %>px; --panel-pad: <%= L.panelPadding %>px; --stage: <%= L.stage %>px; --slot: <%= L.slotSide %>px; --key-row: <%= L.keyRowSpacing %>px; --helps: <%= L.helpsHeight %>px; --clue: <%= L.clueFontSize %>px; --title-h: <%= L.titleHeight %>px; --title-size: <%= L.titleFontSize %>px">
+                  <div class="wp-card wp-qcard">
+                    <% if (w.title) { %><div class="wp-chip"><%= w.title %></div><% } %>
+
+                    <% if (w.stage === 'picture') { %>
+                      <div class="wp-picture">
+                        <img src="/media/questions/<%= w.imageFile %>" alt="" class="<%= w.blurred ? 'is-blurred' : '' %>"
+                             style="--zoom: <%= w.zoom %>; --fx: <%= (w.focusX * 100).toFixed(1) %>%; --fy: <%= (w.focusY * 100).toFixed(1) %>%; --blur: <%= (L.stage * 0.075).toFixed(1) %>px">
+                      </div>
+                    <% } else if (w.stage === 'emoji') { %>
+                      <div class="wp-panel wp-emoji" dir="ltr"><span><%= w.emoji %></span></div>
+                    <% } else if (w.stage === 'audio') { %>
+                      <div class="wp-panel wp-audio" dir="ltr">
+                        <% [0, 1].forEach((side) => { %>
+                          <% if (side === 1) { %>
+                            <button class="wp-play" type="button" data-play aria-label="تشغيل صوت السؤال"><span class="wp-play-glyph" data-play-glyph>▶</span></button>
+                            <audio preload="none" src="/media/audio/<%= w.audioFile %>" data-audio></audio>
+                          <% } %>
+                          <span class="wp-wave"><% [0.35, 0.6, 0.9, 0.5, 0.75, 0.4].forEach((h) => { %><i style="--h: <%= h %>"></i><% }) %></span>
+                        <% }) %>
+                      </div>
+                    <% } else { %>
+                      <div class="wp-panel wp-text"><span class="wp-text-mark" aria-hidden="true">؟</span><span class="wp-text-clue"><%= w.clue %></span></div>
+                    <% } %>
+
+                    <% if (L.hasClueLine) { %><p class="wp-clue"><%= w.clue %></p><% } %>
+                    <div class="wp-tag">
+                      <span><%= w.direction === 'across' ? '← أفقي' : '↓ عمودي' %></span><span>·</span><span><%= w.letters.length %> أحرف</span>
+                    </div>
+                  </div>
+
+                  <div class="wp-slots">
+                    <% w.letters.forEach(() => { %><span class="wp-slot"></span><% }) %>
+                  </div>
+
+                  <div class="wp-card wp-keys-card">
+                    <div class="wp-bank">
+                      <% w.bank.forEach((letter) => { %><span class="wp-key"><span><%= letter %></span></span><% }) %>
+                    </div>
+                    <div class="wp-helps">
+                      <% w.helps.forEach((h) => { %>
+                        <span class="wp-help">
+                          <%- icon(h.icon, 30) %>
+                          <span class="wp-help-title"><%= h.title %></span>
+                          <span class="wp-help-cost"><% if (h.cost) { %><%- icon('coin', 13) %><%= h.cost %><% } else { %>مجاني<% } %></span>
+                        </span>
+                      <% }) %>
+                    </div>
+                  </div>
+                </section>
+              <% }) %>
+
+              <div class="wp-home-indicator"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="ad-card wp-list">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <i data-lucide="list" width="16" height="16"></i>
+            <span class="fw-semibold">Pages</span>
+            <span class="kd-faint small ms-auto">or tap a tile</span>
+          </div>
+          <div class="ad-card-body d-grid gap-1">
+            <button class="wp-list-item is-active" type="button" data-show="grid">
+              <i data-lucide="grid-3x3" width="15" height="15"></i><span>Grid</span>
+            </button>
+            <% preview.words.forEach((w) => { %>
+              <button class="wp-list-item" type="button" data-show="word-<%= w.index %>">
+                <span class="kd-faint small"><%= w.index + 1 %></span>
+                <span class="wz-answer"><%= w.answer %></span>
+                <span class="kd-tag ms-auto"><%= { picture: w.blurred ? 'picture · blurred' : (w.zoom > 1.001 ? 'picture · ×' + Number(w.zoom).toFixed(1) : 'picture'), emoji: 'emoji', audio: 'audio', text: 'text' }[w.stage] %></span>
+              </button>
+            <% }) %>
+            <% if (level.unplaced.length) { %>
+              <p class="small kd-muted mt-2 mb-0">Not in the grid (they do not cross): <% level.unplaced.forEach((u) => { %><span class="wz-answer"><%= u.answer %></span> <% }) %></p>
+            <% } %>
+            <p class="small kd-faint mt-2 mb-0">Sizes follow the app's layout for a 390 × 844 screen. Letter banks use a fixed shuffle per word; the app shuffles on every open.</p>
+          </div>
+        </aside>
+      </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/wasla-preview.js?v=<%= assetVersion %>"></script>
+<%- include('partials/foot') %>

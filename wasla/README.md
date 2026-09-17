@@ -91,6 +91,48 @@ kind, times left unsolved, players — sortable, with a "hard questions" filter
 (solve rate < 50 % over ≥ 10 opens) — and per level: completions, average time
 and stars. Events older than `EVENT_RETENTION_DAYS` (180) are pruned daily.
 
+## Level preview
+
+**Preview** (on the Levels list and a level's page) draws the level in a 390 × 844
+iPhone frame the way the app does: the mint board, the top bar, the teal
+tiles right to left and the progress card. Tap a tile, or a word in the list
+beside the phone, for its question page — title chip, picture (zoomed or
+blurred as set), emoji, sound or text panel, clue, direction, empty answer
+boxes, the 12-letter bank and the helps the app would offer. Sizes come from
+the app's own layout code (`src/preview.js`). Drafts preview too.
+
+## Players
+
+**Players** is a dashboard over the same anonymous events: players today, in 7
+and 30 days (distinct devices), levels and daily puzzles completed today,
+devices with notifications on; players per day for 30 days as a chart (with a
+table); the level funnel (devices that opened and completed each published
+level, as a share of level 1 openers, with the biggest drop marked); helps by
+kind over 30 days; and day-1 / day-7 retention over the last 30 complete
+cohorts. Days are UTC days of when the server received the events.
+
+## Push notifications
+
+The app registers its APNs token with `POST /api/v1/devices`. **Notifications →
+Setup** takes the `.p8` key from the Apple developer account and its Key ID
+(Team ID `652935W544` and topic `koydam.wasla.crosswords` are prefilled). The
+key is stored as `data/apns/AuthKey.p8`, mode 0600, and never shown again; the
+ids live in the settings table. **Notifications** composes a title (≤ 60) and
+message (≤ 180), optionally a level to open, and sends to every device with
+notifications on, to sandbox devices only, or as a test to one device id —
+after a confirmation step. Sending uses HTTP/2 and an ES256 provider token
+(Node's own `http2` and `crypto`, no dependency), each device to the host for
+its environment, 20 at a time. Dead tokens are switched off; the history
+table lists every send with sent / failed / disabled counts.
+
+## Challenge links
+
+`/c/3?t=80&s=2` is a shareable page: "تحداك صديق: حل لغز رقم 3 في 1:20 — هل
+تستطيع أسرع؟" with Open Graph tags, an **افتح في وصلة** button
+(`wasla://c/3?t=80&s=2`) and an App Store button when a link is set (Settings →
+Challenge links, or `APP_STORE_URL` in `.env`). The apple-app-site-association
+file makes the same URL open the app directly once it is installed.
+
 ## API
 
 Public; reads are cached for a minute. Errors are `{ "error": "…" }`. The full
@@ -101,8 +143,11 @@ contract is `docs/wasla-v2-contract.md` in the iOS repository.
 | `GET /api/v1/levels` | Published levels, one numbered run: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `difficulty` |
 | `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `title`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
 | `GET /api/v1/daily?date=YYYY-MM-DD` | A level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
-| `GET /api/v1/config` | Rewards, streak bonus, timer, reminder hour (Settings page) |
+| `GET /api/v1/config` | Rewards, streak bonus, streak freeze cost, timer, reminder hour, stars per level (Settings page) |
 | `POST /api/v1/events` | `{ device, events[] }`, ≤ 100 events, 64 kB, 30 batches/min per IP → `202 { accepted }` |
+| `POST /api/v1/devices` | `{ device, token, platform, environment, enabled, locale }`, upsert by device, 4 kB, 30/min per IP → `204` |
+| `GET /c/:level?t=&s=` | Challenge landing page (Arabic, Open Graph tags, `wasla://` and App Store buttons); 404 page for an unpublished level |
+| `GET /.well-known/apple-app-site-association`, `GET /apple-app-site-association` | Universal links for `/c/*`, `application/json`, cached 1 h |
 | `GET /media/questions/<file>`, `GET /media/audio/<file>` | Pictures and sounds |
 | `GET /privacy`, `GET /support` | Legal pages, Arabic then English |
 

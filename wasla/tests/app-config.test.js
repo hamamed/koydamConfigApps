@@ -19,6 +19,7 @@ test('starts from the contract defaults', () => {
     timer: { secondsPerWord: 25, bonusCoins: 15 },
     reminderHour: 10,
     starsPerLevel: 2,
+    streakFreezeCost: 50,
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });
@@ -65,4 +66,16 @@ test('a stored stars per level that no longer validates reads as the default', (
   const db = openDatabase(':memory:');
   db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('starsPerLevel', '9');
   assert.equal(createAppConfig(db).get().starsPerLevel, DEFAULT_CONFIG.starsPerLevel);
+});
+
+test('streak freeze cost is 0 to 500 coins, 50 by default, 0 turning it off', () => {
+  assert.equal(settings.get().streakFreezeCost, 50);
+  for (const cost of [0, 1, 500, '120']) {
+    const result = settings.save({ ...DEFAULT_CONFIG, streakFreezeCost: cost });
+    assert.equal(result.error, undefined, String(cost));
+    assert.equal(result.config.streakFreezeCost, Number(cost));
+  }
+  for (const cost of [501, -1, 2.5, 'free', undefined]) {
+    assert.match(settings.save({ ...DEFAULT_CONFIG, streakFreezeCost: cost }).error, /streak freeze/i, String(cost));
+  }
 });

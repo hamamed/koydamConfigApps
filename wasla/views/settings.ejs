@@ -32,11 +32,12 @@
                      ['dailyPuzzleCoins', 'Coins for solving the daily puzzle', values.dailyPuzzleCoins, defaults.dailyPuzzleCoins],
                      ['streakBonusPerDay', 'Streak bonus per day', values.streakBonusPerDay, defaults.streakBonusPerDay],
                      ['streakBonusMax', 'Streak bonus cap', values.streakBonusMax, defaults.streakBonusMax],
+                     ['streakFreezeCost', 'Streak freeze cost (coins to keep a streak after missing one day, 0 = off)', values.streakFreezeCost, defaults.streakFreezeCost],
                    ].forEach(([name, label, value, fallback]) => { %>
                   <div class="row g-2 align-items-center">
                     <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
                     <div class="col-sm-5">
-                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" step="1" required value="<%= value %>">
+                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" <% if (name === 'streakFreezeCost') { %>max="<%= maxStreakFreezeCost %>"<% } %> step="1" required value="<%= value %>">
                       <div class="form-text">Default <%= fallback %></div>
                     </div>
                   </div>
@@ -84,6 +85,20 @@
                   </div>
                   <div class="col-12 form-text">Stars a player needs per level to unlock the next ones: level N needs (N−1) × this many stars in total. 0 opens every level.</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="link" width="16" height="16"></i>
+                <span class="fw-semibold">Challenge links</span>
+              </div>
+              <div class="ad-card-body d-grid gap-2">
+                <label class="small fw-semibold" for="appStoreUrl">App Store link</label>
+                <input class="form-control" type="url" id="appStoreUrl" name="appStoreUrl" value="<%= appStoreUrl %>" placeholder="https://apps.apple.com/app/id…">
+                <div class="form-text">Shown as a button on challenge pages (/c/3). Not part of /api/v1/config.<% if (envAppStoreUrl) { %> Empty uses APP_STORE_URL from the environment: <%= envAppStoreUrl %>.<% } else { %> Empty hides the button.<% } %></div>
               </div>
             </div>
           </div>

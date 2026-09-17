@@ -1,0 +1,75 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', { heading: 'Notifications', subheading: 'APNs token authentication: the .p8 key from your Apple developer account' }) %>
+    <div class="ad-content">
+      <%- include('partials/notifications-tabs', { active: 'setup' }) %>
+      <%- include('partials/flash') %>
+
+      <div class="row g-3">
+        <div class="col-xl-6">
+          <form class="ad-card" method="post" action="/admin/notifications/setup" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="key-round" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">APNs key</span>
+              <% if (apns.configured) { %>
+                <span class="ad-status ad-status-published">Key uploaded (Key ID <%= apns.keyId %>)</span>
+              <% } else if (apns.hasKey) { %>
+                <span class="ad-status ad-status-draft">Key file present, Key ID missing</span>
+              <% } else { %>
+                <span class="ad-status ad-status-draft">Not set up</span>
+              <% } %>
+            </div>
+            <div class="ad-card-body d-grid gap-3">
+              <div>
+                <label class="form-label small fw-semibold" for="key"><%= apns.hasKey ? 'Replace the .p8 key (optional)' : '.p8 key file' %></label>
+                <input class="form-control" type="file" id="key" name="key" accept=".p8" <%= apns.hasKey ? '' : 'required' %>>
+                <div class="form-text">Certificates, Identifiers &amp; Profiles → Keys → a key with Apple Push Notifications service. Stored on the server only (data/apns, readable by the service alone); it is never shown again.</div>
+              </div>
+              <div>
+                <label class="form-label small fw-semibold" for="keyId">Key ID</label>
+                <input class="form-control font-monospace" id="keyId" name="keyId" maxlength="10" required value="<%= values.keyId %>" placeholder="ABC123DEFG" autocomplete="off">
+              </div>
+              <div class="row g-2">
+                <div class="col-sm-5">
+                  <label class="form-label small fw-semibold" for="teamId">Team ID</label>
+                  <input class="form-control font-monospace" id="teamId" name="teamId" maxlength="10" value="<%= values.teamId %>" placeholder="<%= defaults.teamId %>">
+                </div>
+                <div class="col-sm-7">
+                  <label class="form-label small fw-semibold" for="topic">Topic (bundle id)</label>
+                  <input class="form-control font-monospace" id="topic" name="topic" value="<%= values.topic %>" placeholder="<%= defaults.topic %>">
+                </div>
+              </div>
+              <div>
+                <button class="btn btn-kd-accent" type="submit"><%= apns.hasKey ? 'Save' : 'Upload key' %></button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-xl-6">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="info" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">How sending works</span>
+            </div>
+            <div class="ad-card-body small d-grid gap-2">
+              <p class="mb-0">Each device is sent to Apple's host for its own build: App Store and TestFlight builds to production, builds run from Xcode to sandbox. One key works for both.</p>
+              <p class="mb-0">A token Apple reports as no longer valid (410, BadDeviceToken, Unregistered) is switched off, so later sends skip it. Other failures are counted and tried again next time.</p>
+              <% if (apns.uploadedAt) { %><p class="mb-0 kd-faint">Key uploaded <%= apns.uploadedAt.replace('T', ' ').slice(0, 16) %> UTC.</p><% } %>
+              <% if (apns.hasKey) { %>
+                <form method="post" action="/admin/notifications/setup/remove" class="m-0 mt-2" data-confirm="Remove the APNs key? Nothing can be sent until a key is uploaded again.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-kd-danger" type="submit">Remove key</button>
+                </form>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

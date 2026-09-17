@@ -23,6 +23,12 @@ export const config = {
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3700').replace(/\/+$/, ''),
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),
 
+  /** The APNs .p8 key uploaded in the panel. Under data/, which deploys preserve. */
+  apnsDir: path.resolve(root, process.env.APNS_DIR || path.join(process.env.DATA_DIR || './data', 'apns')),
+
+  /** The App Store link on the challenge page; the panel's Settings value wins when set. */
+  appStoreUrl: (process.env.APP_STORE_URL || '').trim(),
+
   /** Question pictures. Under /storage, which deploys preserve. */
   imagesDir: path.resolve(root, process.env.IMAGES_DIR || './storage/questions'),
   maxImageBytes: num(process.env.MAX_IMAGE_BYTES, 8 * 1024 * 1024),

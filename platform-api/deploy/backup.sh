@@ -300,6 +300,9 @@ add "systemd-minebox"    /etc/systemd/system/minebox.service
 add "systemd-fortnite"   /etc/systemd/system/fortnite.service
 # Wasla's question pictures: uploaded in the panel, no other copy.
 add "wasla/storage"      /opt/wasla/storage
+# Wasla's APNs signing key (.p8), uploaded in the panel. Apple lets you download
+# a key once; without this copy a restore means revoking it and making a new one.
+add "wasla/apns"         /opt/wasla/data/apns
 add "systemd-wasla"      /etc/systemd/system/wasla.service
 # bdc runs a service and three timers; the loop keeps them in step as they change.
 for unit in /etc/systemd/system/bdc*.service /etc/systemd/system/bdc*.timer; do

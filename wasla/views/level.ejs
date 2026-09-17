@@ -26,6 +26,10 @@
 
           <span class="ad-status <%= level.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= level.published ? 'Published' : 'Draft' %></span>
 
+          <a class="btn btn-kd-outline <%= level.words.length ? '' : 'disabled' %>" href="/admin/levels/<%= level.id %>/preview">
+            <i data-lucide="smartphone" width="15" height="15" class="me-1"></i>Preview
+          </a>
+
           <form method="post" action="/admin/levels/<%= level.id %>/shuffle" class="m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button class="btn btn-kd-outline" type="submit" <%= level.words.length < 2 ? 'disabled' : '' %>>

@@ -7,9 +7,12 @@ import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
+import { previewLevel, STARTING_COINS } from '../preview.js';
 import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerImport } from './admin-import.js';
+import { registerNotifications } from './admin-notifications.js';
+import { registerPlayers } from './admin-players.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
 
@@ -19,7 +22,9 @@ const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
  * The panel: questions (with pictures, sounds and zoom), levels built from
  * them, and the sections registered from the admin-*.js files beside this one.
  */
-export function adminRouter({ repo, images, audio, daily, appConfig, events, pendingImports }) {
+export function adminRouter({
+  repo, images, audio, daily, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players,
+}) {
   const router = express.Router();
 
   const loginLimiter = rateLimit({
@@ -285,6 +290,13 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     });
   });
 
+  // The level as the app draws it, in a phone-sized frame. Drafts too.
+  router.get('/levels/:id/preview', (req, res, next) => {
+    const level = repo.getLevel(Number(req.params.id));
+    if (!level) return next();
+    res.render('level-preview', { title: `Preview · ${level.name}`, level, preview: previewLevel(level), coins: STARTING_COINS });
+  });
+
   const levelAction = (path, handler) => router.post(`/levels/:id/${path}`, (req, res) => {
     const id = Number(req.params.id);
     if (!repo.getLevel(id)) {
@@ -334,7 +346,9 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
   registerDaily(router, { repo, daily });
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports });
-  registerSettings(router, { appConfig });
+  registerSettings(router, { appConfig, siteSettings });
+  registerPlayers(router, { players });
+  registerNotifications(router, { repo, devices, notifications, apnsCredentials });
 
   return router;
 }

@@ -147,6 +147,7 @@ test('config returns the contract defaults', async () => {
     timer: { secondsPerWord: 25, bonusCoins: 15 },
     reminderHour: 10,
     starsPerLevel: 2,
+    streakFreezeCost: 50,
   });
 });
 
