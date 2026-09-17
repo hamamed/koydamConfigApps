@@ -213,3 +213,45 @@ CREATE TABLE IF NOT EXISTS wordsearch_days (
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Player profiles (contract §7): a public username, no email or password. The app
+-- keeps a random token (only its SHA-256 is stored here) and sends it to act as the profile.
+CREATE TABLE IF NOT EXISTS profiles (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  username          TEXT NOT NULL,
+  username_key      TEXT NOT NULL UNIQUE,      -- lower-case, hamza forms and digits folded
+  avatar            TEXT NOT NULL,
+  token_hash        TEXT NOT NULL UNIQUE,
+  points            INTEGER NOT NULL DEFAULT 0,
+  levels_completed  INTEGER NOT NULL DEFAULT 0,
+  words_solved      INTEGER NOT NULL DEFAULT 0,
+  streak            INTEGER NOT NULL DEFAULT 0,
+  best_streak       INTEGER NOT NULL DEFAULT 0,
+  streak_date       TEXT,                      -- the player's last daily completion, YYYY-MM-DD
+  banned            INTEGER NOT NULL DEFAULT 0,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  stats_updated_at  TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_points ON profiles(points DESC);
+
+-- One row per profile and date: the word search time and the all-games time, each set once.
+CREATE TABLE IF NOT EXISTS profile_daily (
+  profile_id          INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  date                TEXT NOT NULL,
+  wordsearch_seconds  INTEGER,
+  wordsearch_at       TEXT,
+  allgames_seconds    INTEGER,
+  allgames_at         TEXT,
+  PRIMARY KEY (profile_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_profile_daily_date ON profile_daily(date);
+
+CREATE TABLE IF NOT EXISTS profile_badges (
+  profile_id  INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  badge       TEXT NOT NULL,
+  earned_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (profile_id, badge)
+);

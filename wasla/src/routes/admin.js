@@ -14,6 +14,7 @@ import { registerDailyGames } from './admin-daily-games.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { registerPlayers } from './admin-players.js';
+import { registerProfiles } from './admin-profiles.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
 import { registerWordSearch } from './admin-wordsearch.js';
@@ -25,7 +26,7 @@ const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles,
 }) {
   const router = express.Router();
 
@@ -352,6 +353,7 @@ export function adminRouter({
   registerImport(router, { repo, images, audio, pendingImports });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });
+  if (profiles) registerProfiles(router, { profiles });
   if (wordSearch && wordSearchDays) {
     registerDaily(router, { wordSearch, wordSearchDays });
     registerWordSearch(router, { wordSearch });

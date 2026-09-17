@@ -42,6 +42,10 @@
       <i data-lucide="users" width="17" height="17"></i>
       <span>Players</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/profiles') ? 'is-active' : '' %>" href="/admin/profiles">
+      <i data-lucide="user-round" width="17" height="17"></i>
+      <span>Profiles</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/stats') ? 'is-active' : '' %>" href="/admin/stats">
       <i data-lucide="chart-column" width="17" height="17"></i>
       <span>Stats</span>

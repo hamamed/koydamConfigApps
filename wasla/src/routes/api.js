@@ -5,6 +5,7 @@ import { parseDay, todayUtc } from '../daily.js';
 import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
 import { DAILY_TITLE } from '../level-label.js';
+import { registerProfileApi } from './api-profiles.js';
 
 /**
  * What the iOS app reads, plus the one thing it writes: anonymous gameplay
@@ -12,7 +13,7 @@ import { DAILY_TITLE } from '../level-label.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, profiles }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -108,6 +109,8 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     if (!set) return res.status(404).json({ error: 'There are no daily games yet.' });
     res.json(set);
   });
+
+  if (profiles) registerProfileApi(router, { profiles });
 
   // ── Events ────────────────────────────────────────────────────────────────
 
