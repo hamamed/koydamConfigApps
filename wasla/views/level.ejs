@@ -114,7 +114,7 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="list-checks" width="16" height="16"></i>
-              <span class="fw-semibold">Questions in this level</span>
+              <span class="fw-semibold">Questions</span>
               <span class="kd-tag kd-tag-accent ms-auto" data-picker-count><%= chosen.size %></span>
             </div>
             <div class="ad-card-body d-grid gap-2">
@@ -122,20 +122,32 @@
                 <input class="form-control form-control-sm" type="search" placeholder="Filter" dir="auto" data-picker-filter>
                 <a class="btn btn-sm btn-kd-outline text-nowrap" href="/admin/questions/new?level=<%= level.id %>">New question</a>
               </div>
-              <div class="wz-picker">
-                <% if (!questions.length) { %>
-                  <p class="kd-faint small m-0">No free questions: every question is already in a level. Add a new one.</p>
-                <% } %>
-                <% questions.forEach((q) => { %>
+              <%
+                const pickItem = (q) => { %>
                   <label class="wz-pick" data-picker-item data-text="<%= q.answer %> <%= q.clue %> <%= q.title %>">
                     <input class="form-check-input" type="checkbox" name="questions" value="<%= q.id %>" <%= chosen.has(q.id) ? 'checked' : '' %>>
                     <%- include('partials/qimage', { q, size: 'xs' }) %>
                     <span class="min-w-0">
                       <span class="d-flex align-items-center gap-2"><span class="wz-answer"><%= q.answer %></span><% if (q.title) { %><span class="kd-tag wz-ar text-truncate"><%= q.title %></span><% } %></span>
-                      <span class="wz-ar small kd-faint d-block text-truncate"><%= q.clue %></span>
+                      <span class="wz-ar small kd-faint d-block text-truncate"><%= q.clue || (q.type === 'image' ? 'صورة' : q.type === 'audio' ? 'صوت' : q.type === 'emoji' ? (q.emoji || 'إيموجي') : '') %></span>
                     </span>
                   </label>
-                <% }) %>
+              <% };
+                const inLevel = questions.filter((q) => chosen.has(q.id));
+                const available = questions.filter((q) => !chosen.has(q.id));
+              %>
+              <div class="wz-picker">
+                <div class="wz-pick-group" data-picker-group="in">
+                  <div class="ad-section-label d-flex align-items-center">In this level <span class="kd-tag ms-auto" data-picker-group-count><%= inLevel.length %></span></div>
+                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty <%= inLevel.length ? 'hidden' : '' %>>None yet — tick questions below to add them.</p>
+                  <% inLevel.forEach(pickItem) %>
+                </div>
+                <div class="wz-pick-group" data-picker-group="available">
+                  <div class="ad-section-label d-flex align-items-center">Available to add <span class="kd-tag kd-tag-accent ms-auto" data-picker-group-count><%= available.length %></span></div>
+                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty <%= available.length ? 'hidden' : '' %>>No free questions: every question is already in a level. Add a new one.</p>
+                  <% available.forEach(pickItem) %>
+                </div>
+                <p class="kd-faint small m-0">Questions used in other levels are not listed.</p>
               </div>
               <button class="btn btn-kd-accent" type="submit">Save and build grid</button>
             </div>

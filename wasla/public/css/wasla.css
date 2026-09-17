@@ -259,3 +259,8 @@
 .wz-share-fill { width: var(--wz-share, 0%); background: var(--wz-teal); }
 /* KPI cards whose label wraps keep their number on the same baseline as the rest. */
 .wz-kpi { display: flex; flex-direction: column; justify-content: space-between; }
+
+/* Level page picker: the level's questions, then the ones still free to add. */
+.wz-pick-group { display: grid; gap: 2px; }
+.wz-pick-group + .wz-pick-group { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--kd-line); }
+.wz-pick-group .ad-section-label { margin-bottom: .25rem; }

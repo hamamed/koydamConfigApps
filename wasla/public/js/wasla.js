@@ -147,8 +147,27 @@
       const term = filter.value.trim();
       items.forEach((item) => { item.hidden = term !== '' && !item.dataset.text.includes(term); });
     });
-    picker.addEventListener('change', () => {
+    const groups = {
+      in: picker.querySelector('[data-picker-group="in"]'),
+      available: picker.querySelector('[data-picker-group="available"]'),
+    };
+    const refreshGroups = () => {
+      Object.values(groups).forEach((group) => {
+        if (!group) return;
+        const shown = group.querySelectorAll('[data-picker-item]').length;
+        const counter = group.querySelector('[data-picker-group-count]');
+        const empty = group.querySelector('[data-picker-empty]');
+        if (counter) counter.textContent = shown;
+        if (empty) empty.hidden = shown > 0;
+      });
+    };
+    picker.addEventListener('change', (event) => {
       count.textContent = picker.querySelectorAll('input[name="questions"]:checked').length;
+      // Ticking moves a question into the level's group; unticking moves it back to the available ones.
+      const item = event.target.closest('[data-picker-item]');
+      const target = event.target.checked ? groups.in : groups.available;
+      if (item && target) target.appendChild(item);
+      refreshGroups();
     });
   });
 })();
