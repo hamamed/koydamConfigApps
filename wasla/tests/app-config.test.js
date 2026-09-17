@@ -18,6 +18,7 @@ test('starts from the contract defaults', () => {
     streakBonusMax: 50,
     timer: { secondsPerWord: 25, bonusCoins: 15 },
     reminderHour: 10,
+    starsPerLevel: 2,
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });
@@ -41,9 +42,27 @@ test('refuses values that are not whole numbers in range, and changes nothing', 
     { streakBonusPerDay: 2.5 },
     { reminderHour: 24 },
     { timer: { secondsPerWord: 0, bonusCoins: 15 } },
+    { starsPerLevel: 4 },
+    { starsPerLevel: -1 },
+    { starsPerLevel: 1.5 },
+    { starsPerLevel: undefined },
   ];
   for (const over of bad) {
     assert.ok(settings.save({ ...DEFAULT_CONFIG, ...over }).error, JSON.stringify(over));
   }
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
+});
+
+test('stars per level is 0 to 3, 0 opening every level', () => {
+  for (const stars of [0, 1, 3, '2']) {
+    const result = settings.save({ ...DEFAULT_CONFIG, starsPerLevel: stars });
+    assert.equal(result.error, undefined, String(stars));
+    assert.equal(result.config.starsPerLevel, Number(stars));
+  }
+});
+
+test('a stored stars per level that no longer validates reads as the default', () => {
+  const db = openDatabase(':memory:');
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('starsPerLevel', '9');
+  assert.equal(createAppConfig(db).get().starsPerLevel, DEFAULT_CONFIG.starsPerLevel);
 });

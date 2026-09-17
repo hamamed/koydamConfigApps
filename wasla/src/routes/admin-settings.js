@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, REWARD_DAYS } from '../app-config.js';
+import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, REWARD_DAYS } from '../app-config.js';
 
 /** The numbers GET /api/v1/config serves. */
 export function registerSettings(router, { appConfig }) {
@@ -7,6 +7,7 @@ export function registerSettings(router, { appConfig }) {
     values,
     defaults: DEFAULT_CONFIG,
     rewardDays: REWARD_DAYS,
+    maxStarsPerLevel: MAX_STARS_PER_LEVEL,
     ...(error ? { flash: { type: 'danger', message: error } } : {}),
   });
 
@@ -22,6 +23,7 @@ export function registerSettings(router, { appConfig }) {
       streakBonusMax: body.streakBonusMax,
       timer: { secondsPerWord: body.timerSecondsPerWord, bonusCoins: body.timerBonusCoins },
       reminderHour: body.reminderHour,
+      starsPerLevel: body.starsPerLevel,
     };
     const result = appConfig.save(input);
     // A refused form comes back with what was typed, not the stored values.

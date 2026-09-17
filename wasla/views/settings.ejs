@@ -68,6 +68,25 @@
               </div>
             </div>
           </div>
+
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="star" width="16" height="16"></i>
+                <span class="fw-semibold">Level unlocking</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div class="row g-2 align-items-center">
+                  <label class="col-sm-7 small fw-semibold" for="starsPerLevel">Stars per level</label>
+                  <div class="col-sm-5">
+                    <input class="form-control" type="number" id="starsPerLevel" name="starsPerLevel" min="0" max="<%= maxStarsPerLevel %>" step="1" required value="<%= values.starsPerLevel %>">
+                    <div class="form-text">Default <%= defaults.starsPerLevel %></div>
+                  </div>
+                  <div class="col-12 form-text">Stars a player needs per level to unlock the next ones: level N needs (N−1) × this many stars in total. 0 opens every level.</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="d-flex gap-2 mt-3">

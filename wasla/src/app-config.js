@@ -14,9 +14,11 @@ export const DEFAULT_CONFIG = Object.freeze({
   streakBonusMax: 50,
   timer: Object.freeze({ secondsPerWord: 25, bonusCoins: 15 }),
   reminderHour: 10,
+  starsPerLevel: 2,
 });
 
 export const REWARD_DAYS = 7;
+export const MAX_STARS_PER_LEVEL = 3;
 const MAX_COINS = 100_000;
 
 /** A whole number in [min, max] from a number or a numeric string, else null. */
@@ -42,6 +44,8 @@ const FIELDS = {
     return secondsPerWord === null || bonusCoins === null ? null : { secondsPerWord, bonusCoins };
   },
   reminderHour: (v) => whole(v, 0, 23),
+  // Level N needs (N − 1) × this many stars in total; 0 opens every level.
+  starsPerLevel: (v) => whole(v, 0, MAX_STARS_PER_LEVEL),
 };
 
 const MESSAGES = {
@@ -51,6 +55,7 @@ const MESSAGES = {
   streakBonusMax: 'The streak bonus cap must be a whole number, 0 or more.',
   timer: 'The timer needs 1 to 600 seconds per word and a whole number of bonus coins.',
   reminderHour: 'The reminder hour is a whole number from 0 to 23.',
+  starsPerLevel: `Stars per level is a whole number from 0 to ${MAX_STARS_PER_LEVEL}.`,
 };
 
 export function createAppConfig(db) {
