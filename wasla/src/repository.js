@@ -71,8 +71,8 @@ function readQuestion(input, current = {}) {
   const problem = answerProblem(answer);
   if (problem) return { error: problem };
 
+  // Checked against the type below: a picture, sound or emoji can stand on its title alone.
   const clue = String(input.clue ?? current.clue ?? '').trim();
-  if (!clue) return { error: 'A clue is required — it is the question the player reads.' };
   if (clue.length > MAX_CLUE) return { error: `A clue can be at most ${MAX_CLUE} characters.` };
 
   const title = String(input.title ?? current.title ?? '').trim();
@@ -101,6 +101,9 @@ function readQuestion(input, current = {}) {
   };
   const { type, error } = readType(input, current, media);
   if (error) return { error };
+  if (type === 'text' && !clue) {
+    return { error: 'A text question needs a clue — it is all the player has to go on. Pictures, sounds and emoji may leave it empty.' };
+  }
 
   const blurred = input.blurred !== undefined ? truthy(input.blurred) : Boolean(current.blurred);
 

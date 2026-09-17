@@ -34,7 +34,7 @@ export function readImportCsv(text) {
   if (unknown.length) return { error: `Unknown column${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. The columns are: ${IMPORT_COLUMNS.join(', ')}.` };
   const repeated = header.filter((name, i) => header.indexOf(name) !== i);
   if (repeated.length) return { error: `Column named twice: ${repeated.join(', ')}.` };
-  for (const required of ['answer', 'clue']) {
+  for (const required of ['answer']) {
     if (!header.includes(required)) return { error: `The header needs an “${required}” column.` };
   }
   if (!header.includes('title') && !header.includes('category')) {
@@ -70,6 +70,7 @@ function mediaFor(name, kind, media) {
  */
 export function planImport(repo, rows, media) {
   const levelCount = repo.listLevels().length;
+  const lastAllowed = lastNewLevel(rows, levelCount);
 
   return rows.map(({ row, values, extra }) => {
     const plan = { row, answer: values.answer, clue: values.clue, error: null };
@@ -81,7 +82,7 @@ export function planImport(repo, rows, media) {
     const audio = mediaFor(values.audio, 'audio', media);
     if (audio.error) return fail(audio.error);
 
-    const level = readLevelNumber(values.level, levelCount);
+    const level = readLevelNumber(values.level, levelCount, lastAllowed);
     if (level.error) return fail(level.error);
 
     // Blank cells are left out, so the question's own defaults apply.
@@ -111,25 +112,39 @@ export function planImport(repo, rows, media) {
       title: check.question.title,
       levelNumber: level.number,
       levelName: level.number ? levelLabel(level.number) : null,
-      levelIsNew: level.number === levelCount + 1,
+      levelIsNew: level.number > levelCount,
     };
   });
 }
 
 /**
- * The `level` cell: blank for none, or a level number as the panel counts them
- * (1, 2, 3 …). One past the last level adds that level; anything further is a
- * gap, and refused.
+ * The highest level number this file may use. New levels must follow on from the
+ * last existing one without a gap, but one file may add several: 4, 5 and 6 after
+ * level 3 are fine together; 6 without 4 and 5 is not.
  */
-function readLevelNumber(cell, levelCount) {
+function lastNewLevel(rows, levelCount) {
+  const used = new Set(rows
+    .map(({ values }) => String(values.level ?? '').trim())
+    .filter((text) => /^\d+$/.test(text))
+    .map(Number));
+  let last = levelCount;
+  while (used.has(last + 1)) last += 1;
+  return last;
+}
+
+/**
+ * The `level` cell: blank for none, or a level number as the panel counts them
+ * (1, 2, 3 …): an existing level, or a new one that follows on without a gap.
+ */
+function readLevelNumber(cell, levelCount, lastAllowed = levelCount) {
   const text = String(cell ?? '').trim();
   if (!text) return { number: null };
   if (!/^\d+$/.test(text) || Number(text) < 1) {
     return { error: `The level is a level number (1, 2, 3 …), not “${text}”.` };
   }
   const number = Number(text);
-  if (number > levelCount + 1) {
-    return { error: `There is no ${levelLabel(number)}. ${levelCount ? `The last is ${levelLabel(levelCount)}; ` : 'There are no levels yet; '}use ${levelCount + 1} to add a new one.` };
+  if (number > lastAllowed) {
+    return { error: `There is no ${levelLabel(number)}. ${lastAllowed ? `The last is ${levelLabel(lastAllowed)}; ` : 'There are no levels yet; '}use ${lastAllowed + 1} to add a new one.` };
   }
   return { number };
 }
@@ -153,10 +168,10 @@ export function commitImport(repo, plan) {
       }
     }
 
-    const levelCount = repo.listLevels().length;
     const levels = [...byLevel].sort(([a], [b]) => a - b).map(([number, ids]) => {
       const existing = repo.levelByNumber(number);
-      if (!existing && number !== levelCount + 1) {
+      // Levels are created in ascending order, so a new one is always the next number.
+      if (!existing && number !== repo.listLevels().length + 1) {
         throw Object.assign(new Error(`There is no ${levelLabel(number)} any more.`), { status: 400 });
       }
       const level = existing ?? repo.createLevel();

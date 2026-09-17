@@ -47,7 +47,7 @@
                 <tbody>
                   <% [
                        ['answer', 'Required. As it is spelled, e.g. أسد — it is played as اسد.'],
-                       ['clue', 'Required. The question the player reads.'],
+                       ['clue', 'The question the player reads. Required for text questions; picture, sound and emoji questions may leave it empty and go on the title alone.'],
                        ['title', 'Required. Shown above the question in the app, up to 40 characters, e.g. حيوانات. An old category column is used when title is blank.'],
                        ['type', 'text, image, emoji or audio. Blank: follows the media.'],
                        ['emoji', '1 to 8 emoji, for emoji questions.'],
@@ -57,7 +57,7 @@
                        ['focus_y', '0 to 1. Blank is 0.5.'],
                        ['blurred', 'yes / 1 / true to start the picture blurred.'],
                        ['audio', 'File name of a sound uploaded alongside.'],
-                       ['level', 'Level number to add the question to (1, 2, 3 … as on the Levels page). One past the last level adds a new level. Blank: no level.'],
+                       ['level', 'Level number to add the question to (1, 2, 3 … as on the Levels page). New levels are added when their numbers follow on from the last level without a gap — one file can add several (e.g. 4, 5, 6 after level 3). Blank: no level.'],
                      ].forEach(([name, text]) => { %>
                     <tr><td class="kd-mono small"><%= name %></td><td class="small"><%= text %></td></tr>
                   <% }) %>

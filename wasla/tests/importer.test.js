@@ -59,7 +59,7 @@ test('each row is checked with the same rules as the question form', () => {
   assert.match(untitled.error, /title/i);
 });
 
-test('the level column is a level number: existing, or one past the last to add it', () => {
+test('the level column is a level number: existing, or new levels added one after another', () => {
   repo.createLevel();
   repo.createLevel();
   const { rows } = readImportCsv([
@@ -67,18 +67,49 @@ test('the level column is a level number: existing, or one past the last to add 
     'مصر,x,t,1',
     'مرس,x,t,3',
     'سمر,x,t,4',
+    'نمر,x,t,6',
     'رسم,x,t,0',
     'قمر,x,t,بلدان',
     'نمر,x,t,2.5',
   ].join('\n'));
 
-  const [existing, next, gap, zero, named, fraction] = planImport(repo, rows, media);
+  const [existing, next, after, gap, zero, named, fraction] = planImport(repo, rows, media);
   assert.deepEqual([existing.error, existing.levelNumber, existing.levelIsNew], [null, 1, false]);
   assert.deepEqual([next.error, next.levelNumber, next.levelIsNew], [null, 3, true]);
-  assert.match(gap.error, /no Level 4.*use 3/);
+  assert.deepEqual([after.error, after.levelNumber, after.levelIsNew], [null, 4, true]);
+  assert.match(gap.error, /no Level 6.*use 5/);
   assert.match(zero.error, /level number/);
   assert.match(named.error, /level number/);
   assert.match(fraction.error, /level number/);
+});
+
+test('one file can add several new levels, created in order', () => {
+  const { rows } = readImportCsv([
+    'answer,clue,title,level',
+    'مصر,x,t,2',
+    'مرس,x,t,1',
+    'سمر,x,t,2',
+    'رسم,x,t,1',
+  ].join('\n'));
+
+  const result = commitImport(repo, planImport(repo, rows, media));
+
+  assert.deepEqual(result.levels.map((l) => [l.number, l.created, l.added]), [[1, true, 2], [2, true, 2]]);
+  assert.equal(repo.listLevels().length, 2);
+});
+
+test('picture, sound and emoji questions may have only a title; text questions need a clue', () => {
+  const { rows } = readImportCsv([
+    'answer,clue,title,type,emoji,image',
+    'أسد,,حيوانات,image,,lion.jpg',
+    'مصر,,بلدان,emoji,🇪🇬,',
+    'قمر,,طبيعة,text,,',
+  ].join('\n'));
+
+  const [picture, emoji, text] = planImport(repo, rows, media);
+  assert.equal(picture.error, null);
+  assert.equal(emoji.error, null);
+  assert.match(text.error, /clue/i);
 });
 
 test('confirming imports only the valid rows, adds the next level and lays levels out', () => {
