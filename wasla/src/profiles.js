@@ -69,6 +69,25 @@ export function readUsername(raw) {
 export const readAvatar = (raw) => (AVATARS.includes(raw) ? raw : null);
 
 const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
+
+/** Letters and digits nobody misreads: no O/0, I/1, S/5. */
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRTUVWXYZ2346789';
+export const RECOVERY_CODE = /^WSL-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+
+/** A fresh recovery code, "WSL-3K7Q-9F2M". Shown once in the app; only its hash is stored. */
+export function newRecoveryCode() {
+  const pick = () => Array.from(crypto.randomBytes(4), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
+  return `WSL-${pick()}-${pick()}`;
+}
+
+/** The code as it is compared: upper case, hyphens where they belong. */
+export function readRecoveryCode(raw) {
+  const clean = String(raw ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const body = clean.startsWith('WSL') ? clean.slice(3) : clean;
+  if (body.length !== 8) return null;
+  const code = `WSL-${body.slice(0, 4)}-${body.slice(4)}`;
+  return RECOVERY_CODE.test(code) ? code : null;
+}
 const whole = (v, max = MAX_TOTAL) => (Number.isInteger(v) && v >= 0 && v <= max ? v : null);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const isRealDate = (date) => DATE.test(date) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date;
@@ -138,10 +157,11 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
     if (!face) return { error: 'اختر صورة من القائمة', status: 400 };
     if (isTaken(read.key)) return { error: 'هذا الاسم مأخوذ', status: 409 };
     const token = crypto.randomBytes(32).toString('base64url');
+    const recoveryCode = newRecoveryCode();
     try {
-      const info = db.prepare('INSERT INTO profiles (username, username_key, avatar, token_hash) VALUES (?, ?, ?, ?)')
-        .run(read.username, read.key, face, hashToken(token));
-      return { profile: byId.get(info.lastInsertRowid), token };
+      const info = db.prepare('INSERT INTO profiles (username, username_key, avatar, token_hash, recovery_hash) VALUES (?, ?, ?, ?, ?)')
+        .run(read.username, read.key, face, hashToken(token), hashToken(recoveryCode));
+      return { profile: byId.get(info.lastInsertRowid), token, recoveryCode };
     } catch (err) {
       if (String(err.code).startsWith('SQLITE_CONSTRAINT')) return { error: 'هذا الاسم مأخوذ', status: 409 };
       throw err;
@@ -200,6 +220,31 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   }
 
   const remove = (profile) => db.prepare('DELETE FROM profiles WHERE id = ?').run(profile.id).changes > 0;
+
+  // ── Recovery ─────────────────────────────────────────────────────────────
+
+  /**
+   * The profile a recovery code belongs to, with a **new** token: the phone that
+   * recovers becomes the one that holds the profile, and the old one signs out.
+   * `{ token, profile }`, or `{ error, status }` for an unknown code or a banned profile.
+   */
+  function recover(rawCode) {
+    const code = readRecoveryCode(rawCode);
+    if (!code) return { error: 'رمز الاسترجاع غير صحيح', status: 400 };
+    const profile = db.prepare('SELECT * FROM profiles WHERE recovery_hash = ?').get(hashToken(code));
+    if (!profile) return { error: 'لا يوجد ملف بهذا الرمز', status: 404 };
+    if (profile.banned) return { error: 'هذا الحساب موقوف', status: 403 };
+    const token = crypto.randomBytes(32).toString('base64url');
+    db.prepare("UPDATE profiles SET token_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hashToken(token), profile.id);
+    return { token, profile: byId.get(profile.id) };
+  }
+
+  /** A new code for a profile; the old one stops working. The caller shows it once. */
+  function resetRecoveryCode(profile) {
+    const code = newRecoveryCode();
+    db.prepare("UPDATE profiles SET recovery_hash = ?, updated_at = datetime('now') WHERE id = ?").run(hashToken(code), profile.id);
+    return code;
+  }
 
   // ── Leaderboards ─────────────────────────────────────────────────────────
 
@@ -316,7 +361,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   const get = (id) => byId.get(id) ?? null;
 
   return {
-    authenticate, checkUsername, create, update, saveStats, saveDailyTime, remove,
+    authenticate, checkUsername, create, update, saveStats, saveDailyTime, remove, recover, resetRecoveryCode,
     leaderboard, publicView, ownView, findByUsername, list, count, setBanned, get, today,
   };
 }

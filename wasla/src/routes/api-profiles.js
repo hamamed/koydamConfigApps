@@ -48,7 +48,14 @@ export function registerProfileApi(router, { profiles }) {
   router.post('/profiles', noStore, limiter(10, 60 * 60_000, 'Too many new profiles from here. Try again later.'), json, (req, res) => {
     const result = profiles.create(req.body ?? {});
     if (result.error) return res.status(result.status).json({ error: result.error });
-    res.status(201).json({ token: result.token, profile: profiles.ownView(result.profile) });
+    res.status(201).json({ token: result.token, recoveryCode: result.recoveryCode, profile: profiles.ownView(result.profile) });
+  });
+
+  // A code is 8 characters from 30: guessing is hopeless, and this keeps it that way.
+  router.post('/profiles/recover', noStore, limiter(10, 60 * 60_000, 'Too many tries. Try again later.'), json, (req, res) => {
+    const result = profiles.recover(req.body?.code);
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.json({ token: result.token, profile: profiles.ownView(result.profile) });
   });
 
   const writes = limiter(60, 60_000, 'Too many requests. Try again in a minute.');
@@ -84,6 +91,10 @@ export function registerProfileApi(router, { profiles }) {
     const saved = profiles.saveDailyTime(req.profile, time);
     const board = time.kind === 'allgames' ? 'today-allgames' : 'today-wordsearch';
     res.json({ seconds: saved.seconds, rank: profiles.leaderboard(board, { date: time.date, viewer: req.profile, limit: 0 }).me?.rank ?? null });
+  });
+
+  router.post('/profile/me/recovery-code', noStore, writes, requireProfile, (req, res) => {
+    res.json({ recoveryCode: profiles.resetRecoveryCode(req.profile) });
   });
 
   router.get('/leaderboards/:board', noStore, writes, (req, res) => {

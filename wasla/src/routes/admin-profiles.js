@@ -35,6 +35,14 @@ export function registerProfiles(router, { profiles }) {
     res.redirect(back(req));
   });
 
+  /** Support: the player lost the code and the phone. The new code is shown once, here. */
+  router.post('/profiles/:id/recovery-code', (req, res) => {
+    const profile = load(req, res);
+    if (!profile) return;
+    req.flash('success', `New recovery code for “${profile.username}”: ${profiles.resetRecoveryCode(profile)} — give it to the player; the old code no longer works.`);
+    res.redirect(back(req));
+  });
+
   router.post('/profiles/:id/delete', (req, res) => {
     const profile = load(req, res);
     if (!profile) return;

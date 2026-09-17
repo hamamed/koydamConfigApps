@@ -172,3 +172,42 @@ test('HTTP: create, check, update, post a time, read the board, delete', async (
   assert.equal((await call('/profile/me', { method: 'DELETE', token })).status, 204);
   assert.equal((await call('/profile/me', { token })).status, 401);
 });
+
+test('a recovery code brings the profile back on another phone, with a new token', () => {
+  const { token, recoveryCode, profile } = profiles.create({ username: 'sara', avatar: 'paw' });
+  assert.match(recoveryCode, /^WSL-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+  assert.ok(!db.prepare('SELECT * FROM profiles').get().recovery_hash.includes(recoveryCode));
+
+  // Typed without hyphens and in lower case: still the same code.
+  const recovered = profiles.recover(recoveryCode.replace(/-/g, '').toLowerCase());
+  assert.equal(recovered.profile.id, profile.id);
+  assert.notEqual(recovered.token, token);
+  assert.equal(profiles.authenticate(recovered.token).id, profile.id);
+  assert.equal(profiles.authenticate(token), null, 'the old phone signs out');
+
+  assert.equal(profiles.recover('WSL-AAAA-BBBB').status, 404);
+  assert.equal(profiles.recover('nope').status, 400);
+});
+
+test('a new code replaces the old one, and a banned profile cannot be recovered', () => {
+  const { recoveryCode, profile } = profiles.create({ username: 'sara', avatar: 'paw' });
+  const fresh = profiles.resetRecoveryCode(profile);
+  assert.notEqual(fresh, recoveryCode);
+  assert.equal(profiles.recover(recoveryCode).status, 404);
+  assert.equal(profiles.recover(fresh).profile.id, profile.id);
+  profiles.setBanned(profile.id, true);
+  assert.equal(profiles.recover(fresh).status, 403);
+});
+
+test('HTTP: create shows the code once, and it recovers the profile later', async () => {
+  const created = await (await call('/profiles', { method: 'POST', body: { username: 'recovered', avatar: 'moon' } })).json();
+  assert.match(created.recoveryCode, /^WSL-/);
+  const back = await (await call('/profiles/recover', { method: 'POST', body: { code: created.recoveryCode } })).json();
+  assert.equal(back.profile.username, 'recovered');
+  assert.notEqual(back.token, created.token);
+  assert.equal((await call('/profiles/recover', { method: 'POST', body: { code: 'WSL-ZZZZ-ZZZZ' } })).status, 404);
+
+  const next = await (await call('/profile/me/recovery-code', { method: 'POST', token: back.token })).json();
+  assert.match(next.recoveryCode, /^WSL-/);
+  assert.equal((await call('/profiles/recover', { method: 'POST', body: { code: created.recoveryCode } })).status, 404);
+});

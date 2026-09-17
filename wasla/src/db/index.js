@@ -29,6 +29,8 @@ const ADDITIVE_COLUMNS = [
   // Unused legacy from removed level packs; kept so existing databases match. Nothing reads or writes it.
   ['levels', 'pack_id', 'INTEGER REFERENCES packs(id) ON DELETE SET NULL'],
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],
+  // SHA-256 of the profile's recovery code (contract §7): the only way back in on another phone.
+  ['profiles', 'recovery_hash', 'TEXT'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */

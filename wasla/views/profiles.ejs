@@ -51,6 +51,11 @@
                             <input type="hidden" name="banned" value="<%= p.banned ? '0' : '1' %>">
                             <button class="btn btn-sm <%= p.banned ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= p.banned ? 'Unban' : 'Ban' %></button>
                           </form>
+                          <form method="post" action="/admin/profiles/<%= p.id %>/recovery-code" class="m-0" data-confirm="Make a new recovery code for “<%= p.username %>”? The old one stops working.">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="q" value="<%= search %>">
+                            <button class="btn btn-sm btn-kd-ghost" type="submit">New code</button>
+                          </form>
                           <form method="post" action="/admin/profiles/<%= p.id %>/delete" class="m-0" data-confirm="Delete “<%= p.username %>” and all its scores?">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="q" value="<%= search %>">

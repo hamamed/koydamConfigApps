@@ -222,6 +222,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   username_key      TEXT NOT NULL UNIQUE,      -- lower-case, hamza forms and digits folded
   avatar            TEXT NOT NULL,
   token_hash        TEXT NOT NULL UNIQUE,
+  recovery_hash     TEXT,                      -- SHA-256 of the recovery code shown once in the app
   points            INTEGER NOT NULL DEFAULT 0,
   levels_completed  INTEGER NOT NULL DEFAULT 0,
   words_solved      INTEGER NOT NULL DEFAULT 0,
