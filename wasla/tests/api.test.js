@@ -9,6 +9,8 @@ import { openDatabase } from '../src/db/index.js';
 import { createEvents } from '../src/events.js';
 import { createRepository } from '../src/repository.js';
 import { apiRouter } from '../src/routes/api.js';
+import { createWordSearch } from '../src/wordsearch-daily.js';
+import { cellsOf } from '../src/wordsearch.js';
 
 let server;
 let base;
@@ -37,6 +39,7 @@ before(async () => {
     daily: createDaily(db, repo),
     appConfig: createAppConfig(db),
     events: createEvents(db, repo),
+    wordSearch: createWordSearch(db, { appConfig: createAppConfig(db) }),
   }));
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -148,6 +151,7 @@ test('config returns the contract defaults', async () => {
     reminderHour: 10,
     starsPerLevel: 2,
     streakFreezeCost: 50,
+    wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
   });
 });
 
@@ -169,6 +173,48 @@ test('the daily puzzle refuses a malformed date', async () => {
   }
 });
 
+test('the word search is a 404 with a message until a title has six usable answers', async () => {
+  const res = await fetch(`${base}/wordsearch?date=2026-09-18`);
+  assert.equal(res.status, 404);
+  assert.match((await res.json()).error, /theme/);
+});
+
+test('the word search refuses a malformed date', async () => {
+  for (const date of ['2026-02-30', '17-09-2026', 'today', '2026-09-17T10:00', '']) {
+    const res = await fetch(`${base}/wordsearch?date=${encodeURIComponent(date)}`);
+    assert.equal(res.status, 400, date);
+    assert.match((await res.json()).error, /date/);
+  }
+});
+
+test('the word search board has the contract shape, matches its rows and is the same for a date', async () => {
+  for (const answer of ['أسد', 'نمر', 'فيل', 'زرافة', 'حصان', 'غزال', 'قرد', 'جمل']) {
+    repo.createQuestion({ title: 'حيوانات', answer, clue: 'x' });
+  }
+  const res = await fetch(`${base}/wordsearch?date=2026-09-18`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
+  const body = await res.json();
+
+  assert.deepEqual(Object.keys(body).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
+  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-18', 'حيوانات', 9, 30]);
+  assert.equal(body.rows.length, body.size);
+  for (const row of body.rows) assert.equal([...row].length, body.size);
+  assert.ok(body.words.length >= 6 && body.words.length <= 10);
+  const grid = body.rows.map((r) => [...r]);
+  for (const w of body.words) {
+    assert.deepEqual(Object.keys(w).sort(), ['col', 'dCol', 'dRow', 'display', 'id', 'row', 'word']);
+    assert.ok([-1, 0, 1].includes(w.dRow) && [-1, 0, 1].includes(w.dCol) && (w.dRow || w.dCol));
+    assert.equal(cellsOf(w).map(([r, c]) => grid[r][c]).join(''), w.word);
+  }
+  const lion = body.words.find((w) => w.display === 'أسد');
+  if (lion) assert.equal(lion.word, 'اسد');
+
+  assert.deepEqual(await (await fetch(`${base}/wordsearch?date=2026-09-18`)).json(), body);
+  const sunday = await (await fetch(`${base}/wordsearch?date=2026-09-20`)).json();
+  assert.equal(sunday.size, 10);
+});
+
 test('events are accepted with 202 and a count, unknown types ignored', async () => {
   const res = await post('/events', {
     device: '8a1f5b2e-3c4d-4e5f-9a0b-1c2d3e4f5a6b',
@@ -184,6 +230,23 @@ test('events are accepted with 202 and a count, unknown types ignored', async ()
   assert.equal(res.status, 202);
   assert.deepEqual(await res.json(), { accepted: 5 });
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM events').get().n, 5);
+});
+
+test('word search events are accepted for the daily puzzle only', async () => {
+  const before = db.prepare("SELECT COUNT(*) FROM events WHERE type LIKE 'wordsearch_%'").pluck().get();
+  const res = await post('/events', {
+    device: '8a1f5b2e-3c4d-4e5f-9a0b-1c2d3e4f5a6b',
+    events: [
+      { type: 'wordsearch_started', level: 0, at: '2026-09-18T08:00:00Z' },
+      { type: 'wordsearch_word_found', level: 0, word: 12, at: '2026-09-18T08:00:20Z' },
+      { type: 'wordsearch_completed', level: 0, seconds: 140, stars: 3, at: '2026-09-18T08:02:20Z' },
+      { type: 'wordsearch_completed', level: 2, seconds: 140, stars: 3 },
+      { type: 'wordsearch_word_found', level: 0 },
+    ],
+  });
+  assert.equal(res.status, 202);
+  assert.deepEqual(await res.json(), { accepted: 3 });
+  assert.equal(db.prepare("SELECT COUNT(*) FROM events WHERE type LIKE 'wordsearch_%'").pluck().get(), before + 3);
 });
 
 test('events refuse a bad batch, a body over 64 kB and malformed JSON', async () => {

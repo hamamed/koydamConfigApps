@@ -16,12 +16,14 @@ export const DEFAULT_CONFIG = Object.freeze({
   reminderHour: 10,
   starsPerLevel: 2,
   streakFreezeCost: 50,
+  wordSearchHelpCosts: Object.freeze({ revealLetter: 15, revealWord: 40 }),
 });
 
 export const REWARD_DAYS = 7;
 export const MAX_STARS_PER_LEVEL = 3;
 const MAX_COINS = 100_000;
 export const MAX_STREAK_FREEZE_COST = 500;
+export const MAX_WORD_SEARCH_HELP_COST = 500;
 
 /** A whole number in [min, max] from a number or a numeric string, else null. */
 function whole(value, min, max) {
@@ -50,6 +52,12 @@ const FIELDS = {
   starsPerLevel: (v) => whole(v, 0, MAX_STARS_PER_LEVEL),
   // Coins to keep a streak after missing one day; 0 turns the feature off.
   streakFreezeCost: (v) => whole(v, 0, MAX_STREAK_FREEZE_COST),
+  // Coins for the two word-search helps; 0 hides that help in the app.
+  wordSearchHelpCosts: (v) => {
+    const revealLetter = whole(v?.revealLetter, 0, MAX_WORD_SEARCH_HELP_COST);
+    const revealWord = whole(v?.revealWord, 0, MAX_WORD_SEARCH_HELP_COST);
+    return revealLetter === null || revealWord === null ? null : { revealLetter, revealWord };
+  },
 };
 
 const MESSAGES = {
@@ -61,6 +69,7 @@ const MESSAGES = {
   reminderHour: 'The reminder hour is a whole number from 0 to 23.',
   starsPerLevel: `Stars per level is a whole number from 0 to ${MAX_STARS_PER_LEVEL}.`,
   streakFreezeCost: `The streak freeze cost is a whole number of coins from 0 to ${MAX_STREAK_FREEZE_COST}.`,
+  wordSearchHelpCosts: `Each word search help costs a whole number of coins from 0 to ${MAX_WORD_SEARCH_HELP_COST}.`,
 };
 
 export function createAppConfig(db) {

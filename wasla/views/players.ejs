@@ -1,5 +1,6 @@
 <%
   const pct = (n) => (n === null || n === undefined ? '—' : `${Math.round(n * 100)}%`);
+  const duration = (s) => (s === null || s === undefined ? '—' : `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`);
   const dropAt = (i, stage) => funnel.drop && funnel.drop.index === i && funnel.drop.stage === stage;
 %>
 <%- include('partials/head') %>
@@ -135,6 +136,30 @@
                 <% }) %>
               </div>
               <p class="small kd-muted mt-3 mb-0">Players first seen on day X who played again on day X + 1 (or X + 7), over the last 30 first days whose return day has ended. "First seen" is the earliest event kept (<%= retentionDays %> days).</p>
+            </div>
+          </div>
+
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="search" width="16" height="16"></i>
+              <span class="fw-semibold">Daily word search</span>
+              <span class="kd-faint small ms-auto">last <%= wordSearch.days %> days · <%= kpis.wordSearchCompletedToday %> completed today</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-3">
+                <% [
+                     ['Completed', wordSearch.completed, wordSearch.started + ' started · ' + pct(wordSearch.completionRate) + ' finished'],
+                     ['Players', wordSearch.players, 'completed at least one'],
+                     ['Average time', duration(wordSearch.avgSeconds), 'per completed board'],
+                     ['Average stars', wordSearch.avgStars === null ? '—' : wordSearch.avgStars.toFixed(1), wordSearch.wordsFound + ' words found'],
+                   ].forEach(([label, value, note]) => { %>
+                  <div class="col-6">
+                    <div class="ad-kpi-label"><%= label %></div>
+                    <div class="ad-kpi-value"><%= value %></div>
+                    <div class="small kd-faint"><%= note %></div>
+                  </div>
+                <% }) %>
+              </div>
             </div>
           </div>
         </div>

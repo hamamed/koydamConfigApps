@@ -10,6 +10,11 @@
 import { levelLabel } from './level-label.js';
 
 export const EVENT_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left', 'level_completed'];
+/** The daily word search (contract §5). Always `level: 0`; `word` is a question id. */
+export const WORD_SEARCH_TYPES = ['wordsearch_started', 'wordsearch_word_found', 'wordsearch_completed'];
+const KNOWN_TYPES = [...EVENT_TYPES, ...WORD_SEARCH_TYPES];
+/** The crossword's per-question events, which the question stats count. */
+const QUESTION_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left'];
 export const HELPS = ['revealLetter', 'removeLetters', 'solveWord', 'unzoomImage', 'unblurImage', 'askFriend'];
 export const MAX_EVENTS = 100;
 export const RETENTION_DAYS = 180;
@@ -28,13 +33,17 @@ const secondsOk = (v) => typeof v === 'number' && Number.isFinite(v) && v >= 0 &
 
 /** The stored form of one event, or null to skip it. */
 function readEvent(raw) {
-  if (!isObject(raw) || !EVENT_TYPES.includes(raw.type)) return null;
+  if (!isObject(raw) || !KNOWN_TYPES.includes(raw.type)) return null;
   if (!intIn(raw.level, 0, MAX_LEVEL)) return null;
+  // The word search is only ever the daily puzzle.
+  if (WORD_SEARCH_TYPES.includes(raw.type) && raw.level !== 0) return null;
 
   const at = typeof raw.at === 'string' && !Number.isNaN(Date.parse(raw.at)) ? new Date(raw.at).toISOString() : null;
   const event = { type: raw.type, level: raw.level, word: null, help: null, seconds: null, stars: null, at };
 
-  if (raw.type === 'level_completed') {
+  if (raw.type === 'wordsearch_started') return event;
+
+  if (raw.type === 'level_completed' || raw.type === 'wordsearch_completed') {
     if (!secondsOk(raw.seconds) || !intIn(raw.stars, 0, 3)) return null;
     return { ...event, seconds: raw.seconds, stars: raw.stars };
   }
@@ -107,7 +116,7 @@ export function createEvents(db, repo) {
           SUM(type = 'help_used') AS helps,
           ${helpColumns},
           COUNT(DISTINCT device) AS devices
-        FROM events WHERE word IS NOT NULL GROUP BY word
+        FROM events WHERE word IS NOT NULL AND type IN (${QUESTION_TYPES.map((t) => `'${t}'`).join(', ')}) GROUP BY word
       )
       SELECT q.id, q.answer, q.clue, q.title, q.type, q.image_file, q.image_zoom, q.focus_x, q.focus_y,
         a.avg_seconds, a.helps, ${HELPS.map((h) => `a.help_${h}`).join(', ')},
@@ -143,10 +152,10 @@ export function createEvents(db, repo) {
   }
 
   function levelStats() {
-    const toRow = (row, i) => ({
+    const toRow = (row, i, name = null) => ({
       levelId: row.id,
       // Levels have no names: "Level 3" by place in the panel list (this query's order).
-      name: row.id === null ? 'Daily puzzle' : levelLabel(i + 1),
+      name: name ?? (row.id === null ? 'Daily puzzle' : levelLabel(i + 1)),
       published: Boolean(row.published),
       completions: row.completions,
       avgSeconds: row.avg_seconds,
@@ -157,13 +166,21 @@ export function createEvents(db, repo) {
       SELECT l.id, l.published, COUNT(e.id) AS completions, AVG(e.seconds) AS avg_seconds,
         AVG(e.stars) AS avg_stars, COUNT(DISTINCT e.device) AS devices
       FROM levels l LEFT JOIN events e ON e.level_id = l.id AND e.type = 'level_completed'
-      GROUP BY l.id ORDER BY l.position, l.id`).all().map(toRow);
+      GROUP BY l.id ORDER BY l.position, l.id`).all().map((row, i) => toRow(row, i));
 
     const daily = db.prepare(`
       SELECT NULL AS id, 1 AS published, COUNT(*) AS completions,
         AVG(seconds) AS avg_seconds, AVG(stars) AS avg_stars, COUNT(DISTINCT device) AS devices
       FROM events WHERE type = 'level_completed' AND level_number = 0`).get();
-    return daily.completions ? [...levels, toRow(daily, -1)] : levels;
+    const wordSearch = db.prepare(`
+      SELECT NULL AS id, 1 AS published, COUNT(*) AS completions,
+        AVG(seconds) AS avg_seconds, AVG(stars) AS avg_stars, COUNT(DISTINCT device) AS devices
+      FROM events WHERE type = 'wordsearch_completed'`).get();
+    return [
+      ...levels,
+      ...(daily.completions ? [toRow(daily, -1)] : []),
+      ...(wordSearch.completions ? [toRow(wordSearch, -1, 'Daily word search')] : []),
+    ];
   }
 
   /** Headline numbers for the top of the Stats page. */

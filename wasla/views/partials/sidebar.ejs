@@ -24,6 +24,10 @@
       <i data-lucide="calendar-days" width="17" height="17"></i>
       <span>Daily puzzle</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/wordsearch') ? 'is-active' : '' %>" href="/admin/wordsearch">
+      <i data-lucide="search" width="17" height="17"></i>
+      <span>Word search</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/import') ? 'is-active' : '' %>" href="/admin/import">
       <i data-lucide="file-up" width="17" height="17"></i>
       <span>Import</span>

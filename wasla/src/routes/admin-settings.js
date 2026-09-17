@@ -1,5 +1,5 @@
 import { readAppStoreUrl } from '../site-settings.js';
-import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST, REWARD_DAYS } from '../app-config.js';
+import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST, MAX_WORD_SEARCH_HELP_COST, REWARD_DAYS } from '../app-config.js';
 
 /** The numbers GET /api/v1/config serves. */
 export function registerSettings(router, { appConfig, siteSettings }) {
@@ -12,6 +12,7 @@ export function registerSettings(router, { appConfig, siteSettings }) {
     rewardDays: REWARD_DAYS,
     maxStarsPerLevel: MAX_STARS_PER_LEVEL,
     maxStreakFreezeCost: MAX_STREAK_FREEZE_COST,
+    maxWordSearchHelpCost: MAX_WORD_SEARCH_HELP_COST,
     ...(error ? { flash: { type: 'danger', message: error } } : {}),
   });
 
@@ -29,6 +30,7 @@ export function registerSettings(router, { appConfig, siteSettings }) {
       reminderHour: body.reminderHour,
       starsPerLevel: body.starsPerLevel,
       streakFreezeCost: body.streakFreezeCost,
+      wordSearchHelpCosts: { revealLetter: body.wordSearchRevealLetter, revealWord: body.wordSearchRevealWord },
     };
     const appStoreUrl = String(body.appStoreUrl ?? '');
     const link = readAppStoreUrl(appStoreUrl);

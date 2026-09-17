@@ -14,6 +14,7 @@ const DAY_MS = 86_400_000;
 export const TREND_DAYS = 30;
 export const HELP_DAYS = 30;
 export const RETENTION_COHORTS = 30;
+export const WORD_SEARCH_DAYS = 30;
 
 /** YYYY-MM-DD `n` days after (or before, when negative) `date`. */
 export function addDays(date, n) {
@@ -57,6 +58,8 @@ export function createPlayers(db, { repo }) {
       levelsCompletedToday: scalar(`SELECT COUNT(*) FROM events WHERE type = 'level_completed' AND level_number > 0
         AND received_at >= ? AND received_at < ?`, today, tomorrow),
       dailyCompletedToday: scalar(`SELECT COUNT(*) FROM events WHERE type = 'level_completed' AND level_number = 0
+        AND received_at >= ? AND received_at < ?`, today, tomorrow),
+      wordSearchCompletedToday: scalar(`SELECT COUNT(*) FROM events WHERE type = 'wordsearch_completed'
         AND received_at >= ? AND received_at < ?`, today, tomorrow),
       notificationsEnabled: scalar('SELECT COUNT(*) FROM devices WHERE enabled = 1'),
     };
@@ -140,9 +143,29 @@ export function createPlayers(db, { repo }) {
     return { d1: measure(1), d7: measure(7) };
   }
 
-  function dashboard(today = todayUtc()) {
-    return { today, kpis: kpis(today), perDay: playersPerDay(today), funnel: funnel(), helps: helps(today), retention: retention(today) };
+  /**
+   * The daily word search over the last `days` days: boards started and
+   * completed, distinct players who completed, average time and stars of a
+   * completion, and words found.
+   */
+  function wordSearch(today = todayUtc(), days = WORD_SEARCH_DAYS) {
+    const row = db.prepare(`SELECT
+        IFNULL(SUM(type = 'wordsearch_started'), 0) AS started,
+        IFNULL(SUM(type = 'wordsearch_completed'), 0) AS completed,
+        COUNT(DISTINCT CASE WHEN type = 'wordsearch_completed' THEN device END) AS players,
+        AVG(CASE WHEN type = 'wordsearch_completed' THEN seconds END) AS avgSeconds,
+        AVG(CASE WHEN type = 'wordsearch_completed' THEN stars END) AS avgStars,
+        IFNULL(SUM(type = 'wordsearch_word_found'), 0) AS wordsFound
+      FROM events WHERE type IN ('wordsearch_started', 'wordsearch_word_found', 'wordsearch_completed')
+        AND received_at >= ? AND received_at < ?`).get(addDays(today, -(days - 1)), addDays(today, 1));
+    return { days, ...row, completionRate: row.started ? row.completed / row.started : null };
   }
 
-  return { kpis, playersPerDay, funnel, helps, retention, dashboard };
+  function dashboard(today = todayUtc()) {
+    return {
+      today, kpis: kpis(today), perDay: playersPerDay(today), funnel: funnel(), helps: helps(today), retention: retention(today), wordSearch: wordSearch(today),
+    };
+  }
+
+  return { kpis, playersPerDay, funnel, helps, retention, wordSearch, dashboard };
 }

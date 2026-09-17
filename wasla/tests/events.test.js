@@ -127,6 +127,39 @@ test('level stats average time and stars over completions, keyed to the level pl
   assert.deepEqual([daily.name, daily.completions], ['Daily puzzle', 1]);
 });
 
+test('word search events need level 0; found needs a word id, completed needs seconds and stars', () => {
+  const batch = readEventBatch({ device: DEVICE, events: [
+    { type: 'wordsearch_started', level: 0, at: AT },
+    { type: 'wordsearch_started', level: 3, at: AT },
+    { type: 'wordsearch_word_found', level: 0, word: words[0], at: AT },
+    { type: 'wordsearch_word_found', level: 0, at: AT },
+    { type: 'wordsearch_completed', level: 0, seconds: 120.5, stars: 2, at: AT },
+    { type: 'wordsearch_completed', level: 0, seconds: 120, stars: 4, at: AT },
+    { type: 'wordsearch_completed', level: 0, stars: 2, at: AT },
+  ] });
+  assert.deepEqual(batch.events.map((e) => [e.type, e.level, e.word, e.seconds, e.stars]), [
+    ['wordsearch_started', 0, null, null, null],
+    ['wordsearch_word_found', 0, words[0], null, null],
+    ['wordsearch_completed', 0, null, 120.5, 2],
+  ]);
+});
+
+test('word search events stay out of question stats and get their own row in level stats', () => {
+  record([
+    open(words[0]),
+    { type: 'wordsearch_word_found', level: 0, word: words[0], at: AT, device: 'c3d4e5f6-0000-4000-8000-000000000000' },
+    { type: 'wordsearch_completed', level: 0, seconds: 90, stars: 3, at: AT, device: DEVICE },
+    { type: 'wordsearch_completed', level: 0, seconds: 150, stars: 2, at: AT, device: DEVICE },
+  ]);
+  const row = events.questionStats().find((s) => s.questionId === words[0]);
+  assert.deepEqual([row.opens, row.devices], [1, 1]);
+
+  const rows = events.levelStats();
+  assert.equal(rows.some((r) => r.name === 'Daily puzzle'), false);
+  const search = rows.find((r) => r.name === 'Daily word search');
+  assert.deepEqual([search.levelId, search.completions, search.avgSeconds, search.avgStars, search.devices], [null, 2, 120, 2.5, 1]);
+});
+
 test('pruning removes events older than the retention window', () => {
   record([open(words[0]), open(words[1])]);
   db.prepare("UPDATE events SET received_at = datetime('now', '-200 days') WHERE word = ?").run(words[0]);

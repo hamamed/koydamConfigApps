@@ -71,7 +71,33 @@ test('KPIs count distinct devices by UTC day and completions today', () => {
     month: 5,                // + nobody: E is 40 days ago
     levelsCompletedToday: 3, // A×2, B×1
     dailyCompletedToday: 2,  // A, B
+    wordSearchCompletedToday: 0,
     notificationsEnabled: 1,
+  });
+});
+
+test('word search over 30 days: started, completed, players, average time and stars, words found', () => {
+  const ws = (device, type, day, extra = {}) => event(device, type, day, { level: 0, ...extra });
+  ws('A', 'wordsearch_started', TODAY);
+  ws('A', 'wordsearch_word_found', TODAY, { word: 4 });
+  ws('A', 'wordsearch_word_found', TODAY, { word: 5 });
+  ws('A', 'wordsearch_completed', TODAY, { seconds: 100, stars: 3 });
+  ws('B', 'wordsearch_started', addDays(TODAY, -3));
+  ws('B', 'wordsearch_completed', addDays(TODAY, -3), { seconds: 200, stars: 2 });
+  ws('C', 'wordsearch_started', addDays(TODAY, -2));
+  // Outside the window.
+  ws('E', 'wordsearch_completed', addDays(TODAY, -40), { seconds: 999, stars: 0 });
+
+  assert.deepEqual(players.wordSearch(TODAY), {
+    days: 30, started: 3, completed: 2, players: 2, avgSeconds: 150, avgStars: 2.5, wordsFound: 2, completionRate: 2 / 3,
+  });
+  assert.equal(players.kpis(TODAY).wordSearchCompletedToday, 1);
+  assert.equal(players.dashboard(TODAY).wordSearch.completed, 2);
+});
+
+test('word search with no events reads as zeros and no averages', () => {
+  assert.deepEqual(players.wordSearch(TODAY), {
+    days: 30, started: 0, completed: 0, players: 0, avgSeconds: null, avgStars: null, wordsFound: 0, completionRate: null,
   });
 });
 

@@ -264,3 +264,51 @@
 .wz-pick-group { display: grid; gap: 2px; }
 .wz-pick-group + .wz-pick-group { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--kd-line); }
 .wz-pick-group .ad-section-label { margin-bottom: .25rem; }
+
+/* Word search preview: the app's mint ground, a cream board, Tajawal letters
+   and one soft stroke per hidden word. Column 0 is the right edge (dir="rtl"
+   on the grid); the strokes' coordinates already count from the right. */
+.ws-layout { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
+.ws-stage {
+  flex: 0 0 auto;
+  width: min(100%, 460px);
+  padding: 1.25rem;
+  border-radius: 28px;
+  background: #d6eeea;
+}
+.ws-head { display: flex; justify-content: center; margin-bottom: .9rem; }
+.ws-theme {
+  padding: .3rem 1.1rem;
+  border-radius: 99px;
+  background: #fff;
+  border: 2px solid #1f2d3a;
+  color: #1f2d3a;
+  font-family: Tajawal, "Geeza Pro", Tahoma, sans-serif;
+  font-size: 1.15rem; font-weight: 800;
+}
+.ws-board {
+  padding: 12px;
+  border-radius: 22px;
+  background: #fffdf6;
+  border: 2px solid #1f2d3a;
+  box-shadow: 0 4px 0 #1f2d3a;
+}
+.ws-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--ws-size), 1fr);
+}
+.ws-cell {
+  aspect-ratio: 1;
+  display: grid; place-items: center;
+  color: #1f2d3a;
+  font-family: Tajawal, "Geeza Pro", Tahoma, sans-serif;
+  font-size: clamp(1rem, 4.2vw, 1.6rem); font-weight: 800;
+  line-height: 1;
+  position: relative; z-index: 1;
+}
+.ws-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.ws-lines line { stroke-width: .72; stroke-linecap: round; stroke-opacity: .42; }
+.ws-side { flex: 1 1 22rem; min-width: 0; }
+.ws-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--ws-colour); opacity: .75; vertical-align: middle; }
+.ws-arrow { font-size: 1.1rem; }

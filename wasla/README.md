@@ -70,6 +70,39 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 - **Daily puzzle**: a level chosen per date, otherwise level
   `days since 1970-01-01 mod published count` — the same for everyone.
 
+## Daily word search
+
+The daily puzzle in the app is now a word search (`GET /api/v1/wordsearch`).
+**Word search** in the panel lists the themes, previews any date's board with
+each hidden word drawn over the letters, and lists titles that are close.
+
+- **Themes** are question titles (trimmed). A title's words are its answers in
+  played form, 3–8 letters, each once; a word readable inside a longer one
+  (نمر in نمرة) or as the reverse of another (رمن / نمر) is left out, since it
+  would be found twice. Six words make a theme; 4–5 are listed as "needs N
+  more questions". A theme can be **excluded** (`wordsearch_excluded_titles`).
+- **A date's board**: the eligible themes sorted by title (code-point order),
+  index `days since 1970-01-01 mod count`. Size by weekday, Monday first:
+  7, 7, 8, 8, 9, 9, 10 (Sunday). Words: 6–7 on a 7-board, 6–8 on 8, 7–9 on 9,
+  8–10 on 10, picked by a seed from the date. A theme with too few words short
+  enough for that size passes the day to the next theme; only when no theme
+  fits is a larger size tried. Nothing is stored per date, so editing a theme's
+  questions changes the boards that use it, today's included. `coins` is
+  `dailyPuzzleCoins`.
+- **The generator** (`src/wordsearch.js`, pure): all eight directions, longest
+  word first, up to 30 whole-board attempts, crossings only on equal letters,
+  words that do not fit dropped and reported. Filler letters are weighted by
+  rough Arabic frequency (ا ل ي م و ن ر ه ت ب most, ظ غ ض ث rarest); only
+  played forms appear (never أ إ آ ٱ ؤ ئ ى), with ة and ء included rarely so a
+  lone ة does not give a word away. Any filler that spells a hidden word a
+  second time, in any direction, is re-rolled.
+- **Helps**: `wordSearchHelpCosts` (reveal a letter, reveal a word; 0–500
+  coins, 0 hides the help) on the Settings page.
+- **Events**: `wordsearch_started`, `wordsearch_word_found` (`word`),
+  `wordsearch_completed` (`seconds`, `stars`), `level: 0` only. Players shows
+  completions, players, average time and stars over 30 days; Stats lists a
+  "Daily word search" row.
+
 ## Import
 
 **Import** takes one UTF-8 CSV plus any number of pictures and sounds in one
@@ -143,7 +176,8 @@ contract is `docs/wasla-v2-contract.md` in the iOS repository.
 | `GET /api/v1/levels` | Published levels, one numbered run: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `difficulty` |
 | `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `title`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
 | `GET /api/v1/daily?date=YYYY-MM-DD` | A level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
-| `GET /api/v1/config` | Rewards, streak bonus, streak freeze cost, timer, reminder hour, stars per level (Settings page) |
+| `GET /api/v1/wordsearch?date=YYYY-MM-DD` | The day's word search: `date`, `theme`, `size`, `coins`, `rows`, `words` (`id`, `word`, `display`, `row`, `col`, `dRow`, `dCol`); 400 on a bad date, 404 with no theme |
+| `GET /api/v1/config` | Rewards, streak bonus, streak freeze cost, timer, reminder hour, stars per level, word search help costs (Settings page) |
 | `POST /api/v1/events` | `{ device, events[] }`, ≤ 100 events, 64 kB, 30 batches/min per IP → `202 { accepted }` |
 | `POST /api/v1/devices` | `{ device, token, platform, environment, enabled, locale }`, upsert by device, 4 kB, 30/min per IP → `204` |
 | `GET /c/:level?t=&s=` | Challenge landing page (Arabic, Open Graph tags, `wasla://` and App Store buttons); 404 page for an unpublished level |

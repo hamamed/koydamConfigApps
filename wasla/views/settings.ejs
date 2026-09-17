@@ -92,6 +92,30 @@
           <div class="col-xl-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="search" width="16" height="16"></i>
+                <span class="fw-semibold">Word search helps</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <% [
+                     ['wordSearchRevealLetter', 'Reveal a letter (coins)', values.wordSearchHelpCosts?.revealLetter, defaults.wordSearchHelpCosts.revealLetter],
+                     ['wordSearchRevealWord', 'Reveal a word (coins)', values.wordSearchHelpCosts?.revealWord, defaults.wordSearchHelpCosts.revealWord],
+                   ].forEach(([name, label, value, fallback]) => { %>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                    <div class="col-sm-5">
+                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" max="<%= maxWordSearchHelpCost %>" step="1" required value="<%= value %>">
+                      <div class="form-text">Default <%= fallback %></div>
+                    </div>
+                  </div>
+                <% }) %>
+                <div class="form-text">Coins for the helps in the daily word search. 0 hides that help in the app.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="link" width="16" height="16"></i>
                 <span class="fw-semibold">Challenge links</span>
               </div>

@@ -179,3 +179,12 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ── v4 ──────────────────────────────────────────────────────────────────────
+
+-- Question titles kept out of the daily word search. A title is a theme once it
+-- has enough questions; a row here skips it (matched on the trimmed title).
+CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
+  title       TEXT PRIMARY KEY,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

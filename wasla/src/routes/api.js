@@ -12,7 +12,7 @@ import { DAILY_TITLE } from '../level-label.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -80,6 +80,18 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices }
     if (!level) return res.status(404).json({ error: 'There is no daily puzzle yet.' });
 
     res.json({ ...levelBody(level), number: 0, title: DAILY_TITLE, date: parsed.date, coins: appConfig.get().dailyPuzzleCoins });
+  });
+
+  // The daily word search (contract §5): a board of letters built from one theme.
+  router.get('/wordsearch', cacheable, (req, res) => {
+    const raw = req.query.date;
+    const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
+    if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
+    if (!wordSearch) return res.status(503).json({ error: 'The word search is not available.' });
+
+    const board = wordSearch.forDate(parsed.date);
+    if (!board) return res.status(404).json({ error: 'There is no word search yet: no theme has enough words.' });
+    res.json(board);
   });
 
   // ── Events ────────────────────────────────────────────────────────────────

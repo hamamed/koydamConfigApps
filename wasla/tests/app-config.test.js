@@ -20,6 +20,7 @@ test('starts from the contract defaults', () => {
     reminderHour: 10,
     starsPerLevel: 2,
     streakFreezeCost: 50,
+    wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });
@@ -78,4 +79,26 @@ test('streak freeze cost is 0 to 500 coins, 50 by default, 0 turning it off', ()
   for (const cost of [501, -1, 2.5, 'free', undefined]) {
     assert.match(settings.save({ ...DEFAULT_CONFIG, streakFreezeCost: cost }).error, /streak freeze/i, String(cost));
   }
+});
+
+test('word search help costs are two whole numbers of coins from 0 to 500', () => {
+  assert.deepEqual(settings.get().wordSearchHelpCosts, { revealLetter: 15, revealWord: 40 });
+  for (const costs of [{ revealLetter: 0, revealWord: 500 }, { revealLetter: '20', revealWord: '0' }]) {
+    const result = settings.save({ ...DEFAULT_CONFIG, wordSearchHelpCosts: costs });
+    assert.equal(result.error, undefined, JSON.stringify(costs));
+    assert.deepEqual(result.config.wordSearchHelpCosts, { revealLetter: Number(costs.revealLetter), revealWord: Number(costs.revealWord) });
+  }
+  for (const costs of [{ revealLetter: 501, revealWord: 40 }, { revealLetter: 15, revealWord: -1 }, { revealLetter: 1.5, revealWord: 40 },
+    { revealLetter: 15 }, null, 15]) {
+    assert.match(settings.save({ ...DEFAULT_CONFIG, wordSearchHelpCosts: costs }).error, /word search/i, JSON.stringify(costs));
+  }
+  assert.deepEqual(settings.get().wordSearchHelpCosts, { revealLetter: 20, revealWord: 0 });
+});
+
+test('a database saved before word search help costs existed reads them as the default', () => {
+  const db = openDatabase(':memory:');
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('dailyPuzzleCoins', '45');
+  const config = createAppConfig(db).get();
+  assert.equal(config.dailyPuzzleCoins, 45);
+  assert.deepEqual(config.wordSearchHelpCosts, { revealLetter: 15, revealWord: 40 });
 });
