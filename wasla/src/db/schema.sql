@@ -4,7 +4,11 @@ CREATE TABLE IF NOT EXISTS questions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   answer      TEXT NOT NULL,
   clue        TEXT NOT NULL,
+  -- Unused legacy: replaced by title (src/db/index.js backfills title from it
+  -- once). Kept so existing databases match; nothing writes it any more.
   category    TEXT,
+  -- Shown above the question in the app. Older databases get it from index.js.
+  title       TEXT,
   -- A generated name under the images directory, never a path.
   image_file  TEXT,
   -- 1 shows the whole picture; above 1 is a close-up around the focus point,
@@ -18,6 +22,7 @@ CREATE TABLE IF NOT EXISTS questions (
 
 CREATE TABLE IF NOT EXISTS levels (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  -- Unused legacy: levels have no names ("Level 3" by position). New levels store ''.
   title       TEXT NOT NULL,
   -- Order in the app. The public level number is the rank among published ones.
   position    INTEGER NOT NULL,

@@ -7,6 +7,8 @@
  * make the app retry the same events forever and lose the good ones with them.
  */
 
+import { levelLabel } from './level-label.js';
+
 export const EVENT_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left', 'level_completed'];
 export const HELPS = ['revealLetter', 'removeLetters', 'solveWord', 'unzoomImage', 'unblurImage', 'askFriend'];
 export const MAX_EVENTS = 100;
@@ -107,7 +109,7 @@ export function createEvents(db, repo) {
           COUNT(DISTINCT device) AS devices
         FROM events WHERE word IS NOT NULL GROUP BY word
       )
-      SELECT q.id, q.answer, q.clue, q.type, q.image_file, q.image_zoom, q.focus_x, q.focus_y,
+      SELECT q.id, q.answer, q.clue, q.title, q.type, q.image_file, q.image_zoom, q.focus_x, q.focus_y,
         a.avg_seconds, a.helps, ${HELPS.map((h) => `a.help_${h}`).join(', ')},
         IFNULL(a.opens, 0) AS opens, IFNULL(a.solves, 0) AS solves,
         IFNULL(a.lefts, 0) AS lefts, IFNULL(a.devices, 0) AS devices,
@@ -122,6 +124,7 @@ export function createEvents(db, repo) {
       questionId: row.id,
       answer: row.answer,
       clue: row.clue,
+      title: row.title || '',
       type: row.type,
       imageFile: row.image_file,
       zoom: row.image_zoom,
@@ -140,9 +143,10 @@ export function createEvents(db, repo) {
   }
 
   function levelStats() {
-    const toRow = (row) => ({
+    const toRow = (row, i) => ({
       levelId: row.id,
-      title: row.title,
+      // Levels have no names: "Level 3" by place in the panel list (this query's order).
+      name: row.id === null ? 'Daily puzzle' : levelLabel(i + 1),
       published: Boolean(row.published),
       completions: row.completions,
       avgSeconds: row.avg_seconds,
@@ -150,16 +154,16 @@ export function createEvents(db, repo) {
       devices: row.devices,
     });
     const levels = db.prepare(`
-      SELECT l.id, l.title, l.published, COUNT(e.id) AS completions, AVG(e.seconds) AS avg_seconds,
+      SELECT l.id, l.published, COUNT(e.id) AS completions, AVG(e.seconds) AS avg_seconds,
         AVG(e.stars) AS avg_stars, COUNT(DISTINCT e.device) AS devices
       FROM levels l LEFT JOIN events e ON e.level_id = l.id AND e.type = 'level_completed'
       GROUP BY l.id ORDER BY l.position, l.id`).all().map(toRow);
 
     const daily = db.prepare(`
-      SELECT NULL AS id, 'Daily puzzle' AS title, 1 AS published, COUNT(*) AS completions,
+      SELECT NULL AS id, 1 AS published, COUNT(*) AS completions,
         AVG(seconds) AS avg_seconds, AVG(stars) AS avg_stars, COUNT(DISTINCT device) AS devices
       FROM events WHERE type = 'level_completed' AND level_number = 0`).get();
-    return daily.completions ? [...levels, toRow(daily)] : levels;
+    return daily.completions ? [...levels, toRow(daily, -1)] : levels;
   }
 
   /** Headline numbers for the top of the Stats page. */

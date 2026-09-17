@@ -3,24 +3,15 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: level.title,
-          subheading: (level.published ? 'Level ' + number + ' in the app' : 'Draft — not in the app') + ' · ' + level.words.length + ' words · ' + level.rows + ' × ' + level.cols
+          heading: 'Level ' + level.number,
+          subheading: (level.published ? 'Level ' + level.publishedNumber + ' in the app' : 'Draft — not in the app') + ' · ' + level.words.length + ' words · ' + level.rows + ' × ' + level.cols
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <div class="ad-card mb-3">
         <div class="ad-card-body d-flex flex-wrap gap-2 align-items-end">
-          <form method="post" action="/admin/levels/<%= level.id %>/title" class="d-flex gap-2 align-items-end flex-grow-1">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <div class="flex-grow-1">
-              <label class="form-label small fw-semibold" for="title">Title</label>
-              <input class="form-control wz-ar" id="title" name="title" dir="rtl" value="<%= level.title %>" maxlength="80" required>
-            </div>
-            <button class="btn btn-kd-accent" type="submit">Save</button>
-          </form>
-
-          <form method="post" action="/admin/levels/<%= level.id %>/details" class="d-flex gap-2 align-items-end m-0">
+          <form method="post" action="/admin/levels/<%= level.id %>/details" class="d-flex gap-2 align-items-end m-0 me-auto">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div>
               <label class="form-label small fw-semibold" for="difficulty">Difficulty</label>
@@ -100,6 +91,7 @@
                       <tr>
                         <td class="kd-faint"><%= i + 1 %></td>
                         <td><%- include('partials/qimage', { q: w, size: 'sm' }) %></td>
+                        <td><% if (w.title) { %><span class="kd-tag wz-ar"><%= w.title %></span><% } %></td>
                         <td><span class="wz-answer"><%= w.answer %></span><% if (w.playAnswer !== w.answer) { %> <span class="kd-faint small">→ <span class="wz-answer"><%= w.playAnswer %></span></span><% } %></td>
                         <td class="wz-ar"><%= w.clue %></td>
                         <td class="kd-faint small text-nowrap"><%= w.direction === 'across' ? 'Across ←' : 'Down ↓' %></td>
@@ -131,11 +123,11 @@
                   <p class="kd-faint small m-0">No questions in the bank yet.</p>
                 <% } %>
                 <% questions.forEach((q) => { %>
-                  <label class="wz-pick" data-picker-item data-text="<%= q.answer %> <%= q.clue %> <%= q.category %>">
+                  <label class="wz-pick" data-picker-item data-text="<%= q.answer %> <%= q.clue %> <%= q.title %>">
                     <input class="form-check-input" type="checkbox" name="questions" value="<%= q.id %>" <%= chosen.has(q.id) ? 'checked' : '' %>>
                     <%- include('partials/qimage', { q, size: 'xs' }) %>
                     <span class="min-w-0">
-                      <span class="wz-answer d-block"><%= q.answer %></span>
+                      <span class="d-flex align-items-center gap-2"><span class="wz-answer"><%= q.answer %></span><% if (q.title) { %><span class="kd-tag wz-ar text-truncate"><%= q.title %></span><% } %></span>
                       <span class="wz-ar small kd-faint d-block text-truncate"><%= q.clue %></span>
                     </span>
                     <% if (q.levelCount && !chosen.has(q.id)) { %><span class="kd-tag ms-auto">in <%= q.levelCount %></span><% } %>

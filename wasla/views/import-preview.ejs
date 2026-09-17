@@ -38,7 +38,7 @@
       <div class="ad-card">
         <div class="ad-table-wrap">
           <table class="ad-table wz-import">
-            <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
+            <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Title</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
             <tbody>
               <% plan.forEach((p) => { %>
                 <tr class="<%= p.error ? 'wz-row-error' : '' %>">
@@ -55,6 +55,7 @@
                     <span class="wz-answer"><%= p.storedAnswer || p.answer %></span>
                     <% if (!p.error && p.playAnswer !== p.storedAnswer) { %><div class="small kd-faint wz-ar" dir="rtl">يُلعب: <span class="wz-answer"><%= p.playAnswer %></span></div><% } %>
                   </td>
+                  <td><% if (!p.error) { %><span class="kd-tag wz-ar"><%= p.title %></span><% } %></td>
                   <td class="wz-ar small"><%= p.clue %></td>
                   <td class="text-nowrap">
                     <% if (!p.error) { %><span class="kd-tag"><%= { text: 'Text', image: 'Picture', emoji: 'Emoji', audio: 'Audio' }[p.type] %></span><% } %>
@@ -70,8 +71,8 @@
                     <% } %>
                   </td>
                   <td>
-                    <% if (!p.error && p.levelTitle) { %>
-                      <span class="wz-ar"><%= p.levelTitle %></span>
+                    <% if (!p.error && p.levelNumber) { %>
+                      <span class="text-nowrap"><%= p.levelName %></span>
                       <% if (p.levelIsNew) { %><span class="kd-tag kd-tag-accent">new</span><% } %>
                     <% } %>
                   </td>

@@ -171,13 +171,13 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
       await discardUnused(payload.media);
 
       const skipped = plan.length - result.imported;
-      const unpublished = result.levels.filter((l) => l.unpublished).map((l) => l.title);
-      const notCrossing = result.levels.filter((l) => l.unplaced).map((l) => l.title);
+      const unpublished = result.levels.filter((l) => l.unpublished).map((l) => l.name);
+      const notCrossing = result.levels.filter((l) => l.unplaced).map((l) => l.name);
       const parts = [
         `Imported ${result.imported} question(s)${skipped ? `, skipped ${skipped} with errors` : ''}.`,
-        result.levels.length ? `Levels updated: ${result.levels.map((l) => `${l.title}${l.created ? ' (new)' : ''}`).join('، ')}.` : '',
-        notCrossing.length ? `Some words do not cross yet in: ${notCrossing.join('، ')}.` : '',
-        unpublished.length ? `Unpublished because the grid no longer connects: ${unpublished.join('، ')}.` : '',
+        result.levels.length ? `Levels updated: ${result.levels.map((l) => `${l.name}${l.created ? ' (new)' : ''}`).join(', ')}.` : '',
+        notCrossing.length ? `Some words do not cross yet in: ${notCrossing.join(', ')}.` : '',
+        unpublished.length ? `Unpublished because the grid no longer connects: ${unpublished.join(', ')}.` : '',
       ];
       req.flash(unpublished.length || notCrossing.length ? 'warning' : 'success', parts.filter(Boolean).join(' '));
       res.redirect('/admin/import');

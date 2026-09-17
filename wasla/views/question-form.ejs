@@ -38,14 +38,15 @@
                   <% } %>
                 </div>
                 <div>
+                  <label class="form-label small fw-semibold" for="title">Title <span class="wz-ar kd-faint fw-normal">العنوان</span></label>
+                  <input class="form-control wz-ar" id="title" name="title" dir="rtl" list="known-titles" value="<%= question.title %>" maxlength="<%= maxTitle %>" placeholder="حيوانات، عواصم…" required>
+                  <datalist id="known-titles"><% titles.forEach((t) => { %><option value="<%= t %>"></option><% }) %></datalist>
+                  <div class="form-text">Shown above the question in the app. Up to <%= maxTitle %> characters; pick an existing one to reuse it.</div>
+                </div>
+                <div>
                   <label class="form-label small fw-semibold" for="clue">Question / clue</label>
                   <textarea class="form-control wz-ar" id="clue" name="clue" dir="rtl" rows="3" maxlength="200" required><%= question.clue %></textarea>
                   <div class="form-text">What the player reads above the picture.</div>
-                </div>
-                <div>
-                  <label class="form-label small fw-semibold" for="category">Category</label>
-                  <input class="form-control wz-ar" id="category" name="category" dir="rtl" list="known" value="<%= question.category %>" maxlength="60" placeholder="بلدان، حيوانات، ماركات…">
-                  <datalist id="known"><% categories.forEach((c) => { %><option value="<%= c %>"></option><% }) %></datalist>
                 </div>
                 <div class="row g-2">
                   <div class="col-sm-6">
@@ -67,7 +68,7 @@
                 <% if (levels.length) { %>
                   <div class="small kd-muted">
                     Used in:
-                    <% levels.forEach((l) => { %><a class="kd-tag wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a> <% }) %>
+                    <% levels.forEach((l) => { %><a class="kd-tag" href="/admin/levels/<%= l.id %>"><%= l.name %></a> <% }) %>
                   </div>
                 <% } %>
               </div>

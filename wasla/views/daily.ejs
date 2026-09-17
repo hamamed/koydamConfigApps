@@ -30,7 +30,7 @@
                       <% if (d.date === today) { %><span class="kd-tag kd-tag-accent ms-1">today</span><% } %>
                     </td>
                     <td>
-                      <% if (level) { %><span class="wz-ar fw-semibold"><%= level.title %></span> <span class="kd-faint small">level <%= level.number %></span><% } %>
+                      <% if (level) { %><span class="fw-semibold"><%= level.name %></span><% } %>
                       <% if (d.source === 'scheduled') { %>
                         <span class="ad-status ad-status-published">Chosen</span>
                       <% } else { %>
@@ -44,7 +44,7 @@
                         <select class="form-select form-select-sm wz-daily-select" name="levelId" aria-label="Level for <%= d.date %>">
                           <option value="">Automatic</option>
                           <% levels.forEach((l) => { %>
-                            <option value="<%= l.id %>" <%= d.scheduledId === l.id ? 'selected' : '' %>><%= l.number %> · <%= l.title %></option>
+                            <option value="<%= l.id %>" <%= d.scheduledId === l.id ? 'selected' : '' %>><%= l.name %></option>
                           <% }) %>
                         </select>
                         <button class="btn btn-sm btn-kd-accent" type="submit">Save</button>
@@ -81,7 +81,7 @@
                 <div class="flex-grow-1">
                   <label class="form-label small fw-semibold" for="levelId">Level</label>
                   <select class="form-select" id="levelId" name="levelId" required>
-                    <% levels.forEach((l) => { %><option value="<%= l.id %>"><%= l.number %> · <%= l.title %></option><% }) %>
+                    <% levels.forEach((l) => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %>
                   </select>
                 </div>
                 <button class="btn btn-kd" type="submit">Schedule</button>
@@ -104,7 +104,7 @@
                       <% later.forEach((d) => { %>
                         <tr>
                           <td class="kd-mono"><%= d.date %></td>
-                          <td class="wz-ar"><%= d.title %><% if (!d.published) { %> <span class="kd-tag kd-tag-warn">unpublished</span><% } %></td>
+                          <td><%= d.name %><% if (!d.published) { %> <span class="kd-tag kd-tag-warn">unpublished</span><% } %></td>
                           <td class="text-end">
                             <form method="post" action="/admin/daily/<%= d.date %>/clear" class="m-0">
                               <input type="hidden" name="_csrf" value="<%= csrfToken %>">

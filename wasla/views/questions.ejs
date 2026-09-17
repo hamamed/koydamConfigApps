@@ -11,7 +11,7 @@
       <%- include('partials/flash') %>
 
       <form class="ad-toolbar d-flex flex-wrap gap-2 align-items-center mb-3" method="get" action="/admin/questions">
-        <input class="form-control wz-search" name="q" value="<%= search %>" placeholder="Search answers, clues, categories" dir="auto">
+        <input class="form-control wz-search" name="q" value="<%= search %>" placeholder="Search answers, clues, titles" dir="auto">
         <div class="form-check m-0">
           <input class="form-check-input" type="checkbox" id="unused" name="unused" value="1" <%= unused ? 'checked' : '' %>>
           <label class="form-check-label small" for="unused">Only questions not in a level</label>
@@ -29,7 +29,7 @@
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Picture</th><th>Answer</th><th>Type</th><th>Clue</th><th>Category</th><th>Levels</th><th></th></tr></thead>
+              <thead><tr><th>Picture</th><th>Answer</th><th>Type</th><th>Title</th><th>Clue</th><th>Levels</th><th></th></tr></thead>
               <tbody>
                 <% questions.forEach((q) => { %>
                   <tr>
@@ -40,8 +40,8 @@
                       <% if (q.type === 'emoji' && q.emoji) { %><span class="wz-emoji"><%= q.emoji %></span><% } %>
                       <% if (q.blurred) { %><span class="kd-tag kd-tag-accent">blurred</span><% } %>
                     </td>
+                    <td><% if (q.title) { %><span class="kd-tag wz-ar"><%= q.title %></span><% } else { %><span class="kd-tag kd-tag-warn">no title</span><% } %></td>
                     <td class="wz-ar"><%= q.clue %></td>
-                    <td><% if (q.category) { %><span class="kd-tag wz-ar"><%= q.category %></span><% } %></td>
                     <td><%= q.levelCount ? q.levelCount : '—' %></td>
                     <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>">Edit</a></td>
                   </tr>

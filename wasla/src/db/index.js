@@ -24,6 +24,8 @@ const ADDITIVE_COLUMNS = [
   ['questions', 'image_blurred', 'INTEGER NOT NULL DEFAULT 0'],
   // A generated name under the audio directory, never a path.
   ['questions', 'audio_file', 'TEXT'],
+  // Shown above the question in the app. Replaces category, which older rows are backfilled from.
+  ['questions', 'title', 'TEXT'],
   // Unused legacy from removed level packs; kept so existing databases match. Nothing reads or writes it.
   ['levels', 'pack_id', 'INTEGER REFERENCES packs(id) ON DELETE SET NULL'],
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],
@@ -52,6 +54,10 @@ export function openDatabase(file) {
       database.exec("UPDATE questions SET type = 'image' WHERE image_file IS NOT NULL");
     }
   }
+  // Questions from before titles: the old category becomes the title, once.
+  // Rows that already have a title (every row saved since) are left alone.
+  database.exec(`UPDATE questions SET title = substr(trim(category), 1, 40)
+    WHERE title IS NULL AND category IS NOT NULL AND trim(category) <> ''`);
   // Indexes on added columns can only be made once the columns exist. (idx_levels_pack: unused legacy.)
   database.exec('CREATE INDEX IF NOT EXISTS idx_levels_pack ON levels(pack_id)');
   return database;

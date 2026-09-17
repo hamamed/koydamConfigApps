@@ -76,7 +76,7 @@
                       <td>
                         <a class="wz-answer" href="/admin/questions/<%= q.questionId %>"><%= q.answer %></a>
                         <% if (q.isHard) { %><span class="kd-tag wz-tag-hard">hard</span><% } %>
-                        <div class="wz-ar small kd-faint text-truncate wz-stats-clue"><%= q.clue %></div>
+                        <div class="wz-ar small kd-faint text-truncate wz-stats-clue"><% if (q.title) { %><span class="kd-tag wz-ar me-1"><%= q.title %></span><% } %><%= q.clue %></div>
                       </td>
                       <td class="text-end"><%= q.opens %></td>
                       <td class="text-end"><%= q.solves %></td>
@@ -120,7 +120,7 @@
                   <% levels.forEach((l) => { %>
                     <tr>
                       <td>
-                        <% if (l.levelId) { %><a class="wz-ar fw-semibold" href="/admin/levels/<%= l.levelId %>"><%= l.title %></a><% } else { %><span class="fw-semibold"><%= l.title %></span><% } %>
+                        <% if (l.levelId) { %><a class="fw-semibold" href="/admin/levels/<%= l.levelId %>"><%= l.name %></a><% } else { %><span class="fw-semibold"><%= l.name %></span><% } %>
                         <% if (!l.published) { %><span class="ad-status ad-status-draft">Draft</span><% } %>
                       </td>
                       <td class="text-end"><%= l.completions %></td>

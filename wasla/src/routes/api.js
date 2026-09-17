@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 import { parseDay, todayUtc } from '../daily.js';
 import { readEventBatch } from '../events.js';
+import { DAILY_TITLE } from '../level-label.js';
 
 /**
  * What the iOS app reads, plus the one thing it writes: anonymous gameplay
@@ -26,6 +27,8 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events }) {
     id: w.id,
     answer: w.playAnswer,
     answerDisplay: w.answer,
+    // Shown above the question. Empty for an older question saved without one.
+    title: w.title ?? '',
     clue: w.clue,
     row: w.row,
     col: w.col,
@@ -75,7 +78,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events }) {
     const level = pick && repo.publishedLevelById(pick.levelId);
     if (!level) return res.status(404).json({ error: 'There is no daily puzzle yet.' });
 
-    res.json({ ...levelBody(level), number: 0, date: parsed.date, coins: appConfig.get().dailyPuzzleCoins });
+    res.json({ ...levelBody(level), number: 0, title: DAILY_TITLE, date: parsed.date, coins: appConfig.get().dailyPuzzleCoins });
   });
 
   // ── Events ────────────────────────────────────────────────────────────────

@@ -18,8 +18,8 @@ beforeEach(() => {
   db = openDatabase(':memory:');
   repo = createRepository(db);
   events = createEvents(db, repo);
-  words = ['مصر', 'مرس'].map((answer) => repo.createQuestion({ answer, clue: 'x' }).question.id);
-  level = repo.createLevel('بلدان');
+  words = ['مصر', 'مرس'].map((answer) => repo.createQuestion({ title: 'عام', answer, clue: 'x' }).question.id);
+  level = repo.createLevel();
   repo.setLevelQuestions(level.id, words);
   repo.setPublished(level.id, true);
 });
@@ -117,14 +117,14 @@ test('level stats average time and stars over completions, keyed to the level pl
     { type: 'level_completed', level: 0, seconds: 70, stars: 1, at: AT, device: DEVICE },
   ]);
   // Moving the level later must not move its history to another level.
-  const other = repo.createLevel('أخرى');
+  const other = repo.createLevel();
   repo.moveLevel(other.id, 'up');
 
   const rows = events.levelStats();
   const played = rows.find((r) => r.levelId === level.id);
-  assert.deepEqual([played.title, played.completions, played.avgSeconds, played.avgStars], ['بلدان', 2, 75, 2.5]);
+  assert.deepEqual([played.name, played.completions, played.avgSeconds, played.avgStars], ['Level 2', 2, 75, 2.5]);
   const daily = rows.find((r) => r.levelId === null);
-  assert.deepEqual([daily.title, daily.completions], ['Daily puzzle', 1]);
+  assert.deepEqual([daily.name, daily.completions], ['Daily puzzle', 1]);
 });
 
 test('pruning removes events older than the retention window', () => {
@@ -136,7 +136,7 @@ test('pruning removes events older than the retention window', () => {
 });
 
 test('questions nobody has opened sort after the rest, whichever the direction', () => {
-  const unopened = repo.createQuestion({ answer: 'قمر', clue: 'x' }).question.id;
+  const unopened = repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x' }).question.id;
   record([open(words[0]), open(words[1]), { type: 'question_solved', level: 1, word: words[1], seconds: 4, at: AT, device: DEVICE }]);
 
   for (const dir of ['asc', 'desc']) {

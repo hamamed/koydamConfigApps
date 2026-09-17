@@ -47,7 +47,7 @@
                 <tbody>
                   <% levels.forEach((l) => { %>
                     <tr>
-                      <td><a class="fw-semibold wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a></td>
+                      <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>"><%= l.name %></a></td>
                       <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
                       <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>
                       <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'Published' : 'Draft' %></span></td>

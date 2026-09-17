@@ -7,12 +7,11 @@ export function registerDaily(router, { repo, daily }) {
   router.get('/daily', (_req, res) => {
     const today = todayUtc();
     const days = daily.upcoming(today, DAILY_DAYS_SHOWN);
-    const published = repo.publishedLevels();
-    const ids = repo.publishedLevelIds();
-    // id → "3 · title", for the selects and for naming the automatic pick.
-    const levels = ids.map((id, i) => ({ id, number: i + 1, title: published[i].title }));
+    const all = repo.listLevels();
+    // Published levels, for the selects and for naming the automatic pick: "Level 3".
+    const levels = all.filter((l) => l.published);
     const byId = new Map(levels.map((l) => [l.id, l]));
-    const titleOf = (id) => repo.getLevel(id)?.title ?? `#${id}`;
+    const nameOf = (id) => all.find((l) => l.id === id)?.name ?? `#${id}`;
 
     res.render('daily', {
       title: 'Daily puzzle',
@@ -20,7 +19,7 @@ export function registerDaily(router, { repo, daily }) {
       days,
       levels,
       byId,
-      later: daily.scheduledAfter(days.at(-1).date).map((d) => ({ ...d, title: titleOf(d.levelId), published: byId.has(d.levelId) })),
+      later: daily.scheduledAfter(days.at(-1).date).map((d) => ({ ...d, name: nameOf(d.levelId), published: byId.has(d.levelId) })),
     });
   });
 

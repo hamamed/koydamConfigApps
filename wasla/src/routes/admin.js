@@ -7,7 +7,7 @@ import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
-import { DIFFICULTIES, MAX_ZOOM } from '../repository.js';
+import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerImport } from './admin-import.js';
 import { registerSettings } from './admin-settings.js';
@@ -97,7 +97,7 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
   });
 
   const blankQuestion = {
-    answer: '', playAnswer: '', clue: '', category: '', type: 'text', emoji: '',
+    answer: '', playAnswer: '', clue: '', title: '', type: 'text', emoji: '',
     imageFile: null, zoom: 1, focusX: 0.5, focusY: 0.5, blurred: false, audioFile: null,
   };
 
@@ -105,13 +105,15 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     title: question.id ? 'Edit question' : 'New question',
     question,
     maxZoom: MAX_ZOOM,
+    maxTitle: MAX_TITLE,
     maxEmoji: MAX_EMOJI,
     types: QUESTION_TYPES,
     maxImageMb: megabytes(config.maxImageBytes),
     maxAudioMb: megabytes(config.maxAudioBytes),
     levels: question.id ? repo.levelsUsing(question.id) : [],
     levelId: extra.levelId ?? '',
-    categories: [...new Set(repo.listQuestions().map((q) => q.category).filter(Boolean))].sort(),
+    // Titles already in use, offered for reuse.
+    titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
   });
 
   router.get('/questions/new', (req, res) => renderForm(res, blankQuestion, { levelId: req.query.level }));
@@ -130,7 +132,7 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     const input = {
       answer: req.body.answer,
       clue: req.body.clue,
-      category: req.body.category,
+      title: req.body.title,
       // Empty is "Automatic": the type follows the media.
       type: req.body.type ?? '',
       emoji: req.body.emoji ?? '',
@@ -190,7 +192,7 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
       if (level) {
         const ids = [...level.words, ...level.unplaced].map((w) => w.id);
         repo.setLevelQuestions(level.id, [...ids, result.question.id]);
-        req.flash('success', `Added “${result.question.answer}” to ${level.title}.`);
+        req.flash('success', `Added “${result.question.answer}” to ${level.name}.`);
         return res.redirect(`/admin/levels/${level.id}`);
       }
       req.flash('success', savedMessage(result.question));
@@ -217,7 +219,7 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
         await audio.remove(result.previousAudio);
       }
       req.flash(result.unpublished.length ? 'warning' : 'success', result.unpublished.length
-        ? `Saved. The new answer no longer crosses the grid, so these levels were unpublished: ${result.unpublished.join('، ')}.`
+        ? `Saved. The new answer no longer crosses the grid, so these levels were unpublished: ${result.unpublished.join(', ')}.`
         : savedMessage(result.question));
       res.redirect('/admin/questions');
     } catch (err) {
@@ -256,8 +258,8 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
   });
 
   router.post('/levels', (req, res) => {
-    const level = repo.createLevel(req.body.title);
-    req.flash('success', `Created ${level.title}. Pick its questions below.`);
+    const level = repo.createLevel();
+    req.flash('success', `Added ${level.name}. Pick its questions below.`);
     res.redirect(`/admin/levels/${level.id}`);
   });
 
@@ -274,13 +276,12 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     }));
     const chosen = new Set([...level.words, ...level.unplaced].map((w) => w.id));
     res.render('level', {
-      title: level.title,
+      title: level.name,
       level,
       cells: [...cells.values()],
       questions: repo.listQuestions(),
       difficulties: DIFFICULTIES,
       chosen,
-      number: level.published ? repo.listLevels().filter((l) => l.published).findIndex((l) => l.id === level.id) + 1 : null,
     });
   });
 
@@ -292,11 +293,6 @@ export function adminRouter({ repo, images, audio, daily, appConfig, events, pen
     }
     const back = handler(id, req) ?? `/admin/levels/${id}`;
     res.redirect(back);
-  });
-
-  levelAction('title', (id, req) => {
-    const result = repo.renameLevel(id, req.body.title);
-    req.flash(result.error ? 'danger' : 'success', result.error ?? 'Title saved.');
   });
 
   levelAction('details', (id, req) => {

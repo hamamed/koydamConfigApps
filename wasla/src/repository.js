@@ -7,9 +7,11 @@
 
 import { answerProblem, foldForPlay, normalizeAnswer } from './arabic.js';
 import { generateLayout } from './layout.js';
+import { appLevelTitle, levelName } from './level-label.js';
 import { deriveType, emojiProblem, normalizeEmoji, QUESTION_TYPES, TYPE_NEEDS } from './question-types.js';
 
 export const MAX_CLUE = 200;
+export const MAX_TITLE = 40;
 export const MAX_ZOOM = 5;
 export const MIN_WORDS = 2;
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -21,7 +23,8 @@ const toQuestion = (row) => row && ({
   // so questions written before folding existed are laid out folded too.
   playAnswer: foldForPlay(row.answer),
   clue: row.clue,
-  category: row.category || '',
+  // Rows from before titles (and not backfilled) read as an empty title.
+  title: row.title || '',
   type: row.type || 'text',
   emoji: row.emoji || null,
   imageFile: row.image_file || null,
@@ -72,6 +75,10 @@ function readQuestion(input, current = {}) {
   if (!clue) return { error: 'A clue is required — it is the question the player reads.' };
   if (clue.length > MAX_CLUE) return { error: `A clue can be at most ${MAX_CLUE} characters.` };
 
+  const title = String(input.title ?? current.title ?? '').trim();
+  if (!title) return { error: 'A title is required — it is shown above the question in the app.' };
+  if ([...title].length > MAX_TITLE) return { error: `A title can be at most ${MAX_TITLE} characters.` };
+
   const zoom = Number(input.zoom ?? current.zoom ?? 1);
   if (!Number.isFinite(zoom) || zoom < 1 || zoom > MAX_ZOOM) {
     return { error: `Image zoom must be between 1 and ${MAX_ZOOM}.` };
@@ -101,7 +108,7 @@ function readQuestion(input, current = {}) {
     fields: {
       answer,
       clue,
-      category: String(input.category ?? current.category ?? '').trim().slice(0, 60) || null,
+      title,
       type,
       emoji: media.emoji,
       image_file: media.imageFile,
@@ -127,7 +134,7 @@ export function createRepository(db) {
   function listQuestions({ search = '', unused = false } = {}) {
     const term = `%${String(search).trim()}%`;
     return db.prepare(`${QUESTION_SELECT}
-      WHERE (q.answer LIKE @term OR q.clue LIKE @term OR IFNULL(q.category, '') LIKE @term)
+      WHERE (q.answer LIKE @term OR q.clue LIKE @term OR IFNULL(q.title, '') LIKE @term)
       ${unused ? 'AND NOT EXISTS (SELECT 1 FROM level_words lw WHERE lw.question_id = q.id)' : ''}
       ORDER BY q.id DESC`).all({ term }).map(toQuestion);
   }
@@ -136,24 +143,25 @@ export function createRepository(db) {
     return toQuestion(db.prepare(`${QUESTION_SELECT} WHERE q.id = ?`).get(id));
   }
 
+  /** The levels a question is in, in panel order, each with its number and `name` ("Level 3"). */
   function levelsUsing(questionId) {
-    return db.prepare(`SELECT l.id, l.title, l.published FROM levels l
-      JOIN level_words lw ON lw.level_id = l.id WHERE lw.question_id = ? ORDER BY l.position`).all(questionId);
+    const using = new Set(db.prepare('SELECT level_id FROM level_words WHERE question_id = ?').all(questionId).map((r) => r.level_id));
+    return listLevels().filter((l) => using.has(l.id));
   }
 
   /** The same checks a save makes, without saving: `{ error }` or `{ question }` as it would be stored. */
   function checkQuestion(input) {
     const { fields, error } = readQuestion(input);
     if (error) return { error };
-    return { question: { answer: fields.answer, playAnswer: foldForPlay(fields.answer), type: fields.type } };
+    return { question: { answer: fields.answer, playAnswer: foldForPlay(fields.answer), title: fields.title, type: fields.type } };
   }
 
   function createQuestion(input) {
     const { fields, error } = readQuestion(input);
     if (error) return { error };
     const { lastInsertRowid } = db.prepare(`INSERT INTO questions
-      (answer, clue, category, type, emoji, image_file, image_zoom, focus_x, focus_y, image_blurred, audio_file)
-      VALUES (@answer, @clue, @category, @type, @emoji, @image_file, @image_zoom, @focus_x, @focus_y, @image_blurred, @audio_file)`).run(fields);
+      (answer, clue, title, type, emoji, image_file, image_zoom, focus_x, focus_y, image_blurred, audio_file)
+      VALUES (@answer, @clue, @title, @type, @emoji, @image_file, @image_zoom, @focus_x, @focus_y, @image_blurred, @audio_file)`).run(fields);
     return { question: getQuestion(lastInsertRowid) };
   }
 
@@ -169,7 +177,7 @@ export function createRepository(db) {
     if (error) return { error };
 
     return tx(() => {
-      db.prepare(`UPDATE questions SET answer = @answer, clue = @clue, category = @category,
+      db.prepare(`UPDATE questions SET answer = @answer, clue = @clue, title = @title,
         type = @type, emoji = @emoji, image_file = @image_file, image_zoom = @image_zoom,
         focus_x = @focus_x, focus_y = @focus_y, image_blurred = @image_blurred, audio_file = @audio_file,
         updated_at = datetime('now') WHERE id = @id`).run({ ...fields, id });
@@ -180,7 +188,7 @@ export function createRepository(db) {
           const { unplaced } = relayout(level.id);
           if (level.published && unplaced.length) {
             setPublishedRow(level.id, false);
-            unpublished.push(level.title);
+            unpublished.push(level.name);
           }
         }
       }
@@ -192,7 +200,7 @@ export function createRepository(db) {
   function deleteQuestion(id) {
     const using = levelsUsing(id);
     if (using.length) {
-      return { error: `Remove it from these levels first: ${using.map((l) => l.title).join('، ')}.` };
+      return { error: `Remove it from these levels first: ${using.map((l) => l.name).join(', ')}.` };
     }
     const current = getQuestion(id);
     db.prepare('DELETE FROM questions WHERE id = ?').run(id);
@@ -222,9 +230,9 @@ export function createRepository(db) {
     }));
   }
 
+  // levels.title is unused legacy: a level is named by its place ("Level 3").
   const toLevel = (row) => row && ({
     id: row.id,
-    title: row.title,
     position: row.position,
     published: Boolean(row.published),
     seed: row.seed,
@@ -242,20 +250,30 @@ export function createRepository(db) {
       (SELECT COUNT(*) FROM level_words lw WHERE lw.level_id = l.id AND lw.direction IS NULL) AS unplaced_count
     FROM levels l`;
 
+  /**
+   * Every level in panel order. `number` is its place in this list (the panel's
+   * "Level 3"); `publishedNumber` is the number the app shows, null for a draft.
+   */
   function listLevels() {
-    return db.prepare(`${LEVEL_SELECT} ORDER BY l.position, l.id`).all().map(toLevel);
+    let shown = 0;
+    return db.prepare(`${LEVEL_SELECT} ORDER BY l.position, l.id`).all().map((row, i) => {
+      const level = toLevel(row);
+      const numbers = { number: i + 1, publishedNumber: level.published ? ++shown : null };
+      return { ...level, ...numbers, name: levelName(numbers) };
+    });
   }
 
   function getLevel(id) {
-    const level = toLevel(db.prepare(`${LEVEL_SELECT} WHERE l.id = ?`).get(id));
+    const level = listLevels().find((l) => l.id === Number(id));
     if (!level) return null;
-    const words = wordsOf(id);
+    const words = wordsOf(level.id);
     return { ...level, words: words.filter((w) => w.direction), unplaced: words.filter((w) => !w.direction) };
   }
 
-  function findLevelByTitle(title) {
-    const row = db.prepare('SELECT id FROM levels WHERE title = ? ORDER BY position, id LIMIT 1').get(String(title ?? '').trim());
-    return row ? getLevel(row.id) : null;
+  /** The level at a panel number (1-based), or null. */
+  function levelByNumber(number) {
+    const level = listLevels()[Number(number) - 1];
+    return level ? getLevel(level.id) : null;
   }
 
   /** A validated difficulty, or `{ error }`. */
@@ -265,22 +283,15 @@ export function createRepository(db) {
     return { difficulty: level };
   }
 
-  function createLevel(title, details = {}) {
+  /** Adds the next level at the end of the list. Levels have no names; the legacy title stays empty. */
+  function createLevel(details = {}) {
     const { difficulty, error } = readLevelDetails(details);
     // Callers check details first; reaching here with bad ones is a bug, not input.
     if (error) throw new Error(error);
-    const clean = String(title ?? '').trim().slice(0, 80) || 'مستوى جديد';
     const { next } = db.prepare('SELECT IFNULL(MAX(position), 0) + 1 AS next FROM levels').get();
-    const { lastInsertRowid } = db.prepare('INSERT INTO levels (title, position, difficulty) VALUES (?, ?, ?)')
-      .run(clean, next, difficulty);
+    const { lastInsertRowid } = db.prepare("INSERT INTO levels (title, position, difficulty) VALUES ('', ?, ?)")
+      .run(next, difficulty);
     return getLevel(lastInsertRowid);
-  }
-
-  function renameLevel(id, title) {
-    const clean = String(title ?? '').trim().slice(0, 80);
-    if (!clean) return { error: 'A level needs a title.' };
-    db.prepare("UPDATE levels SET title = ?, updated_at = datetime('now') WHERE id = ?").run(clean, id);
-    return { level: getLevel(id) };
   }
 
   function setLevelDetails(id, details) {
@@ -412,7 +423,8 @@ export function createRepository(db) {
       id: level.id,
       summary: {
         number: i + 1,
-        title: level.title,
+        // Compatibility only: the app builds its own title from the number.
+        title: appLevelTitle(i + 1),
         wordCount: level.wordCount,
         rows: level.rows,
         cols: level.cols,
@@ -457,7 +469,7 @@ export function createRepository(db) {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
     listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
-    listLevels, getLevel, findLevelByTitle, createLevel, renameLevel, setLevelDetails, setLevelQuestions, shuffleLevel,
+    listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty,
     publishedLevels, publishedLevelIds, publishedLevel, publishedLevelById, counts,
   };

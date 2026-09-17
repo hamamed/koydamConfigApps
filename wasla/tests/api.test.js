@@ -20,15 +20,15 @@ before(async () => {
   db = openDatabase(':memory:');
   repo = createRepository(db);
   const ids = [
-    repo.createQuestion({ answer: 'المغرب', clue: 'بلد عاصمته الرباط', imageFile: 'aaaaaaaaaaaaaaaaaaaaaaaa.jpg', zoom: 2, focusX: 0.25, focusY: 0.75, blurred: true }),
-    repo.createQuestion({ answer: 'مصر', clue: 'بلد الأهرامات', emoji: '🇪🇬🐪' }),
-    repo.createQuestion({ answer: 'باريس', clue: 'عاصمة فرنسا', audioFile: 'bbbbbbbbbbbbbbbbbbbbbbbb.m4a' }),
-    repo.createQuestion({ answer: 'أسد', clue: 'ملك الغابة' }),
+    repo.createQuestion({ title: 'بلدان', answer: 'المغرب', clue: 'بلد عاصمته الرباط', imageFile: 'aaaaaaaaaaaaaaaaaaaaaaaa.jpg', zoom: 2, focusX: 0.25, focusY: 0.75, blurred: true }),
+    repo.createQuestion({ title: 'عام', answer: 'مصر', clue: 'بلد الأهرامات', emoji: '🇪🇬🐪' }),
+    repo.createQuestion({ title: 'عام', answer: 'باريس', clue: 'عاصمة فرنسا', audioFile: 'bbbbbbbbbbbbbbbbbbbbbbbb.m4a' }),
+    repo.createQuestion({ title: 'عام', answer: 'أسد', clue: 'ملك الغابة' }),
   ].map((r) => r.question.id);
-  level = repo.createLevel('بلدان', { difficulty: 'easy' });
+  level = repo.createLevel({ difficulty: 'easy' });
   repo.setLevelQuestions(level.id, ids);
   assert.equal(repo.setPublished(level.id, true).error, undefined);
-  repo.createLevel('مسودة');
+  repo.createLevel();
 
   const app = express();
   app.use('/api/v1', apiRouter({
@@ -55,7 +55,7 @@ test('lists published levels only', async () => {
   const body = await res.json();
 
   assert.equal(res.status, 200);
-  assert.deepEqual(body.levels.map((l) => [l.number, l.title, l.wordCount]), [[1, 'بلدان', 4]]);
+  assert.deepEqual(body.levels.map((l) => [l.number, l.title, l.wordCount]), [[1, 'لغز رقم 1', 4]]);
 });
 
 test('level summaries carry difficulty and no pack fields', async () => {
@@ -90,7 +90,7 @@ test('a level carries its grid, clues and image framing', async () => {
 
 test('a word has the contract shape: played answer, spelling, type, emoji and audio', async () => {
   const { words } = await (await fetch(`${base}/levels/1`)).json();
-  const keys = ['id', 'answer', 'answerDisplay', 'clue', 'row', 'col', 'direction', 'type', 'image', 'emoji', 'audio'];
+  const keys = ['id', 'answer', 'answerDisplay', 'title', 'clue', 'row', 'col', 'direction', 'type', 'image', 'emoji', 'audio'];
   words.forEach((w) => assert.deepEqual(Object.keys(w).sort(), [...keys].sort()));
 
   const lion = words.find((w) => w.answerDisplay === 'أسد');
@@ -103,6 +103,25 @@ test('a word has the contract shape: played answer, spelling, type, emoji and au
   assert.equal(paris.type, 'audio');
   assert.deepEqual(paris.audio, { url: 'https://wasla.example/media/audio/bbbbbbbbbbbbbbbbbbbbbbbb.m4a' });
   assert.equal(paris.emoji, null);
+});
+
+test('every word carries its title, and no category', async () => {
+  const { words } = await (await fetch(`${base}/levels/1`)).json();
+
+  assert.equal(words.find((w) => w.answer === 'المغرب').title, 'بلدان');
+  assert.equal(words.find((w) => w.answer === 'مصر').title, 'عام');
+  words.forEach((w) => assert.equal('category' in w, false));
+});
+
+test('a question from before titles is sent with an empty title', async () => {
+  const untitled = db.prepare("SELECT id FROM questions WHERE answer = 'باريس'").get().id;
+  db.prepare('UPDATE questions SET title = NULL WHERE id = ?').run(untitled);
+  try {
+    const { words } = await (await fetch(`${base}/levels/1`)).json();
+    assert.equal(words.find((w) => w.id === untitled).title, '');
+  } finally {
+    db.prepare("UPDATE questions SET title = 'عام' WHERE id = ?").run(untitled);
+  }
 });
 
 test('an unknown or unpublished level is a 404 with a message', async () => {
@@ -135,7 +154,7 @@ test('the daily puzzle is a level with number 0, its date and its coins', async 
   const body = await res.json();
 
   assert.equal(res.status, 200);
-  assert.deepEqual([body.number, body.date, body.coins, body.title], [0, '2026-09-17', 30, 'بلدان']);
+  assert.deepEqual([body.number, body.date, body.coins, body.title], [0, '2026-09-17', 30, 'لغز اليوم']);
   assert.equal(body.words.length, 4);
   assert.ok(body.words[0].answerDisplay);
 });

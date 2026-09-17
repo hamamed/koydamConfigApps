@@ -8,12 +8,16 @@
  */
 
 import { parseCsv } from './csv.js';
+import { levelLabel } from './level-label.js';
 
-export const IMPORT_COLUMNS = ['answer', 'clue', 'category', 'type', 'emoji', 'image', 'zoom', 'focus_x', 'focus_y', 'blurred', 'audio', 'level'];
-/** Columns older CSVs may still carry; read past without complaint. `pack` is from removed level packs. */
-const IGNORED_COLUMNS = ['pack'];
+export const IMPORT_COLUMNS = ['answer', 'clue', 'title', 'type', 'emoji', 'image', 'zoom', 'focus_x', 'focus_y', 'blurred', 'audio', 'level'];
+/**
+ * Columns older CSVs may still carry; read past without complaint. `pack` is
+ * from removed level packs. `category` was replaced by `title`, and stands in
+ * for a blank title so an old file still imports.
+ */
+const IGNORED_COLUMNS = ['pack', 'category'];
 export const MAX_IMPORT_ROWS = 1000;
-const MAX_LEVEL_TITLE = 80;
 
 /** `{ rows: [{ row, values }] }` keyed by column name, or `{ error }` for the whole file. */
 export function readImportCsv(text) {
@@ -32,6 +36,9 @@ export function readImportCsv(text) {
   if (repeated.length) return { error: `Column named twice: ${repeated.join(', ')}.` };
   for (const required of ['answer', 'clue']) {
     if (!header.includes(required)) return { error: `The header needs an “${required}” column.` };
+  }
+  if (!header.includes('title') && !header.includes('category')) {
+    return { error: 'The header needs a “title” column: every question has a title, shown above it in the app.' };
   }
 
   const body = table.slice(1);
@@ -62,7 +69,7 @@ function mediaFor(name, kind, media) {
  * `{ kind: 'image' | 'audio', file }`, the name it was stored under.
  */
 export function planImport(repo, rows, media) {
-  const levelsNamed = new Map();
+  const levelCount = repo.listLevels().length;
 
   return rows.map(({ row, values, extra }) => {
     const plan = { row, answer: values.answer, clue: values.clue, error: null };
@@ -74,15 +81,15 @@ export function planImport(repo, rows, media) {
     const audio = mediaFor(values.audio, 'audio', media);
     if (audio.error) return fail(audio.error);
 
-    const levelTitle = (values.level ?? '').slice(0, MAX_LEVEL_TITLE);
-    if (levelTitle && !levelsNamed.has(levelTitle)) levelsNamed.set(levelTitle, repo.findLevelByTitle(levelTitle));
+    const level = readLevelNumber(values.level, levelCount);
+    if (level.error) return fail(level.error);
 
     // Blank cells are left out, so the question's own defaults apply.
     const given = (value) => (value === undefined || value === '' ? undefined : value);
     const input = {
       answer: values.answer,
       clue: values.clue,
-      category: values.category,
+      title: values.title || values.category,
       type: given(values.type),
       emoji: values.emoji,
       imageFile: image.file,
@@ -101,10 +108,30 @@ export function planImport(repo, rows, media) {
       playAnswer: check.question.playAnswer,
       storedAnswer: check.question.answer,
       type: check.question.type,
-      levelTitle: levelTitle || null,
-      levelIsNew: Boolean(levelTitle) && !levelsNamed.get(levelTitle),
+      title: check.question.title,
+      levelNumber: level.number,
+      levelName: level.number ? levelLabel(level.number) : null,
+      levelIsNew: level.number === levelCount + 1,
     };
   });
+}
+
+/**
+ * The `level` cell: blank for none, or a level number as the panel counts them
+ * (1, 2, 3 …). One past the last level adds that level; anything further is a
+ * gap, and refused.
+ */
+function readLevelNumber(cell, levelCount) {
+  const text = String(cell ?? '').trim();
+  if (!text) return { number: null };
+  if (!/^\d+$/.test(text) || Number(text) < 1) {
+    return { error: `The level is a level number (1, 2, 3 …), not “${text}”.` };
+  }
+  const number = Number(text);
+  if (number > levelCount + 1) {
+    return { error: `There is no ${levelLabel(number)}. ${levelCount ? `The last is ${levelLabel(levelCount)}; ` : 'There are no levels yet; '}use ${levelCount + 1} to add a new one.` };
+  }
+  return { number };
 }
 
 /**
@@ -120,18 +147,25 @@ export function commitImport(repo, plan) {
     for (const p of valid) {
       const created = repo.createQuestion(p.input);
       if (created.error) throw Object.assign(new Error(`Row ${p.row}: ${created.error}`), { status: 400 });
-      if (p.levelTitle) {
-        const ids = byLevel.get(p.levelTitle) ?? [];
-        byLevel.set(p.levelTitle, [...ids, created.question.id]);
+      if (p.levelNumber) {
+        const ids = byLevel.get(p.levelNumber) ?? [];
+        byLevel.set(p.levelNumber, [...ids, created.question.id]);
       }
     }
 
-    const levels = [...byLevel].map(([title, ids]) => {
-      const existing = repo.findLevelByTitle(title);
-      const level = existing ?? repo.createLevel(title);
+    const levelCount = repo.listLevels().length;
+    const levels = [...byLevel].sort(([a], [b]) => a - b).map(([number, ids]) => {
+      const existing = repo.levelByNumber(number);
+      if (!existing && number !== levelCount + 1) {
+        throw Object.assign(new Error(`There is no ${levelLabel(number)} any more.`), { status: 400 });
+      }
+      const level = existing ?? repo.createLevel();
       const current = [...level.words, ...level.unplaced].map((w) => w.id);
       const { layout, unpublished } = repo.setLevelQuestions(level.id, [...current, ...ids]);
-      return { id: level.id, title, created: !existing, added: ids.length, unplaced: layout.unplaced.length, unpublished };
+      return {
+        id: level.id, number, name: repo.getLevel(level.id).name, created: !existing,
+        added: ids.length, unplaced: layout.unplaced.length, unpublished,
+      };
     });
 
     const usedFiles = valid.flatMap((p) => [p.input.imageFile, p.input.audioFile]).filter(Boolean);

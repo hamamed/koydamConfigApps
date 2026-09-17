@@ -8,15 +8,12 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-body">
-          <form method="post" action="/admin/levels" class="row g-2 align-items-end">
+          <form method="post" action="/admin/levels" class="d-flex flex-wrap align-items-center gap-2 m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <div class="col-md-8">
-              <label class="form-label small fw-semibold" for="title">New level title</label>
-              <input class="form-control wz-ar" id="title" name="title" dir="rtl" placeholder="بلدان وعواصم" maxlength="80" required>
-            </div>
-            <div class="col-md-4">
-              <button class="btn btn-kd w-100" type="submit">Create level</button>
-            </div>
+            <button class="btn btn-kd" type="submit">
+              <i data-lucide="plus" width="15" height="15" class="me-1"></i>Add level <%= levels.length + 1 %>
+            </button>
+            <span class="small kd-faint">Levels have no names: they are numbered in the order below. A new level goes at the end, as a draft.</span>
           </form>
         </div>
       </div>
@@ -41,12 +38,12 @@
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>#</th><th>Title</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
+              <thead><tr><th>Level</th><th>In the app</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
               <tbody>
-                <% let shown = 0; levels.forEach((l, i) => { if (l.published) shown++; %>
+                <% levels.forEach((l, i) => { %>
                   <tr>
-                    <td class="kd-faint"><%= l.published ? shown : '—' %></td>
-                    <td><a class="fw-semibold wz-ar" href="/admin/levels/<%= l.id %>"><%= l.title %></a></td>
+                    <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>">Level <%= l.number %></a></td>
+                    <td class="kd-faint text-nowrap"><% if (!l.published) { %>—<% } else if (l.publishedNumber !== l.number) { %><span class="kd-tag" title="Drafts before it are skipped in the app">Level <%= l.publishedNumber %></span><% } else { %>same<% } %></td>
                     <td><%- include('partials/difficulty', { difficulty: l.difficulty }) %></td>
                     <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
                     <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>

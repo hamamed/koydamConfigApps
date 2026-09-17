@@ -1,8 +1,8 @@
 # Wasla
 
 The backend for **وصلة**, an Arabic crossword quiz for iOS. Admins write
-questions — an answer, a clue and an optional picture — and group them into
-levels; the service lays each level out as a crossword and serves it to the app.
+questions — an answer, a clue, a title and an optional picture — and group
+them into levels; the service lays each level out as a crossword and serves it to the app.
 
 ## Run it
 
@@ -38,6 +38,14 @@ Answers are stored as spelled (`أسد`) and played folded: أ إ آ ٱ → ا, 
 form; `answerDisplay` carries the spelling. Folding happens on read, so older
 rows need no migration. The question form shows "يُلعب: …" as you type.
 
+## Question titles
+
+Every question has a **title** (1–40 characters, e.g. حيوانات), shown above the
+question in the app. The form requires one and offers the titles already in use.
+It replaced the old *category*: on boot, a question without a title takes its
+category once. The `category` column stays in the database, unused. A question
+still without a title loads and publishes, and the API sends `"title": ""`.
+
 ## Question types
 
 `text`, `image`, `emoji` (1–8 emoji) or `audio` (MP3/M4A/AAC/WAV ≤ 5 MB, sniffed
@@ -50,7 +58,11 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 ## Level order, difficulty, daily puzzle
 
 - **Levels are one numbered run** (1, 2, 3 …) in the order set on the Levels
-  page. There are no packs or categories. (The `packs` table and
+  page. There are no packs or categories, and levels have no names: the panel
+  calls each "Level N" by its place in the full list, and shows the app number
+  beside it when drafts before it make the two differ. **Add level** appends the
+  next one. (`levels.title` is unused legacy; the API's level `title` is
+  `لغز رقم N`, and the daily puzzle's is `لغز اليوم`.) (The `packs` table and
   `levels.pack_id` column still exist in older databases and are unused.)
 - **Difficulty** is easy / medium / hard per level. **Order by difficulty** on
   the Levels page sorts every level together: easy → medium → hard, then fewer
@@ -62,11 +74,13 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 
 **Import** takes one UTF-8 CSV plus any number of pictures and sounds in one
 upload (example at `/assets/import-example.csv`). Columns:
-`answer,clue,category,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,level`.
-A `pack` column from an older CSV is accepted and ignored.
+`answer,clue,title,type,emoji,image,zoom,focus_x,focus_y,blurred,audio,level`.
+`level` is a level number as on the Levels page; one past the last level adds
+it, and a bigger number is a row error. A `pack` column from an older CSV is
+ignored, and an old `category` column stands in for a blank `title`.
 Every row is checked with the question form's rules and previewed; confirming
 imports the valid rows in one transaction and lays out each level they were
-added to (a missing level is created). Unconfirmed imports
+added to. Unconfirmed imports
 and their unused files are removed after 24 hours.
 
 ## Stats
@@ -85,7 +99,7 @@ contract is `docs/wasla-v2-contract.md` in the iOS repository.
 | | |
 |---|---|
 | `GET /api/v1/levels` | Published levels, one numbered run: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `difficulty` |
-| `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
+| `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `title`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
 | `GET /api/v1/daily?date=YYYY-MM-DD` | A level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
 | `GET /api/v1/config` | Rewards, streak bonus, timer, reminder hour (Settings page) |
 | `POST /api/v1/events` | `{ device, events[] }`, ≤ 100 events, 64 kB, 30 batches/min per IP → `202 { accepted }` |

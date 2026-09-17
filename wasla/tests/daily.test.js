@@ -14,9 +14,9 @@ beforeEach(() => {
   daily = createDaily(db, repo);
 });
 
-function publishedLevel(title) {
-  const ids = ['مصر', 'مرس'].map((answer) => repo.createQuestion({ answer, clue: 'x' }).question.id);
-  const level = repo.createLevel(title);
+function publishedLevel() {
+  const ids = ['مصر', 'مرس'].map((answer) => repo.createQuestion({ title: 'عام', answer, clue: 'x' }).question.id);
+  const level = repo.createLevel();
   repo.setLevelQuestions(level.id, ids);
   repo.setPublished(level.id, true);
   return level;
@@ -53,7 +53,7 @@ test('a scheduled level wins over the automatic pick, and clearing it falls back
 
 test('only a published level can be scheduled, and an unpublished one falls back', () => {
   const a = publishedLevel('a');
-  const draft = repo.createLevel('draft');
+  const draft = repo.createLevel();
   assert.match(daily.schedule('2026-09-17', draft.id).error, /published/);
   assert.match(daily.schedule('2026-02-30', a.id).error, /date/);
 
