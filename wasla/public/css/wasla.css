@@ -135,9 +135,6 @@
 /* Difficulty chip: kd-tag has ok and warn; hard needs red. */
 .wz-tag-hard { background: #fef2f2; border-color: #fecaca; color: var(--kd-danger); }
 
-/* Daily puzzle */
-.wz-daily-select { min-width: 14rem; }
-
 /* Settings: the 7-day reward cycle in one row. */
 .wz-reward-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: .4rem; }
 .wz-reward-day { display: grid; gap: .15rem; }
@@ -296,7 +293,8 @@
 .ws-grid {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--ws-size), 1fr);
+  /* minmax(0, …): a wide letter must not push a 10-column board past its frame. */
+  grid-template-columns: repeat(var(--ws-size), minmax(0, 1fr));
 }
 .ws-cell {
   aspect-ratio: 1;
@@ -312,3 +310,15 @@
 .ws-side { flex: 1 1 22rem; min-width: 0; }
 .ws-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--ws-colour); opacity: .75; vertical-align: middle; }
 .ws-arrow { font-size: 1.1rem; }
+
+/* Daily puzzle schedule and editor. */
+.ws-stage-compact .ws-cell { font-size: clamp(.95rem, 3.2vw, 1.45rem); }
+.ws-loading { opacity: .55; transition: opacity var(--kd-fast) var(--kd-ease); }
+.ws-words-input { min-height: 14rem; font-size: 1.05rem; line-height: 1.7; }
+.ws-past > summary { cursor: pointer; list-style: none; }
+.ws-past > summary::-webkit-details-marker { display: none; }
+.ws-past:not([open]) > summary { border-bottom: 0; }
+.ws-past-chevron { transition: transform var(--kd-fast) var(--kd-ease); }
+.ws-past[open] .ws-past-chevron { transform: rotate(90deg); }
+/* A radio picker drawn as a button group: the chosen one is ink, like btn-kd. */
+.btn-check:checked + .btn-kd-outline { background: var(--kd-ink); border-color: var(--kd-ink); color: #fff; }

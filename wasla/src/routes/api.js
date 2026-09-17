@@ -12,7 +12,7 @@ import { DAILY_TITLE } from '../level-label.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -70,6 +70,8 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     res.json(levelBody(level));
   });
 
+  // Legacy: the crossword daily puzzle, for app builds from before the word
+  // search. The panel no longer plans it; dates already in daily_levels still apply.
   router.get('/daily', cacheable, (req, res) => {
     const raw = req.query.date;
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
@@ -83,13 +85,14 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   });
 
   // The daily word search (contract §5): a board of letters built from one theme.
+  // A board planned in the panel wins; any other date gets the automatic one.
   router.get('/wordsearch', cacheable, (req, res) => {
     const raw = req.query.date;
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
     if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
     if (!wordSearch) return res.status(503).json({ error: 'The word search is not available.' });
 
-    const board = wordSearch.forDate(parsed.date);
+    const board = wordSearchDays ? wordSearchDays.boardFor(parsed.date) : wordSearch.forDate(parsed.date);
     if (!board) return res.status(404).json({ error: 'There is no word search yet: no theme has enough words.' });
     res.json(board);
   });

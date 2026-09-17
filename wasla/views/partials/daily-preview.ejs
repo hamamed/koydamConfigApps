@@ -1,0 +1,43 @@
+<%# The editor's preview panel: what cannot be saved yet, then the board. Rendered with the page and by POST /admin/daily/:date/preview. %>
+<% if (typeof saveError !== 'undefined' && saveError) { %>
+  <div class="alert alert-danger small"><%= saveError %></div>
+<% } else if (typeof saveFailed !== 'undefined' && saveFailed) { %>
+  <div class="alert alert-danger small">Not saved — fix what is listed below first.</div>
+<% } %>
+
+<% if (composed.problems.length) { %>
+  <div class="alert alert-warning small">
+    <ul class="mb-0 ps-3">
+      <% composed.problems.forEach((p) => { %><li><%= p %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<% if (composed.dropped.length) { %>
+  <div class="alert alert-danger small">
+    <div class="fw-semibold mb-1"><%= composed.dropped.length %> word<%= composed.dropped.length === 1 ? '' : 's' %> could not fit — saving is blocked until every word is on the board:</div>
+    <ul class="mb-0 ps-3">
+      <% composed.dropped.forEach((d) => { %><li><span class="wz-answer"><%= d.display %></span> — <%= d.message %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<% if (!composed.board) { %>
+  <div class="ad-empty">
+    <i data-lucide="grid-3x3"></i>
+    <p class="mb-0">Choose words to see the board.</p>
+  </div>
+<% } else { const board = composed.board; %>
+  <div class="ws-layout">
+    <%- include('ws-board', { board, compact: true }) %>
+    <div class="ws-side">
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        <span class="kd-tag"><%= board.size %> × <%= board.size %></span>
+        <span class="kd-tag"><%= board.words.length %> words</span>
+        <span class="kd-tag kd-mono">seed <%= state.seed %></span>
+        <% if (composed.canSave) { %><span class="kd-tag kd-tag-ok">ready to save</span><% } %>
+      </div>
+      <%- include('ws-words', { board, customBase }) %>
+    </div>
+  </div>
+<% } %>

@@ -10,6 +10,8 @@ import { createEvents } from '../src/events.js';
 import { createRepository } from '../src/repository.js';
 import { apiRouter } from '../src/routes/api.js';
 import { createWordSearch } from '../src/wordsearch-daily.js';
+import { composeDay } from '../src/wordsearch-editor.js';
+import { createWordSearchSchedule } from '../src/wordsearch-schedule.js';
 import { cellsOf } from '../src/wordsearch.js';
 
 let server;
@@ -17,6 +19,7 @@ let base;
 let repo;
 let db;
 let level;
+let wordSearchDays;
 
 before(async () => {
   db = openDatabase(':memory:');
@@ -32,6 +35,8 @@ before(async () => {
   assert.equal(repo.setPublished(level.id, true).error, undefined);
   repo.createLevel();
 
+  const wordSearch = createWordSearch(db, { appConfig: createAppConfig(db) });
+  wordSearchDays = createWordSearchSchedule(db, { wordSearch, appConfig: createAppConfig(db) });
   const app = express();
   app.use('/api/v1', apiRouter({
     repo,
@@ -39,7 +44,8 @@ before(async () => {
     daily: createDaily(db, repo),
     appConfig: createAppConfig(db),
     events: createEvents(db, repo),
-    wordSearch: createWordSearch(db, { appConfig: createAppConfig(db) }),
+    wordSearch,
+    wordSearchDays,
   }));
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -213,6 +219,38 @@ test('the word search board has the contract shape, matches its rows and is the 
   assert.deepEqual(await (await fetch(`${base}/wordsearch?date=2026-09-18`)).json(), body);
   const sunday = await (await fetch(`${base}/wordsearch?date=2026-09-20`)).json();
   assert.equal(sunday.size, 10);
+});
+
+test('a planned word search day is served as stored, in the same shape, and questions edits do not change it', async () => {
+  // Runs after the board test above, so حيوانات is already a theme.
+  const date = '2026-10-05';
+  const automatic = await (await fetch(`${base}/wordsearch?date=${date}`)).json();
+
+  const words = ['احمر', 'ازرق', 'اخضر', 'اصفر', 'بنفسجي', 'برتقالي'].map((word) => ({ id: null, word, display: word }));
+  const { board, canSave } = composeDay({ theme: 'ألوان', words, size: 8, seed: 42 });
+  assert.equal(canSave, true);
+  assert.deepEqual(wordSearchDays.save(date, { theme: 'ألوان', size: 8, words, seed: 42, board, source: 'custom' }), {});
+
+  const res = await fetch(`${base}/wordsearch?date=${date}`);
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
+  const stored = await res.json();
+  assert.deepEqual(Object.keys(stored), Object.keys(automatic));
+  assert.deepEqual(stored, { date, theme: 'ألوان', size: 8, coins: 30, rows: board.rows, words: board.words });
+  stored.words.forEach((w) => {
+    assert.deepEqual(Object.keys(w).sort(), ['col', 'dCol', 'dRow', 'display', 'id', 'row', 'word']);
+    assert.ok(Number.isInteger(w.id) && w.id > 0);
+  });
+
+  // Editing questions changes nothing about a stored day.
+  const extra = repo.createQuestion({ title: 'حيوانات', answer: 'دلفين', clue: 'x' }).question.id;
+  assert.deepEqual(await (await fetch(`${base}/wordsearch?date=${date}`)).json(), stored);
+
+  // Deleted, the date is automatic again.
+  assert.equal(wordSearchDays.remove(date), true);
+  const back = await (await fetch(`${base}/wordsearch?date=${date}`)).json();
+  assert.equal(back.theme, 'حيوانات');
+  repo.deleteQuestion(extra);
 });
 
 test('events are accepted with 202 and a count, unknown types ignored', async () => {

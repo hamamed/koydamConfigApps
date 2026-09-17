@@ -2,125 +2,160 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Daily puzzle', subheading: 'One level per date, the same for every player' }) %>
+    <%- include('partials/topbar', {
+          heading: 'Daily puzzle',
+          subheading: 'The daily word search, planned date by date',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/wordsearch">Word themes</a>'
+        }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
-      <% if (!levels.length) { %>
-        <div class="ad-card ad-empty">
-          <i data-lucide="calendar-days"></i>
-          <p class="mb-0">Publish a level first — the daily puzzle is chosen from published levels.</p>
+      <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+          <div class="ad-card ad-kpi h-100">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i data-lucide="calendar-range" width="17" height="17"></i>
+              <span class="ad-kpi-label">Planned ahead</span>
+            </div>
+            <% if (summary.lastDate) { %>
+              <div class="ad-kpi-value">Scheduled until <span class="kd-mono"><%= summary.lastDate %></span></div>
+              <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span class="kd-tag <%= summary.low ? 'kd-tag-warn' : 'kd-tag-ok' %>"><%= summary.daysAhead %> day<%= summary.daysAhead === 1 ? '' : 's' %> ahead</span>
+                <% if (summary.low) { %><span class="kd-tag kd-tag-warn">fewer than <%= lowDays %> days left — add more</span><% } %>
+                <% if (summary.gaps) { %><span class="kd-tag kd-tag-warn"><%= summary.gaps %> unplanned date<%= summary.gaps === 1 ? '' : 's' %> in between (automatic)</span><% } %>
+              </div>
+            <% } else { %>
+              <div class="ad-kpi-value">Nothing planned</div>
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <span class="kd-tag kd-tag-warn">every day is automatic — add days to plan them</span>
+              </div>
+            <% } %>
+          </div>
         </div>
-      <% } else { %>
-        <p class="small kd-muted">
-          A date without a chosen level gets an automatic pick from the published levels, the same for everyone.
-          Dates are the player's own calendar day; today in UTC is <span class="kd-mono"><%= today %></span>.
-        </p>
+        <div class="col-lg-5">
+          <div class="ad-card ad-kpi h-100">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <i data-lucide="calendar-check" width="17" height="17"></i>
+              <span class="ad-kpi-label">Today · <span class="kd-mono"><%= today %></span> UTC</span>
+            </div>
+            <div class="ad-kpi-value"><span class="wz-ar"><%= todayTheme ?? '—' %></span></div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+              <% if (summary.todayScheduled) { %>
+                <span class="ad-status ad-status-published">Scheduled</span>
+              <% } else if (todayTheme) { %>
+                <span class="ad-status ad-status-draft">Automatic</span>
+              <% } else { %>
+                <span class="ad-status ad-status-archived">No puzzle</span>
+              <% } %>
+              <a class="small ms-auto" href="/admin/daily/<%= today %>">View today’s board</a>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <div class="ad-card mb-3">
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="calendar-plus" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">Add days</span>
+          <form method="get" action="/admin/daily/plan" class="d-flex gap-2 m-0">
+            <input class="form-control form-control-sm" type="date" name="date" min="<%= today %>" required aria-label="Date to plan">
+            <button class="btn btn-sm btn-kd-outline text-nowrap" type="submit">Plan a date</button>
+          </form>
+        </div>
+        <div class="ad-card-body">
+          <form method="post" action="/admin/daily/add" class="d-flex flex-wrap align-items-center gap-2 m-0">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <% addChoices.forEach((n) => { %>
+              <button class="btn btn-kd" type="submit" name="days" value="<%= n %>" <%= playableCount ? '' : 'disabled' %>>Add <%= n %> days</button>
+            <% }) %>
+            <span class="small kd-muted ms-lg-2">
+              <% if (playableCount) { %>
+                From <%= summary.lastDate ? 'the day after ' + summary.lastDate : 'today' %>. Each day takes the next theme in the rotation
+                (<%= playableCount %> in use, never the same as the day before when another fits) and its weekday size, Monday 7 → Sunday 10.
+                The board is frozen when it is added.
+              <% } else { %>
+                No theme is in use yet — add questions on <a href="/admin/wordsearch">Word themes</a>, or plan a date with typed words.
+              <% } %>
+            </span>
+          </form>
+        </div>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="calendar-days" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">Scheduled from today</span>
+          <span class="kd-faint small"><%= upcoming.length %> day<%= upcoming.length === 1 ? '' : 's' %></span>
+        </div>
+        <% if (!upcoming.length) { %>
+          <div class="ad-empty">
+            <i data-lucide="calendar-x"></i>
+            <p class="mb-0">No day is planned. Dates without a plan get the automatic board, which changes when questions change.</p>
+          </div>
+        <% } else { %>
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Date</th><th>Puzzle</th><th>Choose a level</th><th></th></tr></thead>
+              <thead><tr><th>Date</th><th>Theme</th><th class="text-end">Size</th><th class="text-end">Words</th><th>Source</th><th></th></tr></thead>
               <tbody>
-                <% days.forEach((d) => { const level = byId.get(d.levelId); %>
+                <% upcoming.forEach((d) => { %>
                   <tr>
                     <td class="text-nowrap">
-                      <span class="kd-mono"><%= d.date %></span>
-                      <span class="kd-faint small ms-1"><%= new Date(d.date + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }) %></span>
+                      <a class="kd-mono" href="/admin/daily/<%= d.date %>"><%= d.date %></a>
+                      <span class="wz-ar small kd-muted ms-1"><%= d.weekdayAr %></span>
                       <% if (d.date === today) { %><span class="kd-tag kd-tag-accent ms-1">today</span><% } %>
                     </td>
-                    <td>
-                      <% if (level) { %><span class="fw-semibold"><%= level.name %></span><% } %>
-                      <% if (d.source === 'scheduled') { %>
-                        <span class="ad-status ad-status-published">Chosen</span>
-                      <% } else { %>
-                        <span class="ad-status ad-status-draft">Automatic</span>
-                        <% if (d.scheduledId) { %><span class="kd-tag kd-tag-warn">chosen level is unpublished</span><% } %>
-                      <% } %>
-                    </td>
-                    <td>
-                      <form method="post" action="/admin/daily/<%= d.date %>" class="d-flex gap-2 m-0">
+                    <td><span class="wz-ar fw-semibold"><%= d.theme %></span></td>
+                    <td class="text-end"><%= d.size %> × <%= d.size %></td>
+                    <td class="text-end"><%= d.wordCount %></td>
+                    <td><span class="kd-tag"><%= d.source === 'custom' ? 'typed words' : 'theme' %></span></td>
+                    <td class="text-end text-nowrap">
+                      <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">Preview</a>
+                      <a class="btn btn-sm btn-kd-outline" href="/admin/daily/<%= d.date %>/edit">Edit</a>
+                      <form method="post" action="/admin/daily/<%= d.date %>/delete" class="d-inline m-0" data-confirm="Delete the puzzle for <%= d.date %>? That day goes back to the automatic board.">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <select class="form-select form-select-sm wz-daily-select" name="levelId" aria-label="Level for <%= d.date %>">
-                          <option value="">Automatic</option>
-                          <% levels.forEach((l) => { %>
-                            <option value="<%= l.id %>" <%= d.scheduledId === l.id ? 'selected' : '' %>><%= l.name %></option>
-                          <% }) %>
-                        </select>
-                        <button class="btn btn-sm btn-kd-accent" type="submit">Save</button>
+                        <button class="btn btn-sm btn-kd-danger" type="submit">Delete</button>
                       </form>
-                    </td>
-                    <td class="text-end">
-                      <% if (d.scheduledId) { %>
-                        <form method="post" action="/admin/daily/<%= d.date %>/clear" class="m-0">
-                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                          <button class="btn btn-sm btn-kd-ghost" type="submit">Clear</button>
-                        </form>
-                      <% } %>
                     </td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
-        </div>
+        <% } %>
+      </div>
 
-        <div class="row g-3">
-          <div class="col-lg-6">
-            <form class="ad-card" method="post" action="/admin/daily">
-              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="calendar-plus" width="16" height="16"></i>
-                <span class="fw-semibold">Another date</span>
-              </div>
-              <div class="ad-card-body d-flex flex-wrap gap-2 align-items-end">
-                <div>
-                  <label class="form-label small fw-semibold" for="date">Date</label>
-                  <input class="form-control" type="date" id="date" name="date" min="<%= today %>" required>
-                </div>
-                <div class="flex-grow-1">
-                  <label class="form-label small fw-semibold" for="levelId">Level</label>
-                  <select class="form-select" id="levelId" name="levelId" required>
-                    <% levels.forEach((l) => { %><option value="<%= l.id %>"><%= l.name %></option><% }) %>
-                  </select>
-                </div>
-                <button class="btn btn-kd" type="submit">Schedule</button>
-              </div>
-            </form>
+      <details class="ad-card ws-past">
+        <summary class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="chevron-right" width="16" height="16" class="ws-past-chevron"></i>
+          <span class="fw-semibold me-auto">Past days</span>
+          <span class="kd-faint small"><%= past.length %><%= past.length >= 60 ? '+' : '' %> · read-only</span>
+        </summary>
+        <% if (!past.length) { %>
+          <p class="small kd-faint m-3">No planned day has passed yet.</p>
+        <% } else { %>
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead><tr><th>Date</th><th>Theme</th><th class="text-end">Size</th><th class="text-end">Words</th><th></th></tr></thead>
+              <tbody>
+                <% past.forEach((d) => { %>
+                  <tr>
+                    <td class="text-nowrap"><span class="kd-mono"><%= d.date %></span> <span class="wz-ar small kd-muted ms-1"><%= d.weekdayAr %></span></td>
+                    <td><span class="wz-ar"><%= d.theme %></span></td>
+                    <td class="text-end"><%= d.size %> × <%= d.size %></td>
+                    <td class="text-end"><%= d.wordCount %></td>
+                    <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">View</a></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
           </div>
+        <% } %>
+      </details>
 
-          <div class="col-lg-6">
-            <div class="ad-card">
-              <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="calendar-days" width="16" height="16"></i>
-                <span class="fw-semibold">Scheduled later</span>
-              </div>
-              <div class="ad-card-body p-0">
-                <% if (!later.length) { %>
-                  <p class="small kd-faint m-3">Nothing scheduled beyond the next <%= days.length %> days.</p>
-                <% } else { %>
-                  <table class="ad-table">
-                    <tbody>
-                      <% later.forEach((d) => { %>
-                        <tr>
-                          <td class="kd-mono"><%= d.date %></td>
-                          <td><%= d.name %><% if (!d.published) { %> <span class="kd-tag kd-tag-warn">unpublished</span><% } %></td>
-                          <td class="text-end">
-                            <form method="post" action="/admin/daily/<%= d.date %>/clear" class="m-0">
-                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                              <button class="btn btn-sm btn-kd-ghost" type="submit">Clear</button>
-                            </form>
-                          </td>
-                        </tr>
-                      <% }) %>
-                    </tbody>
-                  </table>
-                <% } %>
-              </div>
-            </div>
-          </div>
-        </div>
-      <% } %>
+      <p class="small kd-faint mt-3 mb-0">
+        Dates are the player’s own calendar day. The older crossword daily puzzle (<span class="kd-mono">/api/v1/daily</span>) still answers
+        for app builds from before the word search, but is no longer planned here.
+      </p>
     </div>
   </main>
 </div>

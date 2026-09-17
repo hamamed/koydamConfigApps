@@ -1,0 +1,25 @@
+<%# The placed words of a previewOf() board, with their colour, direction and start. %>
+<div class="ad-table-wrap">
+  <table class="ad-table">
+    <thead><tr><th></th><th>Word</th><th>Direction</th><th class="text-end">Letters</th><th class="text-end">Start</th></tr></thead>
+    <tbody>
+      <% board.words.forEach((w) => { %>
+        <tr>
+          <td><span class="ws-swatch" style="--ws-colour: <%= w.colour %>"></span></td>
+          <td>
+            <% if (w.id < customBase) { %>
+              <a class="wz-answer" href="/admin/questions/<%= w.id %>"><%= w.display %></a>
+            <% } else { %>
+              <span class="wz-answer"><%= w.display %></span> <span class="kd-tag ms-1">typed</span>
+            <% } %>
+            <% if (w.display !== w.word) { %><span class="kd-faint small wz-ar ms-1">يُلعب: <%= w.word %></span><% } %>
+          </td>
+          <td><span class="ws-arrow"><%= w.arrow %></span></td>
+          <td class="text-end"><%= w.length %></td>
+          <td class="text-end kd-mono small"><%= w.row %>, <%= w.col %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<p class="small kd-faint mt-2 mb-0">Start is row, column as the API sends it: row 0 at the top, column 0 at the right edge.</p>

@@ -1,0 +1,18 @@
+<%# The board as the app draws it: mint ground, theme chip, cream board, one stroke per word. `board` comes from previewOf(). %>
+<div class="ws-stage<%= typeof compact !== 'undefined' && compact ? ' ws-stage-compact' : '' %>">
+  <div class="ws-head" dir="rtl" lang="ar">
+    <span class="ws-theme"><%= board.theme %></span>
+  </div>
+  <div class="ws-board" dir="rtl" lang="ar">
+    <div class="ws-grid" style="--ws-size: <%= board.size %>">
+      <% board.cells.forEach((row, r) => { row.forEach((letter, c) => { %>
+        <span class="ws-cell" title="row <%= r %>, col <%= c %>"><%= letter %></span>
+      <% }) }) %>
+      <svg class="ws-lines" viewBox="0 0 <%= board.size %> <%= board.size %>" aria-hidden="true">
+        <% board.words.forEach((w) => { %>
+          <line x1="<%= w.line.x1 %>" y1="<%= w.line.y1 %>" x2="<%= w.line.x2 %>" y2="<%= w.line.y2 %>" stroke="<%= w.colour %>"/>
+        <% }) %>
+      </svg>
+    </div>
+  </div>
+</div>

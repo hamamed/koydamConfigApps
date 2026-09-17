@@ -67,14 +67,46 @@ text. A picture can start **blurred**. `image` is sent whenever a picture exists
 - **Difficulty** is easy / medium / hard per level. **Order by difficulty** on
   the Levels page sorts every level together: easy → medium → hard, then fewer
   words, then the current order.
-- **Daily puzzle**: a level chosen per date, otherwise level
-  `days since 1970-01-01 mod published count` — the same for everyone.
+- **Legacy crossword daily puzzle** (`GET /api/v1/daily`, for app builds from
+  before the word search): a level from `daily_levels` for the date, otherwise
+  level `days since 1970-01-01 mod published count`. The panel no longer plans
+  it — the Daily puzzle page is the word search now — but the endpoint and its
+  table stay, and dates already in the table still apply.
 
 ## Daily word search
 
-The daily puzzle in the app is now a word search (`GET /api/v1/wordsearch`).
-**Word search** in the panel lists the themes, previews any date's board with
-each hidden word drawn over the letters, and lists titles that are close.
+The daily puzzle in the app is a word search (`GET /api/v1/wordsearch`). Two
+pages in the panel:
+
+- **Daily puzzle** (`/admin/daily`) is the schedule. The header says how far it
+  is planned ("Scheduled until … (N days ahead)", a warning under 7 days, and
+  any unplanned dates in between) and whether today is scheduled or automatic.
+  **Add 7 / 14 / 30 days** plans the next dates after the last planned one (or
+  from today). Each takes the automatic rotation's theme and weekday size, but
+  passes over the previous day's theme when another theme fits; a date no theme
+  can fill is skipped and reported. The list shows planned days from today
+  (date, Arabic weekday, theme, size, word count, Preview / Edit / Delete) and,
+  folded, past days read-only. **Plan a date** opens the editor for any date
+  from today on, prefilled with that date's automatic board.
+- **A day's editor** (`/admin/daily/:date/edit`): words **from a theme** (any
+  eligible title, then tick 6–10 of its words) or **typed words** (a theme name
+  and one word per line — the answer rules and folding of the question form,
+  3–8 letters, each once, none readable inside another; no questions needed).
+  Size 7–10, defaulting to the weekday's. **Shuffle** picks a new seed. The
+  preview redraws on every change (`POST /admin/daily/:date/preview`, the same
+  code Save runs); words that do not fit are listed with the reason and Save
+  stays disabled. Save freezes the board.
+- **Stored boards** (`wordsearch_days`: date, theme, size, words, seed, board
+  JSON, source `theme`|`custom`). A stored board is served exactly as saved,
+  `coins` from the current config; editing or deleting questions never changes
+  it. **Delete** returns the date to the automatic board. Typed words have no
+  question, so their ids are `1000000001`, `1000000002`, … (the app needs a
+  unique whole-number id per word; nothing that counts questions uses them).
+- **Word themes** (`/admin/wordsearch`) lists the themes, excludes or includes
+  them, and lists titles that are close. Its old `?date=` preview redirects to
+  the day's page.
+
+The **automatic board** (any date without a stored one):
 
 - **Themes** are question titles (trimmed). A title's words are its answers in
   played form, 3–8 letters, each once; a word readable inside a longer one
@@ -86,8 +118,8 @@ each hidden word drawn over the letters, and lists titles that are close.
   7, 7, 8, 8, 9, 9, 10 (Sunday). Words: 6–7 on a 7-board, 6–8 on 8, 7–9 on 9,
   8–10 on 10, picked by a seed from the date. A theme with too few words short
   enough for that size passes the day to the next theme; only when no theme
-  fits is a larger size tried. Nothing is stored per date, so editing a theme's
-  questions changes the boards that use it, today's included. `coins` is
+  fits is a larger size tried. Nothing is stored for an automatic date, so
+  editing a theme's questions changes its automatic boards. `coins` is
   `dailyPuzzleCoins`.
 - **The generator** (`src/wordsearch.js`, pure): all eight directions, longest
   word first, up to 30 whole-board attempts, crossings only on equal letters,
@@ -175,8 +207,8 @@ contract is `docs/wasla-v2-contract.md` in the iOS repository.
 |---|---|
 | `GET /api/v1/levels` | Published levels, one numbered run: `number`, `title`, `wordCount`, `rows`, `cols`, `updatedAt`, `difficulty` |
 | `GET /api/v1/levels/:number` | The grid: each word's `id`, `answer` (folded), `answerDisplay`, `title`, `clue`, `row`, `col`, `direction`, `type`, `image` (`url`, `zoom`, `focusX`, `focusY`, `blurred`) or `null`, `emoji`, `audio` (`url`) |
-| `GET /api/v1/daily?date=YYYY-MM-DD` | A level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
-| `GET /api/v1/wordsearch?date=YYYY-MM-DD` | The day's word search: `date`, `theme`, `size`, `coins`, `rows`, `words` (`id`, `word`, `display`, `row`, `col`, `dRow`, `dCol`); 400 on a bad date, 404 with no theme |
+| `GET /api/v1/daily?date=YYYY-MM-DD` | Legacy (older app builds): a level with `number: 0`, `date`, `coins`; 400 on a bad date, 404 with nothing published |
+| `GET /api/v1/wordsearch?date=YYYY-MM-DD` | The day's word search — the planned board when there is one, else the automatic one: `date`, `theme`, `size`, `coins`, `rows`, `words` (`id`, `word`, `display`, `row`, `col`, `dRow`, `dCol`); 400 on a bad date, 404 with no board |
 | `GET /api/v1/config` | Rewards, streak bonus, streak freeze cost, timer, reminder hour, stars per level, word search help costs (Settings page) |
 | `POST /api/v1/events` | `{ device, events[] }`, ≤ 100 events, 64 kB, 30 batches/min per IP → `202 { accepted }` |
 | `POST /api/v1/devices` | `{ device, token, platform, environment, enabled, locale }`, upsert by device, 4 kB, 30/min per IP → `204` |

@@ -1,96 +1,21 @@
 <%- include('partials/head') %>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Word search',
-          subheading: 'The daily puzzle as a word search, built from question titles',
-          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/wordsearch?date=' + date + '" target="_blank" rel="noopener">View the JSON</a>'
+          heading: 'Word themes',
+          subheading: 'The question titles the daily word search is built from',
+          actions: '<a class="btn btn-sm btn-kd" href="/admin/daily">Daily puzzle schedule</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
-      <% if (badDate) { %>
-        <div class="alert alert-warning small">That is not a calendar date; showing <%= date %>.</div>
-      <% } %>
 
       <p class="small kd-muted">
-        A question title with at least <%= minWords %> different answers of 3–8 letters is a theme. Each date takes the next
-        theme in title order, a board size by weekday (Monday 7, 7, 8, 8, 9, 9, Sunday 10) and 6–10 of the theme's words —
-        the same board for every player. Dates are the player's own calendar day; today in UTC is <span class="kd-mono"><%= today %></span>.
+        A question title with at least <%= minWords %> different answers of 3–8 letters is a theme. <strong>Add days</strong> on the
+        <a href="/admin/daily">Daily puzzle</a> page takes the themes in title order, skipping excluded ones, and freezes each board when
+        it is added — so editing questions here never changes a planned day. Dates that are not planned get an automatic board from the
+        same rotation, which does follow question edits.
       </p>
-
-      <div class="ad-card mb-3">
-        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="eye" width="16" height="16"></i>
-          <span class="fw-semibold me-auto">Preview</span>
-          <form method="get" action="/admin/wordsearch" class="d-flex gap-2 m-0">
-            <input class="form-control form-control-sm" type="date" name="date" value="<%= date %>" aria-label="Date to preview" required>
-            <button class="btn btn-sm btn-kd-outline" type="submit">Show</button>
-          </form>
-        </div>
-        <div class="ad-card-body">
-          <% if (!board) { %>
-            <div class="ad-empty">
-              <i data-lucide="search-x"></i>
-              <p class="mb-0">No board for <%= date %>: no theme has <%= minWords %> usable words yet<%= eligible.length ? ' that is not excluded' : '' %>.</p>
-            </div>
-          <% } else { %>
-            <div class="ws-layout">
-              <div class="ws-stage">
-                <div class="ws-head" dir="rtl" lang="ar">
-                  <span class="ws-theme"><%= board.theme %></span>
-                </div>
-                <div class="ws-board" dir="rtl" lang="ar">
-                  <div class="ws-grid" style="--ws-size: <%= board.size %>">
-                    <% board.cells.forEach((row, r) => { row.forEach((letter, c) => { %>
-                      <span class="ws-cell" title="row <%= r %>, col <%= c %>"><%= letter %></span>
-                    <% }) }) %>
-                    <svg class="ws-lines" viewBox="0 0 <%= board.size %> <%= board.size %>" aria-hidden="true">
-                      <% board.words.forEach((w) => { %>
-                        <line x1="<%= w.line.x1 %>" y1="<%= w.line.y1 %>" x2="<%= w.line.x2 %>" y2="<%= w.line.y2 %>" stroke="<%= w.colour %>"/>
-                      <% }) %>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div class="ws-side">
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <span class="kd-tag kd-tag-accent"><%= date %> · <%= weekday %></span>
-                  <span class="kd-tag"><%= board.size %> × <%= board.size %></span>
-                  <span class="kd-tag"><%= board.words.length %> words</span>
-                  <span class="kd-tag"><%= board.coins %> coins</span>
-                  <% if (board.size !== scheduledSize) { %>
-                    <span class="kd-tag kd-tag-warn">weekday size <%= scheduledSize %> fit no theme</span>
-                  <% } %>
-                </div>
-                <div class="ad-table-wrap">
-                  <table class="ad-table">
-                    <thead><tr><th></th><th>Word</th><th>Direction</th><th class="text-end">Letters</th><th class="text-end">Start</th></tr></thead>
-                    <tbody>
-                      <% board.words.forEach((w) => { %>
-                        <tr>
-                          <td><span class="ws-swatch" style="--ws-colour: <%= w.colour %>"></span></td>
-                          <td>
-                            <a class="wz-answer" href="/admin/questions/<%= w.id %>"><%= w.display %></a>
-                            <% if (w.display !== w.word) { %><span class="kd-faint small wz-ar ms-1">يُلعب: <%= w.word %></span><% } %>
-                          </td>
-                          <td><span class="ws-arrow"><%= w.arrow %></span></td>
-                          <td class="text-end"><%= w.length %></td>
-                          <td class="text-end kd-mono small"><%= w.row %>, <%= w.col %></td>
-                        </tr>
-                      <% }) %>
-                    </tbody>
-                  </table>
-                </div>
-                <p class="small kd-faint mt-2 mb-0">Start is row, column as the API sends it: row 0 at the top, column 0 at the right edge.</p>
-              </div>
-            </div>
-          <% } %>
-        </div>
-      </div>
 
       <div class="row g-3">
         <div class="col-xl-7">
@@ -124,7 +49,6 @@
                             <form method="post" action="/admin/wordsearch/exclude" class="m-0">
                               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                               <input type="hidden" name="title" value="<%= t.title %>">
-                              <input type="hidden" name="date" value="<%= date %>">
                               <input type="hidden" name="excluded" value="<%= t.excluded ? '0' : '1' %>">
                               <button class="btn btn-sm <%= t.excluded ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= t.excluded ? 'Include' : 'Exclude' %></button>
                             </form>
@@ -140,30 +64,6 @@
         </div>
 
         <div class="col-xl-5 d-grid gap-3 align-content-start">
-          <div class="ad-card">
-            <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="calendar-days" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">Next <%= upcoming.length %> days</span>
-            </div>
-            <div class="ad-table-wrap">
-              <table class="ad-table">
-                <thead><tr><th>Date</th><th>Theme</th><th class="text-end">Size</th></tr></thead>
-                <tbody>
-                  <% upcoming.forEach((d) => { %>
-                    <tr>
-                      <td class="text-nowrap">
-                        <a class="kd-mono" href="/admin/wordsearch?date=<%= d.date %>"><%= d.date %></a>
-                        <span class="kd-faint small ms-1"><%= d.weekday.slice(0, 3) %></span>
-                      </td>
-                      <td class="wz-ar"><%= d.theme ?? '—' %></td>
-                      <td class="text-end"><%= d.size ? d.size + ' · ' + d.words + ' words' : '—' %></td>
-                    </tr>
-                  <% }) %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="list-plus" width="16" height="16"></i>

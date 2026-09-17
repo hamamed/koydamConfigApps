@@ -1,0 +1,74 @@
+<%- include('partials/head') %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Daily puzzle · ' + date,
+          subheading: weekday + ' · ' + (day ? 'planned board' : 'automatic board'),
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/wordsearch?date=' + date + '" target="_blank" rel="noopener">View the JSON</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily"><i data-lucide="arrow-left" width="14" height="14"></i> Schedule</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= previous %>">← <%= previous %></a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= next %>"><%= next %> →</a>
+        <div class="ms-auto d-flex gap-2">
+          <% if (past) { %>
+            <span class="kd-tag">past day · read-only</span>
+          <% } else if (day) { %>
+            <a class="btn btn-sm btn-kd-outline" href="/admin/daily/<%= date %>/edit">Edit</a>
+            <form method="post" action="/admin/daily/<%= date %>/delete" class="m-0" data-confirm="Delete the puzzle for <%= date %>? That day goes back to the automatic board.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-kd-danger" type="submit">Delete</button>
+            </form>
+          <% } else { %>
+            <a class="btn btn-sm btn-kd" href="/admin/daily/<%= date %>/edit">Plan this date</a>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-body">
+          <% if (!board) { %>
+            <div class="ad-empty">
+              <i data-lucide="search-x"></i>
+              <p class="mb-0">No board for <%= date %>: nothing is planned and no theme has enough usable words.</p>
+            </div>
+          <% } else { %>
+            <div class="ws-layout">
+              <%- include('partials/ws-board', { board }) %>
+              <div class="ws-side">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <span class="kd-tag kd-tag-accent"><%= date %> · <span class="wz-ar"><%= weekdayAr %></span></span>
+                  <span class="kd-tag"><%= board.size %> × <%= board.size %></span>
+                  <span class="kd-tag"><%= board.words.length %> words</span>
+                  <span class="kd-tag"><%= coins %> coins</span>
+                  <% if (day) { %>
+                    <span class="ad-status ad-status-published">Scheduled</span>
+                    <span class="kd-tag"><%= day.source === 'custom' ? 'typed words' : 'theme' %></span>
+                  <% } else { %>
+                    <span class="ad-status ad-status-draft">Automatic</span>
+                    <% if (board.size !== weekdaySize) { %><span class="kd-tag kd-tag-warn">weekday size <%= weekdaySize %> fit no theme</span><% } %>
+                  <% } %>
+                </div>
+                <p class="small kd-muted">
+                  <% if (day) { %>
+                    Frozen when it was saved (last <span class="kd-mono"><%= day.updatedAt %></span> UTC): editing questions does not change it.
+                  <% } else { %>
+                    Not planned: this board follows the rotation and changes if the theme’s questions change.<% if (!past) { %> Plan the date to freeze it.<% } %>
+                  <% } %>
+                </p>
+                <%- include('partials/ws-words', { board, customBase }) %>
+              </div>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

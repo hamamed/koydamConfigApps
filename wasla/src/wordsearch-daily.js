@@ -8,11 +8,12 @@
  * with at least MIN_THEME_WORDS such words is a theme, unless the panel
  * excluded it.
  *
- * Nothing is stored per date. The theme is the eligible themes, sorted by
- * title, indexed by days since 1970-01-01; the board size follows the weekday;
- * the words and the board come from a seed made of the date. Editing a theme's
- * questions therefore changes the boards of the dates that use it, today's
- * included — like the automatic daily crossword.
+ * This is the automatic board. The panel stores boards for planned dates
+ * (src/wordsearch-schedule.js), and a stored board always wins. Here the
+ * theme is the eligible themes, sorted by title, indexed by days since
+ * 1970-01-01; the board size follows the weekday; the words and the board come
+ * from a seed made of the date. Editing a theme's questions therefore changes
+ * the automatic boards that use it — never a stored one.
  */
 
 import { foldForPlay, letters } from './arabic.js';
@@ -35,7 +36,7 @@ export const SIZE_BY_WEEKDAY = Object.freeze([7, 7, 8, 8, 9, 9, 10]);
 export const WEEKDAY_NAMES = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
 /** How many words a board of each size aims for, [fewest, most]; the date picks within. */
-const WORDS_BY_SIZE = Object.freeze({ 7: [6, 7], 8: [6, 8], 9: [7, 9], 10: [8, 10] });
+export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 7], 8: [6, 8], 9: [7, 9], 10: [8, 10] });
 /** Rounds of swapping a word that did not fit for one that was left over. */
 const REFILL_ROUNDS = 5;
 
@@ -131,33 +132,49 @@ export function createWordSearch(db, { appConfig }) {
   const playable = () => themes().filter((t) => t.eligible && !t.excluded);
 
   /**
-   * The board for a date — `{ date, theme, size, coins, rows, words }` as the
-   * API sends it — or null for a bad date or when no theme can make one.
+   * The automatic pick for a date — `{ theme, size, seed, board }` — or null
+   * for a bad date or when no theme can make one.
    *
    * The weekday's size comes first: every theme is tried at that size,
    * starting from the date's own, before any is tried a size larger. A theme
    * whose words are too long for a small board so passes the day to the next.
+   * `avoid` names a theme to pass over (yesterday's, when planning days ahead);
+   * it is still used when no other theme can make the board.
    */
-  function forDate(date, list = playable()) {
+  function pickForDate(date, list = playable(), { avoid = null } = {}) {
     const parsed = parseDay(date);
     if (!parsed || !list.length) return null;
     const scheduled = sizeForDay(parsed.day);
-    for (let size = scheduled; size <= MAX_SIZE; size++) {
-      for (let step = 0; step < list.length; step++) {
-        const theme = list[(parsed.day + step) % list.length];
-        const board = boardForTheme(theme, size, seedOf(parsed.day, size, step));
-        if (!board) continue;
-        return {
-          date: parsed.date,
-          theme: theme.title,
-          size: board.size,
-          coins: appConfig.get().dailyPuzzleCoins,
-          rows: board.rows,
-          words: board.words,
-        };
+    const passes = avoid && list.some((t) => t.title !== avoid) ? [avoid, null] : [null];
+    for (const skip of passes) {
+      for (let size = scheduled; size <= MAX_SIZE; size++) {
+        for (let step = 0; step < list.length; step++) {
+          const theme = list[(parsed.day + step) % list.length];
+          if (skip && theme.title === skip) continue;
+          const seed = seedOf(parsed.day, size, step);
+          const board = boardForTheme(theme, size, seed);
+          if (board) return { theme: theme.title, size: board.size, seed, board };
+        }
       }
     }
     return null;
+  }
+
+  /**
+   * The automatic board for a date — `{ date, theme, size, coins, rows, words }`
+   * as the API sends it — or null for a bad date or when no theme can make one.
+   */
+  function forDate(date, list = playable()) {
+    const pick = pickForDate(date, list);
+    if (!pick) return null;
+    return {
+      date: parseDay(date).date,
+      theme: pick.theme,
+      size: pick.size,
+      coins: appConfig.get().dailyPuzzleCoins,
+      rows: pick.board.rows,
+      words: pick.board.words,
+    };
   }
 
   /** Keeps a title out of (or lets it back into) the daily word search. */
@@ -172,5 +189,5 @@ export function createWordSearch(db, { appConfig }) {
     return {};
   }
 
-  return { themes, playable, forDate, setExcluded };
+  return { themes, playable, pickForDate, forDate, setExcluded };
 }

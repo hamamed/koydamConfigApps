@@ -1,0 +1,121 @@
+<%- include('partials/head') %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: (day ? 'Edit ' : 'Plan ') + date,
+          subheading: weekday + ' · ' + (day ? 'a planned board; saving replaces it' : 'not planned yet: the automatic board is prefilled'),
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily"><i data-lucide="arrow-left" width="14" height="14"></i> Schedule</a>
+        <span class="kd-tag kd-tag-accent"><%= date %> · <span class="wz-ar"><%= weekdayAr %></span></span>
+        <% if (date === today) { %><span class="kd-tag kd-tag-warn">today — players may already have this board</span><% } %>
+      </div>
+
+      <form id="dailyEditor" method="post" action="/admin/daily/<%= date %>/edit" data-preview-url="/admin/daily/<%= date %>/preview" class="row g-3">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="seed" value="<%= state.seed %>">
+
+        <div class="col-xl-5 d-grid gap-3 align-content-start">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="tags" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">Words</span>
+              <div class="btn-group btn-group-sm" role="group" aria-label="Theme source">
+                <input type="radio" class="btn-check" name="source" id="sourceTheme" value="theme" <%= state.source === 'theme' ? 'checked' : '' %>>
+                <label class="btn btn-kd-outline" for="sourceTheme">From a theme</label>
+                <input type="radio" class="btn-check" name="source" id="sourceCustom" value="custom" <%= state.source === 'custom' ? 'checked' : '' %>>
+                <label class="btn btn-kd-outline" for="sourceCustom">Typed words</label>
+              </div>
+            </div>
+
+            <div class="ad-card-body <%= state.source === 'theme' ? '' : 'd-none' %>" data-source-panel="theme">
+              <% if (!groups.length) { %>
+                <p class="small kd-muted mb-0">No question title has <%= minWords %> usable words yet. Use typed words, or add questions on <a href="/admin/wordsearch">Word themes</a>.</p>
+              <% } else { %>
+                <label class="form-label small fw-semibold" for="themeTitle">Theme</label>
+                <select class="form-select mb-2" id="themeTitle" name="themeTitle">
+                  <% if (!groups.some((g) => g.selected)) { %><option value="">Choose a theme</option><% } %>
+                  <% groups.forEach((g) => { %>
+                    <option value="<%= g.title %>" <%= g.title === state.themeTitle ? 'selected' : '' %>><%= g.title %>&lrm; — <%= g.words.length %> words<%= g.excluded ? ' (excluded from the rotation)' : '' %><%= g.stale ? ' (saved; no longer a theme)' : '' %></option>
+                  <% }) %>
+                </select>
+                <p class="form-text mt-0">Tick <%= minWords %>–<%= maxWords %> words. A word longer than the board size cannot fit.</p>
+                <% groups.forEach((g) => { const on = g.title === state.themeTitle; %>
+                  <div class="wz-pick-group <%= on ? '' : 'd-none' %>" data-theme-group="<%= g.title %>">
+                    <% if (g.stale) { %><p class="small kd-faint mb-1">The saved words; this title no longer has <%= minWords %> usable questions.</p><% } %>
+                    <% g.words.forEach((w) => { %>
+                      <label class="wz-pick">
+                        <input class="form-check-input" type="checkbox" name="wordIds" value="<%= w.id %>" <%= g.ticked.has(w.id) ? 'checked' : '' %> <%= on ? '' : 'disabled' %>>
+                        <span class="min-w-0 d-flex align-items-center gap-2">
+                          <span class="wz-answer"><%= w.display %></span>
+                          <% if (w.display !== w.word) { %><span class="kd-faint small wz-ar">يُلعب: <%= w.word %></span><% } %>
+                        </span>
+                        <span class="kd-tag"><%= [...w.word].length %> letters</span>
+                      </label>
+                    <% }) %>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+
+            <div class="ad-card-body <%= state.source === 'custom' ? '' : 'd-none' %>" data-source-panel="custom">
+              <label class="form-label small fw-semibold" for="customTheme">Theme name</label>
+              <input class="form-control wz-ar mb-3" type="text" id="customTheme" name="customTheme" maxlength="40" dir="rtl" value="<%= state.customTheme %>" placeholder="مثلاً: ألوان">
+              <label class="form-label small fw-semibold" for="customWords">Words, one per line</label>
+              <textarea class="form-control wz-ar ws-words-input" id="customWords" name="customWords" rows="10" dir="rtl" placeholder="أحمر&#10;أزرق&#10;أخضر"><%= state.customWords %></textarea>
+              <p class="form-text mb-0">
+                <%= minWords %>–<%= maxWords %> words of 3–8 Arabic letters, each once, none readable inside another. Harakat are removed and
+                hamza forms are played folded, as for question answers. These words belong to no question.
+              </p>
+            </div>
+          </div>
+
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="grid-3x3" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">Board</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="d-flex flex-wrap align-items-end gap-2">
+                <div>
+                  <label class="form-label small fw-semibold" for="size">Size</label>
+                  <select class="form-select" id="size" name="size">
+                    <% sizes.forEach((s) => { %>
+                      <option value="<%= s %>" <%= s === state.size ? 'selected' : '' %>><%= s %> × <%= s %><%= s === weekdaySize ? ' (weekday size)' : '' %></option>
+                    <% }) %>
+                  </select>
+                </div>
+                <button class="btn btn-kd-outline" type="submit" name="action" value="preview" data-preview>Preview</button>
+                <button class="btn btn-kd-ghost" type="submit" name="action" value="shuffle" data-shuffle>
+                  <i data-lucide="shuffle" width="14" height="14"></i> Shuffle
+                </button>
+                <button class="btn btn-kd-accent ms-auto" type="submit" name="action" value="save" data-save <%= composed.canSave ? '' : 'disabled' %>>Save board</button>
+              </div>
+              <p class="form-text mb-0 mt-2">Shuffle lays the same words out again. Saving freezes exactly the board shown.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-7">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <i data-lucide="eye" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">Preview</span>
+            </div>
+            <div class="ad-card-body" id="dailyPreview" aria-live="polite">
+              <%- include('partials/daily-preview') %>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/wasla-daily.js?v=<%= assetVersion %>"></script>
+<%- include('partials/foot') %>

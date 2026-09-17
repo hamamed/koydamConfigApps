@@ -188,3 +188,21 @@ CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
   title       TEXT PRIMARY KEY,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ── v5 ──────────────────────────────────────────────────────────────────────
+
+-- The daily word search planned in the panel: one frozen board per date. A
+-- date with a row serves exactly this board (coins from the current config);
+-- a date without one gets the automatic board. Editing questions never
+-- changes a row here.
+CREATE TABLE IF NOT EXISTS wordsearch_days (
+  date        TEXT PRIMARY KEY,           -- YYYY-MM-DD
+  theme       TEXT NOT NULL,
+  size        INTEGER NOT NULL,           -- 7 … 10
+  words       TEXT NOT NULL,              -- JSON [{ id | null, word, display }]; id null for a typed word
+  seed        INTEGER NOT NULL,
+  board       TEXT NOT NULL,              -- JSON { theme, size, rows, words }: the API payload minus date and coins
+  source      TEXT NOT NULL DEFAULT 'theme', -- theme | custom
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
