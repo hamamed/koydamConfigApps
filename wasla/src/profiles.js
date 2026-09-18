@@ -35,6 +35,10 @@ export const AVATARS = Object.freeze([
   'star-gem', 'crystal-ball', 'dice', 'brain', 'anchor', 'balloon', 'paper-plane', 'seashell',
   'crown', 'gem', 'crystal', 'sun', 'sprout', 'snowflake', 'tornado', 'firework',
   'piggy-bank', 'wizard-hat', 'chef-hat', 'feather', 'globe', 'origami', 'snowman', 'leaf',
+  'face', 'smiley', 'puppy', 'ghost', 'gingerbread', 'ufo', 'rocket', 'magic-carpet',
+  'controller', 'headset', 'guitar', 'microphone', 'soccer-ball', 'basketball', 'burger', 'candy',
+  'apple', 'atom', 'heart', 'party-popper', 'lightning', 'compass', 'palette', 'glasses',
+  'cap', 'hot-chocolate', 'book', 'key', 'lantern', 'maple-leaf',
 ]);
 
 // Arabic letters, Arabic-Indic digits, Latin letters, digits and underscore.
