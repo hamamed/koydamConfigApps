@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
+import { isDeviceId } from '../devices.js';
 import { AVATARS, BOARDS, readDailyTime, readStats } from '../profiles.js';
 import { parseDay } from '../daily.js';
 
@@ -19,7 +20,19 @@ const bearer = (req) => /^Bearer\s+(\S+)$/i.exec(req.get('authorization') ?? '')
  * Profiles and leaderboards (contract §7). Writes need the profile's token;
  * reads of boards and public profiles do not.
  */
-export function registerProfileApi(router, { profiles }) {
+/** "06:12" from seconds, as the app shows times. */
+const clock = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+
+/** The push to the player someone just passed on today's board. */
+export function passedMessage(passer, seconds, rank) {
+  // No verb that says whether the player is a man or a woman: a username does not tell.
+  return {
+    title: 'وقتك في لغز اليوم تم تجاوزه ⏱️',
+    body: `${passer.username}: ${clock(seconds)}${rank ? ` — أنت الآن #${rank}` : ''}`,
+  };
+}
+
+export function registerProfileApi(router, { profiles, notifications = null }) {
   const json = express.json({ limit: '16kb' });
   const noStore = (_req, res, next) => {
     res.set('Cache-Control', 'no-store');
@@ -90,7 +103,23 @@ export function registerProfileApi(router, { profiles }) {
     if (time.error) return res.status(400).json({ error: time.error });
     const saved = profiles.saveDailyTime(req.profile, time);
     const board = time.kind === 'allgames' ? 'today-allgames' : 'today-wordsearch';
+    // Tell the player just passed, once a day; never slows or fails the answer.
+    if (time.kind === 'allgames' && saved.isNew && notifications) {
+      const passed = profiles.claimPassedPlayer(req.profile, time.date);
+      const devices = passed ? profiles.devicesOf(passed.profile.id) : [];
+      if (devices.length) {
+        notifications.sendToDevices(devices, passedMessage(req.profile, saved.seconds, passed.rank))
+          .catch((err) => console.error('Rank push failed:', err));
+      }
+    }
     res.json({ seconds: saved.seconds, rank: profiles.leaderboard(board, { date: time.date, viewer: req.profile, limit: 0 }).me?.rank ?? null });
+  });
+
+  router.post('/profile/me/device', noStore, writes, json, requireProfile, (req, res) => {
+    const device = req.body?.device;
+    if (!isDeviceId(device)) return res.status(400).json({ error: '"device" must be the app\'s install id.' });
+    profiles.linkDevice(req.profile, device);
+    res.status(204).end();
   });
 
   router.post('/profile/me/recovery-code', noStore, writes, requireProfile, (req, res) => {

@@ -84,6 +84,26 @@ export function createNotifications(db, { devices, credentials, sender }) {
     return { id: Number(lastInsertRowid), summary };
   }
 
+  /**
+   * A push from the game itself (rank changes) to some phones, not recorded in the
+   * panel's history. Quietly nothing when APNs is not set up or no phone can receive it.
+   */
+  async function sendToDevices(deviceIds, { title, body }) {
+    const keys = credentials.load();
+    if (!keys) return null;
+    const targets = deviceIds.map((id) => devices.get(id)).filter((d) => d?.enabled);
+    if (!targets.length) return null;
+    const summary = await sender.send({ credentials: keys, devices: targets, payload: buildPayload({ title, body }) });
+    db.transaction(() => {
+      for (const r of summary.results) {
+        if (r.outcome === 'sent') devices.markSent(r.device);
+        else if (r.outcome === 'disable') devices.disable(r.device, r.reason);
+        else devices.markFailed(r.device, r.reason);
+      }
+    })();
+    return summary;
+  }
+
   function history(limit = 50) {
     return db.prepare(`SELECT n.*, u.username FROM notifications n LEFT JOIN users u ON u.id = n.created_by
       ORDER BY n.id DESC LIMIT ?`).all(limit).map((row) => ({
@@ -103,5 +123,5 @@ export function createNotifications(db, { devices, credentials, sender }) {
     }));
   }
 
-  return { audience, send, history };
+  return { audience, send, sendToDevices, history };
 }

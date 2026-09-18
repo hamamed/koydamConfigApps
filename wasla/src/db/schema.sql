@@ -262,6 +262,16 @@ CREATE TABLE IF NOT EXISTS profile_daily (
 
 CREATE INDEX IF NOT EXISTS idx_profile_daily_date ON profile_daily(date);
 
+-- The phones a profile plays on, so rank pushes reach them (devices holds the push tokens).
+CREATE TABLE IF NOT EXISTS profile_devices (
+  profile_id  INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  device      TEXT NOT NULL,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (profile_id, device)
+);
+
+CREATE INDEX IF NOT EXISTS idx_profile_devices_device ON profile_devices(device);
+
 CREATE TABLE IF NOT EXISTS profile_badges (
   profile_id  INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   badge       TEXT NOT NULL,

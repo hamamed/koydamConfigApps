@@ -13,7 +13,7 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, profiles }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, profiles, notifications }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -110,7 +110,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     res.json(set);
   });
 
-  if (profiles) registerProfileApi(router, { profiles });
+  if (profiles) registerProfileApi(router, { profiles, notifications });
 
   // ── Events ────────────────────────────────────────────────────────────────
 

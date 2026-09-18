@@ -224,3 +224,36 @@ test('the stars board ranks level stars, which never go down, and older apps wit
   assert.match(stats({ stars: -1 }).error, /stars/);
   assert.equal(profiles.publicView(profiles.get(b.id)).stats.stars, 30);
 });
+
+test('passing a player on today\'s board finds the one just behind, once a day', () => {
+  const [slow, mid, fast] = ['slow', 'mid', 'fast'].map((username) => profiles.create({ username, avatar: 'paw' }).profile);
+  profiles.saveDailyTime(slow, { kind: 'allgames', date: '2026-09-18', seconds: 500 });
+  profiles.saveDailyTime(mid, { kind: 'allgames', date: '2026-09-18', seconds: 300 });
+  profiles.saveDailyTime(fast, { kind: 'allgames', date: '2026-09-18', seconds: 200 });
+  const first = profiles.claimPassedPlayer(fast, '2026-09-18');
+  assert.deepEqual([first.profile.username, first.rank], ['mid', 2]);
+  const second = profiles.claimPassedPlayer(fast, '2026-09-18');
+  assert.equal(second.profile.username, 'slow', 'mid was told already; the next one down');
+  assert.equal(profiles.claimPassedPlayer(slow, '2026-09-18'), null, 'nobody is behind the slowest');
+});
+
+test('the best all-games time is the fastest ever and shows on the public profile; boards carry stars', () => {
+  const { profile } = profiles.create({ username: 'sara', avatar: 'paw' });
+  profiles.saveDailyTime(profile, { kind: 'allgames', date: '2026-09-18', seconds: 400 });
+  profiles.saveStats(profile, readStats({ points: 1, levelsCompleted: 0, wordsSolved: 0, streak: 0, bestStreak: 0, stars: 7, bestAllGamesSeconds: 350 }).stats);
+  profiles.saveStats(profile, readStats({ points: 1, levelsCompleted: 0, wordsSolved: 0, streak: 0, bestStreak: 0, stars: 7, bestAllGamesSeconds: 900 }).stats);
+  assert.equal(profiles.publicView(profiles.get(profile.id)).stats.bestAllGamesSeconds, 350);
+  assert.equal(profiles.leaderboard('today-allgames').entries[0].stars, 7);
+  assert.match(readStats({ points: 1, levelsCompleted: 0, wordsSolved: 0, streak: 0, bestStreak: 0, bestAllGamesSeconds: 5 }).error, /bestAllGamesSeconds/);
+  profiles.linkDevice(profile, 'abcdef12-3456');
+  profiles.linkDevice(profile, 'abcdef12-3456');
+  assert.deepEqual(profiles.devicesOf(profile.id), ['abcdef12-3456']);
+});
+
+test('the push to a passed player names who passed them and their new rank', async () => {
+  const { passedMessage } = await import('../src/routes/api-profiles.js');
+  assert.deepEqual(passedMessage({ username: 'سارة' }, 372, 3), {
+    title: 'وقتك في لغز اليوم تم تجاوزه ⏱️',
+    body: 'سارة: 06:12 — أنت الآن #3',
+  });
+});

@@ -105,6 +105,10 @@ export function readStats(body) {
     // Sent by apps from the stars board on; older ones leave it out.
     stars: body?.stars === undefined ? 0 : whole(body.stars, 1_000_000),
   };
+  const best = body?.bestAllGamesSeconds ?? null;
+  if (best !== null && !(Number.isInteger(best) && best >= MIN_SECONDS.allgames && best <= MAX_SECONDS)) {
+    return { error: `"bestAllGamesSeconds" must be null or a whole number from ${MIN_SECONDS.allgames} to ${MAX_SECONDS}.` };
+  }
   const missing = Object.entries(stats).find(([, v]) => v === null);
   if (missing) return { error: `"${missing[0]}" must be a whole number, 0 or more.` };
   const streakDate = body?.streakDate ?? null;
@@ -113,7 +117,7 @@ export function readStats(body) {
   if (!Array.isArray(badges) || badges.length > MAX_BADGES || !badges.every((b) => typeof b === 'string' && BADGE_ID.test(b))) {
     return { error: `"badges" must be a list of at most ${MAX_BADGES} badge ids.` };
   }
-  return { stats: { ...stats, bestStreak: Math.max(stats.bestStreak, stats.streak), streakDate, badges: [...new Set(badges)] } };
+  return { stats: { ...stats, bestStreak: Math.max(stats.bestStreak, stats.streak), streakDate, badges: [...new Set(badges)], bestAllGamesSeconds: best } };
 }
 
 /** A daily time, checked against today on the server (a day either side, for time zones). */
@@ -204,6 +208,8 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   function saveStats(profile, stats) {
     db.transaction(() => {
       db.prepare(`UPDATE profiles SET points = @points, stars = MAX(stars, @stars), levels_completed = @levelsCompleted, words_solved = @wordsSolved,
+          best_allgames_seconds = CASE WHEN @bestAllGamesSeconds IS NULL THEN best_allgames_seconds
+            WHEN best_allgames_seconds IS NULL THEN @bestAllGamesSeconds ELSE MIN(best_allgames_seconds, @bestAllGamesSeconds) END,
           streak = @streak, best_streak = MAX(best_streak, @bestStreak), streak_date = @streakDate,
           stats_updated_at = datetime('now') WHERE id = @id`).run({ ...stats, id: profile.id });
       const insert = db.prepare('INSERT INTO profile_badges (profile_id, badge) VALUES (?, ?) ON CONFLICT DO NOTHING');
@@ -220,10 +226,38 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
       ON CONFLICT(profile_id, date) DO UPDATE SET ${column} = excluded.${column}, ${stamp} = excluded.${stamp}
       WHERE profile_daily.${column} IS NULL`).run(profile.id, date, seconds);
     const kept = db.prepare(`SELECT ${column} AS seconds FROM profile_daily WHERE profile_id = ? AND date = ?`).get(profile.id, date);
+    if (kind === 'allgames') {
+      db.prepare('UPDATE profiles SET best_allgames_seconds = MIN(IFNULL(best_allgames_seconds, ?), ?) WHERE id = ?').run(kept.seconds, kept.seconds, profile.id);
+    }
     return { seconds: kept.seconds, isNew: kept.seconds === seconds };
   }
 
   const remove = (profile) => db.prepare('DELETE FROM profiles WHERE id = ?').run(profile.id).changes > 0;
+
+  /** Links a phone (its anonymous install id) to the profile, so rank pushes can reach it. */
+  function linkDevice(profile, device) {
+    db.prepare(`INSERT INTO profile_devices (profile_id, device) VALUES (?, ?)
+      ON CONFLICT(profile_id, device) DO UPDATE SET updated_at = datetime('now')`).run(profile.id, device);
+  }
+
+  const devicesOf = (profileId) => db.prepare('SELECT device FROM profile_devices WHERE profile_id = ?').pluck().all(profileId);
+
+  /**
+   * After `profile` posted an all-games time: the player just behind it (the one it
+   * passed), if they were not told yet that day — marked told. `{ profile, rank }` or null.
+   */
+  function claimPassedPlayer(profile, date) {
+    return db.transaction(() => {
+      const mine = db.prepare('SELECT allgames_seconds AS s FROM profile_daily WHERE profile_id = ? AND date = ?').get(profile.id, date)?.s;
+      if (mine == null) return null;
+      const passed = db.prepare(`SELECT p.* FROM profile_daily d JOIN profiles p ON p.id = d.profile_id
+        WHERE d.date = ? AND d.allgames_seconds > ? AND p.banned = 0 AND p.id <> ? AND d.passed_notified_at IS NULL
+        ORDER BY d.allgames_seconds ASC, d.allgames_at ASC LIMIT 1`).get(date, mine, profile.id);
+      if (!passed) return null;
+      db.prepare("UPDATE profile_daily SET passed_notified_at = datetime('now') WHERE profile_id = ? AND date = ?").run(passed.id, date);
+      return { profile: passed, rank: leaderboard('today-allgames', { date, viewer: passed, limit: 0 }).me?.rank ?? null };
+    })();
+  }
 
   // ── Recovery ─────────────────────────────────────────────────────────────
 
@@ -306,9 +340,11 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   function leaderboard(board, { date = today(), viewer = null, limit = LEADERBOARD_SIZE } = {}) {
     const q = boardQuery(board, date);
     if (!q) return null;
-    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, ${q.value} AS value ${q.from} ORDER BY ${q.order} LIMIT @limit`)
+    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, p.stars, ${q.value} AS value ${q.from} ORDER BY ${q.order} LIMIT @limit`)
       .all({ ...q.params, limit });
-    const entries = rows.map((r, i) => ({ rank: i + 1, username: r.username, avatar: r.avatar, value: r.value, isMe: r.id === viewer?.id }));
+    const entries = rows.map((r, i) => ({
+      rank: i + 1, username: r.username, avatar: r.avatar, stars: r.stars, value: r.value, isMe: r.id === viewer?.id,
+    }));
     let me = null;
     if (viewer && !viewer.banned) {
       const mine = db.prepare(`SELECT p.id, ${q.value} AS value${q.at ? `, ${q.at} AS at` : ''} ${q.from} AND p.id = @id`)
@@ -334,6 +370,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
       stats: {
         points: profile.points,
         stars: profile.stars,
+        bestAllGamesSeconds: profile.best_allgames_seconds ?? null,
         levelsCompleted: profile.levels_completed,
         wordsSolved: profile.words_solved,
         streak: profile.streak_date && profile.streak_date >= addDays(today(), -2) ? profile.streak : 0,
@@ -375,6 +412,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
 
   return {
     authenticate, checkUsername, create, update, saveStats, saveDailyTime, remove, recover, resetRecoveryCode,
+    linkDevice, devicesOf, claimPassedPlayer,
     leaderboard, publicView, ownView, findByUsername, list, count, setBanned, get, today,
   };
 }
