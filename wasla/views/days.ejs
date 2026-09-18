@@ -1,0 +1,76 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Daily',
+          subheading: 'Every day: the word search and the five games. Open a day to change any of them.',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games">Game word lists</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-body d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="calendar-plus" width="18" height="18"></i>
+          <span class="fw-semibold">Plan ahead</span>
+          <span class="small kd-muted me-auto">Saves today’s automatic pick for every day and game not planned yet — then fix only what you want.</span>
+          <% planChoices.forEach((n) => { %>
+            <form method="post" action="/admin/days/plan" class="m-0">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="count" value="<%= n %>">
+              <button class="btn btn-sm <%= n === 7 ? 'btn-kd' : 'btn-kd-outline' %>" type="submit">Plan next <%= n %> days</button>
+            </form>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days?from=<%= previous %>">← Earlier</a>
+        <% if (!isCurrent) { %><a class="btn btn-sm btn-kd-outline" href="/admin/days">From today</a><% } %>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days?from=<%= next %>">Later →</a>
+        <span class="small kd-muted ms-auto"><%= planned %> of <%= days.length %> days fully planned ·
+          <span class="kd-tag kd-tag-ok">planned</span> <span class="kd-tag kd-tag-accent">typed</span> <span class="kd-tag">automatic</span></span>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <div class="ad-table-wrap">
+            <table class="ad-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>Word search</th>
+                  <% kinds.forEach((k) => { %><th class="wz-ar"><%= labels[k].ar %></th><% }) %>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% days.forEach((d) => { %>
+                  <tr>
+                    <td class="text-nowrap">
+                      <a class="fw-semibold kd-mono" href="/admin/days/<%= d.date %>"><%= d.date %></a>
+                      <div class="small kd-muted"><%= d.weekday %> · <span class="wz-ar"><%= d.weekdayAr %></span><% if (d.isToday) { %> · <strong>today</strong><% } %></div>
+                    </td>
+                    <td>
+                      <% if (d.wordSearch) { %>
+                        <span class="kd-tag <%= d.wordSearch.source === 'custom' ? 'kd-tag-accent' : 'kd-tag-ok' %> wz-ar"><%= d.wordSearch.theme %></span>
+                      <% } else { %>
+                        <span class="kd-tag">automatic</span>
+                      <% } %>
+                    </td>
+                    <% kinds.forEach((k) => { const s = d.games[k]; %>
+                      <td><span class="kd-tag <%= s === 'typed' ? 'kd-tag-accent' : s ? 'kd-tag-ok' : '' %>"><%= s === 'typed' ? 'typed' : s ? 'planned' : 'auto' %></span></td>
+                    <% }) %>
+                    <td class="text-end"><a class="btn btn-sm <%= d.isPast ? 'btn-kd-ghost' : 'btn-kd-outline' %>" href="/admin/days/<%= d.date %>"><%= d.isPast ? 'View' : 'Open' %></a></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

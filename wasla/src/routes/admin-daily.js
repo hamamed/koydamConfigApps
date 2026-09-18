@@ -247,7 +247,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
       return res.status(422).render('daily-edit', { title: `Plan ${date}`, ...model, saveFailed: true, saveError: result.error });
     }
     req.flash('success', `Saved the puzzle for ${date}: “${theme}”, ${state.size} × ${state.size}, ${board.words.length} words.`);
-    res.redirect('/admin/daily');
+    res.redirect(`/admin/days/${date}#wordsearch`);
   });
 
   // The live preview: the same composition as Save, rendered as the preview panel.
@@ -275,6 +275,6 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     }
     const removed = wordSearchDays.remove(date);
     req.flash('success', removed ? `Deleted the puzzle for ${date}; that day is automatic again.` : `${date} was not planned.`);
-    res.redirect('/admin/daily');
+    res.redirect(`/admin/days/${date}#wordsearch`);
   });
 }

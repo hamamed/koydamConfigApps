@@ -11,6 +11,7 @@ import { previewLevel, STARTING_COINS } from '../preview.js';
 import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerDailyGames } from './admin-daily-games.js';
+import { registerDays } from './admin-days.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { registerPlayers } from './admin-players.js';
@@ -359,6 +360,7 @@ export function adminRouter({
     registerWordSearch(router, { wordSearch });
   }
   if (dailyGames) registerDailyGames(router, { dailyGames });
+  if (dailyGames && wordSearch && wordSearchDays) registerDays(router, { dailyGames, wordSearch, wordSearchDays });
   registerNotifications(router, { repo, devices, notifications, apnsCredentials });
 
   return router;

@@ -12,7 +12,7 @@
       <%- include('partials/flash') %>
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily"><i data-lucide="arrow-left" width="14" height="14"></i> Schedule</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= date %>"><i data-lucide="arrow-left" width="14" height="14"></i> Back to the day</a>
         <span class="kd-tag kd-tag-accent"><%= date %> · <span class="wz-ar"><%= weekdayAr %></span></span>
         <% if (date === today) { %><span class="kd-tag kd-tag-warn">today — players may already have this board</span><% } %>
       </div>

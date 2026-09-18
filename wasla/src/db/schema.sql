@@ -190,6 +190,17 @@ CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
 );
 
 -- The daily games' word lists (guess, wheel) once edited in the panel; a missing row reads as the built-in list.
+-- A daily game fixed for a date in the panel (planned or typed); a date and game without a row
+-- is automatic. `game` is the JSON the API sends for that game.
+CREATE TABLE IF NOT EXISTS daily_game_days (
+  date        TEXT NOT NULL,
+  kind        TEXT NOT NULL CHECK (kind IN ('scramble', 'bubbles', 'groups', 'wheel', 'guess')),
+  game        TEXT NOT NULL,
+  source      TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto', 'typed')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (date, kind)
+);
+
 CREATE TABLE IF NOT EXISTS daily_game_lists (
   name        TEXT PRIMARY KEY,
   body        TEXT NOT NULL,

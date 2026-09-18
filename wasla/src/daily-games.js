@@ -10,9 +10,12 @@
  *
  * Scramble, bubbles and groups come from the questions; wheel and guess from
  * the two word lists edited on the Daily games page (src/daily-games-words.js
- * until edited). Every choice comes from a seed made of the date, so nothing is
- * stored and every request answers the same for the same date — until the
- * questions or lists change, which changes days not yet played.
+ * until edited). Every choice comes from a seed made of the date, so every
+ * request answers the same for the same date.
+ *
+ * A game saved for a date in the panel (`daily_game_days`, planned from the
+ * automatic pick or typed by hand) always wins. An unsaved game follows the
+ * questions and lists, so editing them changes days not yet planned.
  */
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
@@ -238,23 +241,84 @@ export function createDailyGames(db, { appConfig }) {
   /** Back to the built-in list. */
   const resetList = (name) => db.prepare('DELETE FROM daily_game_lists WHERE name = ?').run(name).changes > 0;
 
-  /** The set the API sends for a date, or null for a bad date or when no game can be built. */
-  function forDate(date) {
+  /** What each game would be on a date with nothing saved for it. */
+  function automatic(date) {
     const parsed = parseDay(date);
     if (!parsed) return null;
     const { day } = parsed;
     const rows = questions();
-    const config = appConfig.get();
-    const games = {
+    return {
       scramble: buildScramble(rows, seedFor(day, 'scramble')),
       bubbles: buildBubbles(titleGroups(rows, BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       groups: buildGroups(titleGroups(rows, GROUP_LETTERS), seedFor(day, 'groups')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
     };
+  }
+
+  // ── Days planned in the panel ─────────────────────────────────────────────
+
+  /** `{ kind: { game, source, updatedAt } }` saved for a date (absent kinds are automatic). */
+  function saved(date) {
+    const out = {};
+    for (const row of db.prepare('SELECT kind, game, source, updated_at FROM daily_game_days WHERE date = ?').all(date)) {
+      try {
+        out[row.kind] = { game: JSON.parse(row.game), source: row.source, updatedAt: row.updated_at };
+      } catch (err) {
+        console.error(`daily_game_days ${date}/${row.kind}: unreadable JSON, serving the automatic game`, err);
+      }
+    }
+    return out;
+  }
+
+  /** Fixes one game for a date. `source` is "typed" for words written in the panel. */
+  function saveGame(date, kind, game, source = 'typed') {
+    if (!parseDay(date) || !GAME_KINDS.includes(kind) || !game) return { error: 'Unknown date or game.' };
+    db.prepare(`INSERT INTO daily_game_days (date, kind, game, source) VALUES (?, ?, ?, ?)
+      ON CONFLICT(date, kind) DO UPDATE SET game = excluded.game, source = excluded.source, updated_at = datetime('now')`)
+      .run(date, kind, JSON.stringify(game), source);
+    return {};
+  }
+
+  /** Back to automatic for that game and date. */
+  const resetGame = (date, kind) => db.prepare('DELETE FROM daily_game_days WHERE date = ? AND kind = ?').run(date, kind).changes > 0;
+
+  /** Saves the automatic pick of every game not yet saved for the date, so later edits to questions or lists leave it alone. */
+  function freeze(date) {
+    const auto = automatic(date);
+    if (!auto) return { added: 0 };
+    const have = saved(date);
+    let added = 0;
+    db.transaction(() => {
+      for (const kind of GAME_KINDS) {
+        if (have[kind] || !auto[kind]) continue;
+        saveGame(date, kind, auto[kind], 'auto');
+        added++;
+      }
+    })();
+    return { added };
+  }
+
+  /** For the calendar: which games are saved on each date in [from, to]. `{ date: { kind: source } }` */
+  function plannedBetween(from, to) {
+    const out = {};
+    for (const row of db.prepare('SELECT date, kind, source FROM daily_game_days WHERE date >= ? AND date <= ?').all(from, to)) {
+      (out[row.date] ??= {})[row.kind] = row.source;
+    }
+    return out;
+  }
+
+  /** The set the API sends for a date — saved games over the automatic ones — or null for a bad date or when no game can be built. */
+  function forDate(date) {
+    const parsed = parseDay(date);
+    if (!parsed) return null;
+    const config = appConfig.get();
+    const auto = automatic(parsed.date);
+    const fixed = saved(parsed.date);
+    const games = Object.fromEntries(GAME_KINDS.map((kind) => [kind, fixed[kind]?.game ?? auto[kind]]));
     if (Object.values(games).every((g) => g === null)) return null;
     return { date: parsed.date, coins: config.dailyGameCoins, allBonus: config.dailyAllGamesBonus, ...games };
   }
 
-  return { forDate, lists, saveList, resetList };
+  return { forDate, automatic, saved, saveGame, resetGame, freeze, plannedBetween, lists, saveList, resetList };
 }

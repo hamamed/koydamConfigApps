@@ -1,0 +1,125 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Daily · ' + date,
+          subheading: weekday + ' · ' + (allPlanned ? 'everything planned' : 'some games automatic'),
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/daily-games?date=' + date + '" target="_blank" rel="noopener">Games JSON</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days"><i data-lucide="arrow-left" width="14" height="14"></i> Calendar</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= previous %>">← <%= previous %></a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= next %>"><%= next %> →</a>
+        <span class="kd-tag kd-tag-accent wz-ar"><%= weekdayAr %></span>
+        <div class="ms-auto">
+          <% if (past) { %>
+            <span class="kd-tag">past day · read-only</span>
+          <% } else if (!allPlanned) { %>
+            <form method="post" action="/admin/days/<%= date %>/plan" class="m-0">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-sm btn-kd" type="submit">Plan this day</button>
+            </form>
+          <% } else { %>
+            <span class="ad-status ad-status-published">Planned</span>
+          <% } %>
+        </div>
+      </div>
+      <p class="small kd-muted">
+        <strong>Automatic</strong> games follow your questions and word lists, so they can still change until the day is planned.
+        <strong>Planned</strong> and <strong>typed</strong> games are fixed: players get exactly what you see. Edit any game below — the box
+        starts with what the day has now.
+      </p>
+
+      <div class="ad-card mb-3" id="wordsearch">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="search" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">Word search · <span class="wz-ar">البحث عن الكلمات</span></span>
+          <% if (wordSearch.day) { %>
+            <span class="kd-tag <%= wordSearch.day.source === 'custom' ? 'kd-tag-accent' : 'kd-tag-ok' %>"><%= wordSearch.day.source === 'custom' ? 'typed' : 'planned' %></span>
+          <% } else { %>
+            <span class="kd-tag">automatic</span>
+          <% } %>
+          <% if (!past) { %><a class="btn btn-sm btn-kd-outline" href="/admin/daily/<%= date %>/edit">Edit word search</a><% } %>
+        </div>
+        <div class="ad-card-body">
+          <% if (wordSearch.board) { %>
+            <div class="ws-layout">
+              <%- include('partials/ws-board', { board: wordSearch.board, compact: true }) %>
+              <div class="ws-side">
+                <div class="d-flex flex-wrap gap-2">
+                  <span class="kd-tag kd-tag-accent wz-ar"><%= wordSearch.board.theme %></span>
+                  <span class="kd-tag"><%= wordSearch.board.size %> × <%= wordSearch.board.size %></span>
+                  <span class="kd-tag"><%= wordSearch.board.words.length %> words</span>
+                </div>
+                <p class="wz-ar mt-2 mb-0"><%= wordSearch.board.words.map((w) => w.display).join('، ') %></p>
+              </div>
+            </div>
+          <% } else { %>
+            <p class="small kd-muted mb-0">No board for this day: no theme has enough words. <a href="/admin/daily/<%= date %>/edit">Type the words yourself</a>.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <% games.forEach((g) => { %>
+          <div class="col-xl-6" id="<%= g.kind %>">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+                <i data-lucide="<%= g.label.icon %>" width="16" height="16"></i>
+                <span class="fw-semibold me-auto"><%= g.label.en %> · <span class="wz-ar"><%= g.label.ar %></span></span>
+                <span class="kd-tag <%= g.source === 'typed' ? 'kd-tag-accent' : g.source ? 'kd-tag-ok' : '' %>"><%= g.source === 'typed' ? 'typed' : g.source ? 'planned' : 'automatic' %></span>
+              </div>
+              <div class="ad-card-body">
+                <% if (!g.game) { %>
+                  <p class="small kd-muted">Nothing to play: add questions (or list entries), or type this game below.</p>
+                <% } else if (g.kind === 'scramble') { %>
+                  <ul class="list-unstyled d-grid gap-1 mb-2">
+                    <% g.game.words.forEach((w) => { %><li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-tag wz-ar"><%= w.letters %></span> <span class="small kd-muted wz-ar"><%= w.clue %></span></li><% }) %>
+                  </ul>
+                <% } else if (g.kind === 'bubbles') { %>
+                  <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
+                <% } else if (g.kind === 'groups') { %>
+                  <ul class="list-unstyled d-grid gap-1 mb-2">
+                    <% g.game.groups.forEach((gr) => { %><li><span class="kd-tag kd-tag-accent wz-ar"><%= gr.title %></span> <span class="wz-ar"><%= gr.words.map((w) => w.display).join('، ') %></span></li><% }) %>
+                  </ul>
+                <% } else if (g.kind === 'wheel') { %>
+                  <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...g.game.letters].join(' ') %></span> <span class="wz-ar"><%= g.game.words.join('، ') %></span></p>
+                <% } else if (g.kind === 'guess') { %>
+                  <p class="mb-2"><span class="wz-ar fw-semibold fs-4"><%= g.game.display %></span> <span class="small kd-muted"><%= g.game.tries %> tries</span></p>
+                <% } %>
+
+                <% if (!past) { %>
+                  <details <%= g.isOpen ? 'open' : '' %>>
+                    <summary class="small fw-semibold">Edit <%= g.label.en.toLowerCase() %></summary>
+                    <p class="small kd-muted mt-2 mb-1"><%= g.label.hint %></p>
+                    <% if (g.errors.length) { %>
+                      <ul class="small text-danger mb-2"><% g.errors.forEach((e) => { %><li><%= e %></li><% }) %></ul>
+                    <% } %>
+                    <form method="post" action="/admin/days/<%= date %>/games/<%= g.kind %>" class="d-grid gap-2">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <textarea class="form-control wz-ar ws-words-input" name="text" rows="<%= g.kind === 'guess' || g.kind === 'wheel' ? 2 : 6 %>" spellcheck="false"><%= g.text %></textarea>
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-kd-accent" type="submit">Save</button>
+                      </div>
+                    </form>
+                    <% if (g.source) { %>
+                      <form method="post" action="/admin/days/<%= date %>/games/<%= g.kind %>/auto" class="mt-2" data-confirm="Make this game automatic again?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-sm btn-kd-ghost" type="submit">Back to automatic</button>
+                      </form>
+                    <% } %>
+                  </details>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
