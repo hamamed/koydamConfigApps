@@ -47,13 +47,15 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
         seed: day.seed,
       };
     }
-    const pick = wordSearch.pickForDate(date);
+    const pick = wordSearch.automaticPick(date);
+    // A seasonal event's theme is no title's: it opens as typed words.
+    const isEvent = Boolean(pick?.event);
     return {
-      source: pick ? 'theme' : 'custom',
-      themeTitle: pick?.theme ?? '',
-      wordIds: pick ? pick.board.words.map((w) => w.id) : null,
-      customTheme: '',
-      customWords: '',
+      source: pick && !isEvent ? 'theme' : 'custom',
+      themeTitle: pick && !isEvent ? pick.theme : '',
+      wordIds: pick && !isEvent ? pick.board.words.map((w) => w.id) : null,
+      customTheme: isEvent ? pick.theme : '',
+      customWords: isEvent ? pick.board.words.map((w) => w.display).join('\n') : '',
       size: pick?.size ?? sizeForDay(parseDay(date).day),
       seed: pick?.seed ?? newSeed(),
     };

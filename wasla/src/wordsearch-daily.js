@@ -14,10 +14,15 @@
  * 1970-01-01; the board size follows the weekday; the words and the board come
  * from a seed made of the date. Editing a theme's questions therefore changes
  * the automatic boards that use it — never a stored one.
+ *
+ * A date with a seasonal event (src/seasonal-events.js: Ramadan, the two Eids,
+ * Fridays) tries that event's built-in theme first, at the weekday's size and
+ * up, and only falls back to the rotation when it cannot make a board.
  */
 
 import { foldForPlay, letters } from './arabic.js';
 import { parseDay } from './daily.js';
+import { EVENT_THEMES, eventFor, eventQuestions } from './seasonal-events.js';
 import { buildBoard, MAX_SIZE, random, shuffled } from './wordsearch.js';
 
 export const MIN_WORD_LETTERS = 3;
@@ -74,6 +79,19 @@ export function themeWords(questions) {
   }
   const words = kept.sort((a, b) => a.id - b.id).map(({ id, word, display }) => ({ id, word, display }));
   return { words, skipped: skipped.sort((a, b) => a.id - b.id) };
+}
+
+const eventThemes = new Map();
+
+/**
+ * The built-in theme of a seasonal event kind — `{ title, words, skipped }`,
+ * its words folded and filtered by themeWords like a title's answers — or
+ * null for an unknown kind. Built once per kind.
+ */
+export function eventTheme(kind) {
+  if (!EVENT_THEMES[kind]) return null;
+  if (!eventThemes.has(kind)) eventThemes.set(kind, { title: EVENT_THEMES[kind].title, ...themeWords(eventQuestions(kind)) });
+  return eventThemes.get(kind);
 }
 
 /** Code-point order: the same on every machine, whatever its locale. */
@@ -161,11 +179,35 @@ export function createWordSearch(db, { appConfig }) {
   }
 
   /**
+   * The seasonal event's pick for a date — `{ theme, size, seed, board, event }`
+   * — or null when the date has no event or its theme cannot make a board.
+   * Same weekday size and seeds as pickForDate, growing the size when needed.
+   */
+  function eventPickForDate(date) {
+    const parsed = parseDay(date);
+    const event = parsed && eventFor(parsed.date);
+    const theme = event && eventTheme(event.kind);
+    if (!theme) return null;
+    for (let size = sizeForDay(parsed.day); size <= MAX_SIZE; size++) {
+      const seed = seedOf(parsed.day, size, 0);
+      const board = boardForTheme(theme, size, seed);
+      if (board) return { theme: theme.title, size: board.size, seed, board, event };
+    }
+    return null;
+  }
+
+  /**
+   * What an unplanned date gets, and what the planners store: the event's pick,
+   * else the rotation's (pickForDate, with its `avoid`). An event pick carries `event`.
+   */
+  const automaticPick = (date, list, options = {}) => eventPickForDate(date) ?? pickForDate(date, list, options);
+
+  /**
    * The automatic board for a date — `{ date, theme, size, coins, rows, words }`
    * as the API sends it — or null for a bad date or when no theme can make one.
    */
-  function forDate(date, list = playable()) {
-    const pick = pickForDate(date, list);
+  function forDate(date, list) {
+    const pick = automaticPick(date, list);
     if (!pick) return null;
     return {
       date: parseDay(date).date,
@@ -189,5 +231,5 @@ export function createWordSearch(db, { appConfig }) {
     return {};
   }
 
-  return { themes, playable, pickForDate, forDate, setExcluded };
+  return { themes, playable, pickForDate, eventPickForDate, automaticPick, forDate, setExcluded };
 }

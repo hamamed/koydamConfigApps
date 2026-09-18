@@ -35,6 +35,8 @@ const ADDITIVE_COLUMNS = [
   ['profiles', 'stars', 'INTEGER NOT NULL DEFAULT 0'],
   // The player's fastest total for all the daily games, ever (a personal record).
   ['profiles', 'best_allgames_seconds', 'INTEGER'],
+  // The frame round the avatar (profiles.js FRAMES), or null for none.
+  ['profiles', 'frame', 'TEXT'],
   // When this player was last told someone passed their time that day (one push a day).
   ['profile_daily', 'passed_notified_at', 'TEXT'],
 ];

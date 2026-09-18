@@ -63,6 +63,9 @@ export function boardProblem(board) {
   return null;
 }
 
+/** How a planner stores a pick: an event's theme is not a title's, so it is saved as typed words. */
+export const sourceOf = (pick) => (pick.event ? 'custom' : 'theme');
+
 export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
   const selectOne = db.prepare('SELECT * FROM wordsearch_days WHERE date = ?');
 
@@ -141,7 +144,9 @@ export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
    * Plans `count` more days: from the day after the last planned date, or
    * from today when nothing is planned from today on. Each date takes the
    * automatic rotation's theme and weekday size, passing over the previous
-   * day's theme when another fits, and its board is stored as generated.
+   * day's theme when another fits, and its board is stored as generated. A
+   * seasonal event date takes its event's built-in theme instead, stored as
+   * `custom` (its words belong to no question) so the day's editor can open it.
    * `{ added: [{ date, theme, size }], skipped: [date], from, to }` — a date is
    * skipped only when no theme can make a board for it.
    */
@@ -154,14 +159,14 @@ export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
     const firstDay = last && parseDay(last).day >= start.day ? parseDay(last).day + 1 : start.day;
 
     const themes = wordSearch.playable();
-    const themeOn = (date) => get(date)?.theme ?? wordSearch.pickForDate(date, themes)?.theme ?? null;
+    const themeOn = (date) => get(date)?.theme ?? wordSearch.automaticPick(date, themes)?.theme ?? null;
     const added = [];
     const skipped = [];
     db.transaction(() => {
       let previous = themeOn(dayToDate(firstDay - 1));
       for (let i = 0; i < n; i++) {
         const date = dayToDate(firstDay + i);
-        const pick = wordSearch.pickForDate(date, themes, { avoid: previous });
+        const pick = wordSearch.automaticPick(date, themes, { avoid: previous });
         if (!pick) {
           skipped.push(date);
           previous = null;
@@ -169,7 +174,7 @@ export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
         }
         const words = pick.board.words;
         const board = { theme: pick.theme, size: pick.size, rows: pick.board.rows, words };
-        const result = save(date, { theme: pick.theme, size: pick.size, words, seed: pick.seed, board, source: 'theme' });
+        const result = save(date, { theme: pick.theme, size: pick.size, words, seed: pick.seed, board, source: sourceOf(pick) });
         if (result.error) {
           skipped.push(date);
           previous = null;

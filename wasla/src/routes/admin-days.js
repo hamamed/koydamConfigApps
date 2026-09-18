@@ -1,8 +1,10 @@
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { EDITORS } from '../daily-game-editor.js';
 import { GAME_KINDS } from '../daily-games.js';
+import { eventFor, eventLabel } from '../seasonal-events.js';
 import { ARABIC_WEEKDAYS, previewOf } from '../wordsearch-editor.js';
 import { WEEKDAY_NAMES, weekdayOf } from '../wordsearch-daily.js';
+import { sourceOf } from '../wordsearch-schedule.js';
 
 export const PLAN_CHOICES = Object.freeze([7, 14, 30]);
 const CALENDAR_DAYS = 30;
@@ -29,10 +31,10 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     let theme = wordSearchDays.get(date)?.theme ?? null;
     let wordSearchAdded = false;
     if (!theme) {
-      const pick = wordSearch.pickForDate(date, wordSearch.playable(), { avoid: previousTheme });
+      const pick = wordSearch.automaticPick(date, wordSearch.playable(), { avoid: previousTheme });
       if (pick) {
         const board = { theme: pick.theme, size: pick.size, rows: pick.board.rows, words: pick.board.words };
-        const saved = wordSearchDays.save(date, { theme: pick.theme, size: pick.size, words: pick.board.words, seed: pick.seed, board, source: 'theme' });
+        const saved = wordSearchDays.save(date, { theme: pick.theme, size: pick.size, words: pick.board.words, seed: pick.seed, board, source: sourceOf(pick) });
         if (!saved.error) {
           theme = pick.theme;
           wordSearchAdded = true;
@@ -56,6 +58,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
         weekdayAr: ARABIC_WEEKDAYS[weekdayOf(start + i)],
         isToday: date === todayUtc(),
         isPast: isPast(date),
+        event: eventLabel(eventFor(date)),
         wordSearch: saved ? { theme: saved.theme, source: saved.source } : null,
         games: games[date] ?? {},
       };
@@ -129,6 +132,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     res.render('day', {
       title: `Daily · ${date}`,
       date,
+      event: eventLabel(eventFor(date)),
       weekday: WEEKDAY_NAMES[weekdayOf(day)],
       weekdayAr: ARABIC_WEEKDAYS[weekdayOf(day)],
       previous: dayToDate(day - 1),

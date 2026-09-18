@@ -8,6 +8,7 @@ import { createAppConfig } from '../src/app-config.js';
 import { dayToDate, parseDay } from '../src/daily.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
+import { eventFor } from '../src/seasonal-events.js';
 import { createWordSearch, sizeForDay } from '../src/wordsearch-daily.js';
 import { composeDay } from '../src/wordsearch-editor.js';
 import { boardProblem, createWordSearchSchedule } from '../src/wordsearch-schedule.js';
@@ -52,6 +53,7 @@ test('a stored board beats the automatic one, in the same shape, with coins from
   add('حيوانات', ANIMALS);
   const automatic = days.boardFor('2026-09-18');
   assert.deepEqual(automatic, wordSearch.forDate('2026-09-18'));
+  assert.equal(automatic.theme, 'جمعة مباركة', 'a Friday: the event theme, until a board is stored');
 
   assert.deepEqual(customDay('2026-09-18'), {});
   const stored = days.boardFor('2026-09-18');
@@ -92,7 +94,10 @@ test('adding days starts today, follows the weekday sizes and never repeats the 
   let previous = wordSearch.pickForDate(plus(TODAY, -1)).theme;
   for (const { date } of result.added) {
     const day = days.get(date);
-    assert.equal(day.source, 'theme');
+    // Fridays (2026-09-18, 09-25) take the Friday theme, stored as typed words.
+    const isFriday = eventFor(date)?.kind === 'friday';
+    assert.equal(day.source, isFriday ? 'custom' : 'theme', date);
+    if (isFriday) assert.equal(day.theme, 'جمعة مباركة');
     assert.equal(day.size, sizeForDay(parseDay(date).day));
     assert.notEqual(day.theme, previous, `${date} repeats ${previous}`);
     assertValidBoard(day.board);
@@ -135,15 +140,15 @@ test('a single theme is still used on consecutive days rather than leaving them 
   const { added, skipped } = days.addDays(7, TODAY);
   assert.equal(added.length, 7);
   assert.deepEqual(skipped, []);
-  assert.ok(added.every((d) => d.theme === 'حيوانات'));
+  assert.ok(added.every((d) => d.theme === (d.date === '2026-09-18' ? 'جمعة مباركة' : 'حيوانات')));
 });
 
-test('with no theme every day is skipped and nothing is stored', () => {
+test('with no theme every day but the Friday is skipped, and only the Friday is stored', () => {
   add('حيوانات', ANIMALS.slice(0, 5));
   const result = days.addDays(7, TODAY);
-  assert.deepEqual(result.added, []);
-  assert.equal(result.skipped.length, 7);
-  assert.equal(days.lastDate(), null);
+  assert.deepEqual(result.added.map((d) => [d.date, d.theme]), [['2026-09-18', 'جمعة مباركة']]);
+  assert.equal(result.skipped.length, 6);
+  assert.equal(days.lastDate(), '2026-09-18');
   assert.ok(days.addDays(0, TODAY).error);
   assert.ok(days.addDays(61, TODAY).error);
 });

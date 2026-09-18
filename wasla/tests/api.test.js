@@ -184,7 +184,8 @@ test('the daily puzzle refuses a malformed date', async () => {
 });
 
 test('the word search is a 404 with a message until a title has six usable answers', async () => {
-  const res = await fetch(`${base}/wordsearch?date=2026-09-18`);
+  // A Thursday with no seasonal event: a Friday would have its own theme.
+  const res = await fetch(`${base}/wordsearch?date=2026-09-17`);
   assert.equal(res.status, 404);
   assert.match((await res.json()).error, /theme/);
 });
@@ -201,13 +202,13 @@ test('the word search board has the contract shape, matches its rows and is the 
   for (const answer of ['أسد', 'نمر', 'فيل', 'زرافة', 'حصان', 'غزال', 'قرد', 'جمل']) {
     repo.createQuestion({ title: 'حيوانات', answer, clue: 'x' });
   }
-  const res = await fetch(`${base}/wordsearch?date=2026-09-18`);
+  const res = await fetch(`${base}/wordsearch?date=2026-09-19`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'public, max-age=60');
   const body = await res.json();
 
   assert.deepEqual(Object.keys(body).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
-  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-18', 'حيوانات', 9, 30]);
+  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 9, 30]);
   assert.equal(body.rows.length, body.size);
   for (const row of body.rows) assert.equal([...row].length, body.size);
   assert.ok(body.words.length >= 6 && body.words.length <= 10);
@@ -220,7 +221,7 @@ test('the word search board has the contract shape, matches its rows and is the 
   const lion = body.words.find((w) => w.display === 'أسد');
   if (lion) assert.equal(lion.word, 'اسد');
 
-  assert.deepEqual(await (await fetch(`${base}/wordsearch?date=2026-09-18`)).json(), body);
+  assert.deepEqual(await (await fetch(`${base}/wordsearch?date=2026-09-19`)).json(), body);
   const sunday = await (await fetch(`${base}/wordsearch?date=2026-09-20`)).json();
   assert.equal(sunday.size, 10);
 });

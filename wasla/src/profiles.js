@@ -39,7 +39,12 @@ export const AVATARS = Object.freeze([
   'controller', 'headset', 'guitar', 'microphone', 'soccer-ball', 'basketball', 'burger', 'candy',
   'apple', 'atom', 'heart', 'party-popper', 'lightning', 'compass', 'palette', 'glasses',
   'cap', 'hot-chocolate', 'book', 'key', 'lantern', 'maple-leaf',
+  // Seasonal (locked in the app until their event; the server does not check).
+  'fanous', 'eidiya', 'friday-star',
 ]);
+
+/** The frames a player can put round their avatar (the app draws them); null is none. */
+export const FRAMES = Object.freeze(['ramadan', 'eid']);
 
 // Arabic letters, Arabic-Indic digits, Latin letters, digits and underscore.
 const USERNAME = /^[ء-غف-ي٠-٩A-Za-z0-9_]+$/u;
@@ -73,6 +78,12 @@ export function readUsername(raw) {
 }
 
 export const readAvatar = (raw) => (AVATARS.includes(raw) ? raw : null);
+
+/** `{ frame }` — an id from FRAMES, or null for null/'' (no frame) — or `{ error }`. */
+export function readFrame(raw) {
+  if (raw === null || raw === '') return { frame: null };
+  return FRAMES.includes(raw) ? { frame: raw } : { error: 'اختر إطاراً من القائمة' };
+}
 
 const hashToken = (token) => crypto.createHash('sha256').update(String(token)).digest('hex');
 
@@ -180,8 +191,8 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
     }
   }
 
-  /** Changes the username and/or avatar. `{ profile }` or `{ error, status }`. */
-  function update(profile, { username, avatar }, { force = false } = {}) {
+  /** Changes the username, avatar and/or frame. `{ profile }` or `{ error, status }`. */
+  function update(profile, { username, avatar, frame }, { force = false } = {}) {
     const changes = {};
     if (username !== undefined) {
       const read = force ? forcedUsername(username) : readUsername(username);
@@ -194,6 +205,11 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
       const face = readAvatar(avatar);
       if (!face) return { error: 'اختر صورة من القائمة', status: 400 };
       changes.avatar = face;
+    }
+    if (frame !== undefined) {
+      const read = readFrame(frame);
+      if (read.error) return { error: read.error, status: 400 };
+      changes.frame = read.frame;
     }
     if (!Object.keys(changes).length) return { profile };
     const sets = Object.keys(changes).map((k) => `${k} = @${k}`).join(', ');
@@ -340,14 +356,14 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
     }
   }
 
-  /** `{ board, date, entries: [{ rank, username, avatar, value }], me }` or null for an unknown board. */
+  /** `{ board, date, entries: [{ rank, username, avatar, frame, stars, value, isMe }], me }` or null for an unknown board. */
   function leaderboard(board, { date = today(), viewer = null, limit = LEADERBOARD_SIZE } = {}) {
     const q = boardQuery(board, date);
     if (!q) return null;
-    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, p.stars, ${q.value} AS value ${q.from} ORDER BY ${q.order} LIMIT @limit`)
+    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, p.frame, p.stars, ${q.value} AS value ${q.from} ORDER BY ${q.order} LIMIT @limit`)
       .all({ ...q.params, limit });
     const entries = rows.map((r, i) => ({
-      rank: i + 1, username: r.username, avatar: r.avatar, stars: r.stars, value: r.value, isMe: r.id === viewer?.id,
+      rank: i + 1, username: r.username, avatar: r.avatar, frame: r.frame ?? null, stars: r.stars, value: r.value, isMe: r.id === viewer?.id,
     }));
     let me = null;
     if (viewer && !viewer.banned) {
@@ -370,6 +386,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
     return {
       username: profile.username,
       avatar: profile.avatar,
+      frame: profile.frame ?? null,
       joined: profile.created_at.slice(0, 10),
       stats: {
         points: profile.points,

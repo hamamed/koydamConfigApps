@@ -51,6 +51,7 @@
                     <td class="text-nowrap">
                       <a class="fw-semibold kd-mono" href="/admin/days/<%= d.date %>"><%= d.date %></a>
                       <div class="small kd-muted"><%= d.weekday %> · <span class="wz-ar"><%= d.weekdayAr %></span><% if (d.isToday) { %> · <strong>today</strong><% } %></div>
+                      <% if (d.event) { %><span class="kd-tag wz-ar" title="Seasonal event"><i data-lucide="moon" width="12" height="12"></i> <%= d.event %></span><% } %>
                     </td>
                     <td>
                       <% if (d.wordSearch) { %>

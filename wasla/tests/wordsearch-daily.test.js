@@ -72,9 +72,9 @@ test('the size rises through the week, Monday 7 to Sunday 10', () => {
 test('a date gets a deterministic board from its theme, matching the contract', () => {
   add('حيوانات', ANIMALS);
   add('فواكه', FRUITS);
-  const board = wordSearch.forDate('2026-09-18'); // a Friday: size 9
+  const board = wordSearch.forDate('2026-09-19'); // a Saturday with no event: size 9
   assert.deepEqual(Object.keys(board).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
-  assert.equal(board.date, '2026-09-18');
+  assert.equal(board.date, '2026-09-19');
   assert.equal(board.size, 9);
   assert.equal(board.coins, 30);
   assert.ok(['حيوانات', 'فواكه'].includes(board.theme));
@@ -85,10 +85,10 @@ test('a date gets a deterministic board from its theme, matching the contract', 
     assert.equal(cellsOf(w).map(([r, c]) => grid[r][c]).join(''), w.word);
     assert.ok([...w.word].length >= 3 && [...w.word].length <= 8);
   }
-  assert.deepEqual(wordSearch.forDate('2026-09-18'), board);
+  assert.deepEqual(wordSearch.forDate('2026-09-19'), board);
 
   // Consecutive days rotate through the themes.
-  assert.notEqual(wordSearch.forDate('2026-09-19').theme, board.theme);
+  assert.notEqual(wordSearch.forDate('2026-09-20').theme, board.theme);
 });
 
 test('a theme whose words are too long for the day passes the day to one that fits', () => {
@@ -106,12 +106,12 @@ test('a theme whose words are too long for the day passes the day to one that fi
 
 test('no board without a theme, or for a date that is not a date', () => {
   add('حيوانات', ANIMALS.slice(0, 5));
-  assert.equal(wordSearch.forDate('2026-09-18'), null);
+  assert.equal(wordSearch.forDate('2026-09-19'), null);
   add('حيوانات', ANIMALS.slice(5));
-  assert.ok(wordSearch.forDate('2026-09-18'));
+  assert.ok(wordSearch.forDate('2026-09-19'));
   assert.equal(wordSearch.forDate('2026-02-30'), null);
   wordSearch.setExcluded('حيوانات', true);
-  assert.equal(wordSearch.forDate('2026-09-18'), null);
+  assert.equal(wordSearch.forDate('2026-09-19'), null);
 });
 
 test('coins follow the daily puzzle coins in the config', () => {

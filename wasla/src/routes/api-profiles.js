@@ -2,7 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 
 import { isDeviceId } from '../devices.js';
-import { AVATARS, BOARDS, readDailyTime, readStats } from '../profiles.js';
+import { AVATARS, BOARDS, FRAMES, readDailyTime, readStats } from '../profiles.js';
 import { parseDay } from '../daily.js';
 
 const limiter = (limit, windowMs, message) => rateLimit({
@@ -53,6 +53,11 @@ export function registerProfileApi(router, { profiles, notifications = null }) {
     res.json({ avatars: AVATARS });
   });
 
+  router.get('/profiles/frames', (_req, res) => {
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.json({ frames: FRAMES });
+  });
+
   router.get('/profiles/check', noStore, limiter(60, 60_000, 'Too many checks. Try again in a minute.'), (req, res) => {
     const profile = profiles.authenticate(bearer(req));
     res.json(profiles.checkUsername(req.query.username, profile?.id ?? null));
@@ -79,7 +84,7 @@ export function registerProfileApi(router, { profiles, notifications = null }) {
   });
 
   router.patch('/profile/me', noStore, writes, json, requireProfile, (req, res) => {
-    const result = profiles.update(req.profile, { username: req.body?.username, avatar: req.body?.avatar });
+    const result = profiles.update(req.profile, { username: req.body?.username, avatar: req.body?.avatar, frame: req.body?.frame });
     if (result.error) return res.status(result.status).json({ error: result.error });
     res.json({ profile: profiles.ownView(result.profile) });
   });

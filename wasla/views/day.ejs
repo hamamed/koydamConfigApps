@@ -15,6 +15,7 @@
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= previous %>">← <%= previous %></a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= next %>"><%= next %> →</a>
         <span class="kd-tag kd-tag-accent wz-ar"><%= weekdayAr %></span>
+        <% if (event) { %><span class="kd-tag wz-ar" title="Seasonal event: the word search uses its theme unless the day is planned"><i data-lucide="moon" width="12" height="12"></i> <%= event %></span><% } %>
         <div class="ms-auto">
           <% if (past) { %>
             <span class="kd-tag">past day · read-only</span>

@@ -4,7 +4,9 @@ import { after, before, beforeEach, test } from 'node:test';
 import express from 'express';
 
 import { openDatabase } from '../src/db/index.js';
-import { createProfiles, readDailyTime, readStats, readUsername, usernameKey } from '../src/profiles.js';
+import {
+  AVATARS, createProfiles, FRAMES, readDailyTime, readFrame, readStats, readUsername, usernameKey,
+} from '../src/profiles.js';
 import { apiRouter } from '../src/routes/api.js';
 
 let db;
@@ -256,4 +258,57 @@ test('the push to a passed player names who passed them and their new rank', asy
     title: 'وقتك في لغز اليوم تم تجاوزه ⏱️',
     body: 'سارة: 06:12 — أنت الآن #3',
   });
+});
+
+test('the seasonal avatars come last, and frames are ramadan and eid', () => {
+  assert.equal(AVATARS.length, 73);
+  assert.deepEqual(AVATARS.slice(-3), ['fanous', 'eidiya', 'friday-star']);
+  assert.equal(new Set(AVATARS).size, AVATARS.length);
+  assert.deepEqual(FRAMES, ['ramadan', 'eid']);
+  assert.deepEqual(readFrame('eid'), { frame: 'eid' });
+  assert.deepEqual(readFrame(null), { frame: null });
+  assert.deepEqual(readFrame(''), { frame: null });
+  for (const bad of ['gold', 'Ramadan', 1, true, {}]) assert.ok(readFrame(bad).error, String(bad));
+});
+
+test('a frame is set, kept through other changes, cleared, and shown on every view and board', () => {
+  const { profile } = profiles.create({ username: 'hala', avatar: 'fanous' });
+  assert.equal(profiles.ownView(profile).frame, null);
+
+  const framed = profiles.update(profile, { frame: 'ramadan' }).profile;
+  assert.equal(framed.frame, 'ramadan');
+  assert.equal(profiles.update(framed, { avatar: 'eidiya' }).profile.frame, 'ramadan');
+  assert.equal(profiles.publicView(profiles.get(profile.id)).frame, 'ramadan');
+  assert.equal(profiles.ownView(profiles.get(profile.id)).frame, 'ramadan');
+  profiles.saveDailyTime(profile, { kind: 'allgames', date: '2026-09-18', seconds: 300 });
+  assert.equal(profiles.leaderboard('today-allgames').entries[0].frame, 'ramadan');
+
+  const bad = profiles.update(framed, { frame: 'gold' });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.error, 'اختر إطاراً من القائمة');
+  assert.equal(profiles.get(profile.id).frame, 'ramadan');
+
+  assert.equal(profiles.update(framed, { frame: null }).profile.frame, null);
+  assert.equal(profiles.leaderboard('today-allgames').entries[0].frame, null);
+});
+
+test('HTTP: frames are listed, set and cleared through PATCH, and a bad one is a 400', async () => {
+  const frames = await call('/profiles/frames');
+  assert.equal(frames.status, 200);
+  assert.deepEqual(await frames.json(), { frames: ['ramadan', 'eid'] });
+  assert.equal((await (await call('/profiles/avatars')).json()).avatars.length, 73);
+
+  const { token } = await (await call('/profiles', { method: 'POST', body: { username: 'framed', avatar: 'friday-star' } })).json();
+  const set = await call('/profile/me', { method: 'PATCH', token, body: { frame: 'eid' } });
+  assert.equal((await set.json()).profile.frame, 'eid');
+  assert.equal((await (await call('/profile/me', { token })).json()).profile.frame, 'eid');
+  assert.equal((await (await call('/profiles/framed')).json()).profile.frame, 'eid');
+
+  const bad = await call('/profile/me', { method: 'PATCH', token, body: { frame: 'gold' } });
+  assert.equal(bad.status, 400);
+  assert.deepEqual(await bad.json(), { error: 'اختر إطاراً من القائمة' });
+
+  const cleared = await call('/profile/me', { method: 'PATCH', token, body: { frame: '' } });
+  assert.equal((await cleared.json()).profile.frame, null);
+  assert.equal((await call('/profile/me', { method: 'DELETE', token })).status, 204);
 });
