@@ -211,3 +211,16 @@ test('HTTP: create shows the code once, and it recovers the profile later', asyn
   assert.match(next.recoveryCode, /^WSL-/);
   assert.equal((await call('/profiles/recover', { method: 'POST', body: { code: created.recoveryCode } })).status, 404);
 });
+
+test('the stars board ranks level stars, which never go down, and older apps without stars still sync', () => {
+  const [a, b] = ['aaa', 'bbb'].map((username) => profiles.create({ username, avatar: 'paw' }).profile);
+  const stats = (extra) => readStats({ points: 5, levelsCompleted: 1, wordsSolved: 1, streak: 0, bestStreak: 0, ...extra });
+  profiles.saveStats(a, stats({ stars: 12 }).stats);
+  profiles.saveStats(b, stats({ stars: 30 }).stats);
+  profiles.saveStats(b, stats({ stars: 4 }).stats);
+  assert.deepEqual(profiles.leaderboard('stars', { viewer: a }).entries.map((e) => [e.username, e.value]), [['bbb', 30], ['aaa', 12]]);
+  assert.deepEqual(profiles.leaderboard('stars', { viewer: a }).me, { rank: 2, value: 12 });
+  assert.equal(stats({}).stats.stars, 0);
+  assert.match(stats({ stars: -1 }).error, /stars/);
+  assert.equal(profiles.publicView(profiles.get(b.id)).stats.stars, 30);
+});

@@ -19,7 +19,7 @@ import { addDays } from './players.js';
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 16;
 export const LEADERBOARD_SIZE = 50;
-export const BOARDS = Object.freeze(['today-allgames', 'today-wordsearch', 'points', 'streak']);
+export const BOARDS = Object.freeze(['today-allgames', 'today-wordsearch', 'stars', 'points', 'streak']);
 export const DAILY_KINDS = Object.freeze({ wordsearch: 'wordsearch', allgames: 'allgames' });
 /** Faster than this is not a real solve. */
 export const MIN_SECONDS = Object.freeze({ wordsearch: 10, allgames: 30 });
@@ -100,6 +100,8 @@ export function readStats(body) {
     wordsSolved: whole(body?.wordsSolved),
     streak: whole(body?.streak, 100_000),
     bestStreak: whole(body?.bestStreak, 100_000),
+    // Sent by apps from the stars board on; older ones leave it out.
+    stars: body?.stars === undefined ? 0 : whole(body.stars, 1_000_000),
   };
   const missing = Object.entries(stats).find(([, v]) => v === null);
   if (missing) return { error: `"${missing[0]}" must be a whole number, 0 or more.` };
@@ -199,7 +201,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
 
   function saveStats(profile, stats) {
     db.transaction(() => {
-      db.prepare(`UPDATE profiles SET points = @points, levels_completed = @levelsCompleted, words_solved = @wordsSolved,
+      db.prepare(`UPDATE profiles SET points = @points, stars = MAX(stars, @stars), levels_completed = @levelsCompleted, words_solved = @wordsSolved,
           streak = @streak, best_streak = MAX(best_streak, @bestStreak), streak_date = @streakDate,
           stats_updated_at = datetime('now') WHERE id = @id`).run({ ...stats, id: profile.id });
       const insert = db.prepare('INSERT INTO profile_badges (profile_id, badge) VALUES (?, ?) ON CONFLICT DO NOTHING');
@@ -269,6 +271,14 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
           params: { date },
         };
       }
+      case 'stars':
+        return {
+          from: 'FROM profiles p WHERE p.banned = 0 AND p.stars > 0',
+          value: 'p.stars',
+          order: 'p.stars DESC, p.id ASC',
+          better: '(p.stars > @value OR (p.stars = @value AND p.id < @id))',
+          params: {},
+        };
       case 'points':
         return {
           from: 'FROM profiles p WHERE p.banned = 0 AND p.points > 0',
@@ -321,6 +331,7 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
       joined: profile.created_at.slice(0, 10),
       stats: {
         points: profile.points,
+        stars: profile.stars,
         levelsCompleted: profile.levels_completed,
         wordsSolved: profile.words_solved,
         streak: profile.streak_date && profile.streak_date >= addDays(today(), -2) ? profile.streak : 0,

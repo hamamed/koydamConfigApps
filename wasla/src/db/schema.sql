@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   token_hash        TEXT NOT NULL UNIQUE,
   recovery_hash     TEXT,                      -- SHA-256 of the recovery code shown once in the app
   points            INTEGER NOT NULL DEFAULT 0,
+  stars             INTEGER NOT NULL DEFAULT 0,
   levels_completed  INTEGER NOT NULL DEFAULT 0,
   words_solved      INTEGER NOT NULL DEFAULT 0,
   streak            INTEGER NOT NULL DEFAULT 0,

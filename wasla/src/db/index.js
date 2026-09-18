@@ -31,6 +31,8 @@ const ADDITIVE_COLUMNS = [
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],
   // SHA-256 of the profile's recovery code (contract §7): the only way back in on another phone.
   ['profiles', 'recovery_hash', 'TEXT'],
+  // Stars from the levels (contract §7): the main game's leaderboard.
+  ['profiles', 'stars', 'INTEGER NOT NULL DEFAULT 0'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */
