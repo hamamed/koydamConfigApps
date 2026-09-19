@@ -4,7 +4,8 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: question.id ? 'Edit question' : 'New question',
-          subheading: question.id ? 'Changes reach every level that uses it' : 'A word, its clue, and an optional picture'
+          subheading: question.id ? 'Changes reach every level that uses it' : 'A word, its clue, and an optional picture',
+          actions: question.id ? '<a class="btn btn-sm btn-kd-outline" href="/admin/questions/' + question.id + '/preview">See what the player sees</a>' : ''
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>

@@ -1,0 +1,109 @@
+<%
+  const w = preview;
+  const L = w.layout;
+  // Stand-ins for the app's icons: the licensed pack must not be redistributed, and this repository is public.
+  const glyphs = { back: '↩️', coin: '🪙', eye: '👁️', friends: '👥', lightbulb: '💡', magnifier: '🔍', shrink: '↘️', trash: '🗑️' };
+  const icon = (name, size, cls = '') => `<span class="wp-icon wp-glyph ${cls}" aria-hidden="true" style="font-size:${Math.round(size * 0.8)}px;width:${size}px;height:${size}px">${glyphs[name] || '•'}</span>`;
+  const levelName = levels.length ? levels[0].name : 'لغز رقم 1';
+%>
+<%- include('partials/head') %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800;900&family=Lalezar&display=swap" rel="stylesheet">
+<link href="/assets/css/wasla-preview.css?v=<%= assetVersion %>" rel="stylesheet">
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Preview · ' + question.answer,
+          subheading: 'As the player sees it · iPhone 390 × 844' + (levels.length ? ' · in ' + levels.map((l) => l.name).join(', ') : ' · not in a level yet'),
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/questions/' + question.id + '">Edit question</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <% if (question.needsPicture) { %>
+        <div class="alert alert-warning small">This question is still waiting for its picture, so the player would see an empty frame.</div>
+      <% } %>
+
+      <div class="wp-layout">
+        <div class="wp-stage">
+          <div class="wp-phone">
+            <div class="wp-screen" dir="rtl" lang="ar">
+              <div class="wp-status" dir="ltr"><span>9:41</span><span class="wp-island"></span><span class="wp-status-icons">●●● ▮</span></div>
+
+              <header class="wp-nav">
+                <button class="wp-back" type="button" aria-label="رجوع"><%- icon('back', 24, 'wp-mirror') %></button>
+                <h2 class="wp-title"><%= levelName %></h2>
+                <span class="wp-coins"><%- icon('coin', 20) %><span><%= coins %></span></span>
+              </header>
+
+              <section class="wp-page wp-question is-shown"
+                       style="--gap: <%= L.spacing %>px; --outer: <%= L.outerPadding %>px; --card-pad: <%= L.cardPadding %>px; --panel-pad: <%= L.panelPadding %>px; --stage: <%= L.stage %>px; --slot: <%= L.slotSide %>px; --key-row: <%= L.keyRowSpacing %>px; --helps: <%= L.helpsHeight %>px; --clue: <%= L.clueFontSize %>px; --title-h: <%= L.titleHeight %>px; --title-size: <%= L.titleFontSize %>px">
+                <div class="wp-card wp-qcard">
+                  <% if (w.title) { %><div class="wp-chip"><%= w.title %></div><% } %>
+
+                  <% if (w.stage === 'picture') { %>
+                    <div class="wp-picture">
+                      <img src="/media/questions/<%= w.imageFile %>" alt="" class="<%= w.blurred ? 'is-blurred' : '' %> <%= w.zoom > 1.001 ? '' : 'is-fit' %>"
+                           style="--zoom: <%= w.zoom %>; --fx: <%= (w.focusX * 100).toFixed(1) %>%; --fy: <%= (w.focusY * 100).toFixed(1) %>%; --blur: <%= (L.stage * 0.075).toFixed(1) %>px">
+                    </div>
+                  <% } else if (w.stage === 'emoji') { %>
+                    <div class="wp-panel wp-emoji" dir="ltr"><span><%= w.emoji %></span></div>
+                  <% } else if (w.stage === 'audio') { %>
+                    <div class="wp-panel wp-audio" dir="ltr">
+                      <button class="wp-play" type="button" data-play aria-label="تشغيل صوت السؤال"><span class="wp-play-glyph" data-play-glyph>▶</span></button>
+                      <audio preload="none" src="/media/audio/<%= w.audioFile %>" data-audio></audio>
+                      <span class="wp-wave"><% [0.35, 0.6, 0.9, 0.5, 0.75, 0.4].forEach((h) => { %><i style="--h: <%= h %>"></i><% }) %></span>
+                    </div>
+                  <% } else { %>
+                    <div class="wp-panel wp-text"><span class="wp-text-mark" aria-hidden="true">؟</span><span class="wp-text-clue"><%= w.clue %></span></div>
+                  <% } %>
+
+                  <% if (L.hasClueLine && w.clue) { %><p class="wp-clue"><%= w.clue %></p><% } %>
+                  <div class="wp-tag"><span><%= w.letters.length %> أحرف</span></div>
+                </div>
+
+                <div class="wp-slots">
+                  <% w.letters.forEach(() => { %><span class="wp-slot"></span><% }) %>
+                </div>
+
+                <div class="wp-card wp-keys-card">
+                  <div class="wp-bank">
+                    <% w.bank.forEach((letter) => { %><span class="wp-key"><span><%= letter %></span></span><% }) %>
+                  </div>
+                  <div class="wp-helps">
+                    <% w.helps.forEach((h) => { %>
+                      <span class="wp-help">
+                        <%- icon(h.icon, 30) %>
+                        <span class="wp-help-title"><%= h.title %></span>
+                        <span class="wp-help-cost"><% if (h.cost) { %><%- icon('coin', 13) %><%= h.cost %><% } else { %>مجاني<% } %></span>
+                      </span>
+                    <% }) %>
+                  </div>
+                </div>
+              </section>
+
+              <div class="wp-home-indicator"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="ad-card wp-list">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <i data-lucide="smartphone" width="16" height="16"></i>
+            <span class="fw-semibold">What the player sees</span>
+          </div>
+          <div class="ad-card-body small d-grid gap-2">
+            <div><span class="kd-faint">Answer:</span> <span class="wz-answer wz-ar"><%= question.answer %></span></div>
+            <div><span class="kd-faint">Played as:</span> <span class="wz-ar"><%= question.playAnswer %></span></div>
+            <div><span class="kd-faint">Title:</span> <span class="kd-tag wz-ar"><%= question.title || '—' %></span></div>
+            <div><span class="kd-faint">Difficulty:</span> <%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[question.difficulty] || '—' %></div>
+            <div class="kd-faint">The letters shown are the answer's letters plus fillers, the same set the app makes.</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/wasla-preview.js?v=<%= assetVersion %>"></script>
+<%- include('partials/foot') %>

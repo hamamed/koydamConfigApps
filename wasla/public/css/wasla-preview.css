@@ -240,6 +240,8 @@
   transform-origin: var(--fx, 50%) var(--fy, 50%);
 }
 .wp-picture img.is-blurred { filter: blur(var(--blur)); }
+/* No zoom: the whole picture shows, as the app does. */
+.wp-picture img.is-fit { object-fit: contain; }
 
 .wp-panel {
   position: relative;

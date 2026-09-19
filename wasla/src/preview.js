@@ -115,6 +115,26 @@ export function letterBank(letters, seed) {
   return shuffled([...letters, ...fillers], random);
 }
 
+/**
+ * One question as the app's question page draws it, from `repo.getQuestion`.
+ * `direction` is only known inside a level, so a lone question shows none.
+ */
+export function previewQuestion(question) {
+  const letters = [...question.playAnswer];
+  const stage = stageOf(question);
+  const zoomed = stage === 'picture' && question.zoom > 1.001;
+  const blurred = stage === 'picture' && Boolean(question.blurred);
+  return {
+    ...question,
+    letters,
+    stage,
+    blurred,
+    bank: letterBank(letters, question.id),
+    helps: HELPS.filter((h) => (h.kind === 'unzoomImage' ? zoomed : h.kind === 'unblurImage' ? blurred : true)),
+    layout: questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(question.title) }),
+  };
+}
+
 /** Everything the preview page draws for a level from `repo.getLevel`. */
 export function previewLevel(level) {
   const cells = new Map();

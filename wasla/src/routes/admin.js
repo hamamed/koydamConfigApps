@@ -7,7 +7,7 @@ import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
-import { previewLevel, STARTING_COINS } from '../preview.js';
+import { previewLevel, previewQuestion, STARTING_COINS } from '../preview.js';
 import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerDailyGames } from './admin-daily-games.js';
@@ -369,6 +369,19 @@ export function adminRouter({
     } catch (err) {
       next(err);
     }
+  });
+
+  // The question as the player sees it, on a phone-sized screen.
+  router.get('/questions/:id/preview', (req, res, next) => {
+    const question = repo.getQuestion(Number(req.params.id));
+    if (!question) return next();
+    res.render('question-preview', {
+      title: `Preview · ${question.answer}`,
+      question,
+      preview: previewQuestion(question),
+      coins: STARTING_COINS,
+      levels: repo.levelsUsing(question.id),
+    });
   });
 
   router.post('/questions/:id/delete', async (req, res, next) => {

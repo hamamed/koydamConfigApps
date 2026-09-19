@@ -110,7 +110,12 @@
                     </td>
                     <td class="wz-ar"><%= q.clue %></td>
                     <td><%= q.levelCount ? q.levelCount : '—' %></td>
-                    <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>">Edit</a></td>
+                    <td class="text-end text-nowrap">
+                      <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>/preview" title="See what the player sees" aria-label="Preview <%= q.answer %>">
+                        <i data-lucide="smartphone" width="14" height="14"></i>
+                      </a>
+                      <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>">Edit</a>
+                    </td>
                   </tr>
                 <% }) %>
               </tbody>
