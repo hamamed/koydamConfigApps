@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'Questions',
-          subheading: questions.length + ' question' + (questions.length === 1 ? '' : 's') + (titleFilter ? ' titled ' + titleFilter : '') + (unused ? ' not in any level' : ''),
+          subheading: questions.length + ' of ' + total + ' question' + (total === 1 ? '' : 's') + (titleFilter ? ' · ' + titleFilter : '') + (unused ? ' · not in any level' : ''),
           actions: '<a class="btn btn-kd btn-sm" href="/admin/questions/new">New question</a>'
         }) %>
     <div class="ad-content">
@@ -16,12 +16,19 @@
           <input class="form-check-input" type="checkbox" id="unused" name="unused" value="1" <%= unused ? 'checked' : '' %>>
           <label class="form-check-label small" for="unused">Only questions not in a level</label>
         </div>
-        <select class="form-select form-select-sm wz-title-filter wz-ar" name="title" aria-label="Title">
-          <option value="">All titles</option>
-          <% titles.forEach((t) => { %><option value="<%= t %>" <%= t === titleFilter ? 'selected' : '' %>><%= t %></option><% }) %>
-        </select>
-        <button class="btn btn-kd-outline btn-sm" type="submit">Filter</button>
+        <button class="btn btn-kd-outline btn-sm" type="submit">Search</button>
       </form>
+
+      <%# One category at a time; the counts say how big each is. %>
+      <nav class="wz-categories mb-3" aria-label="Categories">
+        <% const link = (title) => '/admin/questions?title=' + encodeURIComponent(title) + (search ? '&q=' + encodeURIComponent(search) : '') + (unused ? '&unused=1' : ''); %>
+        <% categories.forEach((c) => { %>
+          <a class="btn btn-sm wz-ar <%= c.name === titleFilter ? 'btn-kd' : 'btn-kd-outline' %>" href="<%= link(c.name) %>"
+             <%= c.name === titleFilter ? 'aria-current=page' : '' %>><%= c.name %> <span class="wz-category-count"><%= c.count %></span></a>
+        <% }) %>
+        <a class="btn btn-sm <%= showAll ? 'btn-kd' : 'btn-kd-ghost' %>" href="<%= link(allTitles) %>" <%= showAll ? 'aria-current=page' : '' %>>
+          All <span class="wz-category-count"><%= total %></span></a>
+      </nav>
 
       <% if (!questions.length) { %>
         <div class="ad-card ad-empty">
@@ -35,27 +42,33 @@
           <input type="hidden" name="q" value="<%= search %>">
           <% if (unused) { %><input type="hidden" name="unused" value="1"><% } %>
           <% if (titleFilter) { %><input type="hidden" name="titleFilter" value="<%= titleFilter %>"><% } %>
+          <% if (showAll) { %><input type="hidden" name="showAll" value="1"><% } %>
           <div class="d-flex flex-wrap gap-2 align-items-center">
-            <strong class="small"><span data-bulk-count>0</span> selected</strong>
-            <select class="form-select form-select-sm wz-bulk-action" name="action" data-bulk-action aria-label="Action">
-              <option value="">Choose an action…</option>
-              <option value="move">Move to level…</option>
-              <option value="new-level">Make a new level from them</option>
-              <option value="remove">Take out of their levels</option>
-              <option value="title">Set title…</option>
-              <option value="delete">Delete</option>
-            </select>
-            <select class="form-select form-select-sm wz-bulk-field" name="level" data-bulk-field="move" aria-label="Level">
-              <option value="">Level…</option>
-              <% levels.forEach((l) => { %>
-                <option value="<%= l.id %>"><%= l.name %><%= l.published ? '' : ' (draft)' %></option>
-              <% }) %>
-            </select>
-            <input class="form-control form-control-sm wz-bulk-field" name="title" list="bulkTitles" maxlength="40" dir="auto"
-                   placeholder="Title" data-bulk-field="title" aria-label="Title">
-            <datalist id="bulkTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
-            <button class="btn btn-kd btn-sm" type="submit" data-bulk-apply>Apply</button>
-            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>Clear selection</button>
+            <strong class="small me-1"><span data-bulk-count>0</span> selected</strong>
+            <div class="wz-bulk-group">
+              <select class="form-select form-select-sm wz-bulk-field" name="level" aria-label="Level">
+                <option value="">Level…</option>
+                <% levels.forEach((l) => { %>
+                  <option value="<%= l.id %>"><%= l.name %><%= l.published ? '' : ' (draft)' %></option>
+                <% }) %>
+              </select>
+              <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="move" data-bulk-button>
+                <i data-lucide="arrow-right-left" width="14" height="14" class="me-1"></i>Move</button>
+            </div>
+            <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="new-level" data-bulk-button>
+              <i data-lucide="grid-3x3" width="14" height="14" class="me-1"></i>New level</button>
+            <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="remove" data-bulk-button>
+              <i data-lucide="log-out" width="14" height="14" class="me-1"></i>Out of levels</button>
+            <div class="wz-bulk-group">
+              <input class="form-control form-control-sm wz-bulk-field" name="title" list="bulkTitles" maxlength="40" dir="auto"
+                     placeholder="New title" aria-label="New title">
+              <datalist id="bulkTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
+              <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="title" data-bulk-button>
+                <i data-lucide="tag" width="14" height="14" class="me-1"></i>Set title</button>
+            </div>
+            <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button data-bulk-delete-button>
+              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>Delete</button>
+            <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-clear>Clear</button>
           </div>
         </form>
         <div class="ad-card">

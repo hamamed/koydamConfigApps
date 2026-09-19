@@ -236,29 +236,26 @@
 
   // ── Bulk selection (questions list) ─────────────────────────────────────
   //
-  // Without JavaScript the bar still works: every field is shown and the server
-  // checks the choice. Here it counts the selection, shows only the field the
-  // chosen action needs, and asks before deleting.
+  // Without JavaScript the bar still works: each action is its own submit button and the
+  // server checks the choice. Here it counts the selection, keeps the buttons off until
+  // something is ticked, and asks before deleting.
   const bulk = document.querySelector('form[data-question-bulk]');
   if (bulk) {
     const rows = Array.from(document.querySelectorAll('[data-bulk-row]'));
     const all = document.querySelector('[data-bulk-all]');
     const count = bulk.querySelector('[data-bulk-count]');
-    const action = bulk.querySelector('[data-bulk-action]');
-    const apply = bulk.querySelector('[data-bulk-apply]');
-    const fields = Array.from(bulk.querySelectorAll('[data-bulk-field]'));
+    const buttons = Array.from(bulk.querySelectorAll('[data-bulk-button]'));
 
     const selected = () => rows.filter((row) => row.checked).length;
     const reflect = () => {
       const n = selected();
       count.textContent = String(n);
       bulk.classList.toggle('is-active', n > 0);
+      buttons.forEach((button) => { button.disabled = n === 0; });
       if (all) {
         all.checked = n > 0 && n === rows.length;
         all.indeterminate = n > 0 && n < rows.length;
       }
-      fields.forEach((field) => { field.hidden = field.dataset.bulkField !== action.value; });
-      apply.disabled = n === 0 || !action.value;
     };
 
     rows.forEach((row) => row.addEventListener('change', reflect));
@@ -266,15 +263,12 @@
       rows.forEach((row) => { row.checked = all.checked; });
       reflect();
     });
-    action.addEventListener('change', reflect);
     bulk.querySelector('[data-bulk-clear]')?.addEventListener('click', () => {
       rows.forEach((row) => { row.checked = false; });
       reflect();
     });
-    bulk.addEventListener('submit', (event) => {
-      if (action.value === 'delete' && !window.confirm(`Delete ${selected()} question(s)? Questions that are in a level are kept.`)) {
-        event.preventDefault();
-      }
+    bulk.querySelector('[data-bulk-delete-button]')?.addEventListener('click', (event) => {
+      if (!window.confirm(`Delete ${selected()} question(s)? Questions that are in a level are kept.`)) event.preventDefault();
     });
     reflect();
   }

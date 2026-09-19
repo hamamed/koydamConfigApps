@@ -104,12 +104,29 @@ export function adminRouter({
 
   // ── Questions ─────────────────────────────────────────────────────────────
 
+  /** `?title=*` shows every category at once. */
+  const ALL_TITLES = '*';
+
   router.get('/questions', (req, res) => {
     const search = String(req.query.q ?? '');
     const unused = req.query.unused === '1';
-    const titleFilter = String(req.query.title ?? '').trim();
+    // The categories (titles) with how many questions each has, biggest first.
+    const counts = new Map();
+    for (const q of repo.listQuestions()) counts.set(q.title || '', (counts.get(q.title || '') ?? 0) + 1);
+    const categories = [...counts].filter(([name]) => name)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ar'));
+    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+    // One category at a time: the first one, unless a search, "all" or another category was asked for.
+    const asked = String(req.query.title ?? '').trim();
+    const showAll = asked === ALL_TITLES || (!asked && (search || unused));
+    const titleFilter = showAll ? '' : (asked || categories[0]?.name || '');
     res.render('questions', {
       title: 'Questions',
+      categories,
+      total,
+      allTitles: ALL_TITLES,
+      showAll,
       questions: repo.listQuestions({ search, unused, title: titleFilter }),
       search,
       unused,
@@ -125,6 +142,7 @@ export function adminRouter({
     if (req.body.q) params.set('q', String(req.body.q));
     if (req.body.unused === '1') params.set('unused', '1');
     if (req.body.titleFilter) params.set('title', String(req.body.titleFilter));
+    if (req.body.showAll === '1') params.set('title', ALL_TITLES);
     const back = `/admin/questions${params.size ? `?${params}` : ''}`;
     const ids = req.body.ids ?? [];
     if (!(Array.isArray(ids) ? ids.length : ids)) {
