@@ -50,3 +50,23 @@ test('a clue left without its answer still shows, and empty text is refused', ()
   assert.match(readPastedQuestions('  \n ').error, /Paste/);
   assert.match(readPastedQuestions('# عنوان فقط').error, /No questions/);
 });
+
+test('a colon inside a question does not split it; its answer comes from the next line', () => {
+  assert.deepEqual(pairs([
+    '6- ماذا تعني الكلمة التالية: أفلاطون؟',
+    'فيلسوف',
+    '7- ما معنى كلمة: السراب؟ - وهم',
+    'ما عاصمة اليابان؟',
+    'ما عاصمة الصين؟',
+    'بكين',
+  ].join('\n')), [
+    ['ماذا تعني الكلمة التالية: أفلاطون؟', 'فيلسوف'],
+    ['ما معنى كلمة: السراب؟', 'وهم'],
+    ['ما عاصمة اليابان؟', ''],
+    ['ما عاصمة الصين؟', 'بكين'],
+  ]);
+});
+
+test('with answers first, "answer: question?" still splits', () => {
+  assert.deepEqual(pairs('القاهرة: ما عاصمة مصر؟', { order: 'answer-first' }), [['ما عاصمة مصر؟', 'القاهرة']]);
+});

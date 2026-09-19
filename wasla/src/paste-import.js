@@ -6,7 +6,9 @@
  * What it understands, line by line:
  *   - "clue - answer", "clue: answer", "clue = answer", "clue | answer",
  *     "clue → answer", or a tab between them (a copied table);
- *   - "ما عاصمة مصر؟ القاهرة": a question mark ends the clue;
+ *   - "ما عاصمة مصر؟ القاهرة": the last question mark ends the clue;
+ *   - a line ending in a question mark is a whole clue, colons and all
+ *     ("ماذا تعني الكلمة التالية: أفلاطون؟"), and its answer is on the next line;
  *   - "س: …" then "ج: …" (also السؤال / الجواب / الإجابة, Q / A);
  *   - a clue on one line and its answer on the next;
  *   - "# حيوانات" sets the title for the lines after it.
@@ -38,13 +40,22 @@ function cleanAnswer(raw) {
 
 const cleanClue = (raw) => String(raw).replace(/^["'«»“”\s]+|["'«»“”\s:：]+$/gu, '').trim();
 
-/** Splits one line into two sides, or null when it has no separator. */
-function splitLine(line) {
-  const mark = line.search(QUESTION_MARK);
+/** Whether the line is a question on its own: it ends with a question mark. */
+const endsAsQuestion = (line) => /[؟?]["'»”)\]]*$/u.test(line);
+
+/**
+ * Splits one line into two sides, or null when it has no separator. Text
+ * after the last question mark is the answer; a line that ends with one is a
+ * whole clue, so a colon inside the question never splits it.
+ */
+function splitLine(line, order) {
+  const mark = Math.max(line.lastIndexOf('؟'), line.lastIndexOf('?'));
   if (mark > 0 && mark < line.length - 1) {
-    const rest = line.slice(mark + 1).replace(/^[\s\-–—:=|→]+/u, '');
+    const rest = line.slice(mark + 1).replace(/^[\s\-–—:=|→"'»”)\]]+/u, '');
     if (rest) return [line.slice(0, mark + 1), rest];
   }
+  // "answer: question?" is only read that way when answers are said to come first.
+  if (mark > 0 && order !== 'answer-first') return null;
   for (const separator of SEPARATORS) {
     const at = line.indexOf(separator);
     if (at > 0 && at < line.length - separator.length) {
@@ -117,7 +128,7 @@ export function readPastedQuestions(text, { title = '', level = '', order = 'aut
       continue;
     }
 
-    const sides = splitLine(line);
+    const sides = splitLine(line, how);
     if (sides && pending === null) {
       const { clue, answer } = decide(sides[0].trim(), sides[1].trim(), how);
       push(clue, answer);
@@ -125,6 +136,12 @@ export function readPastedQuestions(text, { title = '', level = '', order = 'aut
     }
 
     if (pending === null) {
+      pending = line;
+      continue;
+    }
+    // Another question before the last one got its answer: that one stays unanswered.
+    if (endsAsQuestion(line) && endsAsQuestion(pending)) {
+      flushPending();
       pending = line;
       continue;
     }
