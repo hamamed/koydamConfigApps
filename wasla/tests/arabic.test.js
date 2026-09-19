@@ -25,7 +25,8 @@ test('accepts Arabic words of two to twelve letters', () => {
 test('rejects answers a player could not spell with the letter bank', () => {
   assert.match(answerProblem(''), /required/);
   assert.match(answerProblem('ب'), /at least 2/);
-  assert.match(answerProblem('ابتثجحخدذرزسش'), /at most 12/);
+  assert.equal(answerProblem('ابتثجحخدذرزسش'), null, '13 letters are allowed now');
+  assert.match(answerProblem('ابتثجحخدذرزسشصضطظعغفقك'), /at most 20/);
   assert.match(answerProblem('Paris'), /Arabic letters/);
   assert.match(answerProblem('مصر2'), /Arabic letters/);
 });

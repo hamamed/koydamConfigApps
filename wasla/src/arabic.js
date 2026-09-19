@@ -10,7 +10,7 @@
  */
 
 export const MIN_LETTERS = 2;
-export const MAX_LETTERS = 12;
+export const MAX_LETTERS = 20;
 
 // Harakat, shadda, sukun, superscript alef and Quranic marks; then tatweel.
 const MARKS = /[ؐ-ًؚ-ٰٟۖ-ۭـ]/g;
