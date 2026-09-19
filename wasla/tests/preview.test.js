@@ -29,7 +29,9 @@ test('question layout matches QuestionLayout on a 390 × 844 phone', () => {
   const text = questionLayout({ stage: 'text', letterCount: 4, hasTitle: true });
   assert.equal(text.hasClueLine, false);
   assert.equal(text.stage, 201); // (719 − 495.67) × 0.9
-  assert.equal(questionLayout({ stage: 'emoji', letterCount: 8, hasTitle: false }).stage, 194); // 270 × 0.72
+  assert.equal(questionLayout({ stage: 'emoji', letterCount: 8, hasTitle: false }).stage, 216); // 300 × 0.72
+  // The card is wider than the square stage; a wide picture fills it (QuestionLayout.stageWidth).
+  assert.equal(picture.stageWidth, 322);
   assert.equal(questionLayout({ stage: 'picture', letterCount: 8, hasTitle: false }).slotSide, 34);
 });
 
@@ -62,18 +64,20 @@ test('a level preview lists placed words with their cells, banks and helps', () 
   assert.equal(preview.cells.length, 5);
 });
 
-test('a picture is framed in its own shape, never thinner than 45% of the stage', () => {
+test('a picture is framed in its own shape, as big as the card and the stage allow', () => {
   // QuestionImageView.box in the app: the same numbers, so the preview is what the player sees.
-  assert.deepEqual(pictureBox({ width: 900, height: 600 }, 300), { width: 300, height: 200 });
-  assert.deepEqual(pictureBox({ width: 600, height: 900 }, 300), { width: 200, height: 300 });
-  assert.deepEqual(pictureBox({ width: 512, height: 512 }, 300), { width: 300, height: 300 });
+  assert.deepEqual(pictureBox({ width: 900, height: 600 }, 300, 322), { width: 322, height: 215 });
+  assert.deepEqual(pictureBox({ width: 600, height: 900 }, 300, 322), { width: 200, height: 300 });
+  assert.deepEqual(pictureBox({ width: 512, height: 512 }, 300, 322), { width: 300, height: 300 });
   // A flag saved small is drawn as big as one saved large.
-  assert.deepEqual(pictureBox({ width: 90, height: 60 }, 300), { width: 300, height: 200 });
+  assert.deepEqual(pictureBox({ width: 90, height: 60 }, 300, 322), { width: 322, height: 215 });
   // Extremes stop shrinking instead of becoming a strip.
-  assert.deepEqual(pictureBox({ width: 1200, height: 200 }, 300), { width: 300, height: 135 });
-  assert.deepEqual(pictureBox({ width: 200, height: 1200 }, 300), { width: 135, height: 300 });
+  assert.deepEqual(pictureBox({ width: 1200, height: 200 }, 300, 322), { width: 322, height: 135 });
+  assert.deepEqual(pictureBox({ width: 200, height: 1200 }, 300, 322), { width: 135, height: 300 });
+  // Without a card width the picture stays inside the square stage.
+  assert.deepEqual(pictureBox({ width: 900, height: 600 }, 300), { width: 300, height: 200 });
   // No picture yet, or a kind whose size cannot be read: the square the app draws meanwhile.
-  assert.deepEqual(pictureBox(null, 300), { width: 300, height: 300 });
+  assert.deepEqual(pictureBox(null, 300, 322), { width: 300, height: 300 });
 });
 
 test('a level preview carries each picture frame, and none for a text question', () => {
@@ -85,6 +89,7 @@ test('a level preview carries each picture frame, and none for a text question',
   const sizes = { 'wide.png': { width: 320, height: 168 } };
   const preview = previewLevel(repo.getLevel(level.id), { pictureSize: (file) => sizes[file] ?? null });
   const picture = preview.words.find((w) => w.stage === 'picture');
-  assert.deepEqual(picture.picture, pictureBox(sizes['wide.png'], picture.layout.stage));
+  assert.deepEqual(picture.picture, pictureBox(sizes['wide.png'], picture.layout.stage, picture.layout.stageWidth));
+  assert.ok(picture.picture.width > picture.layout.stage, 'a wide flag uses the card, not just the square');
   assert.equal(preview.words.find((w) => w.stage === 'text').picture, null);
 });

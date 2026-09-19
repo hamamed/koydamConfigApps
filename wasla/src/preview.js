@@ -34,18 +34,20 @@ export const HELPS = [
 export const PICTURE_MIN_SHARE = 0.45;
 
 /**
- * QuestionImageView.box: the frame follows the picture's own shape, never
- * bigger than the stage and never thinner than `PICTURE_MIN_SHARE` of it.
- * An unknown size (no file, or a kind we cannot read) gives the square the
- * app draws while it waits for the picture.
+ * QuestionImageView.box: the frame follows the picture's own shape, made as big
+ * as the card's width and the stage's height allow, and never thinner than
+ * `PICTURE_MIN_SHARE` of the stage. An unknown size (no file, or a kind we
+ * cannot read) gives the square the app draws while it waits for the picture.
  */
-export function pictureBox(size, stage) {
+export function pictureBox(size, stage, maxWidth) {
   if (!size || !(size.width > 0) || !(size.height > 0) || !(stage > 0)) return { width: stage, height: stage };
+  const widest = Math.max(stage, maxWidth ?? stage);
+  const scale = Math.min(widest / size.width, stage / size.height);
   const shortest = Math.round(stage * PICTURE_MIN_SHARE);
-  if (size.width >= size.height) {
-    return { width: stage, height: Math.max(shortest, Math.round(stage * size.height / size.width)) };
-  }
-  return { width: Math.max(shortest, Math.round(stage * size.width / size.height)), height: stage };
+  return {
+    width: Math.max(shortest, Math.round(size.width * scale)),
+    height: Math.max(shortest, Math.round(size.height * scale)),
+  };
 }
 
 const fit = (length, count, cap) => {
@@ -97,7 +99,9 @@ export function questionLayout({ stage, letterCount, hasTitle }) {
   const cardChrome = cardPadding * 2 + (isCompact ? 8 : 14) + 32 + clueLine + titleLine;
   const fixed = outerPadding * 2 + spacing * 2 + panel + slotSide + 4 + cardChrome;
   const room = height - fixed;
-  const widthCap = Math.min(innerWidth - 12, 270);
+  // QuestionLayout.stageWidth: the whole width the card gives the stage, which a wide picture fills.
+  const stageWidth = innerWidth - 12;
+  const widthCap = Math.min(stageWidth, 300);
   const preferred = stage === 'picture' ? Math.min(widthCap, room)
     : stage === 'text' ? Math.min(widthCap, room * 0.9)
       : Math.min(widthCap * 0.72, room);
@@ -106,6 +110,7 @@ export function questionLayout({ stage, letterCount, hasTitle }) {
     isCompact, spacing, outerPadding, cardPadding, panelPadding, keyRowSpacing, helpsHeight, clueFontSize,
     titleHeight, titleFontSize, slotSide, hasClueLine, keySide: Math.floor(keySide * 100) / 100,
     stage: Math.round(Math.max(96, preferred)),
+    stageWidth,
   };
 }
 
@@ -155,14 +160,14 @@ export function previewQuestion(question, { pictureSize } = {}) {
     bank: letterBank(letters, question.id),
     helps: HELPS.filter((h) => (h.kind === 'unzoomImage' ? zoomed : h.kind === 'unblurImage' ? blurred : true)),
     layout,
-    picture: pictureFrame(question, stage, layout.stage, pictureSize),
+    picture: pictureFrame(question, stage, layout, pictureSize),
   };
 }
 
 /** The frame the app draws round this question's picture, or null when it has none. */
-function pictureFrame(word, stage, side, pictureSize) {
+function pictureFrame(word, stage, layout, pictureSize) {
   if (stage !== 'picture' || !word.imageFile) return null;
-  return pictureBox(pictureSize ? pictureSize(word.imageFile) : null, side);
+  return pictureBox(pictureSize ? pictureSize(word.imageFile) : null, layout.stage, layout.stageWidth);
 }
 
 /** Everything the preview page draws for a level from `repo.getLevel`. */
@@ -200,7 +205,7 @@ export function previewLevel(level, { pictureSize } = {}) {
       bank: letterBank(letters, word.id),
       helps: HELPS.filter((h) => (h.kind === 'unzoomImage' ? zoomed : h.kind === 'unblurImage' ? blurred : true)),
       layout,
-      picture: pictureFrame(word, stage, layout.stage, pictureSize),
+      picture: pictureFrame(word, stage, layout, pictureSize),
     };
   });
   return {
