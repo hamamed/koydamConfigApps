@@ -417,6 +417,9 @@ export function adminRouter({
   /** The free questions (in no level, picture in hand) each category can still give a level. */
   const freeQuestions = () => repo.listQuestions({ unused: true }).filter((q) => q.title && !q.needsPicture);
 
+  /** The words the levels already hold, so a generated level does not repeat one. */
+  const usedAnswers = () => repo.listQuestions().filter((q) => q.levelCount > 0).map((q) => q.playAnswer);
+
   router.get('/levels', (_req, res) => {
     const free = freeQuestions();
     const counts = new Map();
@@ -451,7 +454,7 @@ export function adminRouter({
 
     const free = freeQuestions().filter((q) => !difficulty || q.difficulty === difficulty);
     const { levels, ranOutOf, noCrossing, error } = planLevels({
-      questions: free, categories: chosen, count, seed: Date.now() % 1000000,
+      questions: free, categories: chosen, count, seed: Date.now() % 1000000, usedAnswers: usedAnswers(),
     });
     if (error) {
       req.flash('danger', error);

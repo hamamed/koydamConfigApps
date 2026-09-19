@@ -106,3 +106,32 @@ test('a planned level can be built from the bank, and its words all cross', () =
   // The six questions used are no longer free for another level.
   assert.equal(repo.listQuestions({ unused: true }).length, 3);
 });
+
+test('a word is never used twice, in one level or across the levels', () => {
+  // جميل is both an opposite and a synonym: two questions, one word.
+  const questions = [
+    question(1, 'ضد', 'جميل'), question(2, 'ضد', 'كبير'),
+    question(3, 'مرادف', 'جميل'), question(4, 'مرادف', 'سعيد'),
+    question(5, 'معلومات عامة', 'الرباط'), question(6, 'معلومات عامة', 'دمشق'),
+  ];
+  const { levels } = planLevels({ questions, categories: ['ضد', 'مرادف', 'معلومات عامة'], count: 2 });
+  assert.ok(levels.length >= 1);
+  levels.forEach((level) => {
+    const words = level.map((q) => q.playAnswer);
+    assert.equal(new Set(words).size, words.length, 'one level shows a word once');
+  });
+  const all = levels.flat().map((q) => q.playAnswer);
+  assert.equal(new Set(all).size, all.length, 'no level repeats another level\'s word');
+});
+
+test('a word an earlier level already uses is not offered again', () => {
+  const questions = [
+    question(1, 'ضد', 'كبير'), question(2, 'ضد', 'بعيد'),
+    question(3, 'مرادف', 'سعيد'), question(4, 'مرادف', 'كريم'),
+  ];
+  const { levels } = planLevels({
+    questions, categories: ['ضد', 'مرادف'], count: 2, usedAnswers: ['كبير', 'سعيد'],
+  });
+  const used = levels.flat().map((q) => q.answer);
+  assert.deepEqual(used.sort(), ['بعيد', 'كريم'].sort());
+});

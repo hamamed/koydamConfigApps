@@ -44,12 +44,15 @@ export function wordsCross(questions) {
  * Plans up to `count` levels, each with one question per category.
  *
  * `questions` are the ones free to use (in no level yet), already filtered by
- * difficulty. Returns `{ levels: [[question, …], …], ranOutOf, noCrossing }`:
+ * difficulty. `usedAnswers` are the words the levels already hold: two questions
+ * can share a word (جميل is both a synonym and an opposite), and a word the player
+ * has already solved — or one twice in the same level — is not worth a second slot.
+ * Returns `{ levels: [[question, …], …], ranOutOf, noCrossing }`:
  * `ranOutOf` names the category that has no question left, and `noCrossing` says
  * the remaining questions were tried and do not cross — either one means fewer
  * levels than asked for.
  */
-export function planLevels({ questions, categories, count = 1, seed = 1, fits = wordsCross }) {
+export function planLevels({ questions, categories, count = 1, seed = 1, fits = wordsCross, usedAnswers = [] }) {
   const wanted = categories.filter((name, at) => name && categories.indexOf(name) === at);
   if (wanted.length < MIN_CATEGORIES) {
     return {
@@ -59,10 +62,11 @@ export function planLevels({ questions, categories, count = 1, seed = 1, fits = 
   }
 
   const random = mulberry32(seed);
+  const taken = new Set(usedAnswers);
   // One pool per category, shuffled once so every level draws different questions.
   const pools = new Map(wanted.map((name) => [
     name,
-    shuffled(questions.filter((q) => q.title === name), random),
+    shuffled(questions.filter((q) => q.title === name && !taken.has(q.playAnswer)), random),
   ]));
 
   const levels = [];
@@ -78,7 +82,10 @@ export function planLevels({ questions, categories, count = 1, seed = 1, fits = 
     picked.forEach((question) => {
       const pool = pools.get(question.title);
       pool.splice(pool.indexOf(question), 1);
+      taken.add(question.playAnswer);
     });
+    // The word is spent, whichever category it came from: no level repeats it.
+    pools.forEach((pool, name) => pools.set(name, pool.filter((q) => !taken.has(q.playAnswer))));
     levels.push(picked);
   }
   return { levels, ranOutOf, noCrossing };
@@ -99,6 +106,8 @@ function pickCrossingSet({ wanted, pools, fits, random }) {
     });
     if (picked.some((q) => !q)) return null;
     if (new Set(picked.map((q) => q.id)).size !== picked.length) continue;
+    // Two categories can hold the same word; one level must not show it twice.
+    if (new Set(picked.map((q) => q.playAnswer)).size !== picked.length) continue;
     if (fits(picked)) return picked;
   }
   return null;
