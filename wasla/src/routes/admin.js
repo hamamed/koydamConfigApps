@@ -334,6 +334,43 @@ export function adminRouter({
     }
   });
 
+  /** Where to go back to after a row action: a questions-list address, never anything else. */
+  const listAddress = (raw) => {
+    const text = String(raw ?? '');
+    return /^\/admin\/questions(\?[^\s]*)?$/.test(text) ? text : '/admin/questions';
+  };
+
+  // A picture straight from the questions list, for questions created ahead of their picture.
+  router.post('/questions/:id/picture', withUpload((req) => listAddress(req.body?.back)), async (req, res, next) => {
+    const back = listAddress(req.body.back);
+    try {
+      const id = Number(req.params.id);
+      const picture = req.files?.image?.[0];
+      if (!picture?.buffer?.length) {
+        req.flash('warning', 'Choose a picture first.');
+        return res.redirect(back);
+      }
+      const saved = await images.save(picture.buffer);
+      if (saved.error) {
+        req.flash('danger', saved.error);
+        return res.redirect(back);
+      }
+      const result = repo.updateQuestion(id, { imageFile: saved.file, type: 'image' });
+      if (result.error) {
+        await images.remove(saved.file);
+        req.flash('danger', result.error);
+        return res.redirect(back);
+      }
+      if (result.previousImage && result.previousImage !== saved.file && !repo.mediaInUse(result.previousImage)) {
+        await images.remove(result.previousImage);
+      }
+      req.flash('success', `Picture added to «${result.question.answer}».`);
+      res.redirect(back);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post('/questions/:id/delete', async (req, res, next) => {
     try {
       const result = repo.deleteQuestion(Number(req.params.id));

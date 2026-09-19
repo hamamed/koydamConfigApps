@@ -29,6 +29,8 @@ const toQuestion = (row) => row && ({
   type: row.type || 'text',
   emoji: row.emoji || null,
   imageFile: row.image_file || null,
+  // A picture question created ahead of its picture; it cannot be published in a level yet.
+  needsPicture: (row.type || 'text') === 'image' && !row.image_file,
   // A picture's credit: who took it, its licence, and the page it came from.
   imageAuthor: row.image_author || '',
   imageLicence: row.image_licence || '',
@@ -65,11 +67,22 @@ function readType(input, current, media) {
 
   const candidate = chosen ?? current.type ?? null;
   const need = candidate && TYPE_NEEDS[candidate];
+  // A picture question may wait for its picture (created ahead, pictures added one by one in the panel).
+  if (candidate === 'image' && !media.imageFile && awaitsPicture(input, current)) return { type: 'image' };
   if (need && !media[need[0]]) {
     if (chosen) return { error: need[1] };
     return { type: deriveType(media) };
   }
   return { type: candidate ?? deriveType(media) };
+}
+
+/**
+ * Whether a picture question without its picture is allowed: asked for explicitly
+ * (`awaitingPicture: true`), or it was already waiting and this save does not touch the picture.
+ */
+function awaitsPicture(input, current) {
+  if (input.awaitingPicture === true) return true;
+  return current.type === 'image' && !current.imageFile && input.imageFile === undefined;
 }
 
 /** Validated, normalised question fields, or `{ error }`. */
@@ -502,6 +515,8 @@ export function createRepository(db) {
 
   function publishProblem(level) {
     if (level.words.length + level.unplaced.length < MIN_WORDS) return `A level needs at least ${MIN_WORDS} words.`;
+    const waiting = [...level.words, ...level.unplaced].filter((w) => w.needsPicture);
+    if (waiting.length) return `Add the picture first: ${waiting.map((w) => w.answer).join('، ')}.`;
     if (level.unplaced.length) {
       return `Some words do not cross the others: ${level.unplaced.map((w) => w.answer).join('، ')}. Remove them or add words that share their letters.`;
     }

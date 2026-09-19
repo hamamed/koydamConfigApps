@@ -305,4 +305,13 @@
     });
     reflectPicks();
   }
+
+  // ── Row uploads: a picture is sent as soon as it is chosen ──────────────
+  document.querySelectorAll('input[type="file"][data-auto-submit]').forEach((input) => {
+    input.addEventListener('change', () => {
+      if (!input.files?.length) return;
+      input.closest('label')?.classList.add('is-busy');
+      input.form?.submit();
+    });
+  });
 })();

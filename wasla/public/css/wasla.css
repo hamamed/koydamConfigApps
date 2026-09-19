@@ -385,3 +385,7 @@
 
 /* A question's difficulty beside its title. */
 .wz-diff { margin-inline-start: .25rem; }
+
+/* Upload a picture straight from a questions-list row. */
+.wz-upload { cursor: pointer; gap: .35rem; white-space: nowrap; }
+.wz-upload.is-busy { opacity: .55; pointer-events: none; }

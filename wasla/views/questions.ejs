@@ -19,6 +19,7 @@
         <button class="btn btn-kd-outline btn-sm" type="submit">Search</button>
       </form>
 
+      <% const here = '/admin/questions' + (showAll ? '?title=' + encodeURIComponent(allTitles) : titleFilter ? '?title=' + encodeURIComponent(titleFilter) : ''); %>
       <%# One category at a time; the counts say how big each is. %>
       <nav class="wz-categories mb-3" aria-label="Categories">
         <% const link = (title) => '/admin/questions?title=' + encodeURIComponent(title) + (search ? '&q=' + encodeURIComponent(search) : '') + (unused ? '&unused=1' : ''); %>
@@ -81,10 +82,25 @@
                   <tr>
                     <td class="wz-check"><input class="form-check-input" type="checkbox" name="ids" value="<%= q.id %>" form="bulkForm"
                         data-bulk-row aria-label="Select <%= q.answer %>"></td>
-                    <td><%- include('partials/qimage', { q, size: 'sm' }) %></td>
+                    <td>
+                      <% if (q.needsPicture) { %>
+                        <form method="post" action="/admin/questions/<%= q.id %>/picture" enctype="multipart/form-data" class="m-0">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="back" value="<%= here %>">
+                          <label class="btn btn-sm btn-kd-outline wz-upload">
+                            <i data-lucide="image-plus" width="14" height="14"></i>Upload
+                            <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" data-auto-submit class="visually-hidden">
+                          </label>
+                          <noscript><button class="btn btn-sm btn-kd" type="submit">Save</button></noscript>
+                        </form>
+                      <% } else { %>
+                        <%- include('partials/qimage', { q, size: 'sm' }) %>
+                      <% } %>
+                    </td>
                     <td><span class="wz-answer"><%= q.answer %></span> <span class="kd-faint small"><%= [...q.answer].length %></span></td>
                     <td class="text-nowrap">
                       <span class="kd-tag"><%= { text: 'Text', image: 'Picture', emoji: 'Emoji', audio: 'Audio' }[q.type] %></span>
+                      <% if (q.needsPicture) { %><span class="kd-tag kd-tag-warn">needs picture</span><% } %>
                       <% if (q.type === 'emoji' && q.emoji) { %><span class="wz-emoji"><%= q.emoji %></span><% } %>
                       <% if (q.blurred) { %><span class="kd-tag kd-tag-accent">blurred</span><% } %>
                     </td>

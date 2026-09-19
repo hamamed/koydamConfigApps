@@ -404,3 +404,23 @@ test('a question keeps its difficulty, and only easy, medium or hard', () => {
   assert.equal(repo.updateQuestion(question.id, { difficulty: '' }).question.difficulty, '');
   assert.match(repo.createQuestion({ title: 'ت', answer: 'روما', clue: 'x', difficulty: 'impossible' }).error, /easy, medium, hard/);
 });
+
+test('a picture question can wait for its picture, and its level cannot be published until it has one', () => {
+  const waiting = repo.createQuestion({ title: 'شخصيات كرتونية', answer: 'ماجد', clue: '', type: 'image', awaitingPicture: true, difficulty: 'easy' });
+  assert.equal(waiting.error, undefined);
+  assert.equal(waiting.question.type, 'image');
+  assert.equal(waiting.question.needsPicture, true);
+  // Without asking, a picture question still needs its picture.
+  assert.match(repo.createQuestion({ title: 'ت', answer: 'سالي', clue: '', type: 'image' }).error, /picture/i);
+
+  // Editing the title or difficulty keeps it waiting.
+  assert.equal(repo.updateQuestion(waiting.question.id, { difficulty: 'medium' }).question.needsPicture, true);
+
+  const other = repo.createQuestion({ title: 'ت', answer: 'مجد', clue: 'عز وشرف' }).question;
+  const level = repo.createLevel();
+  repo.setLevelQuestions(level.id, [waiting.question.id, other.id]);
+  assert.match(repo.setPublished(level.id, true).error ?? '', /Add the picture first: ماجد/);
+
+  const pictured = repo.updateQuestion(waiting.question.id, { imageFile: 'majed.jpg', type: 'image' }).question;
+  assert.equal(pictured.needsPicture, false);
+});
