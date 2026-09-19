@@ -314,4 +314,19 @@
       input.form?.submit();
     });
   });
+
+  // ── Back to top ─────────────────────────────────────────────────────────
+  //
+  // The question and level lists run to hundreds of rows; this brings the
+  // toolbar back without a long scroll. It only appears once there is a way to go.
+  const toTop = document.querySelector('[data-to-top]');
+  if (toTop) {
+    const reflectTop = () => toTop.classList.toggle('is-shown', window.scrollY > 400);
+    window.addEventListener('scroll', reflectTop, { passive: true });
+    toTop.addEventListener('click', () => {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+    });
+    reflectTop();
+  }
 })();

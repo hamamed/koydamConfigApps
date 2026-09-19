@@ -389,3 +389,26 @@
 /* Upload a picture straight from a questions-list row. */
 .wz-upload { cursor: pointer; gap: .35rem; white-space: nowrap; }
 .wz-upload.is-busy { opacity: .55; pointer-events: none; }
+
+/* Back to top, bottom corner of every panel page. */
+.wz-to-top {
+  position: fixed;
+  inset-block-end: 1.25rem;
+  inset-inline-end: 1.25rem;
+  z-index: 1035;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--kd-line-strong);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--kd-ink);
+  box-shadow: 0 6px 20px rgba(11, 18, 32, .12);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(.5rem);
+  transition: opacity var(--kd-fast) var(--kd-ease), transform var(--kd-fast) var(--kd-ease), visibility var(--kd-fast);
+}
+.wz-to-top.is-shown { opacity: 1; visibility: visible; transform: none; }
+.wz-to-top:hover { background: var(--kd-surface); border-color: var(--kd-ink); }
