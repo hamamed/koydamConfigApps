@@ -43,6 +43,8 @@ const ADDITIVE_COLUMNS = [
   ['questions', 'image_author', 'TEXT'],
   ['questions', 'image_licence', 'TEXT'],
   ['questions', 'image_source', 'TEXT'],
+  // easy | medium | hard, or null when not set: lets levels be built from easy questions first.
+  ['questions', 'difficulty', 'TEXT'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */

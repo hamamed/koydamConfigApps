@@ -33,6 +33,8 @@ const toQuestion = (row) => row && ({
   imageAuthor: row.image_author || '',
   imageLicence: row.image_licence || '',
   imageSource: row.image_source || '',
+  // '' when not set.
+  difficulty: DIFFICULTIES.includes(row.difficulty) ? row.difficulty : '',
   zoom: row.image_zoom,
   focusX: row.focus_x,
   focusY: row.focus_y,
@@ -112,6 +114,11 @@ function readQuestion(input, current = {}) {
 
   const blurred = input.blurred !== undefined ? truthy(input.blurred) : Boolean(current.blurred);
 
+  const rawDifficulty = String(input.difficulty ?? current.difficulty ?? '').trim().toLowerCase();
+  if (rawDifficulty && !DIFFICULTIES.includes(rawDifficulty)) {
+    return { error: `The difficulty is one of: ${DIFFICULTIES.join(', ')} (or empty).` };
+  }
+
   const credit = (key) => String(input[key] ?? current[key] ?? '').trim().slice(0, MAX_CREDIT);
   const imageAuthor = credit('imageAuthor');
   const imageLicence = credit('imageLicence');
@@ -134,6 +141,7 @@ function readQuestion(input, current = {}) {
       // Blurring means nothing without a picture to blur.
       image_blurred: blurred && media.imageFile ? 1 : 0,
       audio_file: media.audioFile,
+      difficulty: rawDifficulty || null,
       // Kept only while there is a picture to credit.
       image_author: media.imageFile ? imageAuthor || null : null,
       image_licence: media.imageFile ? imageLicence || null : null,
@@ -191,9 +199,9 @@ export function createRepository(db) {
     if (error) return { error };
     const { lastInsertRowid } = db.prepare(`INSERT INTO questions
       (answer, clue, title, type, emoji, image_file, image_zoom, focus_x, focus_y, image_blurred, audio_file,
-       image_author, image_licence, image_source)
+       image_author, image_licence, image_source, difficulty)
       VALUES (@answer, @clue, @title, @type, @emoji, @image_file, @image_zoom, @focus_x, @focus_y, @image_blurred, @audio_file,
-              @image_author, @image_licence, @image_source)`).run(fields);
+              @image_author, @image_licence, @image_source, @difficulty)`).run(fields);
     return { question: getQuestion(lastInsertRowid) };
   }
 
@@ -212,7 +220,7 @@ export function createRepository(db) {
       db.prepare(`UPDATE questions SET answer = @answer, clue = @clue, title = @title,
         type = @type, emoji = @emoji, image_file = @image_file, image_zoom = @image_zoom,
         focus_x = @focus_x, focus_y = @focus_y, image_blurred = @image_blurred, audio_file = @audio_file,
-        image_author = @image_author, image_licence = @image_licence, image_source = @image_source,
+        image_author = @image_author, image_licence = @image_licence, image_source = @image_source, difficulty = @difficulty,
         updated_at = datetime('now') WHERE id = @id`).run({ ...fields, id });
 
       const unpublished = [];

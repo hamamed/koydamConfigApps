@@ -44,6 +44,15 @@
                   <div class="form-text">Shown above the question in the app. Up to <%= maxTitle %> characters; pick an existing one to reuse it.</div>
                 </div>
                 <div>
+                  <label class="form-label small fw-semibold" for="difficulty">Difficulty <span class="wz-ar kd-faint fw-normal">الصعوبة</span></label>
+                  <select class="form-select" id="difficulty" name="difficulty">
+                    <option value="" <%= !question.difficulty ? 'selected' : '' %>>Not set</option>
+                    <option value="easy" <%= question.difficulty === 'easy' ? 'selected' : '' %>>Easy · سهل</option>
+                    <option value="medium" <%= question.difficulty === 'medium' ? 'selected' : '' %>>Medium · متوسط</option>
+                    <option value="hard" <%= question.difficulty === 'hard' ? 'selected' : '' %>>Hard · صعب</option>
+                  </select>
+                </div>
+                <div>
                   <label class="form-label small fw-semibold" for="clue">Question / clue</label>
                   <textarea class="form-control wz-ar" id="clue" name="clue" dir="rtl" rows="3" maxlength="200"><%= question.clue %></textarea>
                   <div class="form-text">What the player reads. Optional for picture, sound and emoji questions — they can go on the title alone.</div>

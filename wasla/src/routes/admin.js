@@ -199,7 +199,7 @@ export function adminRouter({
   const blankQuestion = {
     answer: '', playAnswer: '', clue: '', title: '', type: 'text', emoji: '',
     imageFile: null, zoom: 1, focusX: 0.5, focusY: 0.5, blurred: false, audioFile: null,
-    imageAuthor: '', imageLicence: '', imageSource: '',
+    imageAuthor: '', imageLicence: '', imageSource: '', difficulty: '',
   };
 
   const renderForm = (res, question, extra = {}) => res.render('question-form', {
@@ -243,6 +243,7 @@ export function adminRouter({
       focusX: req.body.focusX,
       focusY: req.body.focusY,
       blurred: req.body.blurred === '1',
+      difficulty: req.body.difficulty ?? '',
       imageAuthor: req.body.imageAuthor ?? '',
       imageLicence: req.body.imageLicence ?? '',
       imageSource: req.body.imageSource ?? '',

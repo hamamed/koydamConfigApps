@@ -382,3 +382,6 @@
 .wz-bulk .form-select.wz-ar { background-position: left .7rem center; }
 .wz-bulk .form-select:hover { background-color: var(--kd-surface); border-color: var(--kd-ink); }
 .wz-bulk .form-select:focus-visible { border-color: var(--kd-ink); box-shadow: 0 0 0 3px rgba(11, 18, 32, .12); outline: none; }
+
+/* A question's difficulty beside its title. */
+.wz-diff { margin-inline-start: .25rem; }

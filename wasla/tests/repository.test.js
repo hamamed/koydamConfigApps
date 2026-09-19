@@ -397,3 +397,10 @@ test('a picture keeps its credit, and only a real web address is accepted', () =
   assert.equal(text.imageAuthor, '');
   assert.equal(repo.credited().length, 1);
 });
+
+test('a question keeps its difficulty, and only easy, medium or hard', () => {
+  const { question } = repo.createQuestion({ title: 'معلومات عامة', answer: 'باريس', clue: 'ما عاصمة فرنسا؟', difficulty: 'easy' });
+  assert.equal(question.difficulty, 'easy');
+  assert.equal(repo.updateQuestion(question.id, { difficulty: '' }).question.difficulty, '');
+  assert.match(repo.createQuestion({ title: 'ت', answer: 'روما', clue: 'x', difficulty: 'impossible' }).error, /easy, medium, hard/);
+});

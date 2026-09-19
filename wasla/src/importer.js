@@ -11,7 +11,7 @@ import { parseCsv } from './csv.js';
 import { levelLabel } from './level-label.js';
 
 export const IMPORT_COLUMNS = ['answer', 'clue', 'title', 'type', 'emoji', 'image', 'zoom', 'focus_x', 'focus_y', 'blurred',
-  'audio', 'level', 'image_author', 'image_licence', 'image_source'];
+  'audio', 'level', 'image_author', 'image_licence', 'image_source', 'difficulty'];
 /**
  * Columns older CSVs may still carry; read past without complaint. `pack` is
  * from removed level packs. `category` was replaced by `title`, and stands in
@@ -132,6 +132,7 @@ export function planImport(repo, rows, media) {
       imageAuthor: values.image_author,
       imageLicence: values.image_licence,
       imageSource: values.image_source,
+      difficulty: values.difficulty,
     };
     const check = repo.checkQuestion(input);
     if (check.error) return fail(check.error);

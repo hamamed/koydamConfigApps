@@ -88,7 +88,10 @@
                       <% if (q.type === 'emoji' && q.emoji) { %><span class="wz-emoji"><%= q.emoji %></span><% } %>
                       <% if (q.blurred) { %><span class="kd-tag kd-tag-accent">blurred</span><% } %>
                     </td>
-                    <td><% if (q.title) { %><span class="kd-tag wz-ar"><%= q.title %></span><% } else { %><span class="kd-tag kd-tag-warn">no title</span><% } %></td>
+                    <td class="text-nowrap">
+                      <% if (q.title) { %><span class="kd-tag wz-ar"><%= q.title %></span><% } else { %><span class="kd-tag kd-tag-warn">no title</span><% } %>
+                      <% if (q.difficulty) { %><span class="kd-tag wz-diff <%= { easy: 'kd-tag-ok', medium: 'kd-tag-accent', hard: 'wz-tag-hard' }[q.difficulty] %>"><%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[q.difficulty] %></span><% } %>
+                    </td>
                     <td class="wz-ar"><%= q.clue %></td>
                     <td><%= q.levelCount ? q.levelCount : '—' %></td>
                     <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>">Edit</a></td>
