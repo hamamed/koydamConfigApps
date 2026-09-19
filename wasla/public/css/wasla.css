@@ -332,3 +332,10 @@
 
 /* Pasted questions: room to read Arabic lines. */
 .wz-paste { font-size: 1rem; line-height: 1.7; }
+
+/* The import preview's editable rows. */
+.wz-import-answer { min-width: 9rem; font-weight: 700; }
+.wz-import-title { min-width: 8rem; }
+.wz-import-clue { min-width: 16rem; resize: vertical; }
+.wz-import-level { width: 4.5rem; }
+.wz-row-remove { padding: .1rem .3rem; }

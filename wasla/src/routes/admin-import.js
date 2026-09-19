@@ -4,7 +4,9 @@ import multer from 'multer';
 import { sniffAudio } from '../audio.js';
 import { config } from '../config.js';
 import { sniffImage } from '../images.js';
-import { commitImport, IMPORT_COLUMNS, planImport, readImportCsv } from '../importer.js';
+import {
+  commitImport, EDITABLE_COLUMNS, editImportRows, IMPORT_COLUMNS, MAX_IMPORT_ROWS, planImport, readImportCsv,
+} from '../importer.js';
 import { csrfProtect } from '../middleware/auth.js';
 import { MAX_PASTE_CHARS, PASTE_ORDERS, readPastedQuestions } from '../paste-import.js';
 
@@ -173,6 +175,9 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
     const plan = planImport(repo, payload.rows, mediaMap(payload.media));
     const named = new Set(plan.flatMap((p) => [p.input?.imageFile, p.input?.audioFile]).filter(Boolean));
     res.render('import-preview', {
+      // What each row says now, for the fields the admin can change here.
+      values: new Map(payload.rows.map(({ row, values }) => [row, { ...values, title: values.title || values.category || '' }])),
+      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
       title: 'Import preview',
       id: req.params.id,
       fileName: payload.fileName,
@@ -184,7 +189,8 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
     });
   });
 
-  router.post('/import/:id/confirm', async (req, res, next) => {
+  /** Imports the pending rows that pass, then reports what happened. */
+  async function confirmImport(req, res, next) {
     const payload = pendingImports.get(req.params.id);
     if (!payload) {
       req.flash('danger', 'That import has expired or was already confirmed. Upload it again.');
@@ -193,7 +199,7 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
     try {
       const plan = planImport(repo, payload.rows, mediaMap(payload.media));
       if (!plan.some((p) => !p.error)) {
-        req.flash('danger', 'No row is valid, so nothing was imported. Fix the CSV and upload it again.');
+        req.flash('danger', 'No row is valid, so nothing was imported. Fix the rows and try again.');
         return res.redirect(`/admin/import/${req.params.id}`);
       }
       const result = commitImport(repo, plan);
@@ -216,6 +222,51 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
         req.flash('danger', `Nothing was imported. ${err.message}`);
         return res.redirect(`/admin/import/${req.params.id}`);
       }
+      next(err);
+    }
+  }
+
+  router.post('/import/:id/confirm', confirmImport);
+
+  // The preview's own edits: change a row's answer, clue, title or level, or drop the row —
+  // then look again, or import straight away. Multipart, like the paste, because a long file's
+  // fields are larger than the panel's form-body limit.
+  const rowsForm = multer({ limits: { fieldSize: 64 * 1024, fields: EDITABLE_COLUMNS.length * MAX_IMPORT_ROWS + 10 } }).none();
+  const withRows = (req, res, next) => rowsForm(req, res, (err) => {
+    if (err) {
+      req.flash('danger', 'Those changes could not be read. Try again.');
+      return res.redirect(`/admin/import/${encodeURIComponent(req.params.id)}`);
+    }
+    return csrfProtect(req, res, next);
+  });
+
+  router.post('/import/:id/rows', withRows, async (req, res, next) => {
+    const payload = pendingImports.get(req.params.id);
+    if (!payload) {
+      req.flash('danger', 'That import has expired or was already confirmed. Upload it again.');
+      return res.redirect('/admin/import');
+    }
+    try {
+      const edits = new Map();
+      for (const [name, value] of Object.entries(req.body ?? {})) {
+        const match = /^(answer|clue|title|level)_(\d+)$/.exec(name);
+        if (!match || typeof value !== 'string') continue;
+        const row = Number(match[2]);
+        edits.set(row, { ...edits.get(row), [match[1]]: value });
+      }
+      const removed = req.body.remove ? [req.body.remove] : [];
+      const rows = editImportRows(payload.rows, edits, removed);
+      if (!rows.length) {
+        pendingImports.remove(req.params.id);
+        await discardUnused(payload.media);
+        req.flash('warning', 'Every row was removed, so there is nothing left to import.');
+        return res.redirect('/admin/import');
+      }
+      pendingImports.update(req.params.id, { ...payload, rows });
+      if (req.body.then === 'confirm') return confirmImport(req, res, next);
+      req.flash('success', removed.length ? `Row ${removed[0]} removed.` : 'Changes saved.');
+      res.redirect(`/admin/import/${req.params.id}`);
+    } catch (err) {
       next(err);
     }
   });

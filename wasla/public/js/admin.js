@@ -278,4 +278,14 @@
     });
     reflect();
   }
+
+  // ── Asking before one button of a form ──────────────────────────────────
+  //
+  // `data-confirm` on a form asks on every submit; a form with several buttons
+  // (the import preview: save, remove a row, import) asks only for this one.
+  document.querySelectorAll('[data-confirm-click]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      if (!window.confirm(button.dataset.confirmClick)) event.preventDefault();
+    });
+  });
 })();

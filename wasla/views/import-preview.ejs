@@ -11,17 +11,20 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-body d-flex flex-wrap gap-2 align-items-center">
-          <form method="post" action="/admin/import/<%= id %>/confirm" class="m-0"
-                data-confirm="Import <%= valid %> question(s)? Rows with errors are skipped.">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button class="btn btn-kd" type="submit" <%= valid ? '' : 'disabled' %>>Import <%= valid %> valid row<%= valid === 1 ? '' : 's' %></button>
-          </form>
+          <button class="btn btn-kd-outline" type="submit" form="importRows" name="then" value="save">
+            <i data-lucide="check" width="14" height="14" class="me-1"></i>Save changes
+          </button>
+          <button class="btn btn-kd" type="submit" form="importRows" name="then" value="confirm"
+                  data-confirm-click="Save your changes and import the valid rows? Rows with errors are skipped.">
+            Save and import the valid rows (<%= valid %>)
+          </button>
           <form method="post" action="/admin/import/<%= id %>/cancel" class="m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button class="btn btn-kd-outline" type="submit">Cancel</button>
+            <button class="btn btn-kd-ghost" type="submit">Cancel import</button>
           </form>
           <span class="small kd-faint ms-md-2">
-            <% if (plan.length - valid) { %><%= plan.length - valid %> row(s) will be skipped. Fix them in the CSV or the pasted text and import those separately.<% } else { %>Every row passed.<% } %>
+            Edit any row below, or remove it with <i data-lucide="x" width="13" height="13"></i>. Nothing is added until you import.
+            <% if (plan.length - valid) { %><strong><%= plan.length - valid %> row(s) still have errors</strong> and will be skipped unless you fix them.<% } %>
           </span>
         </div>
       </div>
@@ -35,14 +38,22 @@
         </div>
       <% } %>
 
-      <div class="ad-card">
+      <form id="importRows" class="ad-card" method="post" action="/admin/import/<%= id %>/rows" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <datalist id="importTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
         <div class="ad-table-wrap">
           <table class="ad-table wz-import">
             <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Title</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
             <tbody>
-              <% plan.forEach((p) => { %>
+              <% plan.forEach((p) => { const v = values.get(p.row) || {}; %>
                 <tr class="<%= p.error ? 'wz-row-error' : '' %>">
-                  <td class="kd-faint"><%= p.row %></td>
+                  <td class="kd-faint text-nowrap">
+                    <button class="btn btn-sm btn-kd-ghost wz-row-remove" type="submit" name="remove" value="<%= p.row %>"
+                            title="Remove row <%= p.row %>" aria-label="Remove row <%= p.row %>">
+                      <i data-lucide="x" width="14" height="14"></i>
+                    </button>
+                    <%= p.row %>
+                  </td>
                   <td>
                     <% if (p.error) { %>
                       <span class="kd-tag wz-tag-hard">Error</span>
@@ -51,12 +62,19 @@
                       <span class="kd-tag kd-tag-ok">Ready</span>
                     <% } %>
                   </td>
-                  <td class="text-nowrap">
-                    <span class="wz-answer"><%= p.storedAnswer || p.answer %></span>
+                  <td>
+                    <input class="form-control form-control-sm wz-ar wz-import-answer" name="answer_<%= p.row %>" value="<%= v.answer ?? '' %>"
+                           dir="rtl" aria-label="Answer, row <%= p.row %>">
                     <% if (!p.error && p.playAnswer !== p.storedAnswer) { %><div class="small kd-faint wz-ar" dir="rtl">يُلعب: <span class="wz-answer"><%= p.playAnswer %></span></div><% } %>
                   </td>
-                  <td><% if (!p.error) { %><span class="kd-tag wz-ar"><%= p.title %></span><% } %></td>
-                  <td class="wz-ar small"><%= p.clue %></td>
+                  <td>
+                    <input class="form-control form-control-sm wz-ar wz-import-title" name="title_<%= p.row %>" value="<%= v.title ?? '' %>"
+                           list="importTitles" maxlength="40" dir="auto" aria-label="Title, row <%= p.row %>">
+                  </td>
+                  <td>
+                    <textarea class="form-control form-control-sm wz-ar wz-import-clue" name="clue_<%= p.row %>" rows="2" dir="rtl"
+                              aria-label="Clue, row <%= p.row %>"><%= v.clue ?? '' %></textarea>
+                  </td>
                   <td class="text-nowrap">
                     <% if (!p.error) { %><span class="kd-tag"><%= { text: 'Text', image: 'Picture', emoji: 'Emoji', audio: 'Audio' }[p.type] %></span><% } %>
                     <% if (!p.error && p.type === 'emoji') { %><div class="wz-emoji mt-1"><%= p.input.emoji %></div><% } %>
@@ -71,17 +89,16 @@
                     <% } %>
                   </td>
                   <td>
-                    <% if (!p.error && p.levelNumber) { %>
-                      <span class="text-nowrap"><%= p.levelName %></span>
-                      <% if (p.levelIsNew) { %><span class="kd-tag kd-tag-accent">new</span><% } %>
-                    <% } %>
+                    <input class="form-control form-control-sm wz-import-level" name="level_<%= p.row %>" value="<%= v.level ?? '' %>"
+                           inputmode="numeric" placeholder="—" aria-label="Level, row <%= p.row %>">
+                    <% if (!p.error && p.levelIsNew) { %><span class="kd-tag kd-tag-accent mt-1">new</span><% } %>
                   </td>
                 </tr>
               <% }) %>
             </tbody>
           </table>
         </div>
-      </div>
+      </form>
     </div>
   </main>
 </div>

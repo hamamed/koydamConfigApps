@@ -23,6 +23,12 @@ export function createPendingImports(db) {
     return row ? JSON.parse(row.payload) : null;
   }
 
+  /** Keeps the admin's edits to a pending import. */
+  function update(id, payload) {
+    if (!ID.test(String(id))) return;
+    db.prepare('UPDATE imports SET payload = ? WHERE id = ?').run(JSON.stringify(payload), id);
+  }
+
   function remove(id) {
     db.prepare('DELETE FROM imports WHERE id = ?').run(String(id));
   }
@@ -34,5 +40,5 @@ export function createPendingImports(db) {
       .map((row) => ({ id: row.id, payload: JSON.parse(row.payload) }));
   }
 
-  return { save, get, remove, stale };
+  return { save, get, update, remove, stale };
 }

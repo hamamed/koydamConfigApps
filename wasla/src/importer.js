@@ -54,6 +54,31 @@ export function readImportCsv(text) {
   };
 }
 
+/** The fields the preview lets the admin change before confirming. */
+export const EDITABLE_COLUMNS = ['answer', 'clue', 'title', 'level'];
+
+/**
+ * Rows after the preview's edits: `edits` maps a row number to the new text of
+ * any of EDITABLE_COLUMNS, `removed` lists row numbers to drop. Row numbers
+ * stay as they were, so the admin can still match them to the file.
+ */
+export function editImportRows(rows, edits = new Map(), removed = []) {
+  const gone = new Set(removed.map(Number));
+  return rows
+    .filter(({ row }) => !gone.has(row))
+    .map((entry) => {
+      const change = edits.get(entry.row);
+      if (!change) return entry;
+      const values = { ...entry.values };
+      for (const column of EDITABLE_COLUMNS) {
+        if (change[column] !== undefined) values[column] = String(change[column]).trim();
+      }
+      // An edited title replaces the old category stand-in.
+      if (change.title !== undefined && 'category' in values) values.category = '';
+      return { ...entry, values };
+    });
+}
+
 /** The media a row names, or an error naming what is missing. */
 function mediaFor(name, kind, media) {
   if (!name) return { file: null };

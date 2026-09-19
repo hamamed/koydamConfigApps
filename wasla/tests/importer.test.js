@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
 import { openDatabase } from '../src/db/index.js';
-import { commitImport, planImport, readImportCsv } from '../src/importer.js';
+import { commitImport, editImportRows, planImport, readImportCsv } from '../src/importer.js';
 import { createRepository } from '../src/repository.js';
 
 let repo;
@@ -188,4 +188,20 @@ test('a question already in the bank, or twice in one import, is flagged instead
   const plan = planImport(repo, rows, new Map());
 
   assert.deepEqual(plan.map((p) => p.error), ['Already in the question bank.', null, 'Same as row 2.', null]);
+});
+
+test('the preview can fix a row and drop another before confirming', () => {
+  const rows = [
+    { row: 1, values: { answer: 'الرباط', clue: 'عاصمة المغرب', title: 'عواصم' } },
+    { row: 2, values: { answer: 'تونس', clue: '', category: 'قديم' } },
+    { row: 3, values: { answer: 'خطأ', clue: 'لا نريده', title: 'عواصم' } },
+  ];
+  const edits = new Map([[2, { clue: ' عاصمة تونس ', title: 'عواصم', level: '' }]]);
+
+  const edited = editImportRows(rows, edits, ['3']);
+
+  assert.deepEqual(edited.map((r) => r.row), [1, 2]);
+  assert.deepEqual(edited[1].values, { answer: 'تونس', clue: 'عاصمة تونس', category: '', title: 'عواصم', level: '' });
+  assert.equal(rows[1].values.clue, '', 'the original rows are left alone');
+  assert.deepEqual(planImport(repo, edited, new Map()).map((p) => p.error), [null, null]);
 });
