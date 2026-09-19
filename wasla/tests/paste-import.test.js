@@ -70,3 +70,7 @@ test('a colon inside a question does not split it; its answer comes from the nex
 test('with answers first, "answer: question?" still splits', () => {
   assert.deepEqual(pairs('القاهرة: ما عاصمة مصر؟', { order: 'answer-first' }), [['ما عاصمة مصر؟', 'القاهرة']]);
 });
+
+test('a clue without its answer does not swallow the next whole question', () => {
+  assert.deepEqual(pairs('سؤال بلا جواب؟\nكوكب أحمر - المريخ'), [['سؤال بلا جواب؟', ''], ['كوكب أحمر', 'المريخ']]);
+});

@@ -14,16 +14,19 @@
           <button class="btn btn-kd-outline" type="submit" form="importRows" name="then" value="save">
             <i data-lucide="check" width="14" height="14" class="me-1"></i>Save changes
           </button>
+          <button class="btn btn-kd-outline" type="submit" form="importRows" name="then" value="selected" data-import-selected disabled>
+            <i data-lucide="list-checks" width="14" height="14" class="me-1"></i>Import selected (<span data-import-count>0</span>)</button>
           <button class="btn btn-kd" type="submit" form="importRows" name="then" value="confirm"
                   data-confirm-click="Save your changes and import the valid rows? Rows with errors are skipped.">
-            Save and import the valid rows (<%= valid %>)
+            Save and import all valid rows (<%= valid %>)
           </button>
           <form method="post" action="/admin/import/<%= id %>/cancel" class="m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button class="btn btn-kd-ghost" type="submit">Cancel import</button>
           </form>
           <span class="small kd-faint ms-md-2">
-            Edit any row below, or remove it with <i data-lucide="x" width="13" height="13"></i>. Nothing is added until you import.
+            Edit any row, import it alone with <i data-lucide="check" width="13" height="13"></i>, tick rows to import some,
+            or remove one with <i data-lucide="x" width="13" height="13"></i>. Nothing is added until you import.
             <% if (plan.length - valid) { %><strong><%= plan.length - valid %> row(s) still have errors</strong> and will be skipped unless you fix them.<% } %>
           </span>
         </div>
@@ -43,10 +46,14 @@
         <datalist id="importTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
         <div class="ad-table-wrap">
           <table class="ad-table wz-import">
-            <thead><tr><th>Row</th><th>Status</th><th>Answer</th><th>Title</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
+            <thead><tr><th class="wz-check"><input class="form-check-input" type="checkbox" data-import-all aria-label="Select all rows"></th><th>Row</th><th>Status</th><th>Answer</th><th>Title</th><th>Clue</th><th>Type</th><th>Media</th><th>Level</th></tr></thead>
             <tbody>
               <% plan.forEach((p) => { const v = values.get(p.row) || {}; %>
                 <tr class="<%= p.error ? 'wz-row-error' : '' %>">
+                  <td class="wz-check">
+                    <input class="form-check-input" type="checkbox" name="pick" value="<%= p.row %>" data-import-pick
+                           aria-label="Select row <%= p.row %>">
+                  </td>
                   <td class="kd-faint text-nowrap">
                     <button class="btn btn-sm btn-kd-ghost wz-row-remove" type="submit" name="remove" value="<%= p.row %>"
                             title="Remove row <%= p.row %>" aria-label="Remove row <%= p.row %>">
@@ -54,7 +61,13 @@
                     </button>
                     <%= p.row %>
                   </td>
-                  <td>
+                  <td class="wz-import-status">
+                    <% if (!p.error) { %>
+                      <button class="btn btn-sm btn-kd-outline wz-row-import" type="submit" name="importRow" value="<%= p.row %>"
+                              title="Import row <%= p.row %> now" aria-label="Import row <%= p.row %> now">
+                        <i data-lucide="check" width="14" height="14"></i>
+                      </button>
+                    <% } %>
                     <% if (p.error) { %>
                       <span class="kd-tag wz-tag-hard">Error</span>
                       <div class="small wz-error-text"><%= p.error %></div>
@@ -75,7 +88,7 @@
                     <textarea class="form-control form-control-sm wz-ar wz-import-clue" name="clue_<%= p.row %>" rows="2" dir="rtl"
                               aria-label="Clue, row <%= p.row %>"><%= v.clue ?? '' %></textarea>
                   </td>
-                  <td class="text-nowrap">
+                  <td class="wz-import-status">
                     <% if (!p.error) { %><span class="kd-tag"><%= { text: 'Text', image: 'Picture', emoji: 'Emoji', audio: 'Audio' }[p.type] %></span><% } %>
                     <% if (!p.error && p.type === 'emoji') { %><div class="wz-emoji mt-1"><%= p.input.emoji %></div><% } %>
                     <% if (!p.error && p.input.imageFile && ['1', 'true', 'on', 'yes'].includes(String(p.input.blurred ?? '').toLowerCase())) { %><div><span class="kd-tag kd-tag-accent mt-1">blurred</span></div><% } %>

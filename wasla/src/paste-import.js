@@ -129,6 +129,8 @@ export function readPastedQuestions(text, { title = '', level = '', order = 'aut
     }
 
     const sides = splitLine(line, how);
+    // A line with its own separator is a whole question: the clue before it never got its answer.
+    if (sides && pending !== null && !pendingIsLabelled) flushPending();
     if (sides && pending === null) {
       const { clue, answer } = decide(sides[0].trim(), sides[1].trim(), how);
       push(clue, answer);

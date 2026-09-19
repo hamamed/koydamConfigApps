@@ -189,44 +189,64 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
     });
   });
 
-  /** Imports the pending rows that pass, then reports what happened. */
-  async function confirmImport(req, res, next) {
+  /**
+   * Imports the pending rows that pass — all of them, or only the row numbers in
+   * `only` (one row's ✓, or the ticked rows) — then reports what happened. Rows
+   * left over stay pending, with their pictures and sounds.
+   */
+  async function confirmImport(req, res, next, only = null) {
     const payload = pendingImports.get(req.params.id);
     if (!payload) {
       req.flash('danger', 'That import has expired or was already confirmed. Upload it again.');
       return res.redirect('/admin/import');
     }
+    const back = `/admin/import/${req.params.id}`;
     try {
       const plan = planImport(repo, payload.rows, mediaMap(payload.media));
-      if (!plan.some((p) => !p.error)) {
-        req.flash('danger', 'No row is valid, so nothing was imported. Fix the rows and try again.');
-        return res.redirect(`/admin/import/${req.params.id}`);
+      const chosen = only ? plan.filter((p) => only.has(p.row)) : plan;
+      const ready = chosen.filter((p) => !p.error);
+      if (!ready.length) {
+        const bad = chosen.find((p) => p.error);
+        req.flash('danger', only && bad ? `Row ${bad.row} was not imported: ${bad.error}`
+          : only ? 'Tick the rows to import first.' : 'No row is valid, so nothing was imported. Fix the rows and try again.');
+        return res.redirect(back);
       }
-      const result = commitImport(repo, plan);
-      pendingImports.remove(req.params.id);
-      await discardUnused(payload.media);
+      const result = commitImport(repo, ready);
 
-      const skipped = plan.length - result.imported;
+      const importedRows = new Set(ready.map((p) => p.row));
+      const left = payload.rows.filter(({ row }) => !importedRows.has(row));
+      const finished = !only || !left.length;
+      if (finished) {
+        pendingImports.remove(req.params.id);
+        await discardUnused(payload.media);
+      } else {
+        pendingImports.update(req.params.id, { ...payload, rows: left });
+      }
+
+      const skipped = chosen.length - result.imported;
       const unpublished = result.levels.filter((l) => l.unpublished).map((l) => l.name);
       const notCrossing = result.levels.filter((l) => l.unplaced).map((l) => l.name);
+      const what = only && ready.length === 1 ? `Imported row ${ready[0].row} (${ready[0].storedAnswer}).`
+        : `Imported ${result.imported} question(s)${skipped ? `, skipped ${skipped} with errors` : ''}.`;
       const parts = [
-        `Imported ${result.imported} question(s)${skipped ? `, skipped ${skipped} with errors` : ''}.`,
+        what,
         result.levels.length ? `Levels updated: ${result.levels.map((l) => `${l.name}${l.created ? ' (new)' : ''}`).join(', ')}.` : '',
         notCrossing.length ? `Some words do not cross yet in: ${notCrossing.join(', ')}.` : '',
         unpublished.length ? `Unpublished because the grid no longer connects: ${unpublished.join(', ')}.` : '',
+        finished ? '' : `${left.length} row(s) still waiting below.`,
       ];
       req.flash(unpublished.length || notCrossing.length ? 'warning' : 'success', parts.filter(Boolean).join(' '));
-      res.redirect('/admin/import');
+      res.redirect(finished ? '/admin/import' : back);
     } catch (err) {
       if (err.status === 400) {
         req.flash('danger', `Nothing was imported. ${err.message}`);
-        return res.redirect(`/admin/import/${req.params.id}`);
+        return res.redirect(back);
       }
       next(err);
     }
   }
 
-  router.post('/import/:id/confirm', confirmImport);
+  router.post('/import/:id/confirm', (req, res, next) => confirmImport(req, res, next));
 
   // The preview's own edits: change a row's answer, clue, title or level, or drop the row —
   // then look again, or import straight away. Multipart, like the paste, because a long file's
@@ -263,6 +283,11 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
         return res.redirect('/admin/import');
       }
       pendingImports.update(req.params.id, { ...payload, rows });
+      if (req.body.importRow) return confirmImport(req, res, next, new Set([Number(req.body.importRow)]));
+      if (req.body.then === 'selected') {
+        const picked = [req.body.pick ?? []].flat().map(Number).filter(Number.isInteger);
+        return confirmImport(req, res, next, new Set(picked));
+      }
       if (req.body.then === 'confirm') return confirmImport(req, res, next);
       req.flash('success', removed.length ? `Row ${removed[0]} removed.` : 'Changes saved.');
       res.redirect(`/admin/import/${req.params.id}`);

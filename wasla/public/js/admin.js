@@ -288,4 +288,27 @@
       if (!window.confirm(button.dataset.confirmClick)) event.preventDefault();
     });
   });
+
+  // ── Import preview: ticked rows ─────────────────────────────────────────
+  const importSelected = document.querySelector('[data-import-selected]');
+  if (importSelected) {
+    const picks = Array.from(document.querySelectorAll('[data-import-pick]'));
+    const allPicks = document.querySelector('[data-import-all]');
+    const pickCount = importSelected.querySelector('[data-import-count]');
+    const reflectPicks = () => {
+      const n = picks.filter((p) => p.checked).length;
+      pickCount.textContent = String(n);
+      importSelected.disabled = n === 0;
+      if (allPicks) {
+        allPicks.checked = n > 0 && n === picks.length;
+        allPicks.indeterminate = n > 0 && n < picks.length;
+      }
+    };
+    picks.forEach((p) => p.addEventListener('change', reflectPicks));
+    allPicks?.addEventListener('change', () => {
+      picks.forEach((p) => { p.checked = allPicks.checked; });
+      reflectPicks();
+    });
+    reflectPicks();
+  }
 })();
