@@ -31,6 +31,7 @@
         </div>
       <% } else { %>
         <form id="bulkForm" class="ad-card wz-bulk mb-3" method="post" action="/admin/questions/bulk" data-question-bulk>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <input type="hidden" name="q" value="<%= search %>">
           <% if (unused) { %><input type="hidden" name="unused" value="1"><% } %>
           <% if (titleFilter) { %><input type="hidden" name="titleFilter" value="<%= titleFilter %>"><% } %>
