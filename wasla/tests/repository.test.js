@@ -311,3 +311,61 @@ test('questions free for a level: unused ones and its own, never another level\'
 
   assert.deepEqual(repo.questionsForLevel(second.id).map((q) => q.id).sort(), [ids[1], ids[2]].sort());
 });
+
+// ── Bulk actions ────────────────────────────────────────────────────────────
+
+test('bulk delete removes questions in no level and keeps those in a level', () => {
+  const { ids } = sampleLevel();
+  const loose = repo.createQuestion({ title: 'عام', answer: 'قطر', clue: 'بلد' }).question.id;
+
+  const result = repo.deleteQuestions([loose, ids[0], 999999]);
+
+  assert.deepEqual({ deleted: result.deleted, kept: result.kept }, { deleted: 1, kept: 1 });
+  assert.equal(repo.getQuestion(loose), undefined);
+  assert.ok(repo.getQuestion(ids[0]));
+});
+
+test('bulk title sets one trimmed title and refuses an empty or long one', () => {
+  const a = repo.createQuestion({ title: 'قديم', answer: 'قطر', clue: 'بلد' }).question.id;
+  const b = repo.createQuestion({ title: 'قديم', answer: 'ليبيا', clue: 'بلد' }).question.id;
+
+  assert.deepEqual(repo.setQuestionsTitle([a, String(b)], ' بلدان '), { updated: 2 });
+  assert.equal(repo.getQuestion(a).title, 'بلدان');
+  assert.match(repo.setQuestionsTitle([a], '  ').error, /title/);
+  assert.match(repo.setQuestionsTitle([a], 'ع'.repeat(41)).error, /40/);
+});
+
+test('moving questions takes them out of their old level and lays out both', () => {
+  const { level, ids } = sampleLevel();
+  const other = repo.createLevel();
+
+  const result = repo.moveQuestionsToLevel(ids.slice(0, 3), other.id);
+
+  assert.equal(result.moved, 3);
+  assert.equal(repo.getLevel(other.id).words.length + repo.getLevel(other.id).unplaced.length, 3);
+  assert.equal(repo.getLevel(level.id).words.length + repo.getLevel(level.id).unplaced.length, 2);
+  assert.match(repo.moveQuestionsToLevel(ids, 424242).error, /level/);
+});
+
+test('moving unpublishes a published level left with too few words, and says so', () => {
+  const { level, ids } = sampleLevel();
+  assert.deepEqual(repo.setPublished(level.id, true), {});
+  const other = repo.createLevel();
+
+  const result = repo.moveQuestionsToLevel(ids.slice(0, 4), other.id);
+
+  assert.deepEqual(result.unpublished, [repo.getLevel(level.id).name]);
+  assert.equal(repo.getLevel(level.id).published, false);
+});
+
+test('a new level can be made from selected questions, and questions can leave every level', () => {
+  const { level, ids } = sampleLevel();
+
+  const made = repo.newLevelFromQuestions(ids.slice(0, 2));
+  assert.equal(made.moved, 2);
+  assert.notEqual(made.level.id, level.id);
+
+  assert.deepEqual(repo.removeQuestionsFromLevels(ids).removed, 5);
+  assert.equal(repo.levelsUsing(ids[0]).length, 0);
+  assert.match(repo.newLevelFromQuestions([]).error, /Select/);
+});

@@ -210,6 +210,101 @@ export function createRepository(db) {
     return { imageFile: current?.imageFile ?? null, audioFile: current?.audioFile ?? null };
   }
 
+  // ── Bulk actions (the questions list) ─────────────────────────────────────
+
+  /** Whole, positive, distinct ids from a form field that may be one value or many. */
+  const cleanIds = (ids) => [...new Set((Array.isArray(ids) ? ids : [ids])
+    .map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+
+  /** Lays a level out again after its words changed; unpublishes it, returning its name, if it can no longer be published. */
+  function refreshLevel(levelId) {
+    relayout(levelId);
+    const level = getLevel(levelId);
+    if (!level.published || !publishProblem(level)) return null;
+    setPublishedRow(levelId, false);
+    return level.name;
+  }
+
+  /** Takes questions out of whatever levels hold them. `{ removed, unpublished: [level names] }`. */
+  function removeQuestionsFromLevels(ids) {
+    const clean = cleanIds(ids);
+    return tx(() => {
+      const levelOf = db.prepare('SELECT level_id FROM level_words WHERE question_id = ?');
+      const levelIds = [...new Set(clean.flatMap((id) => levelOf.all(id).map((r) => r.level_id)))];
+      const drop = db.prepare('DELETE FROM level_words WHERE question_id = ?');
+      const removed = clean.reduce((sum, id) => sum + drop.run(id).changes, 0);
+      return { removed, unpublished: levelIds.map(refreshLevel).filter(Boolean) };
+    });
+  }
+
+  /**
+   * Moves questions into a level, out of any other level that held them (a
+   * question belongs to one level). `{ moved, unplaced, unpublished }` or `{ error }`.
+   */
+  function moveQuestionsToLevel(ids, levelId) {
+    const target = getLevel(Number(levelId));
+    if (!target) return { error: 'Choose a level to move them to.' };
+    const clean = cleanIds(ids);
+    if (!clean.length) return { error: 'Select at least one question.' };
+    return tx(() => {
+      const inTarget = new Set(db.prepare('SELECT question_id FROM level_words WHERE level_id = ?').all(target.id).map((r) => r.question_id));
+      const toMove = clean.filter((id) => !inTarget.has(id));
+      const { unpublished } = removeQuestionsFromLevels(toMove);
+      const add = db.prepare('INSERT INTO level_words (level_id, question_id) SELECT ?, id FROM questions WHERE id = ?');
+      const moved = toMove.reduce((sum, id) => sum + add.run(target.id, id).changes, 0);
+      const targetUnpublished = refreshLevel(target.id);
+      return {
+        moved,
+        level: getLevel(target.id),
+        unplaced: getLevel(target.id).unplaced.length,
+        unpublished: [...unpublished, ...(targetUnpublished ? [targetUnpublished] : [])],
+      };
+    });
+  }
+
+  /** A new level (at the end) made of these questions. `{ level, moved, unplaced, unpublished }` or `{ error }`. */
+  function newLevelFromQuestions(ids) {
+    if (!cleanIds(ids).length) return { error: 'Select at least one question.' };
+    return tx(() => moveQuestionsToLevel(ids, createLevel().id));
+  }
+
+  /** Gives every question the same title (its word-search theme). `{ updated }` or `{ error }`. */
+  function setQuestionsTitle(ids, rawTitle) {
+    const title = String(rawTitle ?? '').trim();
+    if (!title) return { error: 'Write the title to give them.' };
+    if ([...title].length > MAX_TITLE) return { error: `A title can be at most ${MAX_TITLE} characters.` };
+    const clean = cleanIds(ids);
+    return tx(() => {
+      const set = db.prepare("UPDATE questions SET title = ?, updated_at = datetime('now') WHERE id = ?");
+      const updated = clean.reduce((sum, id) => sum + set.run(title, id).changes, 0);
+      clean.forEach(touchLevelsUsing);
+      return { updated };
+    });
+  }
+
+  /**
+   * Deletes questions that are in no level; those in a level are kept and
+   * counted in `kept`. `{ deleted, kept, files: [media names to remove] }`.
+   */
+  function deleteQuestions(ids) {
+    return tx(() => {
+      let deleted = 0;
+      let kept = 0;
+      const files = [];
+      for (const id of cleanIds(ids)) {
+        if (!getQuestion(id)) continue;
+        const result = deleteQuestion(id);
+        if (result.error) {
+          kept += 1;
+          continue;
+        }
+        deleted += 1;
+        files.push(...[result.imageFile, result.audioFile].filter(Boolean));
+      }
+      return { deleted, kept, files };
+    });
+  }
+
   function touchLevelsUsing(questionId) {
     db.prepare(`UPDATE levels SET updated_at = datetime('now')
       WHERE id IN (SELECT level_id FROM level_words WHERE question_id = ?)`).run(questionId);
@@ -491,6 +586,7 @@ export function createRepository(db) {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
     listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
+    removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
     listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty,
     publishedLevels, publishedLevelIds, publishedLevel, publishedLevelById, counts,

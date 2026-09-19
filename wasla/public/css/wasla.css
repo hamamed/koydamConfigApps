@@ -322,3 +322,10 @@
 .ws-past[open] .ws-past-chevron { transform: rotate(90deg); }
 /* A radio picker drawn as a button group: the chosen one is ink, like btn-kd. */
 .btn-check:checked + .btn-kd-outline { background: var(--kd-ink); border-color: var(--kd-ink); color: #fff; }
+
+/* Bulk actions on the questions list: a bar that stays in view while rows are ticked. */
+.wz-bulk { position: sticky; top: .5rem; z-index: 5; padding: .6rem .8rem; }
+.wz-bulk.is-active { box-shadow: 0 0 0 2px var(--kd-ink); }
+.wz-bulk-action { width: auto; min-width: 13rem; }
+.wz-bulk-field { width: auto; min-width: 11rem; }
+.wz-check { width: 2rem; }

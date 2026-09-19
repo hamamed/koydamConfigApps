@@ -102,7 +102,72 @@ export function adminRouter({
   router.get('/questions', (req, res) => {
     const search = String(req.query.q ?? '');
     const unused = req.query.unused === '1';
-    res.render('questions', { title: 'Questions', questions: repo.listQuestions({ search, unused }), search, unused });
+    res.render('questions', {
+      title: 'Questions',
+      questions: repo.listQuestions({ search, unused }),
+      search,
+      unused,
+      levels: repo.listLevels(),
+      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+    });
+  });
+
+  // Many questions at once, from the checkboxes on the list: delete, retitle, move or take out of levels.
+  router.post('/questions/bulk', async (req, res, next) => {
+    const params = new URLSearchParams();
+    if (req.body.q) params.set('q', String(req.body.q));
+    if (req.body.unused === '1') params.set('unused', '1');
+    const back = `/admin/questions${params.size ? `?${params}` : ''}`;
+    const ids = req.body.ids ?? [];
+    if (!(Array.isArray(ids) ? ids.length : ids)) {
+      req.flash('warning', 'Select at least one question first.');
+      return res.redirect(back);
+    }
+    const unpublishedNote = (names) => (names.length ? ` Unpublished (no longer publishable): ${names.join(', ')}.` : '');
+    try {
+      switch (req.body.action) {
+        case 'delete': {
+          const { deleted, kept, files } = repo.deleteQuestions(ids);
+          for (const file of files) {
+            if (!repo.mediaInUse(file)) {
+              await images.remove(file);
+              await audio.remove(file);
+            }
+          }
+          req.flash(deleted ? 'success' : 'warning', `Deleted ${deleted} question(s).`
+            + (kept ? ` ${kept} kept because they are in a level — remove them from their level first.` : ''));
+          break;
+        }
+        case 'title': {
+          const result = repo.setQuestionsTitle(ids, req.body.title);
+          req.flash(result.error ? 'danger' : 'success', result.error ?? `Title set on ${result.updated} question(s).`);
+          break;
+        }
+        case 'move':
+        case 'new-level': {
+          const result = req.body.action === 'move' ? repo.moveQuestionsToLevel(ids, req.body.level) : repo.newLevelFromQuestions(ids);
+          if (result.error) {
+            req.flash('danger', result.error);
+            break;
+          }
+          const loose = result.unplaced ? ` ${result.unplaced} word(s) do not cross the others yet.` : '';
+          req.flash(result.unplaced || result.unpublished.length ? 'warning' : 'success',
+            `Moved ${result.moved} question(s) to ${result.level.name}.${loose}${unpublishedNote(result.unpublished)}`);
+          if (req.body.action === 'new-level') return res.redirect(`/admin/levels/${result.level.id}`);
+          break;
+        }
+        case 'remove': {
+          const result = repo.removeQuestionsFromLevels(ids);
+          req.flash('success', `Took ${result.removed} question(s) out of their levels.${unpublishedNote(result.unpublished)}`);
+          break;
+        }
+        default:
+          req.flash('warning', 'Choose what to do with the selected questions.');
+      }
+      res.redirect(back);
+    } catch (err) {
+      next(err);
+    }
   });
 
   const blankQuestion = {

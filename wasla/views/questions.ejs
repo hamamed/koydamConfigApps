@@ -26,13 +26,41 @@
           <a class="btn btn-kd btn-sm" href="/admin/questions/new">Add the first one</a>
         </div>
       <% } else { %>
+        <form id="bulkForm" class="ad-card wz-bulk mb-3" method="post" action="/admin/questions/bulk" data-question-bulk>
+          <input type="hidden" name="q" value="<%= search %>">
+          <% if (unused) { %><input type="hidden" name="unused" value="1"><% } %>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <strong class="small"><span data-bulk-count>0</span> selected</strong>
+            <select class="form-select form-select-sm wz-bulk-action" name="action" data-bulk-action aria-label="Action">
+              <option value="">Choose an action…</option>
+              <option value="move">Move to level…</option>
+              <option value="new-level">Make a new level from them</option>
+              <option value="remove">Take out of their levels</option>
+              <option value="title">Set title…</option>
+              <option value="delete">Delete</option>
+            </select>
+            <select class="form-select form-select-sm wz-bulk-field" name="level" data-bulk-field="move" aria-label="Level">
+              <option value="">Level…</option>
+              <% levels.forEach((l) => { %>
+                <option value="<%= l.id %>"><%= l.name %><%= l.published ? '' : ' (draft)' %></option>
+              <% }) %>
+            </select>
+            <input class="form-control form-control-sm wz-bulk-field" name="title" list="bulkTitles" maxlength="40" dir="auto"
+                   placeholder="Title" data-bulk-field="title" aria-label="Title">
+            <datalist id="bulkTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
+            <button class="btn btn-kd btn-sm" type="submit" data-bulk-apply>Apply</button>
+            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>Clear selection</button>
+          </div>
+        </form>
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Picture</th><th>Answer</th><th>Type</th><th>Title</th><th>Clue</th><th>Levels</th><th></th></tr></thead>
+              <thead><tr><th class="wz-check"><input class="form-check-input" type="checkbox" data-bulk-all aria-label="Select all"></th><th>Picture</th><th>Answer</th><th>Type</th><th>Title</th><th>Clue</th><th>Levels</th><th></th></tr></thead>
               <tbody>
                 <% questions.forEach((q) => { %>
                   <tr>
+                    <td class="wz-check"><input class="form-check-input" type="checkbox" name="ids" value="<%= q.id %>" form="bulkForm"
+                        data-bulk-row aria-label="Select <%= q.answer %>"></td>
                     <td><%- include('partials/qimage', { q, size: 'sm' }) %></td>
                     <td><span class="wz-answer"><%= q.answer %></span> <span class="kd-faint small"><%= [...q.answer].length %></span></td>
                     <td class="text-nowrap">
