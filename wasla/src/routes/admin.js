@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
@@ -6,6 +8,7 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
+import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
 import { previewLevel, previewQuestion, STARTING_COINS } from '../preview.js';
 import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
@@ -31,6 +34,14 @@ export function adminRouter({
   repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles, titles = null,
 }) {
   const router = express.Router();
+
+  /**
+   * A stored picture's pixel size, so a preview frames it the way the app does.
+   * Only a plain file name is looked up, never a path out of the pictures folder.
+   */
+  const pictureSize = (file) => (file && !/[\\/]/.test(file) && !file.startsWith('.')
+    ? imageSize(path.join(images.root, file))
+    : null);
 
   /** The titles every title box offers: the Titles list, or (without it) those on questions. */
   const titleNames = () => (titles ? titles.names()
@@ -378,7 +389,7 @@ export function adminRouter({
     res.render('question-preview', {
       title: `Preview · ${question.answer}`,
       question,
-      preview: previewQuestion(question),
+      preview: previewQuestion(question, { pictureSize }),
       coins: STARTING_COINS,
       levels: repo.levelsUsing(question.id),
     });
@@ -447,7 +458,9 @@ export function adminRouter({
   router.get('/levels/:id/preview', (req, res, next) => {
     const level = repo.getLevel(Number(req.params.id));
     if (!level) return next();
-    res.render('level-preview', { title: `Preview · ${level.name}`, level, preview: previewLevel(level), coins: STARTING_COINS });
+    res.render('level-preview', {
+      title: `Preview · ${level.name}`, level, preview: previewLevel(level, { pictureSize }), coins: STARTING_COINS,
+    });
   });
 
   const levelAction = (path, handler) => router.post(`/levels/:id/${path}`, (req, res) => {

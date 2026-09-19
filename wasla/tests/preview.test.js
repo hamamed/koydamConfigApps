@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { openDatabase } from '../src/db/index.js';
-import { BANK_SIZE, CONTENT_HEIGHT, letterBank, previewLevel, questionLayout, stageOf, tileSize } from '../src/preview.js';
+import { BANK_SIZE, CONTENT_HEIGHT, letterBank, pictureBox, previewLevel, questionLayout, stageOf, tileSize } from '../src/preview.js';
 import { createRepository } from '../src/repository.js';
 
 test('tiles follow the app: at most 62 pt, fitting 358 × 569 with 5 pt gaps', () => {
@@ -60,4 +60,31 @@ test('a level preview lists placed words with their cells, banks and helps', () 
   // The shared م belongs to both words.
   assert.equal(preview.cells.filter((c) => c.words.length === 2).length, 1);
   assert.equal(preview.cells.length, 5);
+});
+
+test('a picture is framed in its own shape, never thinner than 45% of the stage', () => {
+  // QuestionImageView.box in the app: the same numbers, so the preview is what the player sees.
+  assert.deepEqual(pictureBox({ width: 900, height: 600 }, 300), { width: 300, height: 200 });
+  assert.deepEqual(pictureBox({ width: 600, height: 900 }, 300), { width: 200, height: 300 });
+  assert.deepEqual(pictureBox({ width: 512, height: 512 }, 300), { width: 300, height: 300 });
+  // A flag saved small is drawn as big as one saved large.
+  assert.deepEqual(pictureBox({ width: 90, height: 60 }, 300), { width: 300, height: 200 });
+  // Extremes stop shrinking instead of becoming a strip.
+  assert.deepEqual(pictureBox({ width: 1200, height: 200 }, 300), { width: 300, height: 135 });
+  assert.deepEqual(pictureBox({ width: 200, height: 1200 }, 300), { width: 135, height: 300 });
+  // No picture yet, or a kind whose size cannot be read: the square the app draws meanwhile.
+  assert.deepEqual(pictureBox(null, 300), { width: 300, height: 300 });
+});
+
+test('a level preview carries each picture frame, and none for a text question', () => {
+  const db = openDatabase(':memory:');
+  const repo = createRepository(db);
+  const wide = repo.createQuestion({ answer: 'امريكا', clue: '', title: 'علم', type: 'image', imageFile: 'wide.png' }).question;
+  const plain = repo.createQuestion({ answer: 'اسد', clue: 'ملك الغابة', title: 'حيوان' }).question;
+  const level = repo.newLevelFromQuestions([wide.id, plain.id]).level;
+  const sizes = { 'wide.png': { width: 320, height: 168 } };
+  const preview = previewLevel(repo.getLevel(level.id), { pictureSize: (file) => sizes[file] ?? null });
+  const picture = preview.words.find((w) => w.stage === 'picture');
+  assert.deepEqual(picture.picture, pictureBox(sizes['wide.png'], picture.layout.stage));
+  assert.equal(preview.words.find((w) => w.stage === 'text').picture, null);
 });

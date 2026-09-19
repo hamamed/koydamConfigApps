@@ -6,6 +6,7 @@
  */
 
 import { cellsOf } from './layout.js';
+import { imageSize } from './image-size.js';
 
 export const SCREEN = { width: 390, height: 844, statusBar: 47, navBar: 44, homeIndicator: 34 };
 /** The height the app's content gets under the navigation bar. */
@@ -25,6 +26,27 @@ export const HELPS = [
   { kind: 'unblurImage', title: 'وضّح الصورة', cost: 20, icon: 'eye' },
   { kind: 'askFriend', title: 'اسأل صديق', cost: 0, icon: 'friends' },
 ];
+
+/**
+ * QuestionImageView.minShare: a very wide or very tall picture is still drawn
+ * this share of the stage in its short direction, so it never becomes a strip.
+ */
+export const PICTURE_MIN_SHARE = 0.45;
+
+/**
+ * QuestionImageView.box: the frame follows the picture's own shape, never
+ * bigger than the stage and never thinner than `PICTURE_MIN_SHARE` of it.
+ * An unknown size (no file, or a kind we cannot read) gives the square the
+ * app draws while it waits for the picture.
+ */
+export function pictureBox(size, stage) {
+  if (!size || !(size.width > 0) || !(size.height > 0) || !(stage > 0)) return { width: stage, height: stage };
+  const shortest = Math.round(stage * PICTURE_MIN_SHARE);
+  if (size.width >= size.height) {
+    return { width: stage, height: Math.max(shortest, Math.round(stage * size.height / size.width)) };
+  }
+  return { width: Math.max(shortest, Math.round(stage * size.width / size.height)), height: stage };
+}
 
 const fit = (length, count, cap) => {
   if (count <= 0 || length <= 0) return TILE.min;
@@ -119,11 +141,12 @@ export function letterBank(letters, seed) {
  * One question as the app's question page draws it, from `repo.getQuestion`.
  * `direction` is only known inside a level, so a lone question shows none.
  */
-export function previewQuestion(question) {
+export function previewQuestion(question, { pictureSize } = {}) {
   const letters = [...question.playAnswer];
   const stage = stageOf(question);
   const zoomed = stage === 'picture' && question.zoom > 1.001;
   const blurred = stage === 'picture' && Boolean(question.blurred);
+  const layout = questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(question.title) });
   return {
     ...question,
     letters,
@@ -131,12 +154,19 @@ export function previewQuestion(question) {
     blurred,
     bank: letterBank(letters, question.id),
     helps: HELPS.filter((h) => (h.kind === 'unzoomImage' ? zoomed : h.kind === 'unblurImage' ? blurred : true)),
-    layout: questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(question.title) }),
+    layout,
+    picture: pictureFrame(question, stage, layout.stage, pictureSize),
   };
 }
 
+/** The frame the app draws round this question's picture, or null when it has none. */
+function pictureFrame(word, stage, side, pictureSize) {
+  if (stage !== 'picture' || !word.imageFile) return null;
+  return pictureBox(pictureSize ? pictureSize(word.imageFile) : null, side);
+}
+
 /** Everything the preview page draws for a level from `repo.getLevel`. */
-export function previewLevel(level) {
+export function previewLevel(level, { pictureSize } = {}) {
   const cells = new Map();
   const words = level.words.map((word, index) => {
     const letters = [...word.playAnswer];
@@ -149,6 +179,7 @@ export function previewLevel(level) {
     });
     const zoomed = stage === 'picture' && word.zoom > 1.001;
     const blurred = stage === 'picture' && word.blurred;
+    const layout = questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(word.title) });
     return {
       index,
       id: word.id,
@@ -168,7 +199,8 @@ export function previewLevel(level) {
       blurred,
       bank: letterBank(letters, word.id),
       helps: HELPS.filter((h) => (h.kind === 'unzoomImage' ? zoomed : h.kind === 'unblurImage' ? blurred : true)),
-      layout: questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(word.title) }),
+      layout,
+      picture: pictureFrame(word, stage, layout.stage, pictureSize),
     };
   });
   return {

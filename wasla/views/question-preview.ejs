@@ -43,9 +43,11 @@
                   <% if (w.title) { %><div class="wp-chip"><%= w.title %></div><% } %>
 
                   <% if (w.stage === 'picture') { %>
-                    <div class="wp-picture">
-                      <img src="/media/questions/<%= w.imageFile %>" alt="" class="<%= w.blurred ? 'is-blurred' : '' %> <%= w.zoom > 1.001 ? '' : 'is-fit' %>"
-                           style="--zoom: <%= w.zoom %>; --fx: <%= (w.focusX * 100).toFixed(1) %>%; --fy: <%= (w.focusY * 100).toFixed(1) %>%; --blur: <%= (L.stage * 0.075).toFixed(1) %>px">
+                    <div class="wp-slot-picture">
+                      <div class="wp-picture" style="--pw: <%= w.picture.width %>px; --ph: <%= w.picture.height %>px">
+                        <img src="/media/questions/<%= w.imageFile %>" alt="" class="<%= w.blurred ? 'is-blurred' : '' %> <%= w.zoom > 1.001 ? '' : 'is-fit' %>"
+                             style="--zoom: <%= w.zoom %>; --fx: <%= (w.focusX * 100).toFixed(1) %>%; --fy: <%= (w.focusY * 100).toFixed(1) %>%; --blur: <%= (Math.min(w.picture.width, w.picture.height) * 0.075).toFixed(1) %>px">
+                      </div>
                     </div>
                   <% } else if (w.stage === 'emoji') { %>
                     <div class="wp-panel wp-emoji" dir="ltr"><span><%= w.emoji %></span></div>

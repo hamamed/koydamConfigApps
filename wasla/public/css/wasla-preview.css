@@ -214,10 +214,20 @@
   white-space: nowrap;
 }
 
+/* The stage keeps its height whatever the picture's shape, as the app's does. */
+.wp-slot-picture {
+  width: 100%;
+  height: var(--stage);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The frame follows the picture's own shape (QuestionImageView.box), inside the stage. */
 .wp-picture {
   position: relative;
-  width: var(--stage);
-  height: var(--stage);
+  width: var(--pw, var(--stage));
+  height: var(--ph, var(--stage));
   border-radius: 16px;
   overflow: hidden;
   background: var(--mint);
