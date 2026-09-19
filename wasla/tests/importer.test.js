@@ -175,3 +175,17 @@ test('a title column wins over an old category column', () => {
   assert.equal(titled.title, 'حيوانات');
   assert.equal(fallback.title, 'قديم');
 });
+
+test('a question already in the bank, or twice in one import, is flagged instead of added again', () => {
+  repo.createQuestion({ title: 'عواصم', answer: 'القاهرة', clue: 'عاصمة مصر' });
+  const rows = [
+    { row: 1, values: { answer: 'القاهرة', clue: 'عاصمة مصر', title: 'عواصم' } },
+    { row: 2, values: { answer: 'الرباط', clue: 'عاصمة المغرب', title: 'عواصم' } },
+    { row: 3, values: { answer: 'الرباط', clue: 'عاصمة المغرب', title: 'عواصم' } },
+    { row: 4, values: { answer: 'القاهرة', clue: 'أكبر مدينة عربية', title: 'مدن' } },
+  ];
+
+  const plan = planImport(repo, rows, new Map());
+
+  assert.deepEqual(plan.map((p) => p.error), ['Already in the question bank.', null, 'Same as row 2.', null]);
+});

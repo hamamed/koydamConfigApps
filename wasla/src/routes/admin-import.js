@@ -6,6 +6,7 @@ import { config } from '../config.js';
 import { sniffImage } from '../images.js';
 import { commitImport, IMPORT_COLUMNS, planImport, readImportCsv } from '../importer.js';
 import { csrfProtect } from '../middleware/auth.js';
+import { MAX_PASTE_CHARS, PASTE_ORDERS, readPastedQuestions } from '../paste-import.js';
 
 export const MAX_IMPORT_MEDIA = 100;
 const MAX_CSV_BYTES = 2 * 1024 * 1024;
@@ -105,7 +106,36 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
   }
 
   router.get('/import', (_req, res) => {
-    res.render('import', { title: 'Import', columns: IMPORT_COLUMNS, maxMedia: MAX_IMPORT_MEDIA });
+    res.render('import', {
+      title: 'Import',
+      columns: IMPORT_COLUMNS,
+      maxMedia: MAX_IMPORT_MEDIA,
+      maxPaste: MAX_PASTE_CHARS,
+      orders: PASTE_ORDERS,
+      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+      levelCount: repo.listLevels().length,
+    });
+  });
+
+  // Text copied from a website or a document. Sent as multipart, because a long
+  // Arabic paste, percent-encoded, is larger than the panel's form-body limit.
+  const pasteForm = multer({ limits: { fieldSize: MAX_PASTE_CHARS * 4, fields: 10 } }).none();
+  const withPaste = (req, res, next) => pasteForm(req, res, (err) => {
+    if (err) {
+      req.flash('danger', 'That text is too long for one import. Split it.');
+      return res.redirect('/admin/import');
+    }
+    return csrfProtect(req, res, next);
+  });
+
+  router.post('/import/paste', importLimiter, withPaste, (req, res) => {
+    const parsed = readPastedQuestions(req.body.text, { title: req.body.title, level: req.body.level, order: req.body.order });
+    if (parsed.error) {
+      req.flash('danger', parsed.error);
+      return res.redirect('/admin/import');
+    }
+    const id = pendingImports.save({ fileName: 'Pasted text', rows: parsed.rows, media: [], fileErrors: [] });
+    res.redirect(`/admin/import/${id}`);
   });
 
   router.post('/import', importLimiter, oneAtATime, withUpload, async (req, res, next) => {

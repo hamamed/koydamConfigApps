@@ -2,9 +2,51 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Import', subheading: 'Many questions at once, from a CSV and their pictures and sounds' }) %>
+    <%- include('partials/topbar', { heading: 'Import', subheading: 'Many questions at once: paste them from a website, or upload a CSV with pictures and sounds' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
+
+      <form class="ad-card mb-3" method="post" action="/admin/import/paste" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="clipboard-paste" width="16" height="16"></i>
+          <span class="fw-semibold">Paste from a website</span>
+          <span class="small kd-faint ms-auto">Nothing is added until you confirm.</span>
+        </div>
+        <div class="ad-card-body row g-3">
+          <div class="col-lg-8">
+            <label class="form-label small fw-semibold" for="pasteText">Questions</label>
+            <textarea class="form-control wz-ar wz-paste" id="pasteText" name="text" rows="12" dir="rtl" required maxlength="<%= maxPaste %>"
+                      placeholder="# عواصم&#10;ما عاصمة مصر؟ القاهرة&#10;1- عاصمة المغرب - الرباط&#10;س: أكبر محيط في العالم&#10;ج: الهادي&#10;حيوان يلقب بملك الغابة&#10;الأسد"></textarea>
+            <div class="form-text">Copy the questions from any page and paste them here — one question per line
+              (<span class="kd-mono">clue - answer</span>, <span class="kd-mono">clue: answer</span>, a tab, or <span class="kd-mono">…؟ answer</span>),
+              <span class="kd-mono">س:</span>/<span class="kd-mono">ج:</span> pairs, or a clue line followed by its answer line.
+              Numbers and bullets are ignored. A line starting with <span class="kd-mono">#</span> sets the title for the lines below it.</div>
+          </div>
+          <div class="col-lg-4 d-grid gap-3 align-content-start">
+            <div>
+              <label class="form-label small fw-semibold" for="pasteTitle">Title</label>
+              <input class="form-control wz-ar" id="pasteTitle" name="title" list="pasteTitles" maxlength="40" dir="auto" placeholder="e.g. حيوانات">
+              <datalist id="pasteTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
+              <div class="form-text">Used unless a <span class="kd-mono">#</span> line gives one.</div>
+            </div>
+            <div>
+              <label class="form-label small fw-semibold" for="pasteOrder">Which side is the answer?</label>
+              <select class="form-select" id="pasteOrder" name="order">
+                <option value="auto">Guess (the side with ؟ is the question)</option>
+                <option value="clue-first">Question first, then answer</option>
+                <option value="answer-first">Answer first, then question</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label small fw-semibold" for="pasteLevel">Add to level</label>
+              <input class="form-control" id="pasteLevel" name="level" type="number" min="1" max="<%= levelCount + 1 %>" placeholder="None">
+              <div class="form-text">Optional. <%= levelCount + 1 %> makes a new level.</div>
+            </div>
+            <button class="btn btn-kd" type="submit">Preview</button>
+          </div>
+        </div>
+      </form>
 
       <div class="row g-3">
         <div class="col-xl-6">
@@ -12,7 +54,7 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="file-up" width="16" height="16"></i>
-              <span class="fw-semibold">Upload</span>
+              <span class="fw-semibold">Upload a CSV</span>
             </div>
             <div class="ad-card-body d-grid gap-3">
               <div>

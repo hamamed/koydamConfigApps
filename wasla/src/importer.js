@@ -71,6 +71,10 @@ function mediaFor(name, kind, media) {
 export function planImport(repo, rows, media) {
   const levelCount = repo.listLevels().length;
   const lastAllowed = lastNewLevel(rows, levelCount);
+  // The same played answer with the same clue is the same question: already in the bank, or earlier in this file.
+  const sameKey = (playAnswer, clue) => `${playAnswer}\u0000${String(clue ?? '').trim()}`;
+  const inBank = new Set(repo.listQuestions().map((q) => sameKey(q.playAnswer, q.clue)));
+  const seen = new Map();
 
   return rows.map(({ row, values, extra }) => {
     const plan = { row, answer: values.answer, clue: values.clue, error: null };
@@ -102,6 +106,10 @@ export function planImport(repo, rows, media) {
     };
     const check = repo.checkQuestion(input);
     if (check.error) return fail(check.error);
+    const key = sameKey(check.question.playAnswer, input.clue);
+    if (inBank.has(key)) return fail('Already in the question bank.');
+    if (seen.has(key)) return fail(`Same as row ${seen.get(key)}.`);
+    seen.set(key, row);
 
     return {
       ...plan,
