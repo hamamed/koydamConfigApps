@@ -12,6 +12,7 @@ import { deriveType, emojiProblem, normalizeEmoji, QUESTION_TYPES, TYPE_NEEDS } 
 
 export const MAX_CLUE = 200;
 export const MAX_TITLE = 40;
+export const MAX_CREDIT = 160;
 export const MAX_ZOOM = 5;
 export const MIN_WORDS = 2;
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -28,6 +29,10 @@ const toQuestion = (row) => row && ({
   type: row.type || 'text',
   emoji: row.emoji || null,
   imageFile: row.image_file || null,
+  // A picture's credit: who took it, its licence, and the page it came from.
+  imageAuthor: row.image_author || '',
+  imageLicence: row.image_licence || '',
+  imageSource: row.image_source || '',
   zoom: row.image_zoom,
   focusX: row.focus_x,
   focusY: row.focus_y,
@@ -107,6 +112,14 @@ function readQuestion(input, current = {}) {
 
   const blurred = input.blurred !== undefined ? truthy(input.blurred) : Boolean(current.blurred);
 
+  const credit = (key) => String(input[key] ?? current[key] ?? '').trim().slice(0, MAX_CREDIT);
+  const imageAuthor = credit('imageAuthor');
+  const imageLicence = credit('imageLicence');
+  const imageSource = credit('imageSource');
+  if (imageSource && !/^https?:\/\//i.test(imageSource)) {
+    return { error: 'The picture source must be a web address starting with http:// or https://.' };
+  }
+
   return {
     fields: {
       answer,
@@ -121,6 +134,10 @@ function readQuestion(input, current = {}) {
       // Blurring means nothing without a picture to blur.
       image_blurred: blurred && media.imageFile ? 1 : 0,
       audio_file: media.audioFile,
+      // Kept only while there is a picture to credit.
+      image_author: media.imageFile ? imageAuthor || null : null,
+      image_licence: media.imageFile ? imageLicence || null : null,
+      image_source: media.imageFile ? imageSource || null : null,
     },
   };
 }
@@ -145,6 +162,13 @@ export function createRepository(db) {
       ORDER BY q.id DESC`).all({ term, exact }).map(toQuestion);
   }
 
+  /** Every picture that names a photographer or a licence, for the credits page. */
+  function credited() {
+    return db.prepare(`${QUESTION_SELECT}
+      WHERE q.image_file IS NOT NULL AND (IFNULL(q.image_author, '') <> '' OR IFNULL(q.image_licence, '') <> '')
+      ORDER BY q.title, q.id`).all().map(toQuestion);
+  }
+
   function getQuestion(id) {
     return toQuestion(db.prepare(`${QUESTION_SELECT} WHERE q.id = ?`).get(id));
   }
@@ -166,8 +190,10 @@ export function createRepository(db) {
     const { fields, error } = readQuestion(input);
     if (error) return { error };
     const { lastInsertRowid } = db.prepare(`INSERT INTO questions
-      (answer, clue, title, type, emoji, image_file, image_zoom, focus_x, focus_y, image_blurred, audio_file)
-      VALUES (@answer, @clue, @title, @type, @emoji, @image_file, @image_zoom, @focus_x, @focus_y, @image_blurred, @audio_file)`).run(fields);
+      (answer, clue, title, type, emoji, image_file, image_zoom, focus_x, focus_y, image_blurred, audio_file,
+       image_author, image_licence, image_source)
+      VALUES (@answer, @clue, @title, @type, @emoji, @image_file, @image_zoom, @focus_x, @focus_y, @image_blurred, @audio_file,
+              @image_author, @image_licence, @image_source)`).run(fields);
     return { question: getQuestion(lastInsertRowid) };
   }
 
@@ -186,6 +212,7 @@ export function createRepository(db) {
       db.prepare(`UPDATE questions SET answer = @answer, clue = @clue, title = @title,
         type = @type, emoji = @emoji, image_file = @image_file, image_zoom = @image_zoom,
         focus_x = @focus_x, focus_y = @focus_y, image_blurred = @image_blurred, audio_file = @audio_file,
+        image_author = @image_author, image_licence = @image_licence, image_source = @image_source,
         updated_at = datetime('now') WHERE id = @id`).run({ ...fields, id });
 
       const unpublished = [];
@@ -588,7 +615,7 @@ export function createRepository(db) {
   return {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
-    listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
+    credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
     removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
     listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty,

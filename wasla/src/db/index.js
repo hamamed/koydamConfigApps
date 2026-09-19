@@ -39,6 +39,10 @@ const ADDITIVE_COLUMNS = [
   ['profiles', 'frame', 'TEXT'],
   // When this player was last told someone passed their time that day (one push a day).
   ['profile_daily', 'passed_notified_at', 'TEXT'],
+  // Who took the picture, under which licence, and where it came from — shown on /credits and in the app.
+  ['questions', 'image_author', 'TEXT'],
+  ['questions', 'image_licence', 'TEXT'],
+  ['questions', 'image_source', 'TEXT'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */

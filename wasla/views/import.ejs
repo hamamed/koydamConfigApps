@@ -99,6 +99,9 @@
                        ['focus_y', '0 to 1. Blank is 0.5.'],
                        ['blurred', 'yes / 1 / true to start the picture blurred.'],
                        ['audio', 'File name of a sound uploaded alongside.'],
+                       ['image_author', 'Who took the picture — shown on the credits page.'],
+                       ['image_licence', 'The picture licence, e.g. CC BY-SA 4.0.'],
+                       ['image_source', 'Web address the picture came from.'],
                        ['level', 'Level number to add the question to (1, 2, 3 … as on the Levels page). New levels are added when their numbers follow on from the last level without a gap — one file can add several (e.g. 4, 5, 6 after level 3). Blank: no level.'],
                      ].forEach(([name, text]) => { %>
                     <tr><td class="kd-mono small"><%= name %></td><td class="small"><%= text %></td></tr>

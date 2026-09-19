@@ -1,0 +1,26 @@
+<%- include('_top') %>
+<h1>مصادر الصور · Picture credits</h1>
+<p>
+  تُستخدم صور اللاعبين في هذه اللعبة بموجب رخص المشاع الإبداعي، وهذه قائمة المصوّرين والرخص.
+  <br>
+  The pictures below are used under Creative Commons licences. Each one names its photographer, its licence and the page it came from.
+</p>
+<% if (!credits.length) { %>
+  <p>No pictures need a credit yet.</p>
+<% } else { %>
+  <p><%= credits.length %> picture<%= credits.length === 1 ? '' : 's' %>.</p>
+  <table class="wz-credits">
+    <thead><tr><th>الصورة</th><th>المصوّر</th><th>الرخصة</th><th>المصدر</th></tr></thead>
+    <tbody>
+      <% credits.forEach((c) => { %>
+        <tr>
+          <td><%= c.answer %></td>
+          <td><%= c.author || '—' %></td>
+          <td><%= c.licence || '—' %></td>
+          <td><% if (c.source) { %><a href="<%= c.source %>" rel="noopener nofollow">الصفحة</a><% } else { %>—<% } %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+<% } %>
+<%- include('_bottom') %>

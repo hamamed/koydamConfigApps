@@ -346,3 +346,8 @@
 .wz-title-filter { width: auto; min-width: 9rem; }
 .wz-row-import { padding: .1rem .35rem; margin-inline-end: .35rem; }
 .wz-import-status { min-width: 9rem; max-width: 16rem; }
+
+/* The public picture-credits table. */
+.wz-credits { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .95rem; }
+.wz-credits th, .wz-credits td { text-align: start; padding: .4rem .6rem; border-bottom: 1px solid #e5e7eb; }
+.wz-credits th { font-weight: 700; }

@@ -95,7 +95,7 @@ app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '7
 app.use(challengeRouter({ repo, publicUrl: config.publicUrl, siteSettings, assetVersion: config.assetVersion }));
 
 // Public pages the App Store listing links to. No session needed.
-app.use(legalRouter({ assetVersion: config.assetVersion }));
+app.use(legalRouter({ assetVersion: config.assetVersion, repo }));
 
 app.use(express.urlencoded({ extended: false, limit: '256kb' }));
 app.use(session({

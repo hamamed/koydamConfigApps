@@ -381,3 +381,19 @@ test('a two-word answer keeps its space to show and is played without it', () =>
   const words = [...repo.getLevel(level.id).words, ...repo.getLevel(level.id).unplaced];
   assert.ok(words.some((w) => w.playAnswer === 'نجيبمحفوظ'));
 });
+
+test('a picture keeps its credit, and only a real web address is accepted', () => {
+  const { question } = repo.createQuestion({
+    title: 'من هذا اللاعب؟', answer: 'ميسي', clue: '', type: 'image', imageFile: 'a.jpg',
+    imageAuthor: ' Tasnim News Agency ', imageLicence: 'CC BY 4.0', imageSource: 'https://commons.wikimedia.org/wiki/File:A.jpg',
+  });
+  assert.equal(question.imageAuthor, 'Tasnim News Agency');
+  assert.equal(question.imageLicence, 'CC BY 4.0');
+  assert.deepEqual(repo.credited().map((q) => q.answer), ['ميسي']);
+  assert.match(repo.createQuestion({ title: 'ت', answer: 'زيدان', clue: '', type: 'image', imageFile: 'b.jpg', imageSource: 'ftp://x' }).error, /web address/);
+
+  // A question with no picture keeps no credit.
+  const text = repo.createQuestion({ title: 'ت', answer: 'كرة', clue: 'يلعب بها', imageAuthor: 'someone' }).question;
+  assert.equal(text.imageAuthor, '');
+  assert.equal(repo.credited().length, 1);
+});

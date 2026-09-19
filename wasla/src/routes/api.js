@@ -56,6 +56,15 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
 
   router.get('/health', cacheable, (_req, res) => res.json({ ok: true }));
 
+  // Picture credits (contract §8): what the app shows under "مصادر الصور".
+  router.get('/credits', cacheable, (_req, res) => {
+    res.json({
+      credits: repo.credited().map((q) => ({
+        answer: q.answer, title: q.title, author: q.imageAuthor, licence: q.imageLicence, source: q.imageSource,
+      })),
+    });
+  });
+
   router.get('/config', cacheable, (_req, res) => {
     res.json(appConfig.get());
   });

@@ -115,6 +115,16 @@
                     <input class="form-check-input" type="checkbox" id="blurred" name="blurred" value="1" <%= question.blurred ? 'checked' : '' %> data-blur-toggle>
                     <label class="form-check-label small" for="blurred">Start blurred <span class="kd-faint">— the player can pay a help to sharpen it</span></label>
                   </div>
+                  <div class="mt-3">
+                    <div class="small fw-semibold mb-1">Picture credit <span class="kd-faint fw-normal">— shown on /credits and in the app</span></div>
+                    <input class="form-control form-control-sm mb-1" name="imageAuthor" maxlength="160" dir="auto"
+                           value="<%= question.imageAuthor || '' %>" placeholder="Photographer, e.g. Tasnim News Agency">
+                    <input class="form-control form-control-sm mb-1" name="imageLicence" maxlength="160" dir="auto"
+                           value="<%= question.imageLicence || '' %>" placeholder="Licence, e.g. CC BY-SA 4.0">
+                    <input class="form-control form-control-sm" name="imageSource" maxlength="160" type="url" dir="ltr"
+                           value="<%= question.imageSource || '' %>" placeholder="https://commons.wikimedia.org/wiki/File:…">
+                    <div class="form-text">Required by CC BY and CC BY-SA pictures. Leave empty for your own pictures.</div>
+                  </div>
                   <% if (question.imageFile) { %>
                     <div class="form-check mt-2">
                       <input class="form-check-input" type="checkbox" id="removeImage" name="removeImage" value="1">
