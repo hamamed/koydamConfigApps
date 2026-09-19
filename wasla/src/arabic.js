@@ -3,8 +3,10 @@
  *
  * One cell holds one letter, and the player spells the answer from a bank of
  * loose letters. So an answer is stored bare: no harakat (a player cannot tap a
- * fatha), no tatweel (it is decoration, not a letter) and no spaces (a crossword
- * has no blank cell inside a word).
+ * fatha) and no tatweel (it is decoration, not a letter). A name of several
+ * words keeps one space between them (نجيب محفوظ), to be shown as it is written;
+ * the space is dropped from the played form, since a crossword has no blank cell
+ * inside a word. Letter limits count letters, not spaces.
  */
 
 export const MIN_LETTERS = 2;
@@ -17,7 +19,7 @@ const ARABIC_LETTER = /^[\u0621-\u063A\u0641-\u064A\u0671]$/u;
 
 /** The answer as it is stored and compared. */
 export function normalizeAnswer(raw) {
-  return String(raw ?? '').replace(MARKS, '').replace(/\s+/g, '');
+  return String(raw ?? '').replace(MARKS, '').trim().replace(/\s+/g, ' ');
 }
 
 /**
@@ -42,7 +44,7 @@ const FOLDABLE = new RegExp(`[${[...PLAY_FOLDS.keys()].join('')}]`, 'g');
 
 /** The answer as it is played: laid out, crossed and sent to the app. */
 export function foldForPlay(answer) {
-  return String(answer ?? '').replace(FOLDABLE, (ch) => PLAY_FOLDS.get(ch));
+  return String(answer ?? '').replace(/\s+/g, '').replace(FOLDABLE, (ch) => PLAY_FOLDS.get(ch));
 }
 
 /** One entry per grid cell. */
@@ -52,7 +54,7 @@ export function letters(answer) {
 
 /** Why an answer cannot be used, or null when it can. Expects a normalised answer. */
 export function answerProblem(answer) {
-  const list = letters(answer ?? '');
+  const list = letters(String(answer ?? '').replace(/ /g, ''));
   if (list.length === 0) return 'An answer is required.';
   if (!list.every((ch) => ARABIC_LETTER.test(ch))) {
     return 'An answer may only contain Arabic letters — no Latin letters, digits or punctuation.';

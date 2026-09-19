@@ -3,10 +3,13 @@ import { test } from 'node:test';
 
 import { answerProblem, foldForPlay, letters, normalizeAnswer } from '../src/arabic.js';
 
-test('strips diacritics, tatweel and spaces from an answer', () => {
+test('strips diacritics and tatweel, and keeps one space between words', () => {
   assert.equal(normalizeAnswer('  المَغْرِب '), 'المغرب');
   assert.equal(normalizeAnswer('كـــرة'), 'كرة');
-  assert.equal(normalizeAnswer('كرة القدم'), 'كرةالقدم');
+  assert.equal(normalizeAnswer(' نجيب   محفوظ '), 'نجيب محفوظ');
+  assert.equal(foldForPlay('نجيب محفوظ'), 'نجيبمحفوظ', 'played without the space');
+  assert.equal(answerProblem('نجيب محفوظ'), null);
+  assert.match(answerProblem('ابراهيم عبد القادر المازني'), /at most/, 'the limit counts letters, not spaces');
 });
 
 test('splits an answer into one letter per cell', () => {

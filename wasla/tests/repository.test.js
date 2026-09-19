@@ -369,3 +369,15 @@ test('a new level can be made from selected questions, and questions can leave e
   assert.equal(repo.levelsUsing(ids[0]).length, 0);
   assert.match(repo.newLevelFromQuestions([]).error, /Select/);
 });
+
+test('a two-word answer keeps its space to show and is played without it', () => {
+  const { question } = repo.createQuestion({ title: 'أدب وشعراء', answer: ' نجيب  محفوظ ', clue: 'صاحب الثلاثية' });
+  const other = repo.createQuestion({ title: 'أدب وشعراء', answer: 'بيت', clue: 'منزل' }).question;
+  const level = repo.createLevel();
+  repo.setLevelQuestions(level.id, [question.id, other.id]);
+
+  assert.equal(question.answer, 'نجيب محفوظ');
+  assert.equal(question.playAnswer, 'نجيبمحفوظ');
+  const words = [...repo.getLevel(level.id).words, ...repo.getLevel(level.id).unplaced];
+  assert.ok(words.some((w) => w.playAnswer === 'نجيبمحفوظ'));
+});

@@ -26,7 +26,7 @@
                   <label class="form-label small fw-semibold" for="answer">Answer</label>
                   <input class="form-control wz-answer-input" id="answer" name="answer" dir="rtl" lang="ar"
                          value="<%= question.answer %>" maxlength="40" required data-letters="#answerLetters" data-play="#answerPlay">
-                  <div class="form-text">Arabic letters only, 2 to 12. Harakat and spaces are removed. <span id="answerLetters" class="wz-letters"></span></div>
+                  <div class="form-text">Arabic letters only, 2 to 12 (spaces between words don't count). Harakat are removed; a name like نجيب محفوظ keeps its space. <span id="answerLetters" class="wz-letters"></span></div>
                   <div class="wz-play" id="answerPlay" lang="ar" dir="rtl" aria-live="polite">
                     <% if (question.answer) { %>يُلعب: <span class="wz-answer"><%= question.playAnswer %></span><% } %>
                   </div>
