@@ -8,10 +8,11 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
+import { MIN_CATEGORIES, planLevels } from '../level-builder.js';
 import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
 import { previewLevel, previewQuestion, STARTING_COINS } from '../preview.js';
-import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM } from '../repository.js';
+import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM, truthy } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerDailyGames } from './admin-daily-games.js';
 import { registerDays } from './admin-days.js';
@@ -413,8 +414,70 @@ export function adminRouter({
 
   // ── Levels ────────────────────────────────────────────────────────────────
 
+  /** The free questions (in no level, picture in hand) each category can still give a level. */
+  const freeQuestions = () => repo.listQuestions({ unused: true }).filter((q) => q.title && !q.needsPicture);
+
   router.get('/levels', (_req, res) => {
-    res.render('levels', { title: 'Levels', levels: repo.listLevels() });
+    const free = freeQuestions();
+    const counts = new Map();
+    free.forEach((q) => {
+      const row = counts.get(q.title) ?? { name: q.title, total: 0, easy: 0, medium: 0, hard: 0 };
+      row.total += 1;
+      if (DIFFICULTIES.includes(q.difficulty)) row[q.difficulty] += 1;
+      counts.set(q.title, row);
+    });
+    res.render('levels', {
+      title: 'Levels',
+      levels: repo.listLevels(),
+      categories: [...counts.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'ar')),
+      difficulties: DIFFICULTIES,
+      minCategories: MIN_CATEGORIES,
+    });
+  });
+
+  /**
+   * Builds levels on their own: one question from each chosen category, only from
+   * questions no level uses, and only sets whose words cross.
+   */
+  router.post('/levels/generate', (req, res) => {
+    const chosen = [].concat(req.body.categories ?? []).map((name) => String(name).trim()).filter(Boolean);
+    const difficulty = String(req.body.difficulty ?? '').trim();
+    const count = Math.min(20, Math.max(1, Math.round(Number(req.body.count)) || 1));
+    const publish = truthy(req.body.publish);
+    if (difficulty && !DIFFICULTIES.includes(difficulty)) {
+      req.flash('danger', `The difficulty is one of: ${DIFFICULTIES.join(', ')}.`);
+      return res.redirect('/admin/levels');
+    }
+
+    const free = freeQuestions().filter((q) => !difficulty || q.difficulty === difficulty);
+    const { levels, ranOutOf, noCrossing, error } = planLevels({
+      questions: free, categories: chosen, count, seed: Date.now() % 1000000,
+    });
+    if (error) {
+      req.flash('danger', error);
+      return res.redirect('/admin/levels');
+    }
+
+    const made = repo.transaction(() => levels.map((words) => {
+      const result = repo.newLevelFromQuestions(words.map((w) => w.id));
+      if (result.error) return null;
+      if (difficulty) repo.setLevelDetails(result.level.id, { difficulty });
+      if (publish) repo.setPublished(result.level.id, true);
+      return repo.getLevel(result.level.id);
+    }).filter(Boolean));
+
+    // Why fewer levels than asked for, in the words the panel uses elsewhere.
+    const short = made.length < count
+      ? ranOutOf ? ` No free questions left in ${ranOutOf}.`
+        : noCrossing ? ' The questions left do not cross, so no more levels could be built.' : ''
+      : '';
+    if (!made.length) {
+      req.flash('warning', `No level could be built.${short}`);
+      return res.redirect('/admin/levels');
+    }
+    const names = made.length === 1 ? made[0].name : `${made[0].name} – ${made[made.length - 1].name}`;
+    req.flash('success', `Generated ${made.length} level(s): ${names}${publish ? ', published' : ' as drafts'}.${short}`);
+    res.redirect('/admin/levels');
   });
 
   router.post('/levels/order-by-difficulty', (req, res) => {

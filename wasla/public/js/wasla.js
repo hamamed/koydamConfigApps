@@ -137,6 +137,29 @@
     paint();
   });
 
+  // ── Generate levels ───────────────────────────────────────────────────────
+  // The count beside a category is how many free questions it has at the chosen
+  // difficulty, so it is clear before generating which category will run out first.
+  document.querySelectorAll('[data-generator]').forEach((form) => {
+    const difficulty = form.querySelector('[data-generator-difficulty]');
+    const categories = [...form.querySelectorAll('[data-generator-category]')];
+    if (!difficulty) return;
+
+    difficulty.addEventListener('change', () => {
+      const level = difficulty.value || 'any';
+      categories.forEach((box) => {
+        const free = Number(box.dataset[`free${level[0].toUpperCase()}${level.slice(1)}`] ?? 0);
+        const label = box.closest('label');
+        const tag = label?.querySelector('[data-generator-free]');
+        if (tag) tag.textContent = free;
+        // Nothing free at this difficulty: the category cannot be part of a level.
+        box.disabled = free === 0;
+        if (free === 0) box.checked = false;
+        label?.classList.toggle('is-disabled', free === 0);
+      });
+    });
+  });
+
   // ── Question picker ───────────────────────────────────────────────────────
   document.querySelectorAll('[data-picker]').forEach((picker) => {
     const filter = picker.querySelector('[data-picker-filter]');
