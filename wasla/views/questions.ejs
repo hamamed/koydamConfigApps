@@ -60,9 +60,10 @@
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="remove" data-bulk-button>
               <i data-lucide="log-out" width="14" height="14" class="me-1"></i>Out of levels</button>
             <div class="wz-bulk-group">
-              <input class="form-control form-control-sm wz-bulk-field" name="title" list="bulkTitles" maxlength="40" dir="auto"
-                     placeholder="New title" aria-label="New title">
-              <datalist id="bulkTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
+              <select class="form-select form-select-sm wz-bulk-field wz-ar" name="title" aria-label="New title">
+                <option value="">Title…</option>
+                <% categories.forEach((c) => { %><option value="<%= c.name %>"><%= c.name %></option><% }) %>
+              </select>
               <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="title" data-bulk-button>
                 <i data-lucide="tag" width="14" height="14" class="me-1"></i>Set title</button>
             </div>
