@@ -354,3 +354,31 @@
 .wz-credits { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .95rem; }
 .wz-credits th, .wz-credits td { text-align: start; padding: .4rem .6rem; border-bottom: 1px solid #e5e7eb; }
 .wz-credits th { font-weight: 700; }
+
+/* The bulk bar's pickers (level, title) dressed like the outline buttons beside them. */
+.wz-bulk .form-select {
+  background-color: #fff;
+  border: 1px solid var(--kd-line-strong);
+  border-radius: 10px;
+  color: var(--kd-ink);
+  font-size: .875rem;
+  font-weight: 550;
+  min-height: 2.05rem;
+  padding-block: .3rem;
+  padding-inline-start: .75rem;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color var(--kd-fast) var(--kd-ease), border-color var(--kd-fast) var(--kd-ease);
+}
+.wz-bulk .form-select {
+  /* The chevron, drawn in the ink colour, on the side the text ends. */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%230b1220' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-size: 12px 10px;
+  background-position: right .7rem center;
+  padding-inline-end: 2rem;
+  appearance: none;
+}
+.wz-bulk .form-select.wz-ar { background-position: left .7rem center; }
+.wz-bulk .form-select:hover { background-color: var(--kd-surface); border-color: var(--kd-ink); }
+.wz-bulk .form-select:focus-visible { border-color: var(--kd-ink); box-shadow: 0 0 0 3px rgba(11, 18, 32, .12); outline: none; }
