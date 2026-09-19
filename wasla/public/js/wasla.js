@@ -143,30 +143,60 @@
     const count = picker.querySelector('[data-picker-count]');
     const items = [...picker.querySelectorAll('[data-picker-item]')];
 
-    filter?.addEventListener('input', () => {
-      const term = filter.value.trim();
-      items.forEach((item) => { item.hidden = term !== '' && !item.dataset.text.includes(term); });
-    });
+    const chips = [...picker.querySelectorAll('[data-picker-category]')];
+    // '' is the All chip: every category shows.
+    let category = '';
+
     const groups = {
       in: picker.querySelector('[data-picker-group="in"]'),
       available: picker.querySelector('[data-picker-group="available"]'),
     };
-    const refreshGroups = () => {
+    const refreshGroups = (filtering = false) => {
       Object.values(groups).forEach((group) => {
         if (!group) return;
-        const shown = group.querySelectorAll('[data-picker-item]').length;
+        const shown = [...group.querySelectorAll('[data-picker-item]')].filter((item) => !item.hidden).length;
         const counter = group.querySelector('[data-picker-group-count]');
         const empty = group.querySelector('[data-picker-empty]');
         if (counter) counter.textContent = shown;
-        if (empty) empty.hidden = shown > 0;
+        if (!empty) return;
+        // An empty group under a filter means "none here", not "none at all".
+        if (!empty.dataset.emptyDefault) empty.dataset.emptyDefault = empty.textContent.trim();
+        empty.textContent = filtering && empty.dataset.emptyFiltered ? empty.dataset.emptyFiltered : empty.dataset.emptyDefault;
+        empty.hidden = shown > 0;
       });
     };
+
+    /** Shows the questions matching both the typed words and the chosen category. */
+    const applyFilter = () => {
+      const term = filter ? filter.value.trim() : '';
+      items.forEach((item) => {
+        const matchesTerm = term === '' || item.dataset.text.includes(term);
+        const matchesCategory = category === '' || item.dataset.title === category;
+        item.hidden = !(matchesTerm && matchesCategory);
+      });
+      refreshGroups(term !== '' || category !== '');
+    };
+
+    filter?.addEventListener('input', applyFilter);
+
+    chips.forEach((chip) => chip.addEventListener('click', () => {
+      category = chip.dataset.pickerCategory;
+      chips.forEach((other) => {
+        const on = other === chip;
+        other.classList.toggle('btn-kd', on);
+        other.classList.toggle('btn-kd-outline', !on);
+        other.setAttribute('aria-pressed', String(on));
+      });
+      applyFilter();
+    }));
     picker.addEventListener('change', (event) => {
       count.textContent = picker.querySelectorAll('input[name="questions"]:checked').length;
       // Ticking moves a question into the level's group; unticking moves it back to the available ones.
       const item = event.target.closest('[data-picker-item]');
       const target = event.target.checked ? groups.in : groups.available;
       if (item && target) target.appendChild(item);
+      // A question just ticked stays in view even when another category is chosen.
+      if (item && event.target.checked) item.hidden = false;
       refreshGroups();
     });
   });

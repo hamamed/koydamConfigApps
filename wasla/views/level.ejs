@@ -123,8 +123,25 @@
                 <a class="btn btn-sm btn-kd-outline text-nowrap" href="/admin/questions/new?level=<%= level.id %>">New question</a>
               </div>
               <%
+                // One chip per category among the questions offered here, biggest first, so a
+                // level can be built from one category without reading the whole list.
+                const counts = new Map();
+                questions.forEach((q) => { if (q.title) counts.set(q.title, (counts.get(q.title) ?? 0) + 1); });
+                const categories = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ar'));
+              %>
+              <% if (categories.length > 1) { %>
+                <nav class="wz-categories" data-picker-categories aria-label="Categories">
+                  <button class="btn btn-sm btn-kd" type="button" data-picker-category="" aria-pressed="true">
+                    All <span class="wz-category-count"><%= questions.length %></span></button>
+                  <% categories.forEach(([name, count]) => { %>
+                    <button class="btn btn-sm btn-kd-outline wz-ar" type="button" data-picker-category="<%= name %>" aria-pressed="false">
+                      <%= name %> <span class="wz-category-count"><%= count %></span></button>
+                  <% }) %>
+                </nav>
+              <% } %>
+              <%
                 const pickItem = (q) => { %>
-                  <label class="wz-pick" data-picker-item data-text="<%= q.answer %> <%= q.clue %> <%= q.title %>">
+                  <label class="wz-pick" data-picker-item data-title="<%= q.title %>" data-text="<%= q.answer %> <%= q.clue %> <%= q.title %>">
                     <input class="form-check-input" type="checkbox" name="questions" value="<%= q.id %>" <%= chosen.has(q.id) ? 'checked' : '' %>>
                     <%- include('partials/qimage', { q, size: 'xs' }) %>
                     <span class="min-w-0">
@@ -139,12 +156,14 @@
               <div class="wz-picker">
                 <div class="wz-pick-group" data-picker-group="in">
                   <div class="ad-section-label d-flex align-items-center">In this level <span class="kd-tag ms-auto" data-picker-group-count><%= inLevel.length %></span></div>
-                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty <%= inLevel.length ? 'hidden' : '' %>>None yet — tick questions below to add them.</p>
+                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty data-empty-filtered="None from this category — its words are listed below."
+                     <%= inLevel.length ? 'hidden' : '' %>>None yet — tick questions below to add them.</p>
                   <% inLevel.forEach(pickItem) %>
                 </div>
                 <div class="wz-pick-group" data-picker-group="available">
                   <div class="ad-section-label d-flex align-items-center">Available to add <span class="kd-tag kd-tag-accent ms-auto" data-picker-group-count><%= available.length %></span></div>
-                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty <%= available.length ? 'hidden' : '' %>>No free questions: every question is already in a level. Add a new one.</p>
+                  <p class="kd-faint small m-0 wz-pick-empty" data-picker-empty data-empty-filtered="No free question matches this filter."
+                     <%= available.length ? 'hidden' : '' %>>No free questions: every question is already in a level. Add a new one.</p>
                   <% available.forEach(pickItem) %>
                 </div>
                 <p class="kd-faint small m-0">Questions used in other levels are not listed.</p>
