@@ -184,6 +184,12 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Question titles kept out of the daily word search. A title is a theme once it
 -- has enough questions; a row here skips it (matched on the trimmed title).
+-- The titles the panel offers for questions (src/titles.js). A question keeps its title as text.
+CREATE TABLE IF NOT EXISTS question_titles (
+  name        TEXT PRIMARY KEY,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
   title       TEXT PRIMARY KEY,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))

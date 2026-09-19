@@ -1,0 +1,72 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Titles',
+          subheading: titles.length + ' titles · ' + used + ' with questions — shown above each question in the app, and offered in every title box'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form class="ad-card mb-3" method="post" action="/admin/titles">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <i data-lucide="plus" width="16" height="16"></i>
+          <span class="fw-semibold">Add titles</span>
+        </div>
+        <div class="ad-card-body d-flex flex-wrap gap-2 align-items-start">
+          <textarea class="form-control wz-ar wz-titles-add" name="names" rows="2" dir="rtl" required
+                    placeholder="سيارات&#10;حيوانات أليفة، ماركات ساعات"></textarea>
+          <button class="btn btn-kd" type="submit">Add</button>
+          <div class="form-text w-100">One per line, or separated by commas. Up to 40 characters each.</div>
+        </div>
+      </form>
+
+      <div class="ad-card">
+        <div class="ad-table-wrap">
+          <table class="ad-table">
+            <thead><tr><th>Title</th><th>Questions</th><th>Rename</th><th></th></tr></thead>
+            <tbody>
+              <% titles.forEach((t) => { %>
+                <tr>
+                  <td>
+                    <span class="kd-tag wz-ar"><%= t.name %></span>
+                    <% if (!t.listed) { %><span class="kd-tag kd-tag-warn" title="Used on questions but not on the list; adding or renaming puts it on the list">not on list</span><% } %>
+                  </td>
+                  <td>
+                    <% if (t.questions) { %>
+                      <a href="/admin/questions?title=<%= encodeURIComponent(t.name) %>"><%= t.questions %></a>
+                    <% } else { %><span class="kd-faint">0</span><% } %>
+                  </td>
+                  <td>
+                    <form class="d-flex gap-1 m-0" method="post" action="/admin/titles/rename">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="from" value="<%= t.name %>">
+                      <input class="form-control form-control-sm wz-ar wz-title-rename" name="to" value="<%= t.name %>" maxlength="40" dir="rtl"
+                             aria-label="New name for <%= t.name %>">
+                      <button class="btn btn-sm btn-kd-outline" type="submit">Save</button>
+                    </form>
+                  </td>
+                  <td class="text-end text-nowrap">
+                    <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/new?title=<%= encodeURIComponent(t.name) %>">
+                      <i data-lucide="plus" width="14" height="14" class="me-1"></i>Question
+                    </a>
+                    <% if (!t.questions && t.listed) { %>
+                      <form class="d-inline m-0" method="post" action="/admin/titles/delete" data-confirm="Remove “<%= t.name %>” from the list?">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="name" value="<%= t.name %>">
+                        <button class="btn btn-sm btn-kd-ghost" type="submit" aria-label="Remove <%= t.name %>"><i data-lucide="trash-2" width="14" height="14"></i></button>
+                      </form>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

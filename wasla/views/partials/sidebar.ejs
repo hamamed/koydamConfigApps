@@ -20,6 +20,10 @@
       <i data-lucide="message-circle-question" width="17" height="17"></i>
       <span>Questions</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/titles') ? 'is-active' : '' %>" href="/admin/titles">
+      <i data-lucide="tag" width="17" height="17"></i>
+      <span>Titles</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
       <i data-lucide="calendar-days" width="17" height="17"></i>
       <span>Daily</span>

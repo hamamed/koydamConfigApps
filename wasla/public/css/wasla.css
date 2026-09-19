@@ -339,3 +339,8 @@
 .wz-import-clue { min-width: 16rem; resize: vertical; }
 .wz-import-level { width: 4.5rem; }
 .wz-row-remove { padding: .1rem .3rem; }
+
+/* Titles page. */
+.wz-titles-add { max-width: 28rem; }
+.wz-title-rename { width: 12rem; }
+.wz-title-filter { width: auto; min-width: 9rem; }

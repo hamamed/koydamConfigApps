@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'Questions',
-          subheading: questions.length + ' question' + (questions.length === 1 ? '' : 's') + (unused ? ' not in any level' : ''),
+          subheading: questions.length + ' question' + (questions.length === 1 ? '' : 's') + (titleFilter ? ' titled ' + titleFilter : '') + (unused ? ' not in any level' : ''),
           actions: '<a class="btn btn-kd btn-sm" href="/admin/questions/new">New question</a>'
         }) %>
     <div class="ad-content">
@@ -16,19 +16,24 @@
           <input class="form-check-input" type="checkbox" id="unused" name="unused" value="1" <%= unused ? 'checked' : '' %>>
           <label class="form-check-label small" for="unused">Only questions not in a level</label>
         </div>
+        <select class="form-select form-select-sm wz-title-filter wz-ar" name="title" aria-label="Title">
+          <option value="">All titles</option>
+          <% titles.forEach((t) => { %><option value="<%= t %>" <%= t === titleFilter ? 'selected' : '' %>><%= t %></option><% }) %>
+        </select>
         <button class="btn btn-kd-outline btn-sm" type="submit">Filter</button>
       </form>
 
       <% if (!questions.length) { %>
         <div class="ad-card ad-empty">
           <i data-lucide="message-circle-question"></i>
-          <p class="mb-2">No questions<%= search || unused ? ' match' : ' yet' %>.</p>
+          <p class="mb-2">No questions<%= search || unused || titleFilter ? ' match' : ' yet' %>.</p>
           <a class="btn btn-kd btn-sm" href="/admin/questions/new">Add the first one</a>
         </div>
       <% } else { %>
         <form id="bulkForm" class="ad-card wz-bulk mb-3" method="post" action="/admin/questions/bulk" data-question-bulk>
           <input type="hidden" name="q" value="<%= search %>">
           <% if (unused) { %><input type="hidden" name="unused" value="1"><% } %>
+          <% if (titleFilter) { %><input type="hidden" name="titleFilter" value="<%= titleFilter %>"><% } %>
           <div class="d-flex flex-wrap gap-2 align-items-center">
             <strong class="small"><span data-bulk-count>0</span> selected</strong>
             <select class="form-select form-select-sm wz-bulk-action" name="action" data-bulk-action aria-label="Action">

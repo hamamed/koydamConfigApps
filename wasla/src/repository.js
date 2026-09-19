@@ -134,12 +134,15 @@ export function createRepository(db) {
     SELECT q.*, (SELECT COUNT(*) FROM level_words lw WHERE lw.question_id = q.id) AS level_count
     FROM questions q`;
 
-  function listQuestions({ search = '', unused = false } = {}) {
+  /** `title` keeps only questions with exactly that title. */
+  function listQuestions({ search = '', unused = false, title = '' } = {}) {
     const term = `%${String(search).trim()}%`;
+    const exact = String(title ?? '').trim();
     return db.prepare(`${QUESTION_SELECT}
       WHERE (q.answer LIKE @term OR q.clue LIKE @term OR IFNULL(q.title, '') LIKE @term)
+      ${exact ? 'AND trim(q.title) = @exact' : ''}
       ${unused ? 'AND NOT EXISTS (SELECT 1 FROM level_words lw WHERE lw.question_id = q.id)' : ''}
-      ORDER BY q.id DESC`).all({ term }).map(toQuestion);
+      ORDER BY q.id DESC`).all({ term, exact }).map(toQuestion);
   }
 
   function getQuestion(id) {

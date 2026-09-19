@@ -28,6 +28,7 @@ import { errorHandler, notFound } from './middleware/errors.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { createPendingImports } from './pending-imports.js';
 import { createRepository } from './repository.js';
+import { createTitles } from './titles.js';
 import { createSiteSettings } from './site-settings.js';
 import { createWordSearch } from './wordsearch-daily.js';
 import { createWordSearchSchedule } from './wordsearch-schedule.js';
@@ -52,6 +53,7 @@ const wordSearch = createWordSearch(db, { appConfig });
 const wordSearchDays = createWordSearchSchedule(db, { wordSearch, appConfig });
 const dailyGames = createDailyGames(db, { appConfig });
 const profiles = createProfiles(db);
+const titles = createTitles(db);
 
 const app = express();
 
@@ -109,7 +111,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles, titles,
 }));
 app.get('/', (_req, res) => res.redirect('/admin'));
 app.get('/health', (_req, res) => res.json({ ok: true }));

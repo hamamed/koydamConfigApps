@@ -23,7 +23,7 @@ const decodeName = (name) => {
 };
 
 /** Bulk import: upload a CSV with media → preview → confirm or cancel. */
-export function registerImport(router, { repo, images, audio, pendingImports }) {
+export function registerImport(router, { repo, images, audio, pendingImports, titleNames }) {
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
@@ -114,7 +114,7 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
       maxMedia: MAX_IMPORT_MEDIA,
       maxPaste: MAX_PASTE_CHARS,
       orders: PASTE_ORDERS,
-      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+      titles: titleNames(),
       levelCount: repo.listLevels().length,
     });
   });
@@ -177,7 +177,7 @@ export function registerImport(router, { repo, images, audio, pendingImports }) 
     res.render('import-preview', {
       // What each row says now, for the fields the admin can change here.
       values: new Map(payload.rows.map(({ row, values }) => [row, { ...values, title: values.title || values.category || '' }])),
-      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+      titles: titleNames(),
       title: 'Import preview',
       id: req.params.id,
       fileName: payload.fileName,

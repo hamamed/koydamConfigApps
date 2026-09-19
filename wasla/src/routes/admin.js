@@ -18,6 +18,7 @@ import { registerPlayers } from './admin-players.js';
 import { registerProfiles } from './admin-profiles.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
+import { registerTitles } from './admin-titles.js';
 import { registerWordSearch } from './admin-wordsearch.js';
 
 const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
@@ -27,9 +28,13 @@ const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles, titles = null,
 }) {
   const router = express.Router();
+
+  /** The titles every title box offers: the Titles list, or (without it) those on questions. */
+  const titleNames = () => (titles ? titles.names()
+    : [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort());
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -102,13 +107,15 @@ export function adminRouter({
   router.get('/questions', (req, res) => {
     const search = String(req.query.q ?? '');
     const unused = req.query.unused === '1';
+    const titleFilter = String(req.query.title ?? '').trim();
     res.render('questions', {
       title: 'Questions',
-      questions: repo.listQuestions({ search, unused }),
+      questions: repo.listQuestions({ search, unused, title: titleFilter }),
       search,
       unused,
       levels: repo.listLevels(),
-      titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+      titles: titleNames(),
+      titleFilter,
     });
   });
 
@@ -117,6 +124,7 @@ export function adminRouter({
     const params = new URLSearchParams();
     if (req.body.q) params.set('q', String(req.body.q));
     if (req.body.unused === '1') params.set('unused', '1');
+    if (req.body.titleFilter) params.set('title', String(req.body.titleFilter));
     const back = `/admin/questions${params.size ? `?${params}` : ''}`;
     const ids = req.body.ids ?? [];
     if (!(Array.isArray(ids) ? ids.length : ids)) {
@@ -187,10 +195,12 @@ export function adminRouter({
     levels: question.id ? repo.levelsUsing(question.id) : [],
     levelId: extra.levelId ?? '',
     // Titles already in use, offered for reuse.
-    titles: [...new Set(repo.listQuestions().map((q) => q.title).filter(Boolean))].sort(),
+    titles: titleNames(),
   });
 
-  router.get('/questions/new', (req, res) => renderForm(res, blankQuestion, { levelId: req.query.level }));
+  // `?title=حيوانات` (from the Titles page) starts the new question with that title.
+  router.get('/questions/new', (req, res) => renderForm(res, { ...blankQuestion, title: String(req.query.title ?? '').trim().slice(0, 40) },
+    { levelId: req.query.level }));
 
   router.get('/questions/:id', (req, res, next) => {
     const question = repo.getQuestion(Number(req.params.id));
@@ -416,7 +426,8 @@ export function adminRouter({
   });
 
   registerStats(router, { events });
-  registerImport(router, { repo, images, audio, pendingImports });
+  registerImport(router, { repo, images, audio, pendingImports, titleNames });
+  if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });
   if (profiles) registerProfiles(router, { profiles });
