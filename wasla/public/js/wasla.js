@@ -143,6 +143,10 @@
   document.querySelectorAll('[data-generator]').forEach((form) => {
     const difficulty = form.querySelector('[data-generator-difficulty]');
     const categories = [...form.querySelectorAll('[data-generator-category]')];
+    // Nothing ticked means every category, so clearing is how you go back to that.
+    form.querySelector('[data-generator-clear]')?.addEventListener('click', () => {
+      categories.forEach((box) => { box.checked = false; });
+    });
     if (!difficulty) return;
 
     difficulty.addEventListener('change', () => {

@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test';
 
 import express from 'express';
 
-import { createAppConfig } from '../src/app-config.js';
+import { DEFAULT_CONFIG, createAppConfig } from '../src/app-config.js';
 import { createDaily } from '../src/daily.js';
 import { createDailyGames } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
@@ -311,7 +311,9 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.match(res.headers.get('cache-control'), /max-age=60/);
-  assert.deepEqual([body.date, body.coins, body.allBonus], ['2026-09-18', 15, 50]);
+  // The rewards are the ones in the config, not numbers copied into the test.
+  assert.deepEqual([body.date, body.coins, body.allBonus],
+    ['2026-09-18', DEFAULT_CONFIG.dailyGameCoins, DEFAULT_CONFIG.dailyAllGamesBonus]);
   // Only two titles have questions here: never enough for four groups.
   assert.equal(body.groups, null);
   assert.equal(body.guess.tries, 6);

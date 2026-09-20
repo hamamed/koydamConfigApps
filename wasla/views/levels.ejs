@@ -18,18 +18,22 @@
         </div>
       </div>
 
-      <%# One question from each ticked category, only from questions no level uses. %>
+      <%# Ten questions a level, categories drawn at random, معلومات عامة twice. %>
       <% if (categories.length >= minCategories) { %>
         <form class="ad-card mb-3" method="post" action="/admin/levels/generate" data-generator>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="ad-card-head d-flex align-items-center gap-2">
             <i data-lucide="wand-sparkles" width="16" height="16"></i>
             <span class="fw-semibold">Generate levels</span>
-            <span class="small kd-faint ms-auto">One question from each category you tick</span>
+            <span class="small kd-faint ms-auto">Categories drawn at random, <span class="wz-ar"><%= mainCategory %></span> twice a level</span>
           </div>
           <div class="ad-card-body d-grid gap-3">
             <div>
-              <div class="ad-section-label">Categories</div>
+              <div class="ad-section-label d-flex align-items-center gap-2">
+                <span>Categories to draw from</span>
+                <span class="small kd-faint">tick none to use them all</span>
+                <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-generator-clear>Clear</button>
+              </div>
               <div class="wz-generate-categories">
                 <% categories.forEach((c) => { %>
                   <label class="wz-generate-category">
@@ -47,13 +51,18 @@
               <label class="wz-generate-field">
                 <span class="ad-section-label">Difficulty</span>
                 <select class="form-select form-select-sm" name="difficulty" data-generator-difficulty>
-                  <option value="">Any</option>
+                  <option value="">Mixed — easy, then medium, then hard</option>
                   <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= d[0].toUpperCase() + d.slice(1) %></option><% }) %>
                 </select>
               </label>
               <label class="wz-generate-field">
                 <span class="ad-section-label">How many levels</span>
-                <input class="form-control form-control-sm" type="number" name="count" value="5" min="1" max="20">
+                <input class="form-control form-control-sm" type="number" name="count" value="10" min="1" max="<%= maxGenerated %>">
+              </label>
+              <label class="wz-generate-field">
+                <span class="ad-section-label">Questions a level</span>
+                <input class="form-control form-control-sm" type="number" name="size" value="<%= levelSize %>"
+                       min="<%= minCategories %>" max="<%= maxLevelSize %>">
               </label>
               <label class="form-check mb-1">
                 <input class="form-check-input" type="checkbox" name="publish" value="1">
@@ -64,8 +73,9 @@
               </button>
             </div>
             <p class="small kd-faint m-0">
-              Each level takes one free question from every ticked category, and only words that cross are kept.
-              A question already in a level is never reused. The number beside a category is how many it has free.
+              Each level takes <%= mainSlots %> questions from <span class="wz-ar"><%= mainCategory %></span> and the rest
+              from other categories picked at random, so no two levels are the same mix. Only words that cross are kept,
+              and a question already in a level is never reused. The number beside a category is how many it has free.
             </p>
           </div>
         </form>

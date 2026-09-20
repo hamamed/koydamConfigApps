@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
-import { MIN_CATEGORIES, planLevels } from '../level-builder.js';
+import { LEVEL_SIZE, MAIN_CATEGORY, MAIN_SLOTS, MIN_CATEGORIES, planLevels } from '../level-builder.js';
 import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
 import { previewLevel, previewQuestion, STARTING_COINS } from '../preview.js';
@@ -26,6 +26,16 @@ import { registerTitles } from './admin-titles.js';
 import { registerWordSearch } from './admin-wordsearch.js';
 
 const megabytes = (bytes) => Math.round(bytes / 1024 / 1024) || 1;
+
+/** Levels one run of the generator may build, and the words one level may hold. */
+const MAX_GENERATED = 60;
+/** Above this the layout stops beam-searching, and the grids come out as chains. */
+const MAX_LEVEL_SIZE = 14;
+
+/** `total` split as evenly as possible into `parts`, the earlier parts taking the remainder. */
+function share(total, parts) {
+  return Array.from({ length: parts }, (_, i) => Math.floor(total / parts) + (i < total % parts ? 1 : 0));
+}
 
 /**
  * The panel: questions (with pictures, sounds and zoom), levels built from
@@ -435,36 +445,74 @@ export function adminRouter({
       categories: [...counts.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'ar')),
       difficulties: DIFFICULTIES,
       minCategories: MIN_CATEGORIES,
+      levelSize: LEVEL_SIZE,
+      maxLevelSize: MAX_LEVEL_SIZE,
+      maxGenerated: MAX_GENERATED,
+      mainCategory: MAIN_CATEGORY,
+      mainSlots: MAIN_SLOTS,
     });
   });
 
   /**
-   * Builds levels on their own: one question from each chosen category, only from
-   * questions no level uses, and only sets whose words cross.
+   * Builds levels on their own: ten questions each, from categories the generator
+   * draws at random with معلومات عامة taking two of the ten, only from questions no
+   * level uses, and only sets whose words cross.
+   *
+   * With no difficulty picked the run is a spread — easy levels first, then medium,
+   * then hard — and each level is tagged with the difficulty its questions came from,
+   * which is the order players meet them in.
    */
   router.post('/levels/generate', (req, res) => {
     const chosen = [].concat(req.body.categories ?? []).map((name) => String(name).trim()).filter(Boolean);
     const difficulty = String(req.body.difficulty ?? '').trim();
-    const count = Math.min(20, Math.max(1, Math.round(Number(req.body.count)) || 1));
+    const count = Math.min(MAX_GENERATED, Math.max(1, Math.round(Number(req.body.count)) || 1));
+    const size = Math.min(MAX_LEVEL_SIZE, Math.max(MIN_CATEGORIES, Math.round(Number(req.body.size)) || LEVEL_SIZE));
     const publish = truthy(req.body.publish);
     if (difficulty && !DIFFICULTIES.includes(difficulty)) {
       req.flash('danger', `The difficulty is one of: ${DIFFICULTIES.join(', ')}.`);
       return res.redirect('/admin/levels');
     }
 
-    const free = freeQuestions().filter((q) => !difficulty || q.difficulty === difficulty);
-    const { levels, ranOutOf, noCrossing, error } = planLevels({
-      questions: free, categories: chosen, count, seed: Date.now() % 1000000, usedAnswers: usedAnswers(),
+    const free = freeQuestions();
+    const wanted = difficulty ? [difficulty] : DIFFICULTIES;
+    const taken = usedAnswers();
+    const planned = [];
+    let ranOutOf = null;
+    let ranOut = false;
+    let noCrossing = false;
+    let error = null;
+
+    // Each difficulty is planned on its own so a level's words are all of one grade;
+    // the words already spent carry from one round to the next, so none is used twice.
+    share(count, wanted.length).forEach((want, at) => {
+      if (!want || error) return;
+      const grade = wanted[at];
+      const plan = planLevels({
+        questions: free.filter((q) => q.difficulty === grade),
+        categories: chosen,
+        count: want,
+        size,
+        seed: (Date.now() + at) % 1000000,
+        usedAnswers: taken,
+      });
+      if (plan.error) { error = plan.error; return; }
+      plan.levels.forEach((words) => {
+        words.forEach((word) => taken.push(word.playAnswer));
+        planned.push({ words, difficulty: grade });
+      });
+      ranOutOf = ranOutOf ?? plan.ranOutOf;
+      ranOut = ranOut || plan.ranOut;
+      noCrossing = noCrossing || plan.noCrossing;
     });
     if (error) {
       req.flash('danger', error);
       return res.redirect('/admin/levels');
     }
 
-    const made = repo.transaction(() => levels.map((words) => {
+    const made = repo.transaction(() => planned.map(({ words, difficulty: grade }) => {
       const result = repo.newLevelFromQuestions(words.map((w) => w.id));
       if (result.error) return null;
-      if (difficulty) repo.setLevelDetails(result.level.id, { difficulty });
+      repo.setLevelDetails(result.level.id, { difficulty: grade });
       if (publish) repo.setPublished(result.level.id, true);
       return repo.getLevel(result.level.id);
     }).filter(Boolean));
@@ -472,14 +520,15 @@ export function adminRouter({
     // Why fewer levels than asked for, in the words the panel uses elsewhere.
     const short = made.length < count
       ? ranOutOf ? ` No free questions left in ${ranOutOf}.`
-        : noCrossing ? ' The questions left do not cross, so no more levels could be built.' : ''
+        : ranOut ? ' No free questions left for another level.'
+          : noCrossing ? ' The questions left do not cross, so no more levels could be built.' : ''
       : '';
     if (!made.length) {
       req.flash('warning', `No level could be built.${short}`);
       return res.redirect('/admin/levels');
     }
     const names = made.length === 1 ? made[0].name : `${made[0].name} – ${made[made.length - 1].name}`;
-    req.flash('success', `Generated ${made.length} level(s): ${names}${publish ? ', published' : ' as drafts'}.${short}`);
+    req.flash('success', `Generated ${made.length} level(s) of ${size}: ${names}${publish ? ', published' : ' as drafts'}.${short}`);
     res.redirect('/admin/levels');
   });
 
