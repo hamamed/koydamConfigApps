@@ -11,7 +11,7 @@
 
 import { letters } from './arabic.js';
 
-const ATTEMPTS = 60;
+const ATTEMPTS = 12;
 /**
  * What one crossing is worth against one cell of grid area when two layouts of the
  * same words are compared. A crossed letter is a free hint — the player reads it
@@ -129,6 +129,35 @@ class Board {
     return height * width + Math.abs(height - width) * 2;
   }
 
+  /** The best few spots crossing an existing word, most crossings first. */
+  spotsFor(word, limit) {
+    const list = letters(word.answer);
+    const found = [];
+    for (const [k, cell] of this.cells) {
+      const [row, col] = k.split(',').map(Number);
+      for (let i = 0; i < list.length; i++) {
+        if (list[i] !== cell.letter) continue;
+        for (const direction of ['across', 'down']) {
+          if (cell.directions.has(direction)) continue;
+          const r = direction === 'down' ? row - i : row;
+          const c = direction === 'across' ? col - i : col;
+          const crossings = this.fit(word, r, c, direction);
+          if (crossings < 1) continue;
+          found.push({ row: r, col: c, direction, crossings, score: crossings * 100 - this.areaWith(word, r, c, direction) });
+        }
+      }
+    }
+    found.sort((a, b) => b.crossings - a.crossings || b.score - a.score);
+    // The same square can be reached twice; one entry per place is enough.
+    const seen = new Set();
+    return found.filter((spot) => {
+      const k = `${spot.row},${spot.col},${spot.direction}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, limit);
+  }
+
   /** The best spot crossing an existing word, or null. */
   bestSpot(word) {
     const list = letters(word.answer);
@@ -216,6 +245,32 @@ function densify(board, byId, rounds = 3) {
   return current;
 }
 
+/**
+ * A grid being filled, for a caller that chooses words as it goes.
+ *
+ * The level generator uses it to ask "which of these answers would cross what is
+ * already down, and where" — picking words to fit the grid, rather than laying
+ * out words already picked.
+ */
+export function createBoard() {
+  const board = new Board();
+  return {
+    place: (word, spot) => board.place(word, spot.row, spot.col, spot.direction),
+    start: (word) => board.place(word, 0, 0, 'across'),
+    bestSpot: (word) => board.bestSpot(word),
+    /** Crossings the word would make right there, or -1 when it cannot go there. */
+    fitAt: (word, spot) => board.fit(word, spot.row, spot.col, spot.direction),
+    /** Every letter on the board, keyed "row,col". */
+    lettersOn: () => new Map([...board.cells].map(([k, cell]) => [k, cell.letter])),
+    get crossings() { return board.crossings; },
+    get placements() { return [...board.placements]; },
+    get size() {
+      const b = board.bounds;
+      return b ? { rows: b.bottom - b.top + 1, cols: b.right - b.left + 1 } : { rows: 0, cols: 0 };
+    },
+  };
+}
+
 function attempt(order) {
   const board = new Board();
   const [first, ...rest] = order;
@@ -239,6 +294,54 @@ function attempt(order) {
     pending = pending.filter((word) => word !== choice.word);
   }
   return { board, unplaced: pending };
+}
+
+/**
+ * Keeps several half-built grids alive at once and grows them all.
+ *
+ * Placing words one after another is fast but blind: the first spot that works
+ * for an early word can leave every later word only one way in, which is how a
+ * grid ends up as a chain. Carrying the best `BEAM` boards forward lets a worse
+ * early placement prove itself later by letting two words cross the same one.
+ */
+const BEAM = 14;
+/** Up to this many words the beam runs; beyond it the quick pass is used. */
+const BEAM_LIMIT = 14;
+/** Spots tried per word per step: the best few by crossings are enough. */
+const BRANCH = 3;
+
+function beamAttempt(order) {
+  const byId = new Map(order.map((w) => [w.id, w]));
+  const first = new Board();
+  first.place(order[0], 0, 0, 'across');
+  let states = [{ board: first, left: order.slice(1) }];
+
+  while (states.some((state) => state.left.length)) {
+    const next = [];
+    for (const state of states) {
+      if (!state.left.length) { next.push(state); continue; }
+      for (const word of state.left) {
+        for (const spot of state.board.spotsFor(word, BRANCH)) {
+          const board = rebuild([...state.board.placements,
+            { id: word.id, row: spot.row, col: spot.col, direction: spot.direction }], byId);
+          next.push({ board, left: state.left.filter((w) => w !== word) });
+        }
+      }
+      // A word that fits nowhere leaves the board as it is; the state still counts.
+      if (!state.left.some((word) => state.board.spotsFor(word, 1).length)) next.push({ ...state, stuck: true });
+    }
+    if (!next.length) break;
+    const rank = (state) => {
+      const b = state.board.bounds;
+      const area = (b.bottom - b.top + 1) * (b.right - b.left + 1);
+      return state.board.placements.length * 1000 + state.board.crossings * CROSSING_WORTH - area;
+    };
+    states = next.sort((a, b) => rank(b) - rank(a)).slice(0, BEAM);
+    if (states.every((state) => state.stuck || !state.left.length)) break;
+  }
+
+  const best = states[0];
+  return { board: best.board, unplaced: best.left };
 }
 
 function better(a, b) {
@@ -267,7 +370,7 @@ export function generateLayout(words, { seed = 1 } = {}) {
   for (let n = 0; n < ATTEMPTS; n++) {
     // The first attempt is longest-first, the usual best start; the rest vary it.
     const order = n === 0 ? byLength : shuffled(byLength, rand);
-    const { board: placed, unplaced } = attempt(order);
+    const { board: placed, unplaced } = words.length <= BEAM_LIMIT ? beamAttempt(order) : attempt(order);
     const board = densify(placed, byId);
     const b = board.bounds;
     const result = {
