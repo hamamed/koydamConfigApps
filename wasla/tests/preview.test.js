@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { openDatabase } from '../src/db/index.js';
-import { BANK_SIZE, CONTENT_HEIGHT, letterBank, pictureBox, previewLevel, questionLayout, stageOf, tileSize } from '../src/preview.js';
+import { BANK_SIZE, CONTENT_HEIGHT, letterBank, pictureBox, previewLevel, previewQuestion, questionLayout, stageOf, tileSize } from '../src/preview.js';
 import { createRepository } from '../src/repository.js';
 
 test('tiles follow the app: at most 62 pt, fitting 358 × 569 with 5 pt gaps', () => {
@@ -92,4 +92,18 @@ test('a level preview carries each picture frame, and none for a text question',
   assert.deepEqual(picture.picture, pictureBox(sizes['wide.png'], picture.layout.stage, picture.layout.stageWidth));
   assert.ok(picture.picture.width > picture.layout.stage, 'a wide flag uses the card, not just the square');
   assert.equal(preview.words.find((w) => w.stage === 'text').picture, null);
+});
+
+test('a picture framed a little closer offers no way to pay for opening it out', () => {
+  const db = openDatabase(':memory:');
+  const repo = createRepository(db);
+  const framed = repo.createQuestion({
+    answer: 'كونان', clue: '', title: 'شخصيات كرتونية', type: 'image', imageFile: 'a.jpg', zoom: 1.3,
+  }).question;
+  const closeUp = repo.createQuestion({
+    answer: 'ثوم', clue: '', title: 'صورة مكبّرة', type: 'image', imageFile: 'b.jpg', zoom: 3.2,
+  }).question;
+  const helps = (question) => previewQuestion(question).helps.map((h) => h.kind);
+  assert.ok(!helps(framed).includes('unzoomImage'), 'a 1.3× crop is framing, not a puzzle');
+  assert.ok(helps(closeUp).includes('unzoomImage'), 'the close-up category keeps the help');
 });

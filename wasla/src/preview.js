@@ -34,6 +34,13 @@ export const HELPS = [
 export const PICTURE_MIN_SHARE = 0.45;
 
 /**
+ * QuestionImage.puzzleZoom: a crop tight enough to be the question itself.
+ * A picture framed a little closer (1.1×) is just framing, so the app offers no
+ * way to pay for opening it out, and the preview must not show that help either.
+ */
+export const PUZZLE_ZOOM = 1.5;
+
+/**
  * QuestionImageView.box: the frame follows the picture's own shape, made as big
  * as the card's width and the stage's height allow, and never thinner than
  * `PICTURE_MIN_SHARE` of the stage. An unknown size (no file, or a kind we
@@ -149,7 +156,7 @@ export function letterBank(letters, seed) {
 export function previewQuestion(question, { pictureSize } = {}) {
   const letters = [...question.playAnswer];
   const stage = stageOf(question);
-  const zoomed = stage === 'picture' && question.zoom > 1.001;
+  const zoomed = stage === 'picture' && question.zoom >= PUZZLE_ZOOM;
   const blurred = stage === 'picture' && Boolean(question.blurred);
   const layout = questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(question.title) });
   return {
@@ -182,7 +189,7 @@ export function previewLevel(level, { pictureSize } = {}) {
       entry.words.push(index);
       cells.set(key, entry);
     });
-    const zoomed = stage === 'picture' && word.zoom > 1.001;
+    const zoomed = stage === 'picture' && word.zoom >= PUZZLE_ZOOM;
     const blurred = stage === 'picture' && word.blurred;
     const layout = questionLayout({ stage, letterCount: letters.length, hasTitle: Boolean(word.title) });
     return {
