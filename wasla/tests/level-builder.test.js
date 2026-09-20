@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { openDatabase } from '../src/db/index.js';
-import { MIN_CATEGORIES, planLevels, wordsCross } from '../src/level-builder.js';
+import { MIN_CATEGORIES, gradeSet, planLevels, wordsCross } from '../src/level-builder.js';
 import { createRepository } from '../src/repository.js';
 
 const question = (id, title, answer) => ({ id, title, answer, playAnswer: answer });
@@ -134,4 +134,26 @@ test('a word an earlier level already uses is not offered again', () => {
   });
   const used = levels.flat().map((q) => q.answer);
   assert.deepEqual(used.sort(), ['بعيد', 'كريم'].sort());
+});
+
+test('a level is built from the set whose words cross most, short answers first', () => {
+  // Both sets cross, but the short one interlocks in a tighter grid.
+  const questions = [
+    question(1, 'ضد', 'كبير'), question(2, 'ضد', 'الديموقراطية'),
+    question(3, 'مرادف', 'سمير'), question(4, 'مرادف', 'الاستراتيجية'),
+    question(5, 'عام', 'رسام'), question(6, 'عام', 'الكونفدرالية'),
+  ];
+  const seen = new Set();
+  for (let seed = 1; seed <= 6; seed += 1) {
+    const { levels } = planLevels({ questions, categories: ['ضد', 'مرادف', 'عام'], count: 1, seed });
+    assert.equal(levels.length, 1);
+    levels[0].forEach((q) => seen.add(q.answer));
+  }
+  assert.ok(!seen.has('الديموقراطية') && !seen.has('الاستراتيجية'),
+    'a long answer that crosses little is left for another level');
+});
+
+test('a set that cannot be laid out is graded as no level at all', () => {
+  assert.equal(gradeSet([question(1, 'ضد', 'كبير'), question(2, 'مرادف', 'طظغ')]), null);
+  assert.ok(gradeSet([question(1, 'ضد', 'كبير'), question(2, 'مرادف', 'سمير')]).crossings >= 1);
 });

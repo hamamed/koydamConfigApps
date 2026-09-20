@@ -84,5 +84,17 @@ test('the same seed gives the same layout, so a preview matches what is saved', 
 });
 
 test('an empty list is an empty grid', () => {
-  assert.deepEqual(generateLayout([]), { rows: 0, cols: 0, placements: [], unplaced: [] });
+  assert.deepEqual(generateLayout([]), { rows: 0, cols: 0, crossings: 0, placements: [], unplaced: [] });
+});
+
+test('reports how many letters the words share, and prefers a layout with more', () => {
+  const list = words('مدرسة', 'رسام', 'سمير', 'مرسم', 'سلام');
+  const layout = generateLayout(list, { seed: 3 });
+  assert.equal(layout.unplaced.length, 0);
+  assert.ok(layout.crossings >= layout.placements.length - 1, 'a connected grid has at least one crossing per word after the first');
+  // Every crossing is a cell two words share, so it must be one of the letters.
+  const cells = grid(layout, list);
+  const letters = list.reduce((n, w) => n + [...w.answer].length, 0);
+  assert.equal(cells.size, letters - layout.crossings);
+  assert.deepEqual(runs(layout, list).length, list.length, 'no run of letters that is not one of the words');
 });

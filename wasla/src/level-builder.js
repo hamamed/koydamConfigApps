@@ -35,9 +35,22 @@ function shuffled(list, random) {
 
 /** Whether these questions cross as one crossword. */
 export function wordsCross(questions) {
-  if (questions.length < MIN_CATEGORIES) return false;
+  return gradeSet(questions) !== null;
+}
+
+/**
+ * How good a level these questions make, or null when their words do not all cross.
+ *
+ * A player reads a crossed letter off the word they already solved, so the more
+ * crossings — and the tighter the grid holding them — the more one answer helps
+ * with the next. Both are counted here, crossings first.
+ */
+export function gradeSet(questions) {
+  if (questions.length < MIN_CATEGORIES) return null;
   const layout = generateLayout(questions.map((q) => ({ id: q.id, answer: q.playAnswer })));
-  return layout.unplaced.length === 0;
+  if (layout.unplaced.length) return null;
+  const area = layout.rows * layout.cols;
+  return { crossings: layout.crossings, area, score: layout.crossings * 10 - area / 8 };
 }
 
 /**
@@ -97,18 +110,34 @@ export function planLevels({ questions, categories, count = 1, seed = 1, fits = 
  * nothing is left behind rather than blocking the whole plan.
  */
 function pickCrossingSet({ wanted, pools, fits, random }) {
+  const grade = fits === wordsCross ? gradeSet : (set) => (fits(set) ? { score: 0 } : null);
+  let best = null;
   for (let attempt = 0; attempt < TRIES_PER_LEVEL; attempt++) {
-    const picked = wanted.map((name) => {
-      const pool = pools.get(name);
-      // The first try takes the front of each pool; later ones look further down it.
-      const at = attempt === 0 ? 0 : Math.floor(random() * pool.length);
-      return pool[at];
-    });
-    if (picked.some((q) => !q)) return null;
+    const picked = wanted.map((name) => draw(pools.get(name), random, attempt));
+    if (picked.some((q) => !q)) break;
     if (new Set(picked.map((q) => q.id)).size !== picked.length) continue;
     // Two categories can hold the same word; one level must not show it twice.
     if (new Set(picked.map((q) => q.playAnswer)).size !== picked.length) continue;
-    if (fits(picked)) return picked;
+    const grading = grade(picked);
+    if (!grading) continue;
+    if (!best || grading.score > best.score) best = { picked, score: grading.score };
+    // Good enough to stop looking: most words crossing twice in a tight grid.
+    if (best.score >= picked.length * 12) break;
   }
-  return null;
+  return best?.picked ?? null;
+}
+
+/**
+ * One question from a pool, short answers preferred.
+ *
+ * Two are drawn and the shorter one wins: long answers sprawl across the grid and
+ * cross almost nothing, so a level of them is a set of separate words in disguise.
+ */
+function draw(pool, random, attempt) {
+  if (!pool.length) return null;
+  if (attempt === 0) return pool[0];
+  const first = pool[Math.floor(random() * pool.length)];
+  const second = pool[Math.floor(random() * pool.length)];
+  const length = (q) => [...q.playAnswer].length;
+  return length(first) <= length(second) ? first : second;
 }
