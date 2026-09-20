@@ -239,8 +239,8 @@
   // Without JavaScript the bar still works: each action is its own submit button and the
   // server checks the choice. Here it counts the selection, keeps the buttons off until
   // something is ticked, and asks before deleting.
-  const bulk = document.querySelector('form[data-question-bulk]');
-  if (bulk) {
+  // The questions list and the levels list each have one; they behave the same.
+  document.querySelectorAll('form[data-question-bulk], form[data-level-bulk]').forEach((bulk) => {
     const rows = Array.from(document.querySelectorAll('[data-bulk-row]'));
     const all = document.querySelector('[data-bulk-all]');
     const count = bulk.querySelector('[data-bulk-count]');
@@ -249,7 +249,7 @@
     const selected = () => rows.filter((row) => row.checked).length;
     const reflect = () => {
       const n = selected();
-      count.textContent = String(n);
+      if (count) count.textContent = String(n);
       bulk.classList.toggle('is-active', n > 0);
       buttons.forEach((button) => { button.disabled = n === 0; });
       if (all) {
@@ -267,11 +267,14 @@
       rows.forEach((row) => { row.checked = false; });
       reflect();
     });
-    bulk.querySelector('[data-bulk-delete-button]')?.addEventListener('click', (event) => {
-      if (!window.confirm(`Delete ${selected()} question(s)? Questions that are in a level are kept.`)) event.preventDefault();
+    const remove = bulk.querySelector('[data-bulk-delete-button]');
+    remove?.addEventListener('click', (event) => {
+      const ask = (remove.dataset.bulkDeleteAsk || 'Delete %n question(s)? Questions that are in a level are kept.')
+        .replace('%n', String(selected()));
+      if (!window.confirm(ask)) event.preventDefault();
     });
     reflect();
-  }
+  });
 
   // ── Asking before one button of a form ──────────────────────────────────
   //

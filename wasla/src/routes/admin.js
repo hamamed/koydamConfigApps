@@ -520,6 +520,41 @@ export function adminRouter({
     });
   });
 
+  /** Bulk actions on the levels list: publish, unpublish, re-grade, delete. */
+  router.post('/levels/bulk', (req, res) => {
+    const ids = req.body.ids ?? [];
+    if (!(Array.isArray(ids) ? ids.length : ids)) {
+      req.flash('warning', 'Select at least one level first.');
+      return res.redirect('/admin/levels');
+    }
+    switch (req.body.action) {
+      case 'publish':
+      case 'unpublish': {
+        const on = req.body.action === 'publish';
+        const { changed, problems, error } = repo.setLevelsPublished(ids, on);
+        if (error) { req.flash('danger', error); break; }
+        const done = `${on ? 'Published' : 'Unpublished'} ${changed.length} level(s).`;
+        req.flash(problems.length ? 'warning' : 'success',
+          problems.length ? `${done} ${problems.join(' ')}` : done);
+        break;
+      }
+      case 'difficulty': {
+        const { changed, error } = repo.setLevelsDifficulty(ids, req.body.difficulty);
+        req.flash(error ? 'danger' : 'success', error ?? `Difficulty set on ${changed} level(s).`);
+        break;
+      }
+      case 'delete': {
+        const { deleted, error } = repo.deleteLevels(ids);
+        req.flash(error ? 'danger' : 'success',
+          error ?? `Deleted ${deleted} level(s). Their questions are back in the bank.`);
+        break;
+      }
+      default:
+        req.flash('warning', 'Choose what to do with the selected levels.');
+    }
+    res.redirect('/admin/levels');
+  });
+
   // The level as the app draws it, in a phone-sized frame. Drafts too.
   router.get('/levels/:id/preview', (req, res, next) => {
     const level = repo.getLevel(Number(req.params.id));

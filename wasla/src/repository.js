@@ -542,6 +542,56 @@ export function createRepository(db) {
     db.prepare('DELETE FROM levels WHERE id = ?').run(id);
   }
 
+  /**
+   * Bulk actions on the levels list, the same shape as the questions list's.
+   * Each returns what changed, and what could not, in the panel's words.
+   */
+  function setLevelsPublished(ids, on) {
+    const clean = cleanIds(ids);
+    if (!clean.length) return { error: 'Select at least one level.' };
+    return tx(() => {
+      const changed = [];
+      const problems = [];
+      for (const id of clean) {
+        const level = getLevel(id);
+        if (!level || level.published === Boolean(on)) continue;
+        const result = setPublished(id, on);
+        if (result.error) problems.push(`${level.name}: ${result.error}`);
+        else changed.push(level.name);
+      }
+      return { changed, problems };
+    });
+  }
+
+  function setLevelsDifficulty(ids, difficulty) {
+    const clean = cleanIds(ids);
+    if (!clean.length) return { error: 'Select at least one level.' };
+    const { error } = readLevelDetails({ difficulty });
+    if (error) return { error };
+    return tx(() => {
+      let changed = 0;
+      for (const id of clean) {
+        if (!getLevel(id)) continue;
+        setLevelDetails(id, { difficulty });
+        changed += 1;
+      }
+      return { changed };
+    });
+  }
+
+  /** Deletes levels. Their questions stay in the bank, free for another level. */
+  function deleteLevels(ids) {
+    const clean = cleanIds(ids);
+    if (!clean.length) return { error: 'Select at least one level.' };
+    return tx(() => {
+      const deleted = clean.filter((id) => getLevel(id));
+      deleted.forEach((id) => deleteLevel(id));
+      // The numbers players see come from the order, so close the gaps at once.
+      writeOrder(listLevels().map((l) => l.id));
+      return { deleted: deleted.length };
+    });
+  }
+
   /** Rewrites every position densely from an ordered list of ids. */
   function writeOrder(order) {
     const set = db.prepare('UPDATE levels SET position = ? WHERE id = ?');
@@ -641,7 +691,7 @@ export function createRepository(db) {
     credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
     removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
     listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
-    setPublished, deleteLevel, moveLevel, orderByDifficulty,
+    setPublished, deleteLevel, moveLevel, orderByDifficulty, setLevelsPublished, setLevelsDifficulty, deleteLevels,
     publishedLevels, publishedLevelIds, publishedLevel, publishedLevelById, counts,
   };
 }

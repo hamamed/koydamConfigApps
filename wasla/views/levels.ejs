@@ -88,13 +88,37 @@
           <p class="mb-0">No levels yet.</p>
         </div>
       <% } else { %>
+        <%# Tick levels in the table, then act on all of them at once. %>
+        <form id="levelBulk" class="ad-card wz-bulk mb-3" method="post" action="/admin/levels/bulk" data-level-bulk>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <strong class="small me-1"><span data-bulk-count>0</span> selected</strong>
+            <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="publish" data-bulk-button>
+              <i data-lucide="upload" width="14" height="14" class="me-1"></i>Publish</button>
+            <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="unpublish" data-bulk-button>
+              <i data-lucide="download" width="14" height="14" class="me-1"></i>Unpublish</button>
+            <div class="wz-bulk-group">
+              <select class="form-select form-select-sm wz-bulk-field" name="difficulty" aria-label="Difficulty">
+                <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= d[0].toUpperCase() + d.slice(1) %></option><% }) %>
+              </select>
+              <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="difficulty" data-bulk-button>
+                <i data-lucide="gauge" width="14" height="14" class="me-1"></i>Set difficulty</button>
+            </div>
+            <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button
+                    data-bulk-delete-button data-bulk-delete-ask="Delete %n level(s)? Their questions stay in the bank.">
+              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>Delete</button>
+            <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-clear>Clear</button>
+          </div>
+        </form>
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Level</th><th>In the app</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
+              <thead><tr><th class="wz-check"><input class="form-check-input" type="checkbox" data-bulk-all aria-label="Select all"></th><th>Level</th><th>In the app</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
               <tbody>
                 <% levels.forEach((l, i) => { %>
                   <tr>
+                    <td><input class="form-check-input" type="checkbox" name="ids" value="<%= l.id %>" form="levelBulk"
+                               data-bulk-row aria-label="Select level <%= l.number %>"></td>
                     <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>">Level <%= l.number %></a></td>
                     <td class="kd-faint text-nowrap"><% if (!l.published) { %>—<% } else if (l.publishedNumber !== l.number) { %><span class="kd-tag" title="Drafts before it are skipped in the app">Level <%= l.publishedNumber %></span><% } else { %>same<% } %></td>
                     <td><%- include('partials/difficulty', { difficulty: l.difficulty }) %></td>

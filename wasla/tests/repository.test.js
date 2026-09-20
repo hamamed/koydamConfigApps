@@ -424,3 +424,35 @@ test('a picture question can wait for its picture, and its level cannot be publi
   const pictured = repo.updateQuestion(waiting.question.id, { imageFile: 'majed.jpg', type: 'image' }).question;
   assert.equal(pictured.needsPicture, false);
 });
+
+test('levels: several can be published, re-graded and deleted at once', () => {
+  const repo = createRepository(openDatabase(':memory:'));
+  const make = (answers) => {
+    const ids = answers.map((answer) => repo.createQuestion({ answer, clue: 'سؤال', title: 'عام' }).question.id);
+    return repo.newLevelFromQuestions(ids).level;
+  };
+  const first = make(['كبير', 'بعيد', 'الرباط']);
+  const second = make(['سعيد', 'كريم', 'سمير']);
+  const empty = repo.createLevel();
+
+  const published = repo.setLevelsPublished([first.id, second.id, empty.id], true);
+  assert.equal(published.changed.length, 2, 'the two laid-out levels go live');
+  assert.equal(published.problems.length, 1, 'the empty one says why it cannot');
+  assert.match(published.problems[0], /at least 2 words/);
+  assert.ok(repo.getLevel(first.id).published);
+
+  assert.deepEqual(repo.setLevelsDifficulty([first.id, second.id], 'hard'), { changed: 2 });
+  assert.equal(repo.getLevel(second.id).difficulty, 'hard');
+  assert.match(repo.setLevelsDifficulty([first.id], 'impossible').error, /difficulty is one of/);
+
+  const off = repo.setLevelsPublished([first.id, second.id], false);
+  assert.equal(off.changed.length, 2);
+  assert.equal(repo.getLevel(first.id).published, false);
+
+  assert.deepEqual(repo.deleteLevels([first.id, empty.id]), { deleted: 2 });
+  assert.equal(repo.listLevels().length, 1);
+  assert.equal(repo.listLevels()[0].number, 1, 'the numbers close up behind a deleted level');
+  // The questions of a deleted level are free again, not lost.
+  assert.equal(repo.listQuestions({ unused: true }).length, 3);
+  assert.match(repo.deleteLevels([]).error, /at least one level/);
+});
