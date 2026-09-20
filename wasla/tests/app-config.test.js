@@ -16,13 +16,13 @@ test('starts from the contract defaults', () => {
     dailyPuzzleCoins: 30,
     streakBonusPerDay: 5,
     streakBonusMax: 50,
-    timer: { secondsPerWord: 25, bonusCoins: 15 },
+    timer: { secondsPerWord: 25, bonusCoins: 10 },
     reminderHour: 10,
     starsPerLevel: 2,
     streakFreezeCost: 50,
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
-    dailyGameCoins: 15,
-    dailyAllGamesBonus: 50,
+    dailyGameCoins: 8,
+    dailyAllGamesBonus: 30,
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });

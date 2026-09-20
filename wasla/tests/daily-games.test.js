@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
-import { createAppConfig } from '../src/app-config.js';
+import { createAppConfig, DEFAULT_CONFIG } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import { openDatabase } from '../src/db/index.js';
 import {
@@ -139,8 +139,8 @@ test('a date always gets the same set, and different dates different ones', () =
   const b = games.forDate('2026-09-19');
   assert.notDeepEqual(a, b);
   assert.equal(a.date, '2026-09-18');
-  assert.equal(a.coins, 15);
-  assert.equal(a.allBonus, 50);
+  assert.equal(a.coins, DEFAULT_CONFIG.dailyGameCoins);
+  assert.equal(a.allBonus, DEFAULT_CONFIG.dailyAllGamesBonus);
   for (const kind of ['scramble', 'bubbles', 'groups', 'wheel', 'guess']) assert.ok(a[kind], kind);
 });
 
