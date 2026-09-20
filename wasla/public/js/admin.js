@@ -263,6 +263,11 @@
       rows.forEach((row) => { row.checked = all.checked; });
       reflect();
     });
+    // The header checkbox does the same, but a button in the bar is where people look.
+    bulk.querySelector('[data-bulk-select-all]')?.addEventListener('click', () => {
+      rows.forEach((row) => { row.checked = true; });
+      reflect();
+    });
     bulk.querySelector('[data-bulk-clear]')?.addEventListener('click', () => {
       rows.forEach((row) => { row.checked = false; });
       reflect();

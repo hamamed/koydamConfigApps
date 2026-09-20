@@ -107,7 +107,9 @@
             <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button
                     data-bulk-delete-button data-bulk-delete-ask="Delete %n level(s)? Their questions stay in the bank.">
               <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>Delete</button>
-            <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-clear>Clear</button>
+            <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-select-all>
+              Select all <span class="wz-category-count"><%= levels.length %></span></button>
+            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>Clear</button>
           </div>
         </form>
         <div class="ad-card">
