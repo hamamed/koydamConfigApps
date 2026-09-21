@@ -51,7 +51,8 @@ const USERNAME = /^[ء-غف-ي٠-٩A-Za-z0-9_]+$/u;
 const HAS_LETTER = /[ء-غف-يA-Za-z]/u;
 
 /** Names nobody may take, compared by key. */
-const RESERVED = ['admin', 'administrator', 'moderator', 'support', 'wasla', 'wassla', 'koydam', 'وصلة', 'وصله', 'الادارة', 'الدعم', 'مشرف'];
+const RESERVED = ['admin', 'administrator', 'moderator', 'support', 'wasla', 'wassla', 'shabbik', 'shabik', 'koydam',
+  'وصلة', 'وصله', 'شبك', 'شبّك', 'الادارة', 'الدعم', 'مشرف'];
 /** Parts that make a name unacceptable anywhere in it (kept short; the panel can rename or ban). */
 const BLOCKED_PARTS = ['fuck', 'shit', 'bitch', 'porn', 'sex', 'nazi', 'زب', 'كس', 'شرموط', 'قحب', 'منيك', 'نيك', 'خرا'];
 

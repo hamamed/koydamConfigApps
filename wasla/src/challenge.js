@@ -58,8 +58,8 @@ export function challengePage({ level, seconds, stars, publicUrl }) {
     : `تحداك صديق: حل لغز رقم ${level} — هل تستطيع؟`;
   const starText = stars !== null ? ` ${STAR_WORDS[stars]}` : '';
   const description = time
-    ? `صديقك أنهى لغز رقم ${level} في وصلة خلال ${time}${starText}. افتح اللغز وحاول أن تسبقه.`
-    : `صديقك أنهى لغز رقم ${level} في وصلة${starText}. افتح اللغز وحاول أن تتغلب عليه.`;
+    ? `صديقك أنهى لغز رقم ${level} في شبّك خلال ${time}${starText}. افتح اللغز وحاول أن تسبقه.`
+    : `صديقك أنهى لغز رقم ${level} في شبّك${starText}. افتح اللغز وحاول أن تتغلب عليه.`;
   return {
     level,
     seconds,

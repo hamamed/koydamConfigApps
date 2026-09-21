@@ -104,7 +104,7 @@ test('a published level gets the landing page with preview tags and both buttons
   assert.match(html, /<meta property="og:description" content="[^"]+">/);
   assert.match(html, /<meta property="og:url" content="https:\/\/wassla.hamaprojects.com\/c\/1\?t=80&amp;s=3">/);
   assert.match(html, /<meta name="twitter:title" content="تحداك صديق/);
-  assert.match(html, /href="wasla:\/\/c\/1\?t=80&amp;s=3">افتح في وصلة</);
+  assert.match(html, /href="wasla:\/\/c\/1\?t=80&amp;s=3">افتح في شبّك</);
   assert.match(html, /href="https:\/\/apps.apple.com\/app\/id123"/);
 });
 
