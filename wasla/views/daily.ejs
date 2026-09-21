@@ -14,7 +14,7 @@
         <div class="col-lg-7">
           <div class="ad-card ad-kpi h-100">
             <div class="d-flex align-items-center gap-2 mb-2">
-              <i data-lucide="calendar-range" width="17" height="17"></i>
+              <%- icon('calendar-range', 17) %>
               <span class="ad-kpi-label">مخطَّط مسبقاً</span>
             </div>
             <% if (summary.lastDate) { %>
@@ -35,7 +35,7 @@
         <div class="col-lg-5">
           <div class="ad-card ad-kpi h-100">
             <div class="d-flex align-items-center gap-2 mb-2">
-              <i data-lucide="calendar-check" width="17" height="17"></i>
+              <%- icon('calendar-check', 17) %>
               <span class="ad-kpi-label">اليوم · <span class="kd-mono"><%= today %></span> UTC</span>
             </div>
             <div class="ad-kpi-value"><span class="wz-ar"><%= todayTheme ?? '—' %></span></div>
@@ -55,7 +55,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="calendar-plus" width="16" height="16"></i>
+          <%- icon('calendar-plus', 16) %>
           <span class="fw-semibold me-auto">إضافة أيام</span>
           <form method="get" action="/admin/daily/plan" class="d-flex gap-2 m-0">
             <input class="form-control form-control-sm" type="date" name="date" min="<%= today %>" required aria-label="تاريخ للتخطيط">
@@ -83,13 +83,13 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex align-items-center gap-2">
-          <i data-lucide="calendar-days" width="16" height="16"></i>
+          <%- icon('calendar-days', 16) %>
           <span class="fw-semibold me-auto">المجدول من اليوم</span>
           <span class="kd-faint small"><%= upcoming.length %> يوماً</span>
         </div>
         <% if (!upcoming.length) { %>
           <div class="ad-empty">
-            <i data-lucide="calendar-x"></i>
+            <%- icon('calendar-x', 28) %>
             <p class="mb-0">لا يوم مخطَّط. التواريخ غير المخطَّطة تأخذ الشبكة التلقائية، وهي تتغير مع تغيّر الأسئلة.</p>
           </div>
         <% } else { %>
@@ -126,7 +126,7 @@
 
       <details class="ad-card ws-past">
         <summary class="ad-card-head d-flex align-items-center gap-2">
-          <i data-lucide="chevron-right" width="16" height="16" class="ws-past-chevron"></i>
+          <span class="ws-past-chevron"><%- icon('chevron-right', 16) %></span>
           <span class="fw-semibold me-auto">أيام مضت</span>
           <span class="kd-faint small"><%= past.length %><%= past.length >= 60 ? '+' : '' %> · للعرض فقط</span>
         </summary>

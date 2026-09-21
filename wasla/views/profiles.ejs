@@ -22,7 +22,7 @@
       <div class="ad-card">
         <div class="ad-card-body p-0">
           <% if (!rows.length) { %>
-            <div class="ad-empty"><i data-lucide="user-round"></i><p class="mb-0">لا حسابات<%= search ? ' match “' + search + '”' : ' yet' %>.</p></div>
+            <div class="ad-empty"><%- icon('user-round', 28) %><p class="mb-0">لا حسابات<%= search ? ' match “' + search + '”' : ' yet' %>.</p></div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">

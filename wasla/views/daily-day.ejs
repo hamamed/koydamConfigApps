@@ -13,7 +13,7 @@
       <%- include('partials/flash') %>
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily"><i data-lucide="arrow-left" width="14" height="14"></i> الجدول</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/daily"><%- icon('arrow-left', 14) %> الجدول</a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= previous %>">← <%= previous %></a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= next %>"><%= next %> →</a>
         <div class="ms-auto d-flex gap-2">
@@ -35,7 +35,7 @@
         <div class="ad-card-body">
           <% if (!board) { %>
             <div class="ad-empty">
-              <i data-lucide="search-x"></i>
+              <%- icon('search-x', 28) %>
               <p class="mb-0">لا شبكة لـ <%= date %>: nothing is planned and no theme has enough usable words.</p>
             </div>
           <% } else { %>

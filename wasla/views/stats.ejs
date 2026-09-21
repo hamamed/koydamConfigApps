@@ -26,7 +26,7 @@
           <div class="col-6 col-xl-3">
             <div class="ad-card ad-kpi">
               <div class="d-flex align-items-center gap-2 mb-2">
-                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <%- icon(glyph, 17) %>
                 <span class="ad-kpi-label"><%= label %></span>
               </div>
               <div class="ad-kpi-value"><%= value %></div>
@@ -37,7 +37,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="message-circle-question" width="16" height="16"></i>
+          <%- icon('message-circle-question', 16) %>
           <span class="fw-semibold">الأسئلة</span>
           <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="تصفية">
             <a class="btn <%= hard ? 'btn-kd-outline' : 'btn-kd' %>" href="/admin/stats?sort=<%= sort %>&dir=<%= dir %>">الكل</a>
@@ -50,7 +50,7 @@
         <div class="ad-card-body p-0">
           <% if (!questions.length) { %>
             <div class="ad-empty">
-              <i data-lucide="chart-column"></i>
+              <%- icon('chart-column', 28) %>
               <p class="mb-0"><%= hard ? 'No question is hard by that rule yet.' : 'No questions yet.' %></p>
             </div>
           <% } else { %>
@@ -106,12 +106,12 @@
 
       <div class="ad-card">
         <div class="ad-card-head d-flex align-items-center gap-2">
-          <i data-lucide="grid-3x3" width="16" height="16"></i>
+          <%- icon('grid-3x3', 16) %>
           <span class="fw-semibold">الألغاز</span>
         </div>
         <div class="ad-card-body p-0">
           <% if (!levels.length) { %>
-            <div class="ad-empty"><i data-lucide="grid-3x3"></i><p class="mb-0">لا ألغاز بعد.</p></div>
+            <div class="ad-empty"><%- icon('grid-3x3', 28) %><p class="mb-0">لا ألغاز بعد.</p></div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">

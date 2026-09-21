@@ -796,3 +796,12 @@ html[dir="rtl"] { overflow-x: hidden; }
 .wz-avatar-cell.is-locked { border-color: var(--wz-gold); background: #fffaf0; }
 .wz-avatar-id { font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wz-avatar-worn { margin-inline-start: auto; font-weight: 800; font-size: .8rem; color: var(--wz-teal-deep); }
+
+/* The game's own icons, where the panel has them. They carry their own colour
+   and outline, so they are placed rather than tinted. */
+.wz-i {
+  display: inline-block;
+  vertical-align: -0.22em;
+  flex: none;
+}
+.ad-nav-link .wz-i { margin-inline-end: .1rem; }

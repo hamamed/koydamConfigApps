@@ -7,100 +7,100 @@
   <nav class="ad-nav">
     <div class="ad-nav-label">عام</div>
     <a class="ad-nav-link <%= currentPath === '/' ? 'is-active' : '' %>" href="/admin">
-      <i data-lucide="layout-dashboard" width="17" height="17"></i>
+      <%- icon('layout-dashboard', 17) %>
       <span>الرئيسية</span>
     </a>
 
     <div class="ad-nav-label">محتوى اللعبة</div>
     <a class="ad-nav-link <%= currentPath.startsWith('/levels') ? 'is-active' : '' %>" href="/admin/levels">
-      <i data-lucide="grid-3x3" width="17" height="17"></i>
+      <%- icon('grid-3x3', 17) %>
       <span>الألغاز</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/questions') ? 'is-active' : '' %>" href="/admin/questions">
-      <i data-lucide="message-circle-question" width="17" height="17"></i>
+      <%- icon('message-circle-question', 17) %>
       <span>الأسئلة</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/titles') ? 'is-active' : '' %>" href="/admin/titles">
-      <i data-lucide="tag" width="17" height="17"></i>
+      <%- icon('tag', 17) %>
       <span>الفئات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
-      <i data-lucide="calendar-days" width="17" height="17"></i>
+      <%- icon('calendar-days', 17) %>
       <span>لغز اليوم</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/daily-games') ? 'is-active' : '' %>" href="/admin/daily-games">
-      <i data-lucide="list" width="17" height="17"></i>
+      <%- icon('list', 17) %>
       <span>قوائم الكلمات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/lab') ? 'is-active' : '' %>" href="/admin/lab">
-      <i data-lucide="flask-conical" width="17" height="17"></i>
+      <%- icon('flask-conical', 17) %>
       <span>ألعاب المختبر</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/wordsearch') ? 'is-active' : '' %>" href="/admin/wordsearch">
-      <i data-lucide="tags" width="17" height="17"></i>
+      <%- icon('tags', 17) %>
       <span>مواضيع البحث</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/events') ? 'is-active' : '' %>" href="/admin/events">
-      <i data-lucide="moon" width="17" height="17"></i>
+      <%- icon('moon', 17) %>
       <span>المناسبات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/import') ? 'is-active' : '' %>" href="/admin/import">
-      <i data-lucide="file-up" width="17" height="17"></i>
+      <%- icon('file-up', 17) %>
       <span>استيراد</span>
     </a>
 
     <div class="ad-nav-label">اللاعبون</div>
     <a class="ad-nav-link <%= currentPath.startsWith('/players') ? 'is-active' : '' %>" href="/admin/players">
-      <i data-lucide="users" width="17" height="17"></i>
+      <%- icon('users', 17) %>
       <span>الأجهزة</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/profiles') ? 'is-active' : '' %>" href="/admin/profiles">
-      <i data-lucide="user-round" width="17" height="17"></i>
+      <%- icon('user-round', 17) %>
       <span>الحسابات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/boards') ? 'is-active' : '' %>" href="/admin/boards">
-      <i data-lucide="trophy" width="17" height="17"></i>
+      <%- icon('trophy', 17) %>
       <span>المتصدرون</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/badges') ? 'is-active' : '' %>" href="/admin/badges">
-      <i data-lucide="award" width="17" height="17"></i>
+      <%- icon('award', 17) %>
       <span>الشارات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/avatars') ? 'is-active' : '' %>" href="/admin/avatars">
-      <i data-lucide="smile" width="17" height="17"></i>
+      <%- icon('smile', 17) %>
       <span>الصور والإطارات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/stats') ? 'is-active' : '' %>" href="/admin/stats">
-      <i data-lucide="chart-column" width="17" height="17"></i>
+      <%- icon('chart-column', 17) %>
       <span>الإحصاءات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/notifications') ? 'is-active' : '' %>" href="/admin/notifications">
-      <i data-lucide="bell" width="17" height="17"></i>
+      <%- icon('bell', 17) %>
       <span>الإشعارات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/settings') ? 'is-active' : '' %>" href="/admin/settings">
-      <i data-lucide="settings" width="17" height="17"></i>
+      <%- icon('settings', 17) %>
       <span>الإعدادات</span>
     </a>
   </nav>
 
   <div class="ad-sidebar-foot">
     <a class="ad-nav-link" href="/api/v1/levels" target="_blank" rel="noopener">
-      <i data-lucide="external-link" width="17" height="17"></i>
+      <%- icon('external-link', 17) %>
       <span>واجهة الـAPI</span>
     </a>
     <a class="ad-nav-link" href="/privacy" target="_blank" rel="noopener">
-      <i data-lucide="shield" width="17" height="17"></i>
+      <%- icon('shield', 17) %>
       <span>سياسة الخصوصية</span>
     </a>
     <a class="ad-nav-link" href="/support" target="_blank" rel="noopener">
-      <i data-lucide="life-buoy" width="17" height="17"></i>
+      <%- icon('life-buoy', 17) %>
       <span>صفحة الدعم</span>
     </a>
     <form method="post" action="/admin/logout" class="m-0">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <button class="ad-nav-link w-100 border-0 bg-transparent text-start" type="submit">
-        <i data-lucide="log-out" width="17" height="17"></i>
+        <%- icon('log-out', 17) %>
         <span>تسجيل الخروج</span>
       </button>
     </form>

@@ -24,7 +24,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="moon" width="16" height="16"></i>
+          <%- icon('moon', 16) %>
           <span class="fw-semibold me-auto">المواسم القادمة</span>
           <span class="kd-tag"><%= seasons.length %></span>
         </div>
@@ -57,7 +57,7 @@
 
       <div class="ad-card">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="calendar-check" width="16" height="16"></i>
+          <%- icon('calendar-check', 16) %>
           <span class="fw-semibold me-auto">الجُمَع القادمة</span>
           <span class="kd-tag kd-tag-accent wz-ar"><%= fridayTheme %></span>
           <span class="kd-faint small"><%= fridayWords %> كلمة</span>

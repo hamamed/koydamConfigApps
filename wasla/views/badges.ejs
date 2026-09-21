@@ -16,7 +16,7 @@
       <% if (unknown.length) { %>
         <div class="ad-card mb-3">
           <div class="ad-card-head d-flex align-items-center gap-2">
-            <i data-lucide="triangle-alert" width="16" height="16"></i>
+            <%- icon('triangle-alert', 16) %>
             <span class="fw-semibold">شارات لا تعرفها اللوحة</span>
           </div>
           <div class="ad-card-body small">
@@ -31,7 +31,7 @@
           <div class="col-xl-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="award" width="16" height="16"></i>
+                <%- icon('award', 16) %>
                 <span class="fw-semibold me-auto"><%= group.title %></span>
                 <span class="kd-tag"><%= group.badges.length %></span>
               </div>
@@ -67,7 +67,7 @@
       <% if (chosen) { %>
         <div class="ad-card mt-3" id="earners">
           <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-            <i data-lucide="users" width="16" height="16"></i>
+            <%- icon('users', 16) %>
             <span class="fw-semibold me-auto">من نال «<%= chosen.title %>»</span>
             <span class="kd-tag"><%= chosen.count %> لاعباً</span>
             <a class="btn btn-sm btn-kd-ghost" href="/admin/badges">إغلاق</a>

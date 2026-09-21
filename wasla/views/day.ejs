@@ -11,11 +11,11 @@
       <%- include('partials/flash') %>
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a class="btn btn-sm btn-kd-ghost" href="/admin/days"><i data-lucide="arrow-left" width="14" height="14"></i> التقويم</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days"><%- icon('arrow-left', 14) %> التقويم</a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= previous %>">← <%= previous %></a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= next %>"><%= next %> →</a>
         <span class="kd-tag kd-tag-accent wz-ar"><%= weekdayAr %></span>
-        <% if (event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية: يستعمل البحث موضوعها ما لم يُخطَّط اليوم"><i data-lucide="moon" width="12" height="12"></i> <%= event %></span><% } %>
+        <% if (event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية: يستعمل البحث موضوعها ما لم يُخطَّط اليوم"><%- icon('moon', 12) %> <%= event %></span><% } %>
         <div class="ms-auto">
           <% if (past) { %>
             <span class="kd-tag">يوم مضى · للعرض فقط</span>
@@ -42,7 +42,7 @@
             </form>
             <form method="post" action="/admin/days/<%= date %>/clear" class="ms-auto m-0" data-confirm="إعادة كل ألعاب هذا اليوم إلى التلقائي؟">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <button class="btn btn-sm btn-kd-ghost" type="submit"><i data-lucide="rotate-ccw" width="14" height="14"></i> أعد اليوم تلقائياً</button>
+              <button class="btn btn-sm btn-kd-ghost" type="submit"><%- icon('rotate-ccw', 14) %> أعد اليوم تلقائياً</button>
             </form>
           </div>
         </div>
@@ -54,7 +54,7 @@
 
       <div class="ad-card mb-3" id="wordsearch">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="search" width="16" height="16"></i>
+          <%- icon('search', 16) %>
           <span class="fw-semibold me-auto"><span class="wz-ar">البحث عن الكلمات</span></span>
           <% if (wordSearch.day) { %>
             <span class="kd-tag <%= wordSearch.day.source === 'custom' ? 'kd-tag-accent' : 'kd-tag-ok' %>"><%= wordSearch.day.source === 'custom' ? 'مكتوب' : 'مخطَّط' %></span>
@@ -87,7 +87,7 @@
           <div class="col-xl-6" id="<%= g.kind %>">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-                <i data-lucide="<%= g.label.icon %>" width="16" height="16"></i>
+                <%- icon(g.label.icon, 16) %>
                 <span class="fw-semibold me-auto"><span class="wz-ar"><%= g.label.ar %></span></span>
                 <span class="kd-tag <%= g.source === 'typed' ? 'kd-tag-accent' : g.source ? 'kd-tag-ok' : '' %>"><%= g.source === 'typed' ? 'مكتوب' : g.source ? 'مخطَّط' : 'تلقائي' %></span>
                 <% if (!past) { %>
@@ -95,7 +95,7 @@
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <button class="btn btn-sm btn-kd-outline" type="submit"
                             title="يسحب اللعبة من جديد من البنك، ويثبّت هذا الاختيار لهذا اليوم">
-                      <i data-lucide="shuffle" width="14" height="14"></i> اختيار آخر
+                      <%- icon('shuffle', 14) %> اختيار آخر
                     </button>
                   </form>
                 <% } %>

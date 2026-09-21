@@ -9,7 +9,7 @@
       <form class="ad-card mb-3" method="post" action="/admin/import/paste" enctype="multipart/form-data">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="ad-card-head d-flex align-items-center gap-2">
-          <i data-lucide="clipboard-paste" width="16" height="16"></i>
+          <%- icon('clipboard-paste', 16) %>
           <span class="fw-semibold">لصق من موقع</span>
           <span class="small kd-faint ms-auto">لا يُضاف شيء قبل التأكيد.</span>
         </div>
@@ -53,7 +53,7 @@
           <form class="ad-card" method="post" action="/admin/import" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="file-up" width="16" height="16"></i>
+              <%- icon('file-up', 16) %>
               <span class="fw-semibold">رفع ملف CSV</span>
             </div>
             <div class="ad-card-body d-grid gap-3">
@@ -78,10 +78,10 @@
         <div class="col-xl-6">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="table" width="16" height="16"></i>
+              <%- icon('table', 16) %>
               <span class="fw-semibold">الأعمدة</span>
               <a class="btn btn-sm btn-kd-outline ms-auto" href="/assets/import-example.csv" download="wasla-import-example.csv">
-                <i data-lucide="download" width="14" height="14" class="me-1"></i>مثال CSV
+                <span class="me-1"><%- icon('download', 14) %></span>مثال CSV
               </a>
             </div>
             <div class="ad-card-body p-0">

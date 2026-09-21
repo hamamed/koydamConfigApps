@@ -92,6 +92,14 @@ app.locals.assetVersion = config.assetVersion;
 app.set('views', path.join(config.root, 'views'));
 app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '7d' }));
 
+// The two files every browser and crawler asks for. Without them the log fills
+// with 404s and the panel's tab sits blank.
+app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(config.root, 'public', 'favicon.png'), { maxAge: '7d' }));
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').set('Cache-Control', 'public, max-age=86400')
+    .send('User-agent: *\nDisallow: /admin\nDisallow: /api/\nAllow: /\n');
+});
+
 // Challenge links and the apple-app-site-association file iOS fetches for
 // them. Public, no session, and ahead of the 404 handler.
 app.use(challengeRouter({ repo, publicUrl: config.publicUrl, siteSettings, assetVersion: config.assetVersion }));

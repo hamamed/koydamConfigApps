@@ -33,7 +33,7 @@
 
       <% if (!questions.length) { %>
         <div class="ad-card ad-empty">
-          <i data-lucide="message-circle-question"></i>
+          <%- icon('message-circle-question', 28) %>
           <p class="mb-2">لا أسئلة<%= search || unused || titleFilter ? ' match' : ' yet' %>.</p>
           <a class="btn btn-kd btn-sm" href="/admin/questions/new">أضف الأول</a>
         </div>
@@ -54,22 +54,22 @@
                 <% }) %>
               </select>
               <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="move" data-bulk-button>
-                <i data-lucide="arrow-right-left" width="14" height="14" class="me-1"></i>نقل</button>
+                <span class="me-1"><%- icon('arrow-right-left', 14) %></span>نقل</button>
             </div>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="new-level" data-bulk-button>
-              <i data-lucide="grid-3x3" width="14" height="14" class="me-1"></i>لغز جديد</button>
+              <span class="me-1"><%- icon('grid-3x3', 14) %></span>لغز جديد</button>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="remove" data-bulk-button>
-              <i data-lucide="log-out" width="14" height="14" class="me-1"></i>إخراج من الألغاز</button>
+              <span class="me-1"><%- icon('log-out', 14) %></span>إخراج من الألغاز</button>
             <div class="wz-bulk-group">
               <select class="form-select form-select-sm wz-bulk-field wz-ar" name="title" aria-label="New title">
                 <option value="">اختر العنوان</option>
                 <% categories.forEach((c) => { %><option value="<%= c.name %>"><%= c.name %></option><% }) %>
               </select>
               <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="title" data-bulk-button>
-                <i data-lucide="tag" width="14" height="14" class="me-1"></i>تعيين الفئة</button>
+                <span class="me-1"><%- icon('tag', 14) %></span>تعيين الفئة</button>
             </div>
             <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button data-bulk-delete-button>
-              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>حذف</button>
+              <span class="me-1"><%- icon('trash-2', 14) %></span>حذف</button>
             <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-select-all>
               تحديد الكل <span class="wz-category-count"><%= questions.length %></span></button>
             <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>إلغاء</button>
@@ -90,7 +90,7 @@
                           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                           <input type="hidden" name="back" value="<%= here %>">
                           <label class="btn btn-sm btn-kd-outline wz-upload">
-                            <i data-lucide="image-plus" width="14" height="14"></i>رفع
+                            <%- icon('image-plus', 14) %>رفع
                             <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" data-auto-submit class="visually-hidden">
                           </label>
                           <noscript><button class="btn btn-sm btn-kd" type="submit">حفظ</button></noscript>
@@ -114,7 +114,7 @@
                     <td><%= q.levelCount ? q.levelCount : '—' %></td>
                     <td class="text-end text-nowrap">
                       <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>/preview" title="انظر ما يراه اللاعب" aria-label="معاينة <%= q.answer %>">
-                        <i data-lucide="smartphone" width="14" height="14"></i>
+                        <%- icon('smartphone', 14) %>
                       </a>
                       <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= q.id %>">تعديل</a>
                     </td>

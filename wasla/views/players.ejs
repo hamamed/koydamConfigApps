@@ -23,7 +23,7 @@
           <div class="col-6 col-md-4 col-xl-2">
             <div class="ad-card ad-kpi wz-kpi h-100">
               <div class="d-flex align-items-center gap-2 mb-2">
-                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <%- icon(glyph, 17) %>
                 <span class="ad-kpi-label"><%= label %></span>
               </div>
               <div class="ad-kpi-value"><%= value %></div>
@@ -34,7 +34,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex align-items-center gap-2">
-          <i data-lucide="chart-column" width="16" height="16"></i>
+          <%- icon('chart-column', 16) %>
           <span class="fw-semibold">اللاعبون يومياً</span>
           <span class="kd-faint small ms-auto">أجهزة مختلفة، آخر 30 يوماً</span>
         </div>
@@ -60,13 +60,13 @@
         <div class="col-xl-7">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="filter" width="16" height="16"></i>
+              <%- icon('filter', 16) %>
               <span class="fw-semibold">مسار الألغاز</span>
               <span class="kd-faint small ms-auto">أجهزة مختلفة، كل الأحداث المحفوظة</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!funnel.rows.length) { %>
-                <div class="ad-empty"><i data-lucide="filter"></i><p class="mb-0">لا ألغاز منشورة.</p></div>
+                <div class="ad-empty"><%- icon('filter', 28) %><p class="mb-0">لا ألغاز منشورة.</p></div>
               <% } else { %>
                 <% if (funnel.drop) { %>
                   <p class="small mx-3 mt-3 mb-2">
@@ -105,7 +105,7 @@
         <div class="col-xl-5 d-grid gap-3 align-content-start">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="life-buoy" width="16" height="16"></i>
+              <%- icon('life-buoy', 16) %>
               <span class="fw-semibold">المساعدات</span>
               <span class="kd-faint small ms-auto"><%= helps.total %> استُعملت، آخر 30 يوماً</span>
             </div>
@@ -122,7 +122,7 @@
 
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="repeat" width="16" height="16"></i>
+              <%- icon('repeat', 16) %>
               <span class="fw-semibold me-auto">العودة</span>
             </div>
             <div class="ad-card-body">
@@ -141,7 +141,7 @@
 
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="search" width="16" height="16"></i>
+              <%- icon('search', 16) %>
               <span class="fw-semibold">البحث عن الكلمات</span>
               <span class="kd-faint small ms-auto">آخر <%= wordSearch.days %> يوماً · <%= kpis.wordSearchCompletedToday %> أُنهي اليوم</span>
             </div>

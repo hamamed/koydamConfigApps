@@ -15,7 +15,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="lock" width="16" height="16"></i>
+          <%- icon('lock', 16) %>
           <span class="fw-semibold me-auto">الصور المقفلة</span>
           <span class="kd-tag"><%= locked %></span>
         </div>
@@ -44,7 +44,7 @@
         <div class="col-xl-7">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-              <i data-lucide="smile" width="16" height="16"></i>
+              <%- icon('smile', 16) %>
               <span class="fw-semibold me-auto">كل الصور</span>
               <span class="kd-tag"><%= players %> لاعباً</span>
             </div>
@@ -63,7 +63,7 @@
         <div class="col-xl-5">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-              <i data-lucide="frame" width="16" height="16"></i>
+              <%- icon('frame', 16) %>
               <span class="fw-semibold me-auto">الإطارات</span>
               <span class="kd-tag"><%= profilesWithFrame %> يلبسونها</span>
             </div>

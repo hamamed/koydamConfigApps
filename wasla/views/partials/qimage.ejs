@@ -6,5 +6,5 @@
     <% if (q.zoom > 1) { %><span class="wz-badge">×<%= q.zoom %></span><% } %>
   </span>
 <% } else { %>
-  <span class="wz-frame wz-none <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"><i data-lucide="type" width="16" height="16"></i></span>
+  <span class="wz-frame wz-none <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"><%- icon('type', 16) %></span>
 <% } %>

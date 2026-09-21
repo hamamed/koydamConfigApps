@@ -33,6 +33,16 @@ export const config = {
   imagesDir: path.resolve(root, process.env.IMAGES_DIR || './storage/questions'),
   maxImageBytes: num(process.env.MAX_IMAGE_BYTES, 8 * 1024 * 1024),
 
+  /**
+   * The panel's icons: the game's own icon pack, in the same outline style the
+   * app draws. They are a bought asset whose licence allows using them in a
+   * project but not redistributing them, and this repository is public — so
+   * they live under /storage (which deploys preserve and git never sees) and
+   * are served only to a signed-in admin. With the folder empty the panel falls
+   * back to Lucide, so nothing breaks on a checkout that has never seen them.
+   */
+  iconsDir: path.resolve(root, process.env.ICONS_DIR || './storage/icons'),
+
   /** Question sounds, beside the pictures under /storage. */
   audioDir: path.resolve(root, process.env.AUDIO_DIR || './storage/audio'),
   maxAudioBytes: num(process.env.MAX_AUDIO_BYTES, 5 * 1024 * 1024),

@@ -12,7 +12,7 @@
           <form class="ad-card" method="post" action="/admin/notifications/setup" enctype="multipart/form-data">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="key-round" width="16" height="16"></i>
+              <%- icon('key-round', 16) %>
               <span class="fw-semibold me-auto">مفتاح APNs</span>
               <% if (apns.configured) { %>
                 <span class="ad-status ad-status-published">المفتاح مرفوع (Key ID <%= apns.keyId %>)</span>
@@ -52,7 +52,7 @@
         <div class="col-xl-6">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="info" width="16" height="16"></i>
+              <%- icon('info', 16) %>
               <span class="fw-semibold me-auto">كيف يتم الإرسال</span>
             </div>
             <div class="ad-card-body small d-grid gap-2">

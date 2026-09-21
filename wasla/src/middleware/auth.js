@@ -179,8 +179,16 @@ export function csrfProtect(req, res, next) {
     crypto.timingSafeEqual(Buffer.from(submitted), Buffer.from(expected));
 
   if (!valid) {
+    // A panel form whose token has gone stale — the page sat open while the
+    // session rolled over — used to end on an error page, with the selection
+    // lost and nothing to do but go back. Say so where they were standing.
+    const back = typeof req.get === 'function' ? req.get('referer') : null;
+    if (back && req.flash && back.includes('/admin')) {
+      req.flash('danger', 'انتهت الجلسة. حُدِّثت الصفحة — أعد المحاولة.');
+      return res.redirect(back);
+    }
     return next(
-      Object.assign(new Error('Your session expired. Please try that again.'), { status: 403 })
+      Object.assign(new Error('انتهت الجلسة. حدّث الصفحة وأعد المحاولة.'), { status: 403 })
     );
   }
   return next();

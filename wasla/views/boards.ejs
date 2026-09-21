@@ -28,7 +28,7 @@
 
       <div class="ad-card">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="trophy" width="16" height="16"></i>
+          <%- icon('trophy', 16) %>
           <span class="fw-semibold me-auto"><%= board.note %><% if (board.unit === 'time') { %> · <%= date %><% } %></span>
           <span class="kd-tag"><%= data ? data.total : 0 %> على اللوحة</span>
         </div>

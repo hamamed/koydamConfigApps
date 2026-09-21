@@ -12,10 +12,10 @@
       <div class="ad-card mb-3">
         <div class="ad-card-body d-flex flex-wrap gap-2 align-items-center">
           <button class="btn btn-kd-outline" type="submit" form="importRows" name="then" value="save">
-            <i data-lucide="check" width="14" height="14" class="me-1"></i>حفظ التعديلات
+            <span class="me-1"><%- icon('check', 14) %></span>حفظ التعديلات
           </button>
           <button class="btn btn-kd-outline" type="submit" form="importRows" name="then" value="selected" data-import-selected disabled>
-            <i data-lucide="list-checks" width="14" height="14" class="me-1"></i>استورد المحدَّد (<span data-import-count>0</span>)</button>
+            <span class="me-1"><%- icon('list-checks', 14) %></span>استورد المحدَّد (<span data-import-count>0</span>)</button>
           <button class="btn btn-kd" type="submit" form="importRows" name="then" value="confirm"
                   data-confirm-click="Save your changes and import the valid rows? Rows with errors are skipped.">
             احفظ واستورد كل الصفوف الصالحة (<%= valid %>)
@@ -25,8 +25,8 @@
             <button class="btn btn-kd-ghost" type="submit">إلغاء الاستيراد</button>
           </form>
           <span class="small kd-faint ms-md-2">
-            عدّل أي صف، أو استورده وحده بـ <i data-lucide="check" width="13" height="13"></i>، أو حدّد صفوفاً لاستيراد بعضها،
-            or remove one with <i data-lucide="x" width="13" height="13"></i>. لا يُضاف شيء حتى تستورد.
+            عدّل أي صف، أو استورده وحده بـ <%- icon('check', 13) %>، أو حدّد صفوفاً لاستيراد بعضها،
+            or remove one with <%- icon('x', 13) %>. لا يُضاف شيء حتى تستورد.
             <% if (plan.length - valid) { %><strong><%= plan.length - valid %> صفاً ما زال فيه أخطاء</strong> وستُتخطى ما لم تصلحها.<% } %>
           </span>
         </div>
@@ -57,7 +57,7 @@
                   <td class="kd-faint text-nowrap">
                     <button class="btn btn-sm btn-kd-ghost wz-row-remove" type="submit" name="remove" value="<%= p.row %>"
                             title="حذف الصف <%= p.row %>" aria-label="حذف الصف <%= p.row %>">
-                      <i data-lucide="x" width="14" height="14"></i>
+                      <%- icon('x', 14) %>
                     </button>
                     <%= p.row %>
                   </td>
@@ -65,7 +65,7 @@
                     <% if (!p.error) { %>
                       <button class="btn btn-sm btn-kd-outline wz-row-import" type="submit" name="importRow" value="<%= p.row %>"
                               title="استيراد الصف <%= p.row %> الآن" aria-label="استيراد الصف <%= p.row %> now">
-                        <i data-lucide="check" width="14" height="14"></i>
+                        <%- icon('check', 14) %>
                       </button>
                     <% } %>
                     <% if (p.error) { %>

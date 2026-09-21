@@ -25,7 +25,7 @@
 
       <% if (!preview.words.length) { %>
         <div class="ad-card ad-empty">
-          <i data-lucide="smartphone"></i>
+          <%- icon('smartphone', 28) %>
           <p class="mb-0">لا شبكة لهذا اللغز بعد. اختر أسئلة تتقاطع ثم عاينه.</p>
         </div>
       <% } else { %>
@@ -137,13 +137,13 @@
 
         <aside class="ad-card wp-list">
           <div class="ad-card-head d-flex align-items-center gap-2">
-            <i data-lucide="list" width="16" height="16"></i>
+            <%- icon('list', 16) %>
             <span class="fw-semibold">Pages</span>
             <span class="kd-faint small ms-auto">أو اضغط خانة</span>
           </div>
           <div class="ad-card-body d-grid gap-1">
             <button class="wp-list-item is-active" type="button" data-show="grid">
-              <i data-lucide="grid-3x3" width="15" height="15"></i><span>Grid</span>
+              <%- icon('grid-3x3', 15) %><span>Grid</span>
             </button>
             <% preview.words.forEach((w) => { %>
               <button class="wp-list-item" type="button" data-show="word-<%= w.index %>">

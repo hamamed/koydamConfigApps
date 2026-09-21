@@ -12,7 +12,7 @@
 
       <div class="ad-card mb-3">
         <div class="ad-card-body d-flex flex-wrap align-items-center gap-2">
-          <i data-lucide="calendar-plus" width="18" height="18"></i>
+          <%- icon('calendar-plus', 18) %>
           <span class="fw-semibold">خطّط مسبقاً</span>
           <span class="small kd-muted me-auto">يحفظ الاختيار التلقائي الحالي لكل يوم ولعبة لم تُخطَّط بعد — ثم تعدّل ما تشاء فقط.</span>
           <% planChoices.forEach((n) => { %>
@@ -51,7 +51,7 @@
                     <td class="text-nowrap">
                       <a class="fw-semibold kd-mono" href="/admin/days/<%= d.date %>"><%= d.date %></a>
                       <div class="small kd-muted"><%= d.weekday %> · <span class="wz-ar"><%= d.weekdayAr %></span><% if (d.isToday) { %> · <strong>اليوم</strong><% } %></div>
-                      <% if (d.event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية"><i data-lucide="moon" width="12" height="12"></i> <%= d.event %></span><% } %>
+                      <% if (d.event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية"><%- icon('moon', 12) %> <%= d.event %></span><% } %>
                     </td>
                     <td>
                       <% if (d.wordSearch) { %>

@@ -20,13 +20,13 @@
         <div class="col-xl-7">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="tags" width="16" height="16"></i>
+              <%- icon('tags', 16) %>
               <span class="fw-semibold">المواضيع</span>
               <span class="kd-faint small ms-auto"><%= playableCount %> مستعملة · <%= eligible.length - playableCount %> مستبعدة</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!eligible.length) { %>
-                <div class="ad-empty"><i data-lucide="tags"></i><p class="mb-0">لا فئة فيها <%= minWords %> أجوبة صالحة بعد.</p></div>
+                <div class="ad-empty"><%- icon('tags', 28) %><p class="mb-0">لا فئة فيها <%= minWords %> أجوبة صالحة بعد.</p></div>
               <% } else { %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
@@ -65,7 +65,7 @@
         <div class="col-xl-5 d-grid gap-3 align-content-start">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="list-plus" width="16" height="16"></i>
+              <%- icon('list-plus', 16) %>
               <span class="fw-semibold me-auto">تكاد تصلح</span>
             </div>
             <div class="ad-card-body">

@@ -19,13 +19,13 @@
 
       <% if (!set) { %>
         <div class="ad-card mb-3"><div class="ad-card-body">
-          <div class="ad-empty"><i data-lucide="gamepad-2"></i><p class="mb-0">لا يمكن بناء أي لعبة لـ <%= date %> yet.</p></div>
+          <div class="ad-empty"><%- icon('gamepad-2', 28) %><p class="mb-0">لا يمكن بناء أي لعبة لـ <%= date %> yet.</p></div>
         </div></div>
       <% } else { %>
         <div class="row g-3 mb-3">
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="shuffle" width="16" height="16"></i><span class="fw-semibold"><span class="wz-ar">رتّب الحروف</span></span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('shuffle', 16) %><span class="fw-semibold"><span class="wz-ar">رتّب الحروف</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.scramble) { %><p class="small kd-muted mb-0">يحتاج 5 أسئلة بدليل وجواب من 3 إلى 7 حروف.</p><% } else { %>
                   <ul class="list-unstyled d-grid gap-2 mb-0">
@@ -39,7 +39,7 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="circle-dot" width="16" height="16"></i><span class="fw-semibold"><span class="wz-ar">فقاعات الكلمات</span></span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dot', 16) %><span class="fw-semibold"><span class="wz-ar">فقاعات الكلمات</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.bubbles) { %><p class="small kd-muted mb-0">يحتاج فئة فيها 5 أجوبة من 4 إلى 8 حروف.</p><% } else { %>
                   <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= set.bubbles.theme %></span></div>
@@ -54,7 +54,7 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="layout-grid" width="16" height="16"></i><span class="fw-semibold"><span class="wz-ar">صِل المجموعات</span></span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('layout-grid', 16) %><span class="fw-semibold"><span class="wz-ar">صِل المجموعات</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.groups) { %><p class="small kd-muted mb-0">يحتاج 4 فئات، في كل واحدة 4 أجوبة مختلفة من 3 إلى 8 حروف.</p><% } else { %>
                   <ul class="list-unstyled d-grid gap-2 mb-0">
@@ -68,7 +68,7 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="circle-dashed" width="16" height="16"></i><span class="fw-semibold"><span class="wz-ar">عجلة الحروف</span></span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dashed', 16) %><span class="fw-semibold"><span class="wz-ar">عجلة الحروف</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.wheel) { %><p class="small kd-muted mb-0">قائمة عجلة الحروف فارغة.</p><% } else { %>
                   <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...set.wheel.letters].join(' ') %></span></div>
@@ -79,7 +79,7 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="square-asterisk" width="16" height="16"></i><span class="fw-semibold"><span class="wz-ar">خمّن الكلمة</span></span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('square-asterisk', 16) %><span class="fw-semibold"><span class="wz-ar">خمّن الكلمة</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.guess) { %><p class="small kd-muted mb-0">قائمة خمّن الكلمة فارغة.</p><% } else { %>
                   <div class="wz-ar fw-semibold fs-4"><%= set.guess.display %></div>
@@ -90,7 +90,7 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><i data-lucide="coins" width="16" height="16"></i><span class="fw-semibold">المكافآت</span></div>
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('coins', 16) %><span class="fw-semibold">المكافآت</span></div>
               <div class="ad-card-body small">
                 <p class="mb-1"><strong><%= set.coins %></strong> عملة لكل لعبة، مرة في اليوم.</p>
                 <p class="mb-1"><strong><%= set.allBonus %></strong> عملة إضافية عند إنهاء البحث والألعاب الخمس.</p>
@@ -106,7 +106,7 @@
           <div class="col-xl-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="list" width="16" height="16"></i>
+                <%- icon('list', 16) %>
                 <span class="fw-semibold me-auto"><%= labels[name] %></span>
                 <span class="kd-faint small"><%= list.count %> مستعملة · <%= list.edited ? 'edited' : 'built-in' %></span>
               </div>

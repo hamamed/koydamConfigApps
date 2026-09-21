@@ -12,7 +12,7 @@
       <%- include('partials/flash') %>
 
       <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= date %>"><i data-lucide="arrow-left" width="14" height="14"></i> العودة إلى اليوم</a>
+        <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= date %>"><%- icon('arrow-left', 14) %> العودة إلى اليوم</a>
         <span class="kd-tag kd-tag-accent"><%= date %> · <span class="wz-ar"><%= weekdayAr %></span></span>
         <% if (date === today) { %><span class="kd-tag kd-tag-warn">اليوم — قد تكون هذه الشبكة عند اللاعبين بالفعل</span><% } %>
       </div>
@@ -24,7 +24,7 @@
         <div class="col-xl-5 d-grid gap-3 align-content-start">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="tags" width="16" height="16"></i>
+              <%- icon('tags', 16) %>
               <span class="fw-semibold me-auto">الكلمات</span>
               <div class="btn-group btn-group-sm" role="group" aria-label="مصدر الموضوع">
                 <input type="radio" class="btn-check" name="source" id="sourceTheme" value="theme" <%= state.source === 'theme' ? 'checked' : '' %>>
@@ -78,7 +78,7 @@
 
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="grid-3x3" width="16" height="16"></i>
+              <%- icon('grid-3x3', 16) %>
               <span class="fw-semibold me-auto">الشبكة</span>
             </div>
             <div class="ad-card-body">
@@ -93,7 +93,7 @@
                 </div>
                 <button class="btn btn-kd-outline" type="submit" name="action" value="preview" data-preview>معاينة</button>
                 <button class="btn btn-kd-ghost" type="submit" name="action" value="shuffle" data-shuffle>
-                  <i data-lucide="shuffle" width="14" height="14"></i> إعادة ترتيب
+                  <%- icon('shuffle', 14) %> إعادة ترتيب
                 </button>
                 <button class="btn btn-kd-accent ms-auto" type="submit" name="action" value="save" data-save <%= composed.canSave ? '' : 'disabled' %>>حفظ الشبكة</button>
               </div>
@@ -105,7 +105,7 @@
         <div class="col-xl-7">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="eye" width="16" height="16"></i>
+              <%- icon('eye', 16) %>
               <span class="fw-semibold me-auto">معاينة</span>
             </div>
             <div class="ad-card-body" id="dailyPreview" aria-live="polite">

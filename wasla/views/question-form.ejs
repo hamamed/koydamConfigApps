@@ -19,7 +19,7 @@
           <div class="col-lg-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="type" width="16" height="16"></i>
+                <%- icon('type', 16) %>
                 <span class="fw-semibold me-auto">الكلمة والدليل</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
@@ -33,7 +33,7 @@
                   </div>
                   <% if (question.id && question.playAnswer !== question.answer) { %>
                     <div class="wz-fold-note" data-fold-note>
-                      <i data-lucide="info" width="14" height="14"></i>
+                      <%- icon('info', 14) %>
                       تُكتب <span class="wz-answer"><%= question.answer %></span>، وتُلعب <span class="wz-answer"><%= question.playAnswer %></span>: تُوحَّد صور الهمزة والألف داخل الشبكة، ويعرض التطبيق الكتابة الأصلية بعد حل الكلمة.
                     </div>
                   <% } %>
@@ -88,7 +88,7 @@
           <div class="col-lg-6">
             <div class="ad-card h-100" data-zoom-editor <%= question.imageFile ? 'data-has-file' : '' %>>
               <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="image" width="16" height="16"></i>
+                <%- icon('image', 16) %>
                 <span class="fw-semibold">صورة</span>
                 <span class="kd-faint small ms-auto">اختياري</span>
               </div>
@@ -149,7 +149,7 @@
           <div class="col-lg-6">
             <div class="ad-card h-100" data-audio-editor <%= question.audioFile ? 'data-has-file' : '' %>>
               <div class="ad-card-head d-flex align-items-center gap-2">
-                <i data-lucide="audio-lines" width="16" height="16"></i>
+                <%- icon('audio-lines', 16) %>
                 <span class="fw-semibold">الصوت</span>
                 <span class="kd-faint small ms-auto">اختياري</span>
               </div>

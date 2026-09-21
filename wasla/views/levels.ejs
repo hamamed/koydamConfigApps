@@ -11,7 +11,7 @@
           <form method="post" action="/admin/levels" class="d-flex flex-wrap align-items-center gap-2 m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button class="btn btn-kd" type="submit">
-              <i data-lucide="plus" width="15" height="15" class="me-1"></i>أضف اللغز <%= levels.length + 1 %>
+              <span class="me-1"><%- icon('plus', 15) %></span>أضف اللغز <%= levels.length + 1 %>
             </button>
             <span class="small kd-faint">الألغاز بلا أسماء: تُرقَّم بالترتيب أدناه. اللغز الجديد يُضاف في النهاية كمسودة.</span>
           </form>
@@ -23,7 +23,7 @@
         <form class="ad-card mb-3" method="post" action="/admin/levels/generate" data-generator>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="ad-card-head d-flex align-items-center gap-2">
-            <i data-lucide="wand-sparkles" width="16" height="16"></i>
+            <%- icon('wand-sparkles', 16) %>
             <span class="fw-semibold">توليد ألغاز</span>
             <span class="small kd-faint ms-auto">الفئات تُسحب عشوائياً، <span class="wz-ar"><%= mainCategory %></span> مرتين في كل لغز</span>
           </div>
@@ -71,7 +71,7 @@
                 <span class="form-check-label">انشر مباشرة</span>
               </label>
               <button class="btn btn-kd ms-auto" type="submit">
-                <i data-lucide="wand-sparkles" width="15" height="15" class="me-1"></i>ولّد
+                <span class="me-1"><%- icon('wand-sparkles', 15) %></span>ولّد
               </button>
             </div>
             <p class="small kd-faint m-0">
@@ -88,7 +88,7 @@
               data-confirm="إعادة ترتيب كل الألغاز حسب الصعوبة؟ السهلة أولاً ثم المتوسطة ثم الصعبة، وداخل كل مجموعة الأقل كلمات أولاً. هذا يغيّر أرقام الألغاز التي يراها اللاعبون.">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button class="btn btn-sm btn-kd-outline" type="submit">
-            <i data-lucide="arrow-up-down" width="14" height="14" class="me-1"></i>رتّب حسب الصعوبة
+            <span class="me-1"><%- icon('arrow-up-down', 14) %></span>رتّب حسب الصعوبة
           </button>
           <span class="small kd-faint">كل الألغاز: سهل ← متوسط ← صعب، ثم الأقل كلمات، ثم الترتيب الحالي.</span>
         </form>
@@ -96,7 +96,7 @@
 
       <% if (!levels.length) { %>
         <div class="ad-card ad-empty">
-          <i data-lucide="grid-3x3"></i>
+          <%- icon('grid-3x3', 28) %>
           <p class="mb-0">لا ألغاز بعد.</p>
         </div>
       <% } else { %>
@@ -106,19 +106,19 @@
           <div class="d-flex flex-wrap gap-2 align-items-center">
             <strong class="small me-1"><span data-bulk-count>0</span> محدَّد</strong>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="publish" data-bulk-button>
-              <i data-lucide="upload" width="14" height="14" class="me-1"></i>نشر</button>
+              <span class="me-1"><%- icon('upload', 14) %></span>نشر</button>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="unpublish" data-bulk-button>
-              <i data-lucide="download" width="14" height="14" class="me-1"></i>إلغاء النشر</button>
+              <span class="me-1"><%- icon('download', 14) %></span>إلغاء النشر</button>
             <div class="wz-bulk-group">
               <select class="form-select form-select-sm wz-bulk-field" name="difficulty" aria-label="الصعوبة">
                 <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[d] || d %></option><% }) %>
               </select>
               <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="difficulty" data-bulk-button>
-                <i data-lucide="gauge" width="14" height="14" class="me-1"></i>تعيين الصعوبة</button>
+                <span class="me-1"><%- icon('gauge', 14) %></span>تعيين الصعوبة</button>
             </div>
             <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button
                     data-bulk-delete-button data-bulk-delete-ask="حذف %n لغزاً؟ تبقى أسئلتها في البنك.">
-              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>حذف</button>
+              <span class="me-1"><%- icon('trash-2', 14) %></span>حذف</button>
             <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-select-all>
               تحديد الكل <span class="wz-category-count"><%= levels.length %></span></button>
             <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>إلغاء</button>
@@ -146,13 +146,13 @@
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="direction" value="<%= dir %>">
                             <button class="btn btn-sm btn-kd-ghost" type="submit" <%= disabled ? 'disabled' : '' %> aria-label="نقل <%= dir %>">
-                              <i data-lucide="<%= glyph %>" width="14" height="14"></i>
+                              <%- icon(glyph, 14) %>
                             </button>
                           </form>
                         <% }) %>
                       </div>
                     </td>
-                    <td class="text-end text-nowrap"><a class="btn btn-sm btn-kd-ghost" href="/admin/levels/<%= l.id %>/preview" aria-label="معاينة اللغز <%= l.number %>"><i data-lucide="smartphone" width="14" height="14" class="me-1"></i>معاينة</a> <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= l.id %>">فتح</a></td>
+                    <td class="text-end text-nowrap"><a class="btn btn-sm btn-kd-ghost" href="/admin/levels/<%= l.id %>/preview" aria-label="معاينة اللغز <%= l.number %>"><span class="me-1"><%- icon('smartphone', 14) %></span>معاينة</a> <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= l.id %>">فتح</a></td>
                   </tr>
                 <% }) %>
               </tbody>

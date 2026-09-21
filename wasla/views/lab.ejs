@@ -19,7 +19,7 @@
         <% const label = labels[list.name]; %>
         <div class="ad-card mb-3" id="<%= list.name %>">
           <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-            <i data-lucide="<%= list.name === 'roots' ? 'spline' : 'quote' %>" width="16" height="16"></i>
+            <%- icon(list.name === 'roots' ? 'spline' : 'quote', 16) %>
             <span class="fw-semibold me-auto"><%= label.title %></span>
             <span class="kd-tag"><%= list.count %> مدخلاً</span>
             <span class="kd-tag <%= list.edited ? 'kd-tag-accent' : '' %>"><%= list.edited ? 'محرَّرة' : 'مدمجة' %></span>

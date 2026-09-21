@@ -12,7 +12,7 @@
 
       <% if (!apns.configured) { %>
         <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
-          <i data-lucide="key-round" width="17" height="17" class="flex-shrink-0"></i>
+          <span class="flex-shrink-0"><%- icon('key-round', 17) %></span>
           <span class="me-auto">لم تُعدّ APNs بعد، فلا يمكن الإرسال. ارفع مفتاح ‎.p8 أولاً.</span>
           <a class="btn btn-sm btn-kd" href="/admin/notifications/setup">إعداد APNs</a>
         </div>
@@ -28,7 +28,7 @@
           <div class="col-6 col-xl-3">
             <div class="ad-card ad-kpi">
               <div class="d-flex align-items-center gap-2 mb-2">
-                <i data-lucide="<%= glyph %>" width="17" height="17"></i>
+                <%- icon(glyph, 17) %>
                 <span class="ad-kpi-label"><%= label %></span>
               </div>
               <div class="ad-kpi-value"><%= value %></div>
@@ -42,7 +42,7 @@
           <form class="ad-card" method="post" action="/admin/notifications/confirm" data-compose>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="send" width="16" height="16"></i>
+              <%- icon('send', 16) %>
               <span class="fw-semibold me-auto">إشعار جديد</span>
             </div>
             <div class="ad-card-body d-grid gap-3">
@@ -88,13 +88,13 @@
         <div class="col-xl-6">
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="history" width="16" height="16"></i>
+              <%- icon('history', 16) %>
               <span class="fw-semibold me-auto">أُرسلت</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!history.length) { %>
                 <div class="ad-empty">
-                  <i data-lucide="bell"></i>
+                  <%- icon('bell', 28) %>
                   <p class="mb-0">لم يُرسل شيء بعد.</p>
                 </div>
               <% } else { %>

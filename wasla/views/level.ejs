@@ -27,13 +27,13 @@
           <span class="ad-status <%= level.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= level.published ? 'Published' : 'Draft' %></span>
 
           <a class="btn btn-kd-outline <%= level.words.length ? '' : 'disabled' %>" href="/admin/levels/<%= level.id %>/preview">
-            <i data-lucide="smartphone" width="15" height="15" class="me-1"></i>معاينة
+            <span class="me-1"><%- icon('smartphone', 15) %></span>معاينة
           </a>
 
           <form method="post" action="/admin/levels/<%= level.id %>/shuffle" class="m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button class="btn btn-kd-outline" type="submit" <%= level.words.length < 2 ? 'disabled' : '' %>>
-              <i data-lucide="shuffle" width="15" height="15" class="me-1"></i>إعادة ترتيب الشبكة
+              <span class="me-1"><%- icon('shuffle', 15) %></span>إعادة ترتيب الشبكة
             </button>
           </form>
 
@@ -51,14 +51,14 @@
         <div class="col-xl-7">
           <div class="ad-card mb-3">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="grid-3x3" width="16" height="16"></i>
+              <%- icon('grid-3x3', 16) %>
               <span class="fw-semibold">معاينة الشبكة</span>
               <span class="kd-faint small ms-auto">كما يرسمها التطبيق — من اليمين إلى اليسار</span>
             </div>
             <div class="ad-card-body">
               <% if (!level.words.length) { %>
                 <div class="ad-empty">
-                  <i data-lucide="grid-3x3"></i>
+                  <%- icon('grid-3x3', 28) %>
                   <p class="mb-0">اختر سؤالين على الأقل تشترك أجوبتهما في حرف، ثم ابنِ الشبكة.</p>
                 </div>
               <% } else { %>
@@ -84,7 +84,7 @@
 
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="list" width="16" height="16"></i>
+              <%- icon('list', 16) %>
               <span class="fw-semibold me-auto">الأدلة</span>
             </div>
             <div class="ad-card-body p-0">
@@ -113,7 +113,7 @@
           <form class="ad-card" method="post" action="/admin/levels/<%= level.id %>/words" data-picker>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <i data-lucide="list-checks" width="16" height="16"></i>
+              <%- icon('list-checks', 16) %>
               <span class="fw-semibold">الأسئلة</span>
               <span class="kd-tag kd-tag-accent ms-auto" data-picker-count><%= chosen.size %></span>
             </div>

@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
+import { createPanelIcons } from '../panel-icons.js';
 import { LEVEL_SIZE, MAIN_CATEGORY, MAIN_SLOTS, MIN_CATEGORIES, planLevels } from '../level-builder.js';
 import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
@@ -49,6 +50,9 @@ export function adminRouter({
   repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, lab = null, profiles, titles = null,
 }) {
   const router = express.Router();
+
+  // The icon set, read once. `icon()` is on every page through res.locals.
+  const icons = createPanelIcons();
 
   /**
    * A stored picture's pixel size, so a preview frames it the way the app does.
@@ -95,6 +99,7 @@ export function adminRouter({
     res.locals.assetVersion = config.assetVersion;
     res.locals.imageUrl = (file) => `/media/questions/${file}`;
     res.locals.audioUrl = (file) => `/media/audio/${file}`;
+    res.locals.icon = (name, size) => icons.markup(name, size);
     next();
   });
 
@@ -121,6 +126,17 @@ export function adminRouter({
   });
 
   router.use(requireAuth);
+
+  /**
+   * The panel's icons. Behind the sign-in on purpose: the pack may be used in a
+   * project but not handed out, so it is served to the person running the panel
+   * and to nobody else.
+   */
+  router.get('/icons/:name.svg', (req, res) => {
+    const file = icons.file(req.params.name);
+    if (!file) return res.status(404).end();
+    res.type('image/svg+xml').set('Cache-Control', 'private, max-age=604800').sendFile(file);
+  });
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
