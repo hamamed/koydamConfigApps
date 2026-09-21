@@ -837,7 +837,6 @@ html[dir="rtl"] { overflow-x: hidden; }
   flex: none;
 }
 .wz-logo-tile {
-  --wz-tile: 26px;
   width: var(--wz-tile);
   height: var(--wz-tile);
   display: grid;
@@ -882,6 +881,7 @@ html[dir="rtl"] { overflow-x: hidden; }
 /* The tagline ribbon under the pieces, as the app draws it: the display face in
    white on an indigo plate, tucked a little under the pieces. */
 .wz-logo-wrap {
+  --wz-tile: 26px;
   display: inline-flex;
   flex-direction: column;
   align-items: center;

@@ -1,7 +1,9 @@
 <%# The game's logo, drawn rather than fetched: three pieces, tilted and overlapping,
-    over the tagline ribbon — the way LogoView draws them in the app. `size` is a
-    piece's side in pixels; pass `tagline: false` where there is no room for it. %>
-<span class="wz-logo-wrap" style="--wz-tile: <%= typeof size === 'undefined' ? 26 : size %>px"
+    over the tagline ribbon — the way LogoView draws them in the app.
+    Pass `tagline: false` where there is no room for it. %>
+<%# `size` is a piece's side: a number of pixels, or any CSS length — a clamp()
+    where the logo should grow with the page. %>
+<span class="wz-logo-wrap" style="--wz-tile: <%= typeof size === 'number' ? size + 'px' : (size || '26px') %>"
       role="img" aria-label="شبّك · لعبة كلمات متقاطعة">
   <span class="wz-logo">
     <span class="wz-logo-tile wz-logo-a">ش</span>
