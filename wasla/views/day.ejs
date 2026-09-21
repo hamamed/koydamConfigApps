@@ -15,6 +15,7 @@
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= previous %>">← <%= previous %></a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= next %>"><%= next %> →</a>
         <span class="kd-tag kd-tag-accent wz-ar"><%= weekdayAr %></span>
+        <span class="kd-tag kd-tag-ok wz-ar" title="لعبة هذا اليوم — وهي وحدها التي تُكافئ؛ الباقي للأرشيف"><%- icon('star', 12) %> <%= dayKindTitle %></span>
         <% if (event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية: يستعمل البحث موضوعها ما لم يُخطَّط اليوم"><%- icon('moon', 12) %> <%= event %></span><% } %>
         <div class="ms-auto">
           <% if (past) { %>
@@ -82,13 +83,42 @@
         </div>
       </div>
 
+      <% if (dayKind === 'marathon') { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+            <%- icon('zap', 16) %>
+            <span class="fw-semibold me-auto">ماراثون الجمعة</span>
+            <% if (marathon) { %><span class="kd-tag kd-tag-accent"><%= marathon.rounds.length %> جولات · <%= marathon.bonus %> عملة</span><% } %>
+          </div>
+          <div class="ad-card-body">
+            <% if (!marathon) { %>
+              <p class="small kd-muted mb-0">لا جولات كافية لهذا اليوم: تحتاج لعبتين على الأقل من ألعاب اليوم.</p>
+            <% } else { %>
+              <p class="small kd-muted mb-2">الجولات نفسها المعروضة أدناه، مختصرة، واحدة تلو الأخرى بساعة واحدة.</p>
+              <ol class="wz-marathon mb-0">
+                <% marathon.rounds.forEach((r) => { %>
+                  <li><span class="wz-ar fw-semibold"><%= kindNames[r.kind] %></span>
+                    <span class="small kd-muted wz-ar"><%= r.kind === 'scramble' ? r.game.words.length + ' كلمات'
+                      : r.kind === 'bubbles' ? r.game.words.length + ' كلمات · ' + r.game.theme
+                      : r.kind === 'groups' ? r.game.groups.length + ' مجموعات'
+                      : r.kind === 'wheel' ? r.game.words.length + ' كلمات · ' + [...r.game.letters].join(' ')
+                      : r.kind === 'guess' ? r.game.words.map((w) => w.display).join('، ') + ' · ' + r.game.tries + ' محاولات'
+                      : r.game.size + '×' + r.game.size + ' · ' + r.game.theme %></span></li>
+                <% }) %>
+              </ol>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+
       <div class="row g-3">
         <% games.forEach((g) => { %>
           <div class="col-xl-6" id="<%= g.kind %>">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
                 <%- icon(g.label.icon, 16) %>
-                <span class="fw-semibold me-auto"><span class="wz-ar"><%= g.label.ar %></span></span>
+                <span class="fw-semibold me-auto"><span class="wz-ar"><%= g.label.ar %></span>
+                  <% if (g.isDayGame) { %><span class="kd-tag kd-tag-ok">لعبة اليوم</span><% } %></span>
                 <span class="kd-tag <%= g.source === 'typed' ? 'kd-tag-accent' : g.source ? 'kd-tag-ok' : '' %>"><%= g.source === 'typed' ? 'مكتوب' : g.source ? 'مخطَّط' : 'تلقائي' %></span>
                 <% if (!past) { %>
                   <form method="post" action="/admin/days/<%= date %>/games/<%= g.kind %>/again" class="m-0">
@@ -116,7 +146,8 @@
                 <% } else if (g.kind === 'wheel') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...g.game.letters].join(' ') %></span> <span class="wz-ar"><%= g.game.words.join('، ') %></span></p>
                 <% } else if (g.kind === 'guess') { %>
-                  <p class="mb-2"><span class="wz-ar fw-semibold fs-4"><%= g.game.display %></span> <span class="small kd-muted"><%= g.game.tries %> محاولات</span></p>
+                  <p class="mb-2"><span class="wz-ar fw-semibold fs-4"><%= (g.game.words ?? [{ display: g.game.display }]).map((w) => w.display).join('  ·  ') %></span>
+                    <span class="small kd-muted"><%= g.game.tries %> محاولات للكلمتين</span></p>
                 <% } %>
 
                 <% if (!past) { %>

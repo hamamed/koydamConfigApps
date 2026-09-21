@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'ألعاب اليوم · ' + date,
-          subheading: 'الألعاب الخمس إلى جانب البحث عن الكلمات، واحدة لكل اللاعبين في التاريخ نفسه',
+          subheading: 'لعبة واحدة كل يوم بحجمها الكامل، والباقي في الأرشيف بلا جوائز',
           actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/daily-games?date=' + date + '" target="_blank" rel="noopener">عرض JSON</a>'
         }) %>
     <div class="ad-content">
@@ -93,7 +93,7 @@
               <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('coins', 16) %><span class="fw-semibold">المكافآت</span></div>
               <div class="ad-card-body small">
                 <p class="mb-1"><strong><%= set.coins %></strong> عملة لكل لعبة، مرة في اليوم.</p>
-                <p class="mb-1"><strong><%= set.allBonus %></strong> عملة إضافية عند إنهاء البحث والألعاب الخمس.</p>
+                <p class="mb-1"><strong><%= set.allBonus %></strong> عملة إضافية عند إنهاء ماراثون الجمعة كاملاً.</p>
                 <p class="kd-muted mb-0">غيّرهما من <a href="/admin/settings">الإعدادات</a>.</p>
               </div>
             </div>

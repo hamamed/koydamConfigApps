@@ -33,14 +33,16 @@ test('bubbles: theme first, then words cut into pieces, all pieces mixed', () =>
   assert.match(readBubbles('مدن\nطنجة').errors[0], /3 to 8/);
 });
 
-test('groups: four lines of title and four words, no word twice', () => {
+test('groups: four or five lines of title and four words, no word twice', () => {
   const text = 'مدن: طنجة، فاس، رباط، وجدة\nمهن: طبيب، معلم، مهندس، طاهي\nحيوانات: قرد، دجاج، سمكة، عصفور\nفواكه: تفاح، موز، عنب، رمان';
   const { game } = readGroups(text, 5);
   assert.equal(game.groups.length, 4);
   assert.equal(new Set(game.order).size, 16);
+  const five = `${text}\nألوان: أحمر، أزرق، أخضر، أصفر`;
+  assert.equal(readGroups(five, 5).game.groups.length, 5);
   assert.match(readGroups('مدن: طنجة، فاس').errors[0], /exactly 4 words/);
   assert.match(readGroups(text.replace('موز', 'فاس')).errors[0], /two groups/);
-  assert.match(readGroups(text.split('\n').slice(0, 3).join('\n')).errors[0], /exactly 4 groups/);
+  assert.match(readGroups(text.split('\n').slice(0, 3).join('\n')).errors[0], /4 إلى 5/);
 });
 
 test('wheel and guess reuse the list rules', () => {
@@ -48,8 +50,13 @@ test('wheel and guess reuse the list rules', () => {
   assert.deepEqual(game.words, ['حلم', 'حمل', 'حامل']);
   assert.deepEqual([...game.letters].sort(), [...'حملا'].sort());
   assert.ok(readWheel('قلمع: قلم سمك عمل').errors[0].includes('سمك'));
-  assert.deepEqual(readGuess('مدرسة').game, { word: 'مدرسة', display: 'مدرسة', tries: 6 });
+  const guess = readGuess('مدرسة\nملعقة').game;
+  assert.deepEqual(guess.words, [{ word: 'مدرسة', display: 'مدرسة' }, { word: 'ملعقة', display: 'ملعقة' }]);
+  assert.equal(guess.word, 'مدرسة', 'older app builds read one word');
+  assert.equal(guess.tries, 8);
+  assert.equal(readGuess('مدرسة').game.words.length, 1);
   assert.match(readGuess('قلم').errors[0], /5–5/);
+  assert.ok(readGuess('مدرسة\nمدرسة').errors[0].includes('مرتين'));
 });
 
 test('every game turns into text and back into the same words', () => {

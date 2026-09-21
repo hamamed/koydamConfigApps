@@ -167,7 +167,7 @@ test('a board that does not match its letters, size or word rules is refused', (
   assert.equal(boardProblem(board), null);
   const broken = { ...board, words: board.words.map((w, i) => (i === 0 ? { ...w, row: (w.row + 1) % 8 } : w)) };
   assert.match(boardProblem(broken) ?? '', /does not match/);
-  assert.match(boardProblem({ ...board, words: board.words.slice(0, 5) }), /6 to 10/);
+  assert.match(boardProblem({ ...board, words: board.words.slice(0, 5) }), /6 to 12/);
   assert.match(boardProblem({ ...board, words: board.words.map((w) => ({ ...w, id: 1 })) }), /own id/);
   assert.ok(days.save('2026-09-18', { theme: 'x', size: 8, words, seed: 3, board, source: 'custom' }).error);
   assert.ok(days.save('2026-02-30', { theme: 'ألوان', size: 8, words, seed: 3, board, source: 'custom' }).error);

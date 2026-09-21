@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'لغز اليوم',
-          subheading: 'كل يوم: البحث عن الكلمات والألعاب الخمس. افتح يوماً لتغيير أيٍّ منها.',
+          subheading: 'لعبة واحدة لكل يوم من أيام الأسبوع، والجمعة ماراثون. افتح يوماً لتغيير أيٍّ منها.',
           actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games">قوائم الكلمات</a>'
         }) %>
     <div class="ad-content">
@@ -29,8 +29,26 @@
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days?from=<%= previous %>">→ أقدم</a>
         <% if (!isCurrent) { %><a class="btn btn-sm btn-kd-outline" href="/admin/days">من اليوم</a><% } %>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days?from=<%= next %>">أحدث ←</a>
-        <span class="small kd-muted ms-auto"><%= planned %> of <%= days.length %> يوماً مخطّطة بالكامل ·
+        <span class="small kd-muted ms-auto"><%= planned %> من <%= days.length %> يوماً مخطّطة بالكامل ·
           <span class="kd-tag kd-tag-ok">مخطَّط</span> <span class="kd-tag kd-tag-accent">مكتوب</span> <span class="kd-tag">تلقائي</span></span>
+      </div>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <%- icon('calendar-days', 16) %>
+          <span class="fw-semibold me-auto">أسبوع اللعبة</span>
+          <span class="kd-tag">لعبة واحدة كل يوم — وهي وحدها التي تُكافئ</span>
+        </div>
+        <div class="ad-card-body">
+          <div class="wz-week">
+            <% week.forEach((d) => { %>
+              <div class="wz-week-day<%= d.kind === 'marathon' ? ' is-marathon' : '' %>">
+                <span class="wz-week-name wz-ar"><%= d.name %></span>
+                <span class="wz-week-game wz-ar"><%= d.title %></span>
+              </div>
+            <% }) %>
+          </div>
+        </div>
       </div>
 
       <div class="ad-card">
@@ -40,6 +58,7 @@
               <thead>
                 <tr>
                   <th>اليوم</th>
+                  <th>لعبة اليوم</th>
                   <th>البحث عن الكلمات</th>
                   <% kinds.forEach((k) => { %><th class="wz-ar"><%= labels[k].ar %></th><% }) %>
                   <th></th>
@@ -52,6 +71,9 @@
                       <a class="fw-semibold kd-mono" href="/admin/days/<%= d.date %>"><%= d.date %></a>
                       <div class="small kd-muted"><%= d.weekday %> · <span class="wz-ar"><%= d.weekdayAr %></span><% if (d.isToday) { %> · <strong>اليوم</strong><% } %></div>
                       <% if (d.event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية"><%- icon('moon', 12) %> <%= d.event %></span><% } %>
+                    </td>
+                    <td class="text-nowrap">
+                      <span class="kd-tag kd-tag-accent wz-ar" title="اللعبة التي تُكافئ في هذا اليوم"><%= d.kindTitle %></span>
                     </td>
                     <td>
                       <% if (d.wordSearch) { %>

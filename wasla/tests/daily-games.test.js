@@ -5,8 +5,9 @@ import { createAppConfig, DEFAULT_CONFIG } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import { openDatabase } from '../src/db/index.js';
 import {
-  buildBubbles, buildGroups, buildGuess, buildScramble, buildWheel, createDailyGames, GUESS_LETTERS,
-  parseGuessWords, parseWheelSets, spelledFrom, splitParts, titleGroups,
+  buildBubbles, buildGroups, buildGuess, buildScramble, buildWheel, createDailyGames, GROUP_COUNT,
+  GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS, parseGuessWords, parseWheelSets, SCRAMBLE_WORDS, spelledFrom,
+  splitParts, titleGroups,
 } from '../src/daily-games.js';
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from '../src/daily-games-words.js';
 import { parseDay } from '../src/daily.js';
@@ -46,9 +47,9 @@ test('pieces are two letters, the last taking an odd one, never a single letter'
   }
 });
 
-test('the scramble has five clued words, shortest first, each shuffled away from itself', () => {
+test('the scramble takes ten clued words, shortest first, each shuffled away from itself', () => {
   const scramble = buildScramble(rows(), 42);
-  assert.equal(scramble.words.length, 5);
+  assert.equal(scramble.words.length, SCRAMBLE_WORDS);
   const lengths = scramble.words.map((w) => letters(w.word).length);
   assert.deepEqual(lengths, [...lengths].sort((a, b) => a - b));
   for (const w of scramble.words) {
@@ -58,7 +59,9 @@ test('the scramble has five clued words, shortest first, each shuffled away from
   }
 });
 
-test('the scramble skips answers without a clue and gives up below five words', () => {
+test('the scramble plays short rather than not at all, and gives up below five words', () => {
+  const eight = rows().slice(0, 8);
+  assert.equal(buildScramble(eight, 1).words.length, 8, 'a thin bank shortens the round');
   const few = rows().slice(0, 4);
   assert.equal(buildScramble(few, 1), null);
   const noClues = rows().map((r) => ({ ...r, clue: '  ' }));
@@ -73,18 +76,20 @@ test('bubbles use one theme with five words, and the bubbles are exactly their p
   for (const w of bubbles.words) assert.equal(w.parts.join(''), w.word);
 });
 
-test('groups are four titles of four different words, in a shuffled order of all sixteen ids', () => {
+test('groups are five titles of four different words, in a shuffled order of all twenty ids', () => {
   const set = buildGroups(titleGroups(rows(), [3, 8]), 99);
-  assert.equal(set.groups.length, 4);
+  assert.equal(set.groups.length, GROUP_COUNT);
   const ids = set.groups.flatMap((g) => g.words.map((w) => w.id));
-  assert.equal(new Set(ids).size, 16);
+  assert.equal(new Set(ids).size, GROUP_COUNT * 4);
   assert.deepEqual([...set.order].sort(), [...ids].sort());
   const words = set.groups.flatMap((g) => g.words.map((w) => w.word));
-  assert.equal(new Set(words).size, 16);
-  assert.equal(new Set(set.groups.map((g) => g.title)).size, 4);
+  assert.equal(new Set(words).size, GROUP_COUNT * 4);
+  assert.equal(new Set(set.groups.map((g) => g.title)).size, GROUP_COUNT);
 });
 
-test('groups need four usable titles', () => {
+test('groups fall back to four titles, and need four', () => {
+  const four = rows().filter((r) => r.title !== 'حيوانات');
+  assert.equal(buildGroups(titleGroups(four, [3, 8]), 1).groups.length, 4);
   const three = rows().filter((r) => r.title !== 'مهن' && r.title !== 'حيوانات');
   assert.equal(buildGroups(titleGroups(three, [3, 8]), 1), null);
 });
@@ -124,13 +129,24 @@ test('the wheel sends shuffled letters and its words shortest first', () => {
   assert.deepEqual(lengths, [...lengths].sort((a, b) => a - b));
 });
 
-test('the guess word rotates by day and comes back after the whole list', () => {
+test('the guess hides two different words, and the pair rotates by day', () => {
   const { words } = parseGuessWords(DEFAULT_GUESS_WORDS);
   const first = buildGuess(words, 100);
-  assert.equal(first.tries, 6);
-  assert.deepEqual(buildGuess(words, 100 + words.length), first);
+  assert.equal(first.tries, GUESS_TRIES);
+  assert.equal(first.words.length, GUESS_WORDS);
+  assert.notEqual(first.words[0].word, first.words[1].word);
+  assert.equal(first.word, first.words[0].word, 'older app builds read one word');
+  for (const w of first.words) assert.equal(letters(w.word).length, GUESS_LETTERS);
   const week = new Set(Array.from({ length: 7 }, (_, i) => buildGuess(words, 100 + i).word));
   assert.equal(week.size, 7);
+  assert.equal(buildGuess([words[0]], 3).words.length, 1, 'one word left is still a game');
+  assert.equal(buildGuess([], 3), null);
+});
+
+test('the wheel takes a set worth a whole day when the list has one', () => {
+  const sets = [{ letters: 'حملا', words: ['حمل', 'حلم', 'لحم'] }, { letters: 'بحرا', words: ['بحر', 'حرب', 'ربح', 'حبر', 'بحار', 'حارب'] }];
+  for (let day = 0; day < 7; day++) assert.equal(buildWheel(sets, day, 4).words.length, 6, 'never the three-word set');
+  assert.equal(buildWheel([sets[0]], 0, 4).words.length, 3, 'unless it is all there is');
 });
 
 test('a date always gets the same set, and different dates different ones', () => {

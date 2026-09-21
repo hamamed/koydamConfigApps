@@ -47,7 +47,7 @@ before(async () => {
     events: createEvents(db, repo),
     wordSearch,
     wordSearchDays,
-    dailyGames: createDailyGames(db, { appConfig: createAppConfig(db) }),
+    dailyGames: createDailyGames(db, { appConfig: createAppConfig(db), wordSearch }),
   }));
   server = app.listen(0);
   base = `http://127.0.0.1:${server.address().port}/api/v1`;
@@ -160,8 +160,8 @@ test('config returns the contract defaults', async () => {
     starsPerLevel: 2,
     streakFreezeCost: 50,
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
-    dailyGameCoins: 8,
-    dailyAllGamesBonus: 30,
+    dailyGameCoins: 30,
+    dailyAllGamesBonus: 120,
   });
 });
 
@@ -316,9 +316,19 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
     ['2026-09-18', DEFAULT_CONFIG.dailyGameCoins, DEFAULT_CONFIG.dailyAllGamesBonus]);
   // Only two titles have questions here: never enough for four groups.
   assert.equal(body.groups, null);
-  assert.equal(body.guess.tries, 6);
+  assert.equal(body.guess.tries, 8);
+  assert.equal(body.guess.words.length, 2);
   assert.equal([...body.guess.word].length, 5);
   assert.ok(body.wheel.words.length >= 3);
+  // The week gives each date one game; 2026-09-18 is a Friday, so the marathon.
+  assert.equal(body.kind, 'marathon');
+  assert.equal(body.weekday, 5);
+  assert.deepEqual(body.schedule.map((d) => d.kind),
+    ['bubbles', 'groups', 'wheel', 'guess', 'wordsearch', 'marathon', 'scramble']);
+  assert.ok(body.marathon.rounds.length >= 2, 'Friday runs the games back to back');
+  assert.ok(body.marathon.rounds.every((r) => r.game));
+  assert.equal(body.marathon.bonus, DEFAULT_CONFIG.dailyAllGamesBonus);
+  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'scramble');
   assert.deepEqual(await (await fetch(`${base}/daily-games?date=2026-09-18`)).json(), body);
 });
 

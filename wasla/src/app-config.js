@@ -17,8 +17,8 @@ export const DEFAULT_CONFIG = Object.freeze({
   starsPerLevel: 2,
   streakFreezeCost: 50,
   wordSearchHelpCosts: Object.freeze({ revealLetter: 15, revealWord: 40 }),
-  dailyGameCoins: 8,
-  dailyAllGamesBonus: 30,
+  dailyGameCoins: 30,
+  dailyAllGamesBonus: 120,
 });
 
 export const REWARD_DAYS = 7;

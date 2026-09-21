@@ -1,6 +1,7 @@
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { EDITORS } from '../daily-game-editor.js';
 import { GAME_KINDS } from '../daily-games.js';
+import { KIND_NAMES, kindForDay, schedule } from '../daily-schedule.js';
 import { eventFor, eventLabel } from '../seasonal-events.js';
 import { ARABIC_WEEKDAYS, previewOf } from '../wordsearch-editor.js';
 import { WEEKDAY_NAMES, weekdayOf } from '../wordsearch-daily.js';
@@ -10,11 +11,11 @@ export const PLAN_CHOICES = Object.freeze([7, 14, 30]);
 const CALENDAR_DAYS = 30;
 
 export const GAME_LABELS = Object.freeze({
-  scramble: { en: 'Scramble', ar: 'رتّب الحروف', icon: 'shuffle', hint: 'كلمة في كل سطر: الجواب | الدليل (من 3 إلى 8 كلمات).' },
-  bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (من 3 إلى 8 كلمات، كل واحدة من 3 إلى 8 حروف).' },
-  groups: { en: 'Groups', ar: 'صِل المجموعات', icon: 'layout-grid', hint: 'أربعة أسطر: العنوان: كلمة، كلمة، كلمة، كلمة' },
+  scramble: { en: 'Scramble', ar: 'رتّب الحروف', icon: 'shuffle', hint: 'كلمة في كل سطر: الجواب | الدليل (حتى 10 كلمات).' },
+  bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (حتى 8 كلمات، كل واحدة من 4 إلى 10 حروف).' },
+  groups: { en: 'Groups', ar: 'صِل المجموعات', icon: 'layout-grid', hint: 'أربعة أو خمسة أسطر: العنوان: كلمة، كلمة، كلمة، كلمة' },
   wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'سطر واحد: حروف: كلمة كلمة كلمة (كل كلمة تُكتب من تلك الحروف).' },
-  guess: { en: 'Guess', ar: 'خمّن الكلمة', icon: 'square-asterisk', hint: 'كلمة واحدة من خمسة حروف بالضبط.' },
+  guess: { en: 'Guess', ar: 'خمّن الكلمتين', icon: 'square-asterisk', hint: 'كلمة أو كلمتان، كل واحدة في سطر ومن خمسة حروف بالضبط.' },
 });
 
 /**
@@ -61,6 +62,8 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
         event: eventLabel(eventFor(date)),
         wordSearch: saved ? { theme: saved.theme, source: saved.source } : null,
         games: games[date] ?? {},
+        kind: kindForDay(start + i),
+        kindTitle: KIND_NAMES[kindForDay(start + i)],
       };
     });
     const planned = days.filter((d) => d.wordSearch && GAME_KINDS.every((k) => d.games[k])).length;
@@ -71,6 +74,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       kinds: GAME_KINDS,
       labels: GAME_LABELS,
       planChoices: PLAN_CHOICES,
+      week: schedule(),
       previous: dayToDate(start - CALENDAR_DAYS),
       next: dayToDate(start + CALENDAR_DAYS),
       isCurrent: from === todayUtc(),
@@ -113,12 +117,14 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
   function renderDay(res, date, { drafts = {}, errors = {} } = {}) {
     const { day } = parseDay(date);
     const set = dailyGames.forDate(date);
+    const todayKind = kindForDay(day);
     const saved = dailyGames.saved(date);
     const games = GAME_KINDS.map((kind) => {
       const game = set?.[kind] ?? null;
       return {
         kind,
         label: GAME_LABELS[kind],
+        isDayGame: kind === todayKind,
         game,
         source: saved[kind]?.source ?? null,
         updatedAt: saved[kind]?.updatedAt ?? null,
@@ -140,6 +146,10 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       past: isPast(date),
       wordSearch: { day: wsDay, board: board && previewOf(board) },
       games,
+      dayKind: todayKind,
+      dayKindTitle: KIND_NAMES[todayKind],
+      marathon: todayKind === 'marathon' ? dailyGames.marathonFor(date) : null,
+      kindNames: KIND_NAMES,
       allPlanned: Boolean(wsDay) && games.every((g) => g.source || !g.game),
     });
   }

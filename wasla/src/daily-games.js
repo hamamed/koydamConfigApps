@@ -1,12 +1,17 @@
 /**
- * The five daily games beside the word search (contract §6): one set per
- * calendar date, the same for everyone.
+ * The daily games (contract §6, §9): one set per calendar date, the same for
+ * everyone. The week gives each of them a day of its own (src/daily-schedule.js)
+ * and every one is built at its full size, because it is the only game that pays
+ * that day:
  *
- *   scramble — five clues, each answer's letters shuffled
+ *   scramble — ten clues, each answer's letters shuffled
  *   bubbles  — one theme's words cut into pieces, all the pieces mixed
- *   groups   — sixteen words hiding four titles of four
+ *   groups   — twenty words hiding five titles of four
  *   wheel    — a handful of letters and the words they spell
- *   guess    — one hidden five-letter word, six tries
+ *   guess    — two hidden five-letter words at once, eight tries for both
+ *
+ * A game is built as large as the content allows and never smaller than its
+ * minimum: a thin question bank gives a shorter round rather than no game.
  *
  * Scramble, bubbles and groups come from the questions; wheel and guess from
  * the two word lists edited on the Daily games page (src/daily-games-words.js
@@ -20,23 +25,31 @@
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import { parseDay } from './daily.js';
+import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedule.js';
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from './daily-games-words.js';
 import { random, shuffled } from './wordsearch.js';
 
 export const GAME_KINDS = Object.freeze(['scramble', 'bubbles', 'groups', 'wheel', 'guess']);
 
-export const SCRAMBLE_WORDS = 5;
-export const SCRAMBLE_LETTERS = Object.freeze([3, 7]);
-export const BUBBLE_WORDS = 5;
-export const BUBBLE_LETTERS = Object.freeze([4, 8]);
-export const GROUP_COUNT = 4;
+/* How big each game aims to be, and the least it may be built at. */
+export const SCRAMBLE_WORDS = 10;
+export const SCRAMBLE_MIN_WORDS = 5;
+export const SCRAMBLE_LETTERS = Object.freeze([3, 9]);
+export const BUBBLE_WORDS = 8;
+export const BUBBLE_MIN_WORDS = 5;
+export const BUBBLE_LETTERS = Object.freeze([4, 10]);
+export const GROUP_COUNT = 5;
+export const GROUP_MIN_COUNT = 4;
 export const GROUP_SIZE = 4;
-export const GROUP_LETTERS = Object.freeze([3, 8]);
+export const GROUP_LETTERS = Object.freeze([3, 9]);
 export const GUESS_LETTERS = 5;
-export const GUESS_TRIES = 6;
+export const GUESS_WORDS = 2;
+export const GUESS_TRIES = 8;
 export const WHEEL_LETTERS = Object.freeze([3, 7]);
 export const WHEEL_MIN_WORDS = 3;
-export const WHEEL_MAX_WORDS = 8;
+export const WHEEL_MAX_WORDS = 14;
+/** A wheel set worth a whole day: the picker takes one of these when the list has any. */
+export const WHEEL_RICH_WORDS = 6;
 export const LIST_NAMES = Object.freeze(['guess', 'wheel']);
 const MAX_LIST_CHARS = 50_000;
 
@@ -102,7 +115,7 @@ export function buildScramble(questions, seed) {
     seen.add(word);
     pool.push({ id: q.id, word, display: normalizeAnswer(q.answer), clue });
   }
-  if (pool.length < SCRAMBLE_WORDS) return null;
+  if (pool.length < SCRAMBLE_MIN_WORDS) return null;
   const words = shuffled(pool, rand).slice(0, SCRAMBLE_WORDS)
     .sort((a, b) => letters(a.word).length - letters(b.word).length || a.id - b.id)
     .map((w) => ({ ...w, letters: scrambleLetters(w.word, rand) }));
@@ -110,7 +123,10 @@ export function buildScramble(questions, seed) {
 }
 
 export function buildBubbles(groups, day, seed) {
-  const themes = groups.filter((g) => g.words.length >= BUBBLE_WORDS);
+  // Themes deep enough for a full round when there are any, else whatever can
+  // still make a short one — a day with a thin bank plays small, not empty.
+  const deep = groups.filter((g) => g.words.length >= BUBBLE_WORDS);
+  const themes = deep.length ? deep : groups.filter((g) => g.words.length >= BUBBLE_MIN_WORDS);
   if (!themes.length) return null;
   const rand = random(seed);
   // Offset from the word search's rotation, so the two rarely share a theme.
@@ -131,7 +147,7 @@ export function buildGroups(groups, seed) {
     chosen.push({ title: group.title, words: fresh });
     if (chosen.length === GROUP_COUNT) break;
   }
-  if (chosen.length < GROUP_COUNT) return null;
+  if (chosen.length < GROUP_MIN_COUNT) return null;
   return { groups: chosen, order: shuffled(chosen.flatMap((g) => g.words.map((w) => w.id)), rand) };
 }
 
@@ -196,18 +212,76 @@ export function parseWheelSets(text) {
 const rotation = (list, day, salt) => (list.length ? shuffled(list, random(salt))[day % list.length] : null);
 
 export function buildWheel(sets, day, seed) {
-  const set = rotation(sets, day, 0x5eed);
+  // A three-word wheel is over in seconds; when the list holds fuller sets the
+  // day takes one of those, and only falls back to the rest when it does not.
+  const rich = sets.filter((s) => s.words.length >= WHEEL_RICH_WORDS);
+  const set = rotation(rich.length ? rich : sets, day, 0x5eed);
   if (!set) return null;
   const words = [...set.words].sort((a, b) => letters(a).length - letters(b).length || codePointOrder(a, b));
   return { letters: scrambleLetters(set.letters, random(seed)) ?? set.letters, words };
 }
 
+/**
+ * Two hidden words side by side, eight tries for both: every guess is marked on
+ * each board at once, so a letter ruled out on one still has to earn its place
+ * on the other.
+ *
+ * `word` and `display` repeat the first of them, which is what app builds from
+ * before the week of one game a day read — they get a plain single-word round.
+ */
 export function buildGuess(words, day) {
-  const pick = rotation(words, day, 0x9e55);
-  return pick ? { word: pick.word, display: pick.display, tries: GUESS_TRIES } : null;
+  const picks = [];
+  for (let i = 0; i < GUESS_WORDS && picks.length < words.length; i++) {
+    const pick = rotation(words.filter((w) => !picks.some((p) => p.word === w.word)), day, 0x9e55 + i * 0x2f1b);
+    if (pick) picks.push(pick);
+  }
+  if (!picks.length) return null;
+  return {
+    words: picks.map(({ word, display }) => ({ word, display })),
+    word: picks[0].word,
+    display: picks[0].display,
+    tries: GUESS_TRIES,
+  };
 }
 
-export function createDailyGames(db, { appConfig }) {
+/* ── Friday's marathon ─────────────────────────────────────────────────────
+ *
+ * Every game in one run, each cut down to a sprint: the day is not about
+ * finishing one puzzle well but about getting through all six. The rounds are
+ * the same shapes the app already plays, so nothing new has to be drawn — only
+ * shorter, and with no second chances between them.
+ */
+
+export const MARATHON_ROUNDS = Object.freeze(['scramble', 'bubbles', 'groups', 'wheel', 'guess', 'wordsearch']);
+export const MARATHON_SIZES = Object.freeze({ scramble: 4, bubbles: 4, groups: 4, wheel: 6, guess: 1, board: 7 });
+export const MARATHON_GUESS_TRIES = 5;
+
+/** The same game, cut to marathon length; null stays null. */
+export function trimForMarathon(kind, game, rand) {
+  if (!game) return null;
+  switch (kind) {
+    case 'scramble':
+      return { words: game.words.slice(0, MARATHON_SIZES.scramble) };
+    case 'bubbles': {
+      const words = game.words.slice(0, MARATHON_SIZES.bubbles);
+      return { theme: game.theme, words, bubbles: shuffled(words.flatMap((w) => w.parts), rand) };
+    }
+    case 'groups': {
+      const groups = game.groups.slice(0, MARATHON_SIZES.groups);
+      return { groups, order: shuffled(groups.flatMap((g) => g.words.map((w) => w.id)), rand) };
+    }
+    case 'wheel':
+      return { letters: game.letters, words: game.words.slice(0, MARATHON_SIZES.wheel) };
+    case 'guess': {
+      const words = game.words.slice(0, MARATHON_SIZES.guess);
+      return { words, word: words[0].word, display: words[0].display, tries: MARATHON_GUESS_TRIES };
+    }
+    default:
+      return game;
+  }
+}
+
+export function createDailyGames(db, { appConfig, wordSearch = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const listText = (name) => db.prepare('SELECT body FROM daily_game_lists WHERE name = ?').pluck().get(name) ?? DEFAULTS[name];
@@ -358,17 +432,64 @@ export function createDailyGames(db, { appConfig }) {
     return out;
   }
 
-  /** The set the API sends for a date — saved games over the automatic ones — or null for a bad date or when no game can be built. */
+  /** The games of a date as players get them: what the panel saved, else the automatic pick. */
+  function gamesFor(date) {
+    const auto = automatic(date) ?? {};
+    const fixed = saved(date);
+    return Object.fromEntries(GAME_KINDS.map((kind) => [kind, fixed[kind]?.game ?? auto[kind] ?? null]));
+  }
+
+  /**
+   * Friday's run: the date's own games, each cut to a sprint, plus a small
+   * board when the word search can build one. Any date can be asked, so the
+   * panel can preview a Friday before it arrives.
+   */
+  function marathonFor(date) {
+    const parsed = parseDay(date);
+    if (!parsed) return null;
+    const rand = random(seedFor(parsed.day, 'scramble') ^ 0x4d41524e);
+    const games = gamesFor(parsed.date);
+    const rounds = [];
+    for (const kind of MARATHON_ROUNDS) {
+      if (kind === 'wordsearch') {
+        const pick = wordSearch?.marathonBoard?.(parsed.date, MARATHON_SIZES.board);
+        if (pick) rounds.push({ kind, game: pick });
+        continue;
+      }
+      const game = trimForMarathon(kind, games[kind], rand);
+      if (game) rounds.push({ kind, game });
+    }
+    if (rounds.length < 2) return null;
+    return { rounds, bonus: appConfig.get().dailyAllGamesBonus };
+  }
+
+  /**
+   * The set the API sends for a date — null for a bad date or when no game can
+   * be built at all.
+   *
+   * `kind` is the game of that weekday, the only one that pays; the others are
+   * sent all the same, for the archive. App builds from before the schedule
+   * read the five games and ignore the rest, so they keep working.
+   */
   function forDate(date) {
     const parsed = parseDay(date);
     if (!parsed) return null;
     const config = appConfig.get();
-    const auto = automatic(parsed.date);
-    const fixed = saved(parsed.date);
-    const games = Object.fromEntries(GAME_KINDS.map((kind) => [kind, fixed[kind]?.game ?? auto[kind]]));
-    if (Object.values(games).every((g) => g === null)) return null;
-    return { date: parsed.date, coins: config.dailyGameCoins, allBonus: config.dailyAllGamesBonus, ...games };
+    const games = gamesFor(parsed.date);
+    const kind = kindForDay(parsed.day);
+    const marathon = kind === 'marathon' ? marathonFor(parsed.date) : null;
+    if (Object.values(games).every((g) => g === null) && !marathon) return null;
+    return {
+      date: parsed.date,
+      kind,
+      weekday: weekdayOf(parsed.day),
+      schedule: weekSchedule(),
+      coins: config.dailyGameCoins,
+      allBonus: config.dailyAllGamesBonus,
+      ...games,
+      ...(marathon ? { marathon } : {}),
+    };
   }
 
-  return { forDate, automatic, pickAgain, saved, saveGame, resetGame, clearDay, copyDay, freeze, plannedBetween, lists, saveList, resetList };
+  return { forDate, automatic, marathonFor, pickAgain, saved, saveGame, resetGame, clearDay, copyDay, freeze, plannedBetween, lists, saveList, resetList };
 }

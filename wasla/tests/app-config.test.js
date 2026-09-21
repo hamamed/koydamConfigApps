@@ -21,8 +21,8 @@ test('starts from the contract defaults', () => {
     starsPerLevel: 2,
     streakFreezeCost: 50,
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
-    dailyGameCoins: 8,
-    dailyAllGamesBonus: 30,
+    dailyGameCoins: 30,
+    dailyAllGamesBonus: 120,
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });

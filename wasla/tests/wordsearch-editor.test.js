@@ -60,8 +60,8 @@ test('a word that cannot fit blocks saving and says why', () => {
 test('too few or too many words, no theme or a bad size cannot be saved', () => {
   const { words } = readCustomWords(COLOURS.join('\n'));
   assert.match(composeDay({ theme: 'ألوان', words: words.slice(0, 5), size: 8, seed: 1 }).problems.join(), /at least 6/);
-  const eleven = Array.from({ length: 11 }, (_, i) => ({ id: i + 1, word: 'ابت', display: 'ابت' }));
-  assert.match(composeDay({ theme: 'ألوان', words: eleven, size: 10, seed: 1 }).problems.join(), /at most 10/);
+  const thirteen = Array.from({ length: 13 }, (_, i) => ({ id: i + 1, word: 'ابت', display: 'ابت' }));
+  assert.match(composeDay({ theme: 'ألوان', words: thirteen, size: 10, seed: 1 }).problems.join(), /at most 12/);
   assert.equal(composeDay({ theme: '', words, size: 8, seed: 1 }).canSave, false);
   const badSize = composeDay({ theme: 'ألوان', words, size: 12, seed: 1 });
   assert.equal(badSize.board, null);

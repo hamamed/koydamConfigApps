@@ -17,7 +17,8 @@
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import {
-  BUBBLE_LETTERS, GROUP_COUNT, GROUP_LETTERS, GROUP_SIZE, GUESS_LETTERS, GUESS_TRIES, SCRAMBLE_LETTERS,
+  BUBBLE_LETTERS, GROUP_COUNT, GROUP_LETTERS, GROUP_MIN_COUNT, GROUP_SIZE, GUESS_LETTERS, GUESS_TRIES,
+  GUESS_WORDS, SCRAMBLE_LETTERS,
   parseWheelSets, scrambleLetters, splitParts,
 } from './daily-games.js';
 import { random, shuffled } from './wordsearch.js';
@@ -119,7 +120,7 @@ export function readGroups(text, seed = newSeed()) {
     }
     groups.push({ title, words });
   });
-  if (!errors.length && rows.length !== GROUP_COUNT) errors.push(`Give exactly ${GROUP_COUNT} groups, one per line.`);
+  if (!errors.length && (rows.length < GROUP_MIN_COUNT || rows.length > GROUP_COUNT)) errors.push(`أعطِ ${GROUP_MIN_COUNT} إلى ${GROUP_COUNT} مجموعات، واحدة في كل سطر.`);
   if (errors.length) return { errors };
   return { game: { groups, order: shuffled(groups.flatMap((g) => g.words.map((w) => w.id)), random(seed)) } };
 }
@@ -140,14 +141,20 @@ export function readWheel(text, seed = newSeed()) {
 
 // ── Guess ────────────────────────────────────────────────────────────────────
 
-export const guessText = (game) => game?.display ?? '';
+export const guessText = (game) => (game?.words ?? (game?.display ? [{ display: game.display }] : [])).map((w) => w.display).join('\n');
 
+/** One word per line, up to the two the day hides at once. */
 export function readGuess(text) {
   const rows = lines(text);
-  if (rows.length !== 1) return { errors: ['Write one word.'] };
-  const read = readWord(rows[0], [GUESS_LETTERS, GUESS_LETTERS], 1);
-  if (read.error) return { errors: [read.error] };
-  return { game: { word: read.word, display: read.display, tries: GUESS_TRIES } };
+  if (!rows.length || rows.length > GUESS_WORDS) return { errors: [`اكتب كلمة أو ${GUESS_WORDS}، واحدة في كل سطر.`] };
+  const words = [];
+  for (const [i, row] of rows.entries()) {
+    const read = readWord(row, [GUESS_LETTERS, GUESS_LETTERS], i + 1);
+    if (read.error) return { errors: [read.error] };
+    if (words.some((w) => w.word === read.word)) return { errors: [`«${read.display}» مكتوبة مرتين.`] };
+    words.push({ word: read.word, display: read.display });
+  }
+  return { game: { words, word: words[0].word, display: words[0].display, tries: GUESS_TRIES } };
 }
 
 /** Each game's text form and parser, by kind. */

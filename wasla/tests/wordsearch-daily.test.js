@@ -63,10 +63,10 @@ test('an excluded theme is kept out, and can be let back in', () => {
   assert.ok(wordSearch.setExcluded('  ', true).error);
 });
 
-test('the size rises through the week, Monday 7 to Sunday 10', () => {
-  // 2026-09-14 is a Monday.
+test('the size rises through the week, and Thursday takes the whole board', () => {
+  // 2026-09-14 is a Monday; Thursday is the day the week gives the word search.
   const sizes = Array.from({ length: 7 }, (_, i) => sizeForDay(parseDay('2026-09-14').day + i));
-  assert.deepEqual(sizes, [7, 7, 8, 8, 9, 9, 10]);
+  assert.deepEqual(sizes, [7, 7, 8, 10, 9, 9, 10]);
 });
 
 test('a date gets a deterministic board from its theme, matching the contract', () => {

@@ -22,13 +22,14 @@
 
 import { foldForPlay, letters } from './arabic.js';
 import { parseDay } from './daily.js';
+import { kindForDay } from './daily-schedule.js';
 import { EVENT_THEMES, eventFor, eventQuestions } from './seasonal-events.js';
 import { buildBoard, MAX_SIZE, random, shuffled } from './wordsearch.js';
 
 export const MIN_WORD_LETTERS = 3;
 export const MAX_WORD_LETTERS = 8;
 export const MIN_THEME_WORDS = 6;
-export const MAX_BOARD_WORDS = 10;
+export const MAX_BOARD_WORDS = 12;
 /** Themes this close to eligible are listed in the panel as needing more questions. */
 export const CLOSE_THEME_WORDS = 4;
 
@@ -36,18 +37,21 @@ export const CLOSE_THEME_WORDS = 4;
  * Board size by weekday, Monday first: 7, 7, 8, 8, 9, 9, 10 — small early in
  * the week, largest on Sunday. Indexed by `SIZE_BY_WEEKDAY[(day + 3) % 7]`,
  * since 1970-01-01 (day 0) was a Thursday.
+ *
+ * The day the week hands the word search (contract §9) ignores the ramp and
+ * takes the largest board there is: on its own day it is the whole puzzle.
  */
 export const SIZE_BY_WEEKDAY = Object.freeze([7, 7, 8, 8, 9, 9, 10]);
 export const WEEKDAY_NAMES = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
 /** How many words a board of each size aims for, [fewest, most]; the date picks within. */
-export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 7], 8: [6, 8], 9: [7, 9], 10: [8, 10] });
+export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 7], 8: [6, 8], 9: [7, 9], 10: [9, 12] });
 /** Rounds of swapping a word that did not fit for one that was left over. */
 const REFILL_ROUNDS = 5;
 
 /** 0 = Monday … 6 = Sunday, for a day number since the epoch. */
 export const weekdayOf = (day) => (day + 3) % 7;
-export const sizeForDay = (day) => SIZE_BY_WEEKDAY[weekdayOf(day)];
+export const sizeForDay = (day) => (kindForDay(day) === 'wordsearch' ? MAX_SIZE : SIZE_BY_WEEKDAY[weekdayOf(day)]);
 
 const reversed = (word) => [...word].reverse().join('');
 
@@ -219,6 +223,25 @@ export function createWordSearch(db, { appConfig }) {
     };
   }
 
+  /**
+   * A short board for Friday's marathon: the same themes, at the size the run
+   * asks for, seeded away from the day's own board so the two never match.
+   * Null when no theme fits a board that small.
+   */
+  function marathonBoard(date, size) {
+    const parsed = parseDay(date);
+    const list = playable();
+    if (!parsed || !list.length) return null;
+    for (let step = 0; step < list.length; step++) {
+      const theme = list[(parsed.day + step + 1) % list.length];
+      const board = boardForTheme(theme, size, seedOf(parsed.day, size, step) ^ 0x4d41524e);
+      if (board) {
+        return { date: parsed.date, theme: theme.title, size: board.size, rows: board.rows, words: board.words };
+      }
+    }
+    return null;
+  }
+
   /** Keeps a title out of (or lets it back into) the daily word search. */
   function setExcluded(title, excluded) {
     const clean = String(title ?? '').trim();
@@ -231,5 +254,5 @@ export function createWordSearch(db, { appConfig }) {
     return {};
   }
 
-  return { themes, playable, pickForDate, eventPickForDate, automaticPick, forDate, setExcluded };
+  return { themes, playable, pickForDate, eventPickForDate, automaticPick, forDate, marathonBoard, setExcluded };
 }
