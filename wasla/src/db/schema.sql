@@ -207,6 +207,21 @@ CREATE TABLE IF NOT EXISTS daily_game_days (
   PRIMARY KEY (date, kind)
 );
 
+-- The pictures فقاعات الكلمات is played on (contract §10): a picture and the
+-- words that belong to it, cut into pieces by the game. Written by hand.
+CREATE TABLE IF NOT EXISTS picture_rounds (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  image_file  TEXT,
+  zoom        REAL NOT NULL DEFAULT 1,
+  focus_x     REAL NOT NULL DEFAULT 0.5,
+  focus_y     REAL NOT NULL DEFAULT 0.5,
+  words       TEXT NOT NULL,
+  published   INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS daily_game_lists (
   name        TEXT PRIMARY KEY,
   body        TEXT NOT NULL,

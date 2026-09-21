@@ -1,0 +1,87 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: title,
+          subheading: 'صورة واحدة ومعها من ' + limits.min + ' إلى ' + limits.max + ' كلمات تخصّها — تُقطَّع إلى مقاطع يجمعها اللاعب',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/pictures">كل الصور</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+      <% if (errors.length) { %>
+        <div class="alert alert-danger">
+          <ul class="mb-0 ps-3"><% errors.forEach((e) => { %><li class="wz-ar"><%= e %></li><% }) %></ul>
+        </div>
+      <% } %>
+
+      <form method="post" action="<%= round ? '/admin/pictures/' + round.id : '/admin/pictures' %>" enctype="multipart/form-data">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="row g-3">
+          <div class="col-xl-5">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('image', 16) %><span class="fw-semibold">الصورة</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div class="text-center">
+                  <%- include('partials/qimage', { q: { imageFile: round && round.imageFile, zoom: draft.zoom, focusX: draft.focusX, focusY: draft.focusY }, size: 'lg' }) %>
+                </div>
+                <label class="btn btn-kd-outline wz-upload">
+                  <%- icon('image-plus', 14) %> اختر صورة
+                  <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp" class="visually-hidden">
+                </label>
+                <% if (round && round.imageFile) { %>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="removeImage" name="removeImage" value="1">
+                    <label class="form-check-label small" for="removeImage">احذف الصورة الحالية</label>
+                  </div>
+                <% } %>
+                <div>
+                  <label class="small fw-semibold d-block" for="zoom">تكبير</label>
+                  <input class="form-control" type="number" id="zoom" name="zoom" min="1" max="4" step="0.1" value="<%= draft.zoom %>">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-7">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('type', 16) %><span class="fw-semibold">الكلمات</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div>
+                  <label class="small fw-semibold d-block" for="title">اسم الصورة</label>
+                  <input class="form-control wz-ar" type="text" id="title" name="title" maxlength="<%= limits.title %>"
+                         value="<%= draft.title %>" placeholder="بلايستيشن" dir="rtl" required>
+                </div>
+                <div>
+                  <label class="small fw-semibold d-block" for="words">الكلمات التي تخصّ الصورة</label>
+                  <textarea class="form-control wz-ar" id="words" name="words" rows="<%= limits.max %>" dir="rtl"
+                            placeholder="ألعاب&#10;ذراع&#10;سوني&#10;أسلاك&#10;أقراص"><%= draft.words %></textarea>
+                  <div class="small kd-muted">كلمة في كل سطر، من <%= limits.min %> إلى <%= limits.max %> كلمات، وكل كلمة من <%= limits.letters[0] %> إلى <%= limits.letters[1] %> حروف — تُقطَّع إلى مقاطع من حرفين.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button class="btn btn-kd-accent" type="submit">حفظ</button>
+          <% if (round) { %>
+            <a class="btn btn-kd-ghost" href="/admin/pictures">إلغاء</a>
+          <% } %>
+        </div>
+      </form>
+
+      <% if (round) { %>
+        <form class="mt-3" method="post" action="/admin/pictures/<%= round.id %>/delete" data-confirm="تُحذف هذه الصورة نهائياً.">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button class="btn btn-kd-danger btn-sm" type="submit"><%- icon('trash-2', 14) %> حذف الصورة</button>
+        </form>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -14,6 +14,7 @@ import { createAppConfig } from './app-config.js';
 import { createAudioStore } from './audio.js';
 import { config } from './config.js';
 import { createDaily } from './daily.js';
+import { createBubblePictures } from './bubble-pictures.js';
 import { createDailyGames } from './daily-games.js';
 import { createLab } from './lab.js';
 import { createDevices } from './devices.js';
@@ -53,7 +54,8 @@ const notifications = createNotifications(db, { devices, credentials: apnsCreden
 const players = createPlayers(db, { repo });
 const wordSearch = createWordSearch(db, { appConfig });
 const wordSearchDays = createWordSearchSchedule(db, { wordSearch, appConfig });
-const dailyGames = createDailyGames(db, { appConfig, wordSearch });
+const pictures = createBubblePictures(db, { publicUrl: config.publicUrl });
+const dailyGames = createDailyGames(db, { appConfig, wordSearch, pictures });
 const lab = createLab(db);
 const profiles = createProfiles(db);
 const titles = createTitles(db);
@@ -76,7 +78,7 @@ app.use('/api', rateLimit({
   legacyHeaders: false,
   handler: (_req, res) => res.status(429).json({ error: 'Too many requests. Try again in a minute.' }),
 }));
-app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications }));
+app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, notifications }));
 
 // Question pictures and sounds. A replaced file gets a new generated name, so
 // a file at a given name never changes and can be cached for a long time.
@@ -122,7 +124,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, lab, profiles, titles,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles,
 }));
 // The landing page. It answers `/`, which used to bounce everyone to the panel.
 app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));

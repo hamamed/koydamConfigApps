@@ -2,14 +2,15 @@
  * The daily games that are not the word search (contract §6, §9): one set per
  * calendar date, the same for everyone.
  *
- *   bubbles — one theme's words cut into pieces, all the pieces mixed
+ *   bubbles — a picture and its words, cut into pieces and mixed
  *   wheel   — a handful of letters and the words they spell
  *   guess   — two hidden five-letter words at once, eight tries for both
  *   picture — one picture and the five words of ten that belong to it
  *
- * فقاعات الكلمات is built from the question bank's titles; the other two come
- * from the word lists edited on the Daily games page (src/daily-games-words.js
- * until edited). Every choice comes from a seed made
+ * فقاعات الكلمات is played on the pictures written in the panel
+ * (src/bubble-pictures.js), and falls back to a theme from the question bank
+ * when no picture is published for that date. The other two come from the word
+ * lists edited on the Daily games page (src/daily-games-words.js until edited). Every choice comes from a seed made
  * of the date, so every request answers the same for the same date.
  *
  * A game saved for a date in the panel (`daily_game_days`, planned from the
@@ -101,6 +102,25 @@ export function spelledFrom(word, pool) {
     counts.set(ch, left - 1);
   }
   return true;
+}
+
+/**
+ * A picture round as the app plays it: the picture, and its words cut into
+ * pieces with every piece on the board at once.
+ */
+export function buildPictureBubbles(round, seed) {
+  if (!round?.words?.length) return null;
+  const rand = random(seed);
+  const words = round.words.map((raw, index) => {
+    const word = played(raw);
+    return { id: (round.id ?? 0) * 100 + index, word, display: normalizeAnswer(raw), parts: splitParts(word) };
+  });
+  return {
+    theme: round.title,
+    image: round.image ?? null,
+    words,
+    bubbles: shuffled(words.flatMap((w) => w.parts), rand),
+  };
 }
 
 export function buildBubbles(groups, day, seed) {
@@ -216,7 +236,7 @@ export function trimForMarathon(kind, game, rand) {
   switch (kind) {
     case 'bubbles': {
       const words = game.words.slice(0, MARATHON_SIZES.bubbles);
-      return { theme: game.theme, words, bubbles: shuffled(words.flatMap((w) => w.parts), rand) };
+      return { ...game, words, bubbles: shuffled(words.flatMap((w) => w.parts), rand) };
     }
     case 'wheel':
       return { letters: game.letters, words: game.words.slice(0, MARATHON_SIZES.wheel) };
@@ -229,7 +249,7 @@ export function trimForMarathon(kind, game, rand) {
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const questions = () => db.prepare('SELECT id, answer, trim(IFNULL(title, \'\')) AS title FROM questions ORDER BY id').all();
@@ -269,7 +289,8 @@ export function createDailyGames(db, { appConfig, wordSearch = null }) {
     if (!parsed) return null;
     const { day } = parsed;
     return {
-      bubbles: buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
+      bubbles: buildPictureBubbles(pictures?.forDate(parsed.date), seedFor(day, 'bubbles'))
+        ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
     };
@@ -291,7 +312,8 @@ export function createDailyGames(db, { appConfig, wordSearch = null }) {
     const day = parsed.day + step;
     const seed = (seedFor(parsed.day, kind) ^ Math.imul(step + 1, 2654435761)) >>> 0;
     switch (kind) {
-      case 'bubbles': return buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
+      case 'bubbles': return buildPictureBubbles(pictures?.forDate(parsed.date, step), seed)
+        ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
       default: return null;

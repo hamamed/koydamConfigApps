@@ -77,7 +77,6 @@ export function openDatabase(file) {
   // Days planned for games that no longer exist (contract §9): the kinds are
   // gone from the code, so their rows would only ever be dead weight.
   database.exec("DELETE FROM daily_game_days WHERE kind IN ('scramble', 'groups', 'picture')");
-  database.exec('DROP TABLE IF EXISTS picture_rounds');
   // The kinds a planned day may hold live in a CHECK, which SQLite cannot alter,
   // so a database written under an older list of games is rebuilt once.
   const plannedDays = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'daily_game_days'").pluck().get();
