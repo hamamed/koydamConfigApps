@@ -864,3 +864,27 @@ html[dir="rtl"] { overflow-x: hidden; }
 /* The brand bar holds the logo alone, so it is centred and given room. */
 .wz-brand { justify-content: center; padding-block: 1.1rem; }
 .wz-brand .wz-logo { margin-inline-end: 0; }
+
+/* The tagline ribbon under the pieces, as the app draws it: the display face in
+   white on an indigo plate, tucked a little under the pieces. */
+.wz-logo-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+.wz-logo-tagline {
+  position: relative;
+  z-index: 4;
+  margin-top: calc(var(--wz-tile) * -0.12);
+  padding: calc(var(--wz-tile) * 0.08) calc(var(--wz-tile) * 0.34) calc(var(--wz-tile) * 0.12);
+  border: 2px solid var(--wz-ink);
+  border-radius: 99px;
+  background: var(--wz-indigo);
+  box-shadow: 0 3px 0 var(--wz-ink);
+  font-family: "Lalezar", "Tajawal", sans-serif;
+  font-size: calc(var(--wz-tile) * 0.34);
+  line-height: 1.25;
+  color: #fff;
+  white-space: nowrap;
+}
