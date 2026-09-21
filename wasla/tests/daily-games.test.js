@@ -175,8 +175,8 @@ test('a saved list is used for new days and can go back to the built-in one', ()
   assert.equal(games.resetList('guess'), true);
   assert.equal(games.lists().guess.edited, false);
   assert.ok(games.lists().guess.count > 1);
-  assert.equal(games.saveList('nope', 'x').error, 'Unknown list.');
-  assert.match(games.saveList('wheel', '').error, /at least one/);
+  assert.equal(games.saveList('nope', 'x').error, 'قائمة غير معروفة.');
+  assert.match(games.saveList('wheel', '').error, /على الأقل/);
 });
 
 test('another pick differs from the automatic one, and is a playable game', () => {
@@ -224,8 +224,8 @@ test('copying a day puts the games it would serve on another date', () => {
 });
 
 test('a day cannot be copied onto itself, and an unknown date is refused', () => {
-  assert.equal(games.copyDay('2026-09-22', '2026-09-22').error, 'Pick a different day to copy from.');
-  assert.equal(games.copyDay('2026-09-22', 'yesterday').error, 'That is not a valid date.');
+  assert.equal(games.copyDay('2026-09-22', '2026-09-22').error, 'اختر يوماً آخر للنسخ منه.');
+  assert.equal(games.copyDay('2026-09-22', 'yesterday').error, 'هذا ليس تاريخاً صحيحاً.');
 });
 
 test('clearing a day takes every game back to automatic', () => {

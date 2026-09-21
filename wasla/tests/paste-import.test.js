@@ -47,8 +47,8 @@ test('# lines set the title; the default title and level fill the rest', () => {
 
 test('a clue left without its answer still shows, and empty text is refused', () => {
   assert.deepEqual(pairs('سؤال بلا جواب؟'), [['سؤال بلا جواب؟', '']]);
-  assert.match(readPastedQuestions('  \n ').error, /Paste/);
-  assert.match(readPastedQuestions('# عنوان فقط').error, /No questions/);
+  assert.match(readPastedQuestions('  \n ').error, /الصق/);
+  assert.match(readPastedQuestions('# عنوان فقط').error, /لم يُعثر على أسئلة/);
 });
 
 test('a colon inside a question does not split it; its answer comes from the next line', () => {

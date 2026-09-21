@@ -24,8 +24,8 @@ const SEEDED_KEY = 'titles_seeded';
 /** A title as it is stored: trimmed, 1 to MAX_TITLE characters. `{ name }` or `{ error }`. */
 export function readTitle(raw) {
   const name = String(raw ?? '').trim().replace(/\s+/gu, ' ');
-  if (!name) return { error: 'Write the title.' };
-  if ([...name].length > MAX_TITLE) return { error: `A title can be at most ${MAX_TITLE} characters.` };
+  if (!name) return { error: 'اكتب الفئة.' };
+  if ([...name].length > MAX_TITLE) return { error: `الفئة حتى ${MAX_TITLE} حرفاً.` };
   return { name };
 }
 
@@ -79,7 +79,7 @@ export function createTitles(db) {
     const old = String(from ?? '').trim();
     const { name, error } = readTitle(to);
     if (error) return { error };
-    if (!old) return { error: 'Choose a title to rename.' };
+    if (!old) return { error: 'اختر فئة لإعادة تسميتها.' };
     if (name === old) return { renamed: 0 };
     return tx(() => {
       const renamed = db.prepare("UPDATE questions SET title = ?, updated_at = datetime('now') WHERE trim(title) = ?").run(name, old).changes;
@@ -100,7 +100,7 @@ export function createTitles(db) {
   function remove(raw) {
     const name = String(raw ?? '').trim();
     const used = db.prepare('SELECT COUNT(*) AS n FROM questions WHERE trim(title) = ?').get(name).n;
-    if (used) return { error: `“${name}” is on ${used} question(s). Rename it, or give those questions another title first.` };
+    if (used) return { error: `«${name}» مستعملة في ${used} سؤالاً. أعد تسميتها، أو أعطِ تلك الأسئلة فئة أخرى أولاً.` };
     db.prepare('DELETE FROM question_titles WHERE name = ?').run(name);
     return {};
   }

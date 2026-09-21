@@ -7,7 +7,7 @@ export function registerTitles(router, { titles }) {
   router.get('/titles', (_req, res) => {
     const list = titles.list();
     res.render('titles', {
-      title: 'Titles',
+      title: 'الفئات',
       titles: list,
       used: list.filter((t) => t.questions).length,
     });
@@ -16,9 +16,9 @@ export function registerTitles(router, { titles }) {
   router.post('/titles', (req, res) => {
     const { added, existing, errors } = titles.addMany(req.body.names);
     const parts = [
-      added ? `Added ${added} title(s).` : 'No new titles.',
+      added ? `أُضيفت ${added} فئة.` : 'لا فئات جديدة.',
       existing ? `${existing} already on the list.` : '',
-      errors.length ? `Not added: ${errors.join(' · ')}` : '',
+      errors.length ? `لم تُضف: ${errors.join(' · ')}` : '',
     ];
     req.flash(errors.length ? 'warning' : added ? 'success' : 'warning', parts.filter(Boolean).join(' '));
     res.redirect('/admin/titles');
@@ -27,13 +27,13 @@ export function registerTitles(router, { titles }) {
   router.post('/titles/rename', (req, res) => {
     const result = titles.rename(req.body.from, req.body.to);
     if (result.error) req.flash('danger', result.error);
-    else req.flash('success', `Renamed. ${result.renamed} question(s) now have the new title.`);
+    else req.flash('success', `تغيّر الاسم. ${result.renamed} سؤالاً صار بالفئة الجديدة.`);
     res.redirect('/admin/titles');
   });
 
   router.post('/titles/delete', (req, res) => {
     const result = titles.remove(req.body.name);
-    req.flash(result.error ? 'danger' : 'success', result.error ?? 'Title removed from the list.');
+    req.flash(result.error ? 'danger' : 'success', result.error ?? 'حُذفت الفئة من القائمة.');
     res.redirect('/admin/titles');
   });
 }

@@ -226,13 +226,13 @@ export function createDailyGames(db, { appConfig }) {
 
   /** Saves a list when every line is usable and at least one entry remains; `{ error, problems }` otherwise. */
   function saveList(name, text) {
-    if (!LIST_NAMES.includes(name)) return { error: 'Unknown list.' };
+    if (!LIST_NAMES.includes(name)) return { error: 'قائمة غير معروفة.' };
     const body = String(text ?? '').trim();
     if (body.length > MAX_LIST_CHARS) return { error: `A list can be at most ${MAX_LIST_CHARS.toLocaleString('en')} characters.` };
     const parsed = name === 'guess' ? parseGuessWords(body) : parseWheelSets(body);
     const count = name === 'guess' ? parsed.words.length : parsed.sets.length;
     if (parsed.problems.length) return { error: `${parsed.problems.length} line(s) need fixing; nothing was saved.`, problems: parsed.problems };
-    if (!count) return { error: 'The list needs at least one entry.', problems: [] };
+    if (!count) return { error: 'تحتاج القائمة مدخلاً واحداً على الأقل.', problems: [] };
     db.prepare(`INSERT INTO daily_game_lists (name, body) VALUES (?, ?)
       ON CONFLICT(name) DO UPDATE SET body = excluded.body, updated_at = datetime('now')`).run(name, body);
     return { count };
@@ -299,7 +299,7 @@ export function createDailyGames(db, { appConfig }) {
 
   /** Fixes one game for a date. `source` is "typed" for words written in the panel. */
   function saveGame(date, kind, game, source = 'typed') {
-    if (!parseDay(date) || !GAME_KINDS.includes(kind) || !game) return { error: 'Unknown date or game.' };
+    if (!parseDay(date) || !GAME_KINDS.includes(kind) || !game) return { error: 'تاريخ أو لعبة غير معروفة.' };
     db.prepare(`INSERT INTO daily_game_days (date, kind, game, source) VALUES (?, ?, ?, ?)
       ON CONFLICT(date, kind) DO UPDATE SET game = excluded.game, source = excluded.source, updated_at = datetime('now')`)
       .run(date, kind, JSON.stringify(game), source);
@@ -317,8 +317,8 @@ export function createDailyGames(db, { appConfig }) {
    * get) that day, planned or automatic, so a good day can be run again.
    */
   function copyDay(date, from) {
-    if (!parseDay(date) || !parseDay(from)) return { error: 'That is not a valid date.' };
-    if (date === from) return { error: 'Pick a different day to copy from.' };
+    if (!parseDay(date) || !parseDay(from)) return { error: 'هذا ليس تاريخاً صحيحاً.' };
+    if (date === from) return { error: 'اختر يوماً آخر للنسخ منه.' };
     const auto = automatic(from) ?? {};
     const have = saved(from);
     let copied = 0;

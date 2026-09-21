@@ -14,15 +14,15 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Preview · ' + question.answer,
-          subheading: 'As the player sees it · iPhone 390 × 844' + (levels.length ? ' · in ' + levels.map((l) => l.name).join(', ') : ' · not in a level yet'),
-          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/questions/' + question.id + '">Edit question</a>'
+          heading: 'معاينة · ' + question.answer,
+          subheading: 'كما يراها اللاعب · آيفون 390 × 844' + (levels.length ? ' · in ' + levels.map((l) => l.name).join(', ') : ' · ليس في لغز بعد'),
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/questions/' + question.id + '">تعديل السؤال</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <% if (question.needsPicture) { %>
-        <div class="alert alert-warning small">This question is still waiting for its picture, so the player would see an empty frame.</div>
+        <div class="alert alert-warning small">هذا السؤال ما زال بلا صورة، فسيرى اللاعب إطاراً فارغاً.</div>
       <% } %>
 
       <div class="wp-layout">
@@ -93,14 +93,14 @@
         <aside class="ad-card wp-list">
           <div class="ad-card-head d-flex align-items-center gap-2">
             <i data-lucide="smartphone" width="16" height="16"></i>
-            <span class="fw-semibold">What the player sees</span>
+            <span class="fw-semibold">ما يراه اللاعب</span>
           </div>
           <div class="ad-card-body small d-grid gap-2">
-            <div><span class="kd-faint">Answer:</span> <span class="wz-answer wz-ar"><%= question.answer %></span></div>
-            <div><span class="kd-faint">Played as:</span> <span class="wz-ar"><%= question.playAnswer %></span></div>
-            <div><span class="kd-faint">Title:</span> <span class="kd-tag wz-ar"><%= question.title || '—' %></span></div>
-            <div><span class="kd-faint">Difficulty:</span> <%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[question.difficulty] || '—' %></div>
-            <div class="kd-faint">The letters shown are the answer's letters plus fillers, the same set the app makes.</div>
+            <div><span class="kd-faint">الجواب:</span> <span class="wz-answer wz-ar"><%= question.answer %></span></div>
+            <div><span class="kd-faint">يُلعب هكذا:</span> <span class="wz-ar"><%= question.playAnswer %></span></div>
+            <div><span class="kd-faint">الفئة:</span> <span class="kd-tag wz-ar"><%= question.title || '—' %></span></div>
+            <div><span class="kd-faint">الصعوبة:</span> <%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[question.difficulty] || '—' %></div>
+            <div class="kd-faint">الحروف المعروضة هي حروف الجواب مع حروف حشو، وهي نفس المجموعة التي يصنعها التطبيق.</div>
           </div>
         </aside>
       </div>

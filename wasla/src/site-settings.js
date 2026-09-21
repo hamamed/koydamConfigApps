@@ -17,7 +17,7 @@ export function readAppStoreUrl(raw) {
     url = null;
   }
   if (!url || url.protocol !== 'https:' || value.length > MAX_URL) {
-    return { error: 'The App Store link must be an https:// address, such as https://apps.apple.com/app/id1234567890.' };
+    return { error: 'رابط App Store يجب أن يبدأ بـ https://، مثل https://apps.apple.com/app/id1234567890.' };
   }
   return { value: url.toString() };
 }

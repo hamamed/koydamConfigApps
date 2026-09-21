@@ -54,8 +54,8 @@ test('a scheduled level wins over the automatic pick, and clearing it falls back
 test('only a published level can be scheduled, and an unpublished one falls back', () => {
   const a = publishedLevel('a');
   const draft = repo.createLevel();
-  assert.match(daily.schedule('2026-09-17', draft.id).error, /published/);
-  assert.match(daily.schedule('2026-02-30', a.id).error, /date/);
+  assert.match(daily.schedule('2026-09-17', draft.id).error, /منشور/);
+  assert.match(daily.schedule('2026-02-30', a.id).error, /تاريخ/);
 
   daily.schedule('2026-09-17', a.id);
   const b = publishedLevel('b');

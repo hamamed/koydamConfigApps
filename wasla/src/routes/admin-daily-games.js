@@ -1,7 +1,7 @@
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { LIST_NAMES } from '../daily-games.js';
 
-const LIST_LABELS = Object.freeze({ guess: 'Guess words', wheel: 'Wheel sets' });
+const LIST_LABELS = Object.freeze({ guess: 'كلمات خمّن الكلمة', wheel: 'مجموعات عجلة الحروف' });
 
 /**
  * The five daily games (contract §6): a preview of any date's set, and the two
@@ -15,7 +15,7 @@ export function registerDailyGames(router, { dailyGames }) {
       if (drafts[name] !== undefined) lists[name] = { ...lists[name], text: drafts[name], problems: listErrors[name] ?? [] };
     }
     res.render('daily-games', {
-      title: 'Daily games',
+      title: 'ألعاب اليوم',
       date,
       previous: dayToDate(day - 1),
       next: dayToDate(day + 1),

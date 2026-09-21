@@ -5,7 +5,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Send notification?', subheading: 'Check it once more — a push cannot be taken back' }) %>
+    <%- include('partials/topbar', { heading: 'إرسال الإشعار؟', subheading: 'راجعه مرة أخيرة — الإشعار لا يُسترجع' }) %>
     <div class="ad-content">
       <%- include('partials/notifications-tabs', { active: 'compose' }) %>
       <div class="row g-3">
@@ -20,9 +20,9 @@
                 </div>
               </div>
               <dl class="row small mb-0">
-                <dt class="col-4">Goes to</dt>
+                <dt class="col-4">يذهب إلى</dt>
                 <dd class="col-8"><strong><%= audience %></strong> <%= targetLabel[message.target] %><% if (message.device) { %> <span class="font-monospace"><%= message.device %></span><% } %></dd>
-                <dt class="col-4">Opens</dt>
+                <dt class="col-4">يفتح</dt>
                 <dd class="col-8"><%= message.level ? 'Level ' + message.level : 'The home screen' %></dd>
               </dl>
               <form method="post" action="/admin/notifications/send" class="d-flex gap-2 m-0">
@@ -32,8 +32,8 @@
                   <input type="hidden" name="<%= key %>" value="<%= message[key] ?? '' %>">
                 <% }) %>
                 <input type="hidden" name="level" value="<%= message.level ?? '' %>">
-                <button class="btn btn-kd" type="submit">Send to <%= audience %> device<%= audience === 1 ? '' : 's' %></button>
-                <a class="btn btn-kd-ghost" href="/admin/notifications">Cancel</a>
+                <button class="btn btn-kd" type="submit">أرسل إلى <%= audience %> جهازاً</button>
+                <a class="btn btn-kd-ghost" href="/admin/notifications">إلغاء</a>
               </form>
             </div>
           </div>

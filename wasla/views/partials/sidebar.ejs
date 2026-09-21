@@ -1,91 +1,91 @@
 <aside class="ad-sidebar" id="mbSidebar">
   <a class="ad-brand" href="/admin">
     <img class="kd-brand-mark" src="/assets/logo/logo.png" alt="" width="23" height="26">
-    <span class="ad-brand-name">Shabbik<small>Crossword levels</small></span>
+    <span class="ad-brand-name">شبّك<small>لوحة التحكم</small></span>
   </a>
 
   <nav class="ad-nav">
-    <div class="ad-nav-label">Overview</div>
+    <div class="ad-nav-label">عام</div>
     <a class="ad-nav-link <%= currentPath === '/' ? 'is-active' : '' %>" href="/admin">
       <i data-lucide="layout-dashboard" width="17" height="17"></i>
-      <span>Dashboard</span>
+      <span>الرئيسية</span>
     </a>
 
-    <div class="ad-nav-label">Game content</div>
+    <div class="ad-nav-label">محتوى اللعبة</div>
     <a class="ad-nav-link <%= currentPath.startsWith('/levels') ? 'is-active' : '' %>" href="/admin/levels">
       <i data-lucide="grid-3x3" width="17" height="17"></i>
-      <span>Levels</span>
+      <span>الألغاز</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/questions') ? 'is-active' : '' %>" href="/admin/questions">
       <i data-lucide="message-circle-question" width="17" height="17"></i>
-      <span>Questions</span>
+      <span>الأسئلة</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/titles') ? 'is-active' : '' %>" href="/admin/titles">
       <i data-lucide="tag" width="17" height="17"></i>
-      <span>Titles</span>
+      <span>الفئات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
       <i data-lucide="calendar-days" width="17" height="17"></i>
-      <span>Daily</span>
+      <span>لغز اليوم</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/daily-games') ? 'is-active' : '' %>" href="/admin/daily-games">
       <i data-lucide="list" width="17" height="17"></i>
-      <span>Game word lists</span>
+      <span>قوائم الكلمات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/wordsearch') ? 'is-active' : '' %>" href="/admin/wordsearch">
       <i data-lucide="tags" width="17" height="17"></i>
-      <span>Word themes</span>
+      <span>مواضيع البحث</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/import') ? 'is-active' : '' %>" href="/admin/import">
       <i data-lucide="file-up" width="17" height="17"></i>
-      <span>Import</span>
+      <span>استيراد</span>
     </a>
 
-    <div class="ad-nav-label">Players</div>
+    <div class="ad-nav-label">اللاعبون</div>
     <a class="ad-nav-link <%= currentPath.startsWith('/players') ? 'is-active' : '' %>" href="/admin/players">
       <i data-lucide="users" width="17" height="17"></i>
-      <span>Players</span>
+      <span>الأجهزة</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/profiles') ? 'is-active' : '' %>" href="/admin/profiles">
       <i data-lucide="user-round" width="17" height="17"></i>
-      <span>Profiles</span>
+      <span>الحسابات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/boards') ? 'is-active' : '' %>" href="/admin/boards">
       <i data-lucide="trophy" width="17" height="17"></i>
-      <span>Leaderboards</span>
+      <span>المتصدرون</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/stats') ? 'is-active' : '' %>" href="/admin/stats">
       <i data-lucide="chart-column" width="17" height="17"></i>
-      <span>Stats</span>
+      <span>الإحصاءات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/notifications') ? 'is-active' : '' %>" href="/admin/notifications">
       <i data-lucide="bell" width="17" height="17"></i>
-      <span>Notifications</span>
+      <span>الإشعارات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/settings') ? 'is-active' : '' %>" href="/admin/settings">
       <i data-lucide="settings" width="17" height="17"></i>
-      <span>Settings</span>
+      <span>الإعدادات</span>
     </a>
   </nav>
 
   <div class="ad-sidebar-foot">
     <a class="ad-nav-link" href="/api/v1/levels" target="_blank" rel="noopener">
       <i data-lucide="external-link" width="17" height="17"></i>
-      <span>View the API</span>
+      <span>واجهة الـAPI</span>
     </a>
     <a class="ad-nav-link" href="/privacy" target="_blank" rel="noopener">
       <i data-lucide="shield" width="17" height="17"></i>
-      <span>Privacy policy</span>
+      <span>سياسة الخصوصية</span>
     </a>
     <a class="ad-nav-link" href="/support" target="_blank" rel="noopener">
       <i data-lucide="life-buoy" width="17" height="17"></i>
-      <span>Support page</span>
+      <span>صفحة الدعم</span>
     </a>
     <form method="post" action="/admin/logout" class="m-0">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <button class="ad-nav-link w-100 border-0 bg-transparent text-start" type="submit">
         <i data-lucide="log-out" width="17" height="17"></i>
-        <span>Sign out</span>
+        <span>تسجيل الخروج</span>
       </button>
     </form>
   </div>

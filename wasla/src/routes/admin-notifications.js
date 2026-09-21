@@ -9,7 +9,7 @@ export function registerNotifications(router, { repo, devices, notifications, ap
   const blank = { title: '', body: '', level: '', target: 'all', device: '' };
 
   const renderCompose = (res, { values = blank, error = null, status = 200 } = {}) => res.status(status).render('notifications', {
-    title: 'Notifications',
+    title: 'الإشعارات',
     values,
     counts: devices.counts(),
     publishedCount: repo.publishedLevels().length,
@@ -61,18 +61,18 @@ export function registerNotifications(router, { repo, devices, notifications, ap
         values: form.values,
         status: 400,
         error: form.message.target === 'device'
-          ? 'That device is not registered, or has notifications turned off.'
-          : 'No device with notifications on matches that target yet.',
+          ? 'هذا الجهاز غير مسجَّل، أو الإشعارات معطّلة عليه.'
+          : 'لا جهاز مفعَّل الإشعارات يطابق هذه الفئة بعد.',
       });
     }
-    res.render('notifications-confirm', { title: 'Send notification?', message: form.message, audience });
+    res.render('notifications-confirm', { title: 'إرسال الإشعار؟', message: form.message, audience });
   });
 
   router.post('/notifications/send', async (req, res, next) => {
     try {
       const form = checked(req, res);
       if (!form) return;
-      if (req.body.confirmed !== '1') return renderCompose(res, { values: form.values, error: 'Confirm the send first.', status: 400 });
+      if (req.body.confirmed !== '1') return renderCompose(res, { values: form.values, error: 'أكّد الإرسال أولاً.', status: 400 });
 
       const result = await notifications.send(form.message, { userId: req.user?.id ?? null });
       if (result.error) return renderCompose(res, { values: form.values, error: result.error, status: 409 });
@@ -92,7 +92,7 @@ export function registerNotifications(router, { repo, devices, notifications, ap
   const renderSetup = (res, { values = null, error = null, status = 200 } = {}) => {
     const apns = apnsCredentials.status();
     res.status(status).render('notifications-setup', {
-      title: 'Notifications setup',
+      title: 'إعداد الإشعارات',
       apns,
       values: values ?? { keyId: apns.keyId ?? '', teamId: apns.teamId, topic: apns.topic },
       defaults: { teamId: DEFAULT_TEAM_ID, topic: DEFAULT_TOPIC },
@@ -108,7 +108,7 @@ export function registerNotifications(router, { repo, devices, notifications, ap
 
   router.post('/notifications/setup', (req, res, next) => uploadKey(req, res, (err) => {
     if (err) {
-      req.flash('danger', err.code === 'LIMIT_FILE_SIZE' ? 'That file is too large to be an APNs .p8 key.' : 'That upload could not be read.');
+      req.flash('danger', err.code === 'LIMIT_FILE_SIZE' ? 'هذا الملف أكبر من أن يكون مفتاح ‎.p8 لـAPNs.' : 'تعذّرت قراءة الملف المرفوع.');
       return res.redirect('/admin/notifications/setup');
     }
     return csrfProtect(req, res, next);
@@ -117,14 +117,14 @@ export function registerNotifications(router, { repo, devices, notifications, ap
     const result = apnsCredentials.save({ file: req.file?.buffer, ...values });
     if (result.error) return renderSetup(res, { values, error: result.error, status: 400 });
     req.flash('success', result.replacedKey
-      ? `Key uploaded (Key ID ${result.status.keyId}). Send a test to one device to check it.`
-      : 'Ids saved. The uploaded key was kept.');
+      ? `رُفع المفتاح (Key ID ${result.status.keyId}). أرسل تجربة إلى جهاز واحد للتأكد.`
+      : 'حُفظت المعرّفات. وبقي المفتاح المرفوع كما هو.');
     res.redirect('/admin/notifications/setup');
   });
 
   router.post('/notifications/setup/remove', (req, res) => {
     apnsCredentials.remove();
-    req.flash('success', 'The APNs key and its ids were removed. Nothing can be sent until a key is uploaded again.');
+    req.flash('success', 'حُذف مفتاح APNs ومعرّفاته. لا يمكن الإرسال حتى يُرفع مفتاح جديد.');
     res.redirect('/admin/notifications/setup');
   });
 }

@@ -85,7 +85,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   router.get('/daily', cacheable, (req, res) => {
     const raw = req.query.date;
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
-    if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
+    if (!parsed) return res.status(400).json({ error: 'التاريخ يُكتب هكذا YYYY-MM-DD ويجب أن يكون تاريخاً صحيحاً.' });
 
     const pick = daily.forDate(parsed.date);
     const level = pick && repo.publishedLevelById(pick.levelId);
@@ -99,7 +99,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   router.get('/wordsearch', cacheable, (req, res) => {
     const raw = req.query.date;
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
-    if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
+    if (!parsed) return res.status(400).json({ error: 'التاريخ يُكتب هكذا YYYY-MM-DD ويجب أن يكون تاريخاً صحيحاً.' });
     if (!wordSearch) return res.status(503).json({ error: 'The word search is not available.' });
 
     const board = wordSearchDays ? wordSearchDays.boardFor(parsed.date) : wordSearch.forDate(parsed.date);
@@ -111,7 +111,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   router.get('/daily-games', cacheable, (req, res) => {
     const raw = req.query.date;
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
-    if (!parsed) return res.status(400).json({ error: 'The date must be a calendar date written YYYY-MM-DD.' });
+    if (!parsed) return res.status(400).json({ error: 'التاريخ يُكتب هكذا YYYY-MM-DD ويجب أن يكون تاريخاً صحيحاً.' });
     if (!dailyGames) return res.status(503).json({ error: 'The daily games are not available.' });
 
     const set = dailyGames.forDate(parsed.date);

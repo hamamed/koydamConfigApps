@@ -116,10 +116,10 @@ export function planLevels({
   const empty = { levels: [], ranOutOf: null, ranOut: false, noCrossing: false };
 
   if (size < MIN_CATEGORIES) {
-    return { ...empty, error: `A level holds at least ${MIN_CATEGORIES} questions: its words have to cross.` };
+    return { ...empty, error: `اللغز يحتاج ${MIN_CATEGORIES} أسئلة على الأقل: كلماته يجب أن تتقاطع.` };
   }
   if (pool.length < MIN_CATEGORIES) {
-    return { ...empty, error: `Only ${pool.length} category has free questions; a level needs at least ${MIN_CATEGORIES}.` };
+    return { ...empty, error: `فئة واحدة فقط (${pool.length}) فيها أسئلة حرة؛ واللغز يحتاج ${MIN_CATEGORIES} على الأقل.` };
   }
 
   const random = mulberry32(seed);

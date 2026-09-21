@@ -7,9 +7,9 @@ export function notFound(req, res) {
     return res.status(404).json({ error: 'Not found', status: 'error', message: 'Not found' });
   }
   return res.status(404).render('error', {
-    title: 'Not found',
+    title: 'غير موجودة',
     status: 404,
-    message: "That page doesn't exist.",
+    message: 'هذه الصفحة غير موجودة.',
     detail: null,
   });
 }
@@ -26,9 +26,9 @@ export function errorHandler(error, req, res, next) {
   }
 
   return res.status(status).render('error', {
-    title: status >= 500 ? 'Server error' : 'Something went wrong',
+    title: status >= 500 ? 'خطأ في الخادم' : 'حدث خطأ',
     status,
-    message: status >= 500 ? 'Something went wrong on our end.' : error.message,
+    message: status >= 500 ? 'حدث خطأ من جهتنا.' : error.message,
     // Stack traces are useful in development and an information leak in production.
     detail: config.isProduction ? null : error.stack,
   });

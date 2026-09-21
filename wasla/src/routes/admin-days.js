@@ -10,11 +10,11 @@ export const PLAN_CHOICES = Object.freeze([7, 14, 30]);
 const CALENDAR_DAYS = 30;
 
 export const GAME_LABELS = Object.freeze({
-  scramble: { en: 'Scramble', ar: 'رتّب الحروف', icon: 'shuffle', hint: 'One word per line: answer | clue (3–8 words).' },
-  bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'First line the theme, then one word per line (3–8 words of 3–8 letters).' },
-  groups: { en: 'Groups', ar: 'صِل المجموعات', icon: 'layout-grid', hint: 'Four lines: title: word، word، word، word' },
-  wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'One line: letters: word word word (every word spelled from the letters).' },
-  guess: { en: 'Guess', ar: 'خمّن الكلمة', icon: 'square-asterisk', hint: 'One word of exactly 5 letters.' },
+  scramble: { en: 'Scramble', ar: 'رتّب الحروف', icon: 'shuffle', hint: 'كلمة في كل سطر: الجواب | الدليل (من 3 إلى 8 كلمات).' },
+  bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (من 3 إلى 8 كلمات، كل واحدة من 3 إلى 8 حروف).' },
+  groups: { en: 'Groups', ar: 'صِل المجموعات', icon: 'layout-grid', hint: 'أربعة أسطر: العنوان: كلمة، كلمة، كلمة، كلمة' },
+  wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'سطر واحد: حروف: كلمة كلمة كلمة (كل كلمة تُكتب من تلك الحروف).' },
+  guess: { en: 'Guess', ar: 'خمّن الكلمة', icon: 'square-asterisk', hint: 'كلمة واحدة من خمسة حروف بالضبط.' },
 });
 
 /**
@@ -65,7 +65,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     });
     const planned = days.filter((d) => d.wordSearch && GAME_KINDS.every((k) => d.games[k])).length;
     res.render('days', {
-      title: 'Daily',
+      title: 'لغز اليوم',
       days,
       planned,
       kinds: GAME_KINDS,
@@ -80,7 +80,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
   router.post('/days/plan', (req, res) => {
     const count = Number(req.body.count);
     if (!PLAN_CHOICES.includes(count)) {
-      req.flash('danger', `Plan ${PLAN_CHOICES.join(', ')} days at a time.`);
+      req.flash('danger', `خطّط ${PLAN_CHOICES.join('، ')} يوماً في المرة.`);
       return res.redirect('/admin/days');
     }
     const start = parseDay(todayUtc()).day;
@@ -94,8 +94,8 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       gamesAdded += result.gamesAdded;
     }
     req.flash('success', wordSearchAdded || gamesAdded
-      ? `Planned the next ${count} days: ${wordSearchAdded} word search board(s) and ${gamesAdded} game(s) saved. Open any day to change it.`
-      : `The next ${count} days were already planned.`);
+      ? `خُطّطت الأيام الـ${count} القادمة: حُفظت ${wordSearchAdded} شبكة بحث و${gamesAdded} لعبة. افتح أي يوم لتغييره.`
+      : `الأيام الـ${count} القادمة كانت مخطَّطة أصلاً.`);
     res.redirect('/admin/days');
   });
 
@@ -103,7 +103,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
   function dateParam(req, res) {
     const parsed = parseDay(req.params.date);
     if (!parsed) {
-      req.flash('danger', 'That is not a calendar date.');
+      req.flash('danger', 'هذا ليس تاريخاً صحيحاً.');
       res.redirect('/admin/days');
       return null;
     }
@@ -153,12 +153,12 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const parsed = dateParam(req, res);
     if (!parsed) return;
     if (isPast(parsed.date)) {
-      req.flash('danger', 'Past days cannot change.');
+      req.flash('danger', 'الأيام الماضية لا تتغير.');
       return res.redirect(`/admin/days/${parsed.date}`);
     }
     const previous = wordSearchDays.get(dayToDate(parsed.day - 1))?.theme ?? null;
     const result = planDate(parsed.date, previous);
-    req.flash('success', `Saved ${parsed.date}: ${result.wordSearchAdded ? 'the word search and ' : ''}${result.gamesAdded} game(s). Players get exactly this.`);
+    req.flash('success', `حُفظ ${parsed.date}: ${result.wordSearchAdded ? 'البحث عن الكلمات و' : ''}${result.gamesAdded} لعبة. هذا ما سيحصل عليه اللاعبون تماماً.`);
     res.redirect(`/admin/days/${parsed.date}`);
   });
 
@@ -168,17 +168,17 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const { kind } = req.params;
     if (!GAME_KINDS.includes(kind)) return res.redirect(`/admin/days/${parsed.date}`);
     if (isPast(parsed.date)) {
-      req.flash('danger', 'Past days cannot change.');
+      req.flash('danger', 'الأيام الماضية لا تتغير.');
       return res.redirect(`/admin/days/${parsed.date}`);
     }
     const text = String(req.body.text ?? '');
     const read = EDITORS[kind].read(text);
     if (read.errors) {
-      res.locals.flash = { type: 'danger', message: `${GAME_LABELS[kind].en}: fix the lines below; nothing was saved.` };
+      res.locals.flash = { type: 'danger', message: `«${GAME_LABELS[kind].ar}»: أصلح السطور أدناه؛ لم يُحفظ شيء.` };
       return renderDay(res, parsed.date, { drafts: { [kind]: text }, errors: { [kind]: read.errors } });
     }
     dailyGames.saveGame(parsed.date, kind, read.game, 'typed');
-    req.flash('success', `${GAME_LABELS[kind].en} saved for ${parsed.date}.`);
+    req.flash('success', `حُفظت «${GAME_LABELS[kind].ar}» ليوم ${parsed.date}.`);
     res.redirect(`/admin/days/${parsed.date}#${kind}`);
   });
 
@@ -189,17 +189,17 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const { kind } = req.params;
     if (!GAME_KINDS.includes(kind)) return res.redirect(`/admin/days/${parsed.date}`);
     if (isPast(parsed.date)) {
-      req.flash('danger', 'Past days cannot change.');
+      req.flash('danger', 'الأيام الماضية لا تتغير.');
       return res.redirect(`/admin/days/${parsed.date}`);
     }
     // The nonce only has to differ from the last one; the pick it produces is
     // saved, so nothing downstream depends on the number itself.
     const game = dailyGames.pickAgain(parsed.date, kind, Math.floor(Math.random() * 100_000) + 1);
     if (!game) {
-      req.flash('danger', `${GAME_LABELS[kind].en}: there is nothing to pick from — add questions or list entries first.`);
+      req.flash('danger', `«${GAME_LABELS[kind].ar}»: لا شيء للاختيار منه — أضف أسئلة أو مدخلات للقائمة أولاً.`);
     } else {
       dailyGames.saveGame(parsed.date, kind, game, 'auto');
-      req.flash('success', `${GAME_LABELS[kind].en}: a new pick for ${parsed.date}.`);
+      req.flash('success', `«${GAME_LABELS[kind].ar}»: اختيار جديد ليوم ${parsed.date}.`);
     }
     res.redirect(`/admin/days/${parsed.date}#${kind}`);
   });
@@ -209,7 +209,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const parsed = dateParam(req, res);
     if (!parsed) return;
     if (isPast(parsed.date)) {
-      req.flash('danger', 'Past days cannot change.');
+      req.flash('danger', 'الأيام الماضية لا تتغير.');
       return res.redirect(`/admin/days/${parsed.date}`);
     }
     const from = String(req.body.from ?? '').trim();
@@ -226,7 +226,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       });
       words = !saved.error;
     }
-    req.flash('success', `Copied ${from}: ${result.copied} game(s)${words ? ' and the word search' : ''}.`);
+    req.flash('success', `نُسخ ${from}: ${result.copied} لعبة${words ? ' والبحث عن الكلمات' : ''}.`);
     res.redirect(`/admin/days/${parsed.date}`);
   });
 
@@ -235,14 +235,14 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const parsed = dateParam(req, res);
     if (!parsed) return;
     if (isPast(parsed.date)) {
-      req.flash('danger', 'Past days cannot change.');
+      req.flash('danger', 'الأيام الماضية لا تتغير.');
       return res.redirect(`/admin/days/${parsed.date}`);
     }
     const cleared = dailyGames.clearDay(parsed.date);
     const hadWords = wordSearchDays.remove(parsed.date);
     req.flash('success', cleared || hadWords
-      ? `${parsed.date} is automatic again: ${cleared} game(s)${hadWords ? ' and the word search' : ''} cleared.`
-      : `${parsed.date} was already automatic.`);
+      ? `${parsed.date} عاد تلقائياً: أُفرغت ${cleared} لعبة${hadWords ? ' والبحث عن الكلمات' : ''}.`
+      : `${parsed.date} كان تلقائياً أصلاً.`);
     res.redirect(`/admin/days/${parsed.date}`);
   });
 
@@ -251,7 +251,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     if (!parsed) return;
     const { kind } = req.params;
     if (GAME_KINDS.includes(kind) && !isPast(parsed.date) && dailyGames.resetGame(parsed.date, kind)) {
-      req.flash('success', `${GAME_LABELS[kind].en} on ${parsed.date} is automatic again.`);
+      req.flash('success', `«${GAME_LABELS[kind].ar}» في ${parsed.date} عادت تلقائية.`);
     }
     res.redirect(`/admin/days/${parsed.date}#${kind}`);
   });

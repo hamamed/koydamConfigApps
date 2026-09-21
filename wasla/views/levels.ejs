@@ -2,7 +2,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Levels', subheading: 'Published levels reach the app in this order' }) %>
+    <%- include('partials/topbar', { heading: 'الألغاز', subheading: 'الألغاز المنشورة تصل إلى التطبيق بهذا الترتيب' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
@@ -11,9 +11,9 @@
           <form method="post" action="/admin/levels" class="d-flex flex-wrap align-items-center gap-2 m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button class="btn btn-kd" type="submit">
-              <i data-lucide="plus" width="15" height="15" class="me-1"></i>Add level <%= levels.length + 1 %>
+              <i data-lucide="plus" width="15" height="15" class="me-1"></i>أضف اللغز <%= levels.length + 1 %>
             </button>
-            <span class="small kd-faint">Levels have no names: they are numbered in the order below. A new level goes at the end, as a draft.</span>
+            <span class="small kd-faint">الألغاز بلا أسماء: تُرقَّم بالترتيب أدناه. اللغز الجديد يُضاف في النهاية كمسودة.</span>
           </form>
         </div>
       </div>
@@ -24,17 +24,17 @@
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="ad-card-head d-flex align-items-center gap-2">
             <i data-lucide="wand-sparkles" width="16" height="16"></i>
-            <span class="fw-semibold">Generate levels</span>
-            <span class="small kd-faint ms-auto">Categories drawn at random, <span class="wz-ar"><%= mainCategory %></span> twice a level</span>
+            <span class="fw-semibold">توليد ألغاز</span>
+            <span class="small kd-faint ms-auto">الفئات تُسحب عشوائياً، <span class="wz-ar"><%= mainCategory %></span> مرتين في كل لغز</span>
           </div>
           <div class="ad-card-body d-grid gap-3">
             <div>
               <div class="ad-section-label d-flex align-items-center gap-2">
-                <span>Categories to draw from</span>
-                <span class="small kd-faint">tick none to use them all</span>
+                <span>الفئات المسموح السحب منها</span>
+                <span class="small kd-faint">اترك الكل دون تحديد لاستعمالها جميعاً</span>
                 <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-generator-all>
-                  Select all <span class="wz-category-count" data-generator-all-count><%= categories.length %></span></button>
-                <button class="btn btn-kd-ghost btn-sm" type="button" data-generator-clear>Clear</button>
+                  تحديد الكل <span class="wz-category-count" data-generator-all-count><%= categories.length %></span></button>
+                <button class="btn btn-kd-ghost btn-sm" type="button" data-generator-clear>إلغاء</button>
               </div>
               <div class="wz-generate-categories">
                 <% categories.forEach((c) => { %>
@@ -51,31 +51,31 @@
             </div>
             <div class="d-flex flex-wrap align-items-end gap-3">
               <label class="wz-generate-field">
-                <span class="ad-section-label">Difficulty</span>
+                <span class="ad-section-label">الصعوبة</span>
                 <select class="form-select form-select-sm" name="difficulty" data-generator-difficulty>
-                  <option value="">Mixed — easy, then medium, then hard</option>
-                  <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= d[0].toUpperCase() + d.slice(1) %></option><% }) %>
+                  <option value="">مزيج — سهل ثم متوسط ثم صعب</option>
+                  <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[d] || d %></option><% }) %>
                 </select>
               </label>
               <label class="wz-generate-field">
-                <span class="ad-section-label">How many levels</span>
+                <span class="ad-section-label">كم لغزاً</span>
                 <input class="form-control form-control-sm" type="number" name="count" value="10" min="1" max="<%= maxGenerated %>">
               </label>
               <label class="wz-generate-field">
-                <span class="ad-section-label">Questions a level</span>
+                <span class="ad-section-label">أسئلة في اللغز</span>
                 <input class="form-control form-control-sm" type="number" name="size" value="<%= levelSize %>"
                        min="<%= minCategories %>" max="<%= maxLevelSize %>">
               </label>
               <label class="form-check mb-1">
                 <input class="form-check-input" type="checkbox" name="publish" value="1">
-                <span class="form-check-label">Publish straight away</span>
+                <span class="form-check-label">انشر مباشرة</span>
               </label>
               <button class="btn btn-kd ms-auto" type="submit">
-                <i data-lucide="wand-sparkles" width="15" height="15" class="me-1"></i>Generate
+                <i data-lucide="wand-sparkles" width="15" height="15" class="me-1"></i>ولّد
               </button>
             </div>
             <p class="small kd-faint m-0">
-              Each level takes <%= mainSlots %> questions from <span class="wz-ar"><%= mainCategory %></span> and the rest
+              يأخذ كل لغز <%= mainSlots %> أسئلة من <span class="wz-ar"><%= mainCategory %></span> والباقي
               from other categories picked at random, so no two levels are the same mix. Only words that cross are kept,
               and a question already in a level is never reused. The number beside a category is how many it has free.
             </p>
@@ -85,74 +85,74 @@
 
       <% if (levels.length > 1) { %>
         <form method="post" action="/admin/levels/order-by-difficulty" class="d-flex flex-wrap align-items-center gap-2 mb-3"
-              data-confirm="Reorder all levels by difficulty? Easy levels move first, then medium, then hard; within each, levels with fewer words come first. This changes the level numbers players see.">
+              data-confirm="إعادة ترتيب كل الألغاز حسب الصعوبة؟ السهلة أولاً ثم المتوسطة ثم الصعبة، وداخل كل مجموعة الأقل كلمات أولاً. هذا يغيّر أرقام الألغاز التي يراها اللاعبون.">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button class="btn btn-sm btn-kd-outline" type="submit">
-            <i data-lucide="arrow-up-down" width="14" height="14" class="me-1"></i>Order by difficulty
+            <i data-lucide="arrow-up-down" width="14" height="14" class="me-1"></i>رتّب حسب الصعوبة
           </button>
-          <span class="small kd-faint">All levels: easy → medium → hard, then fewer words, then the current order.</span>
+          <span class="small kd-faint">كل الألغاز: سهل ← متوسط ← صعب، ثم الأقل كلمات، ثم الترتيب الحالي.</span>
         </form>
       <% } %>
 
       <% if (!levels.length) { %>
         <div class="ad-card ad-empty">
           <i data-lucide="grid-3x3"></i>
-          <p class="mb-0">No levels yet.</p>
+          <p class="mb-0">لا ألغاز بعد.</p>
         </div>
       <% } else { %>
         <%# Tick levels in the table, then act on all of them at once. %>
         <form id="levelBulk" class="ad-card wz-bulk mb-3" method="post" action="/admin/levels/bulk" data-level-bulk>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="d-flex flex-wrap gap-2 align-items-center">
-            <strong class="small me-1"><span data-bulk-count>0</span> selected</strong>
+            <strong class="small me-1"><span data-bulk-count>0</span> محدَّد</strong>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="publish" data-bulk-button>
-              <i data-lucide="upload" width="14" height="14" class="me-1"></i>Publish</button>
+              <i data-lucide="upload" width="14" height="14" class="me-1"></i>نشر</button>
             <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="unpublish" data-bulk-button>
-              <i data-lucide="download" width="14" height="14" class="me-1"></i>Unpublish</button>
+              <i data-lucide="download" width="14" height="14" class="me-1"></i>إلغاء النشر</button>
             <div class="wz-bulk-group">
-              <select class="form-select form-select-sm wz-bulk-field" name="difficulty" aria-label="Difficulty">
-                <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= d[0].toUpperCase() + d.slice(1) %></option><% }) %>
+              <select class="form-select form-select-sm wz-bulk-field" name="difficulty" aria-label="الصعوبة">
+                <% difficulties.forEach((d) => { %><option value="<%= d %>"><%= { easy: 'سهل', medium: 'متوسط', hard: 'صعب' }[d] || d %></option><% }) %>
               </select>
               <button class="btn btn-kd-outline btn-sm" type="submit" name="action" value="difficulty" data-bulk-button>
-                <i data-lucide="gauge" width="14" height="14" class="me-1"></i>Set difficulty</button>
+                <i data-lucide="gauge" width="14" height="14" class="me-1"></i>تعيين الصعوبة</button>
             </div>
             <button class="btn btn-kd-danger btn-sm" type="submit" name="action" value="delete" data-bulk-button
-                    data-bulk-delete-button data-bulk-delete-ask="Delete %n level(s)? Their questions stay in the bank.">
-              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>Delete</button>
+                    data-bulk-delete-button data-bulk-delete-ask="حذف %n لغزاً؟ تبقى أسئلتها في البنك.">
+              <i data-lucide="trash-2" width="14" height="14" class="me-1"></i>حذف</button>
             <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-bulk-select-all>
-              Select all <span class="wz-category-count"><%= levels.length %></span></button>
-            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>Clear</button>
+              تحديد الكل <span class="wz-category-count"><%= levels.length %></span></button>
+            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>إلغاء</button>
           </div>
         </form>
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th class="wz-check"><input class="form-check-input" type="checkbox" data-bulk-all aria-label="Select all"></th><th>Level</th><th>In the app</th><th>Difficulty</th><th>Words</th><th>Grid</th><th>State</th><th>Order</th><th></th></tr></thead>
+              <thead><tr><th class="wz-check"><input class="form-check-input" type="checkbox" data-bulk-all aria-label="تحديد الكل"></th><th>اللغز</th><th>في التطبيق</th><th>الصعوبة</th><th>الكلمات</th><th>الشبكة</th><th>الحالة</th><th>الترتيب</th><th></th></tr></thead>
               <tbody>
                 <% levels.forEach((l, i) => { %>
                   <tr>
                     <td><input class="form-check-input" type="checkbox" name="ids" value="<%= l.id %>" form="levelBulk"
-                               data-bulk-row aria-label="Select level <%= l.number %>"></td>
-                    <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>">Level <%= l.number %></a></td>
-                    <td class="kd-faint text-nowrap"><% if (!l.published) { %>—<% } else if (l.publishedNumber !== l.number) { %><span class="kd-tag" title="Drafts before it are skipped in the app">Level <%= l.publishedNumber %></span><% } else { %>same<% } %></td>
+                               data-bulk-row aria-label="تحديد اللغز <%= l.number %>"></td>
+                    <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>">اللغز <%= l.number %></a></td>
+                    <td class="kd-faint text-nowrap"><% if (!l.published) { %>—<% } else if (l.publishedNumber !== l.number) { %><span class="kd-tag" title="المسودات قبله تُتخطى في التطبيق">اللغز <%= l.publishedNumber %></span><% } else { %>نفسه<% } %></td>
                     <td><%- include('partials/difficulty', { difficulty: l.difficulty }) %></td>
-                    <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
+                    <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> بلا تقاطع</span><% } %></td>
                     <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>
-                    <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'Published' : 'Draft' %></span></td>
+                    <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'منشور' : 'مسودة' %></span></td>
                     <td>
                       <div class="btn-group btn-group-sm">
                         <% [['up', 'arrow-up', i === 0], ['down', 'arrow-down', i === levels.length - 1]].forEach(([dir, glyph, disabled]) => { %>
                           <form method="post" action="/admin/levels/<%= l.id %>/move" class="m-0">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="direction" value="<%= dir %>">
-                            <button class="btn btn-sm btn-kd-ghost" type="submit" <%= disabled ? 'disabled' : '' %> aria-label="Move <%= dir %>">
+                            <button class="btn btn-sm btn-kd-ghost" type="submit" <%= disabled ? 'disabled' : '' %> aria-label="نقل <%= dir %>">
                               <i data-lucide="<%= glyph %>" width="14" height="14"></i>
                             </button>
                           </form>
                         <% }) %>
                       </div>
                     </td>
-                    <td class="text-end text-nowrap"><a class="btn btn-sm btn-kd-ghost" href="/admin/levels/<%= l.id %>/preview" aria-label="Preview level <%= l.number %>"><i data-lucide="smartphone" width="14" height="14" class="me-1"></i>Preview</a> <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= l.id %>">Open</a></td>
+                    <td class="text-end text-nowrap"><a class="btn btn-sm btn-kd-ghost" href="/admin/levels/<%= l.id %>/preview" aria-label="معاينة اللغز <%= l.number %>"><i data-lucide="smartphone" width="14" height="14" class="me-1"></i>معاينة</a> <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= l.id %>">فتح</a></td>
                   </tr>
                 <% }) %>
               </tbody>

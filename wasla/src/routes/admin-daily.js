@@ -89,7 +89,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
       return { theme: name.theme ?? '', words, problems: [...(name.error ? [name.error] : []), ...errors] };
     }
     const theme = options.find((t) => t.title === state.themeTitle);
-    if (!theme) return { theme: '', words: [], problems: ['Choose a theme.'] };
+    if (!theme) return { theme: '', words: [], problems: ['اختر موضوعاً.'] };
     const ticked = new Set(state.wordIds ?? defaultTicks(theme, state.size));
     return { theme: theme.title, words: theme.words.filter((w) => ticked.has(w.id)), problems: [] };
   }
@@ -128,7 +128,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
   function dateParam(req, res) {
     const parsed = parseDay(req.params.date);
     if (!parsed) {
-      req.flash('danger', 'That is not a calendar date.');
+      req.flash('danger', 'هذا ليس تاريخاً صحيحاً.');
       res.redirect('/admin/daily');
       return null;
     }
@@ -142,7 +142,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     const withWeekday = (d) => ({ ...d, ...weekdays(d.date), wordCount: d.board.words.length });
     const todayBoard = wordSearchDays.boardFor(today);
     res.render('daily', {
-      title: 'Daily puzzle',
+      title: 'لغز اليوم',
       today,
       summary: wordSearchDays.summary(today),
       todayTheme: todayBoard?.theme ?? null,
@@ -157,14 +157,14 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
   router.post('/daily/add', (req, res) => {
     const count = Number(req.body.days);
     if (!ADD_DAY_CHOICES.includes(count)) {
-      req.flash('danger', `Add ${ADD_DAY_CHOICES.join(', ')} days at a time.`);
+      req.flash('danger', `أضف ${ADD_DAY_CHOICES.join('، ')} يوماً في المرة.`);
       return res.redirect('/admin/daily');
     }
     const result = wordSearchDays.addDays(count, todayUtc());
     if (result.error) {
       req.flash('danger', result.error);
     } else if (!result.added.length) {
-      req.flash('danger', `No day was added: no theme can make a board (${result.from} → ${result.to}). Add questions to a theme on the Word themes page, or plan a day with typed words.`);
+      req.flash('danger', `لم يُضف أي يوم: لا موضوع يكفي لبناء شبكة (${result.from} ← ${result.to}). أضف أسئلة إلى موضوع من صفحة مواضيع البحث، أو خطّط يوماً بكلمات مكتوبة.`);
     } else {
       const skipped = result.skipped.length
         ? ` Skipped ${result.skipped.length} (no theme fits, they stay automatic): ${result.skipped.join(', ')}.`
@@ -179,7 +179,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
   router.get('/daily/plan', (req, res) => {
     const parsed = parseDay(String(req.query.date ?? ''));
     if (!parsed) {
-      req.flash('danger', 'Pick a date to plan.');
+      req.flash('danger', 'اختر تاريخاً لتخطيطه.');
       return res.redirect('/admin/daily');
     }
     res.redirect(`/admin/daily/${parsed.date}/edit`);
@@ -213,7 +213,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     const date = dateParam(req, res);
     if (!date) return;
     if (isPast(date)) {
-      req.flash('warning', 'Past days are read-only.');
+      req.flash('warning', 'الأيام الماضية للعرض فقط.');
       return res.redirect(`/admin/daily/${date}`);
     }
     const day = wordSearchDays.get(date);
@@ -228,7 +228,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     const date = dateParam(req, res);
     if (!date) return;
     if (isPast(date)) {
-      req.flash('warning', 'Past days are read-only.');
+      req.flash('warning', 'الأيام الماضية للعرض فقط.');
       return res.redirect(`/admin/daily/${date}`);
     }
     const day = wordSearchDays.get(date);
@@ -248,7 +248,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     if (result.error) {
       return res.status(422).render('daily-edit', { title: `Plan ${date}`, ...model, saveFailed: true, saveError: result.error });
     }
-    req.flash('success', `Saved the puzzle for ${date}: “${theme}”, ${state.size} × ${state.size}, ${board.words.length} words.`);
+    req.flash('success', `حُفظ لغز ${date}: «${theme}»، ${state.size} × ${state.size}، ${board.words.length} كلمة.`);
     res.redirect(`/admin/days/${date}#wordsearch`);
   });
 
@@ -256,7 +256,7 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
   router.post('/daily/:date/preview', (req, res) => {
     res.set('Cache-Control', 'no-store');
     const parsed = parseDay(req.params.date);
-    if (!parsed) return res.status(400).json({ error: 'That is not a calendar date.' });
+    if (!parsed) return res.status(400).json({ error: 'هذا ليس تاريخاً صحيحاً.' });
     const day = wordSearchDays.get(parsed.date);
     const model = editorModel(parsed.date, stateFromBody(req.body, parsed.date), day);
     res.render('partials/daily-preview', { ...res.locals, ...model }, (err, html) => {
@@ -272,11 +272,11 @@ export function registerDaily(router, { wordSearch, wordSearchDays }) {
     const date = dateParam(req, res);
     if (!date) return;
     if (isPast(date)) {
-      req.flash('warning', 'Past days are read-only.');
+      req.flash('warning', 'الأيام الماضية للعرض فقط.');
       return res.redirect(`/admin/daily/${date}`);
     }
     const removed = wordSearchDays.remove(date);
-    req.flash('success', removed ? `Deleted the puzzle for ${date}; that day is automatic again.` : `${date} was not planned.`);
+    req.flash('success', removed ? `حُذف لغز ${date}؛ عاد ذلك اليوم تلقائياً.` : `${date} لم يكن مخطَّطاً.`);
     res.redirect(`/admin/days/${date}#wordsearch`);
   });
 }

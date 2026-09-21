@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST, MAX_WORD_S
 /** The numbers GET /api/v1/config serves. */
 export function registerSettings(router, { appConfig, siteSettings }) {
   const render = (res, values, error = null, appStoreUrl = siteSettings.storedAppStoreUrl()) => res.render('settings', {
-    title: 'Settings',
+    title: 'الإعدادات',
     values,
     appStoreUrl,
     envAppStoreUrl: siteSettings.envAppStoreUrl,
@@ -41,7 +41,7 @@ export function registerSettings(router, { appConfig, siteSettings }) {
     const result = appConfig.save(input);
     if (result.error) return render(res, input, result.error, appStoreUrl);
     siteSettings.saveAppStoreUrl(appStoreUrl);
-    req.flash('success', 'Settings saved. The app picks them up on its next launch.');
+    req.flash('success', 'حُفظت الإعدادات. يقرأها التطبيق عند تشغيله القادم.');
     res.redirect('/admin/settings');
   });
 }

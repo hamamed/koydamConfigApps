@@ -84,11 +84,11 @@ export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
   /** Stores (or replaces) a date's board. `{}` or `{ error }`. */
   function save(date, { theme, size, words, seed, board, source }) {
     const parsed = parseDay(date);
-    if (!parsed) return { error: 'That is not a valid date.' };
-    if (!SOURCES.includes(source)) return { error: 'Unknown theme source.' };
+    if (!parsed) return { error: 'هذا ليس تاريخاً صحيحاً.' };
+    if (!SOURCES.includes(source)) return { error: 'مصدر الموضوع غير معروف.' };
     const problem = boardProblem(board);
     if (problem) return { error: problem };
-    if (board.theme !== theme || board.size !== size) return { error: 'The board does not match its theme and size.' };
+    if (board.theme !== theme || board.size !== size) return { error: 'الشبكة لا تطابق موضوعها وحجمها.' };
     const frozen = {
       theme: board.theme,
       size: board.size,
@@ -152,9 +152,9 @@ export function createWordSearchSchedule(db, { wordSearch, appConfig }) {
    */
   function addDays(count, today) {
     const n = Number(count);
-    if (!Number.isInteger(n) || n < 1 || n > MAX_ADD_DAYS) return { error: `Add 1 to ${MAX_ADD_DAYS} days at a time.` };
+    if (!Number.isInteger(n) || n < 1 || n > MAX_ADD_DAYS) return { error: `أضف من 1 إلى ${MAX_ADD_DAYS} يوماً في المرة.` };
     const start = parseDay(today);
-    if (!start) return { error: 'That is not a valid date.' };
+    if (!start) return { error: 'هذا ليس تاريخاً صحيحاً.' };
     const last = lastDate();
     const firstDay = last && parseDay(last).day >= start.day ? parseDay(last).day + 1 : start.day;
 

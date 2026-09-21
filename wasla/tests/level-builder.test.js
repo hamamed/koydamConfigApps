@@ -58,14 +58,14 @@ test('only the categories asked for are drawn from', () => {
 
 test('a level of fewer than two questions is refused: a lone word has nothing to cross', () => {
   const { error, levels } = planLevels({ questions: bank(['ضد', 'مرادف']), size: 1, count: 1 });
-  assert.match(error, /at least 2 questions/);
+  assert.match(error, /أسئلة على الأقل/);
   assert.deepEqual(levels, []);
   assert.equal(MIN_CATEGORIES, 2);
 });
 
 test('one category with free questions is refused as well', () => {
   const { error, levels } = planLevels({ questions: bank(['ضد']), count: 1, size: 4 });
-  assert.match(error, /at least 2/);
+  assert.match(error, /على الأقل/);
   assert.deepEqual(levels, []);
 });
 

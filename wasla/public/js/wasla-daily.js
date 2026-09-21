@@ -62,7 +62,7 @@
       preview.innerHTML = '';
       const alert = document.createElement('div');
       alert.className = 'alert alert-danger small';
-      alert.textContent = `${err.message} Reload the page and try again.`;
+      alert.textContent = `${err.message} أعد تحميل الصفحة وحاول مرة أخرى.`;
       preview.append(alert);
     } finally {
       preview.classList.remove('ws-loading');

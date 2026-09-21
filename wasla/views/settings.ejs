@@ -2,7 +2,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Settings', subheading: 'Game tuning the app reads at launch from /api/v1/config' }) %>
+    <%- include('partials/topbar', { heading: 'الإعدادات', subheading: 'أرقام اللعبة التي يقرأها التطبيق عند التشغيل من ‎/api/v1/config' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
@@ -13,15 +13,15 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="coins" width="16" height="16"></i>
-                <span class="fw-semibold">Rewards</span>
+                <span class="fw-semibold">المكافآت</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <div>
-                  <span class="form-label small fw-semibold d-block">Daily reward, by day of the <%= rewardDays %>-day cycle</span>
+                  <span class="form-label small fw-semibold d-block">مكافأة الدخول اليومي، بحسب يوم دورة الـ<%= rewardDays %> أيام</span>
                   <div class="wz-reward-days">
                     <% for (let i = 0; i < rewardDays; i++) { %>
                       <label class="wz-reward-day">
-                        <small>Day <%= i + 1 %></small>
+                        <small>اليوم <%= i + 1 %></small>
                         <input class="form-control" type="number" name="dailyRewards" min="0" step="1" required
                                value="<%= values.dailyRewards?.[i] ?? '' %>" placeholder="<%= defaults.dailyRewards[i] %>">
                       </label>
@@ -29,18 +29,18 @@
                   </div>
                 </div>
                 <% [
-                     ['dailyPuzzleCoins', 'Coins for solving the daily puzzle', values.dailyPuzzleCoins, defaults.dailyPuzzleCoins],
-                     ['streakBonusPerDay', 'Streak bonus per day', values.streakBonusPerDay, defaults.streakBonusPerDay],
-                     ['streakBonusMax', 'Streak bonus cap', values.streakBonusMax, defaults.streakBonusMax],
-                     ['streakFreezeCost', 'Streak freeze cost (coins to keep a streak after missing one day, 0 = off)', values.streakFreezeCost, defaults.streakFreezeCost],
-                     ['dailyGameCoins', 'Coins for each of the five daily games', values.dailyGameCoins, defaults.dailyGameCoins],
-                     ['dailyAllGamesBonus', 'Bonus for finishing all six daily games', values.dailyAllGamesBonus, defaults.dailyAllGamesBonus],
+                     ['dailyPuzzleCoins', 'عملات حل لغز اليوم', values.dailyPuzzleCoins, defaults.dailyPuzzleCoins],
+                     ['streakBonusPerDay', 'مكافأة السلسلة لكل يوم', values.streakBonusPerDay, defaults.streakBonusPerDay],
+                     ['streakBonusMax', 'أقصى مكافأة للسلسلة', values.streakBonusMax, defaults.streakBonusMax],
+                     ['streakFreezeCost', 'تكلفة حماية السلسلة (عملات لإبقائها بعد تفويت يوم، 0 = معطّلة)', values.streakFreezeCost, defaults.streakFreezeCost],
+                     ['dailyGameCoins', 'عملات كل لعبة من الألعاب الخمس', values.dailyGameCoins, defaults.dailyGameCoins],
+                     ['dailyAllGamesBonus', 'مكافأة إنهاء الألعاب الست', values.dailyAllGamesBonus, defaults.dailyAllGamesBonus],
                    ].forEach(([name, label, value, fallback]) => { %>
                   <div class="row g-2 align-items-center">
                     <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
                     <div class="col-sm-5">
                       <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" <% if (name === 'streakFreezeCost') { %>max="<%= maxStreakFreezeCost %>"<% } %> step="1" required value="<%= value %>">
-                      <div class="form-text">Default <%= fallback %></div>
+                      <div class="form-text">الافتراضي <%= fallback %></div>
                     </div>
                   </div>
                 <% }) %>
@@ -52,19 +52,19 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="timer" width="16" height="16"></i>
-                <span class="fw-semibold">Timer and reminders</span>
+                <span class="fw-semibold">المؤقّت والتذكير</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <% [
-                     ['timerSecondsPerWord', 'Seconds per word, timed mode', values.timer?.secondsPerWord, defaults.timer.secondsPerWord, 1, 600],
-                     ['timerBonusCoins', 'Bonus coins for beating the timer', values.timer?.bonusCoins, defaults.timer.bonusCoins, 0, null],
-                     ['reminderHour', 'Daily reminder hour (player\'s local time, 0–23)', values.reminderHour, defaults.reminderHour, 0, 23],
+                     ['timerSecondsPerWord', 'ثوانٍ لكل كلمة في الوضع المؤقّت', values.timer?.secondsPerWord, defaults.timer.secondsPerWord, 1, 600],
+                     ['timerBonusCoins', 'عملات إضافية عند سبق المؤقّت', values.timer?.bonusCoins, defaults.timer.bonusCoins, 0, null],
+                     ['reminderHour', 'ساعة التذكير اليومي (بتوقيت اللاعب، 0–23)', values.reminderHour, defaults.reminderHour, 0, 23],
                    ].forEach(([name, label, value, fallback, min, max]) => { %>
                   <div class="row g-2 align-items-center">
                     <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
                     <div class="col-sm-5">
                       <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" <% if (max !== null) { %>max="<%= max %>"<% } %> step="1" required value="<%= value %>">
-                      <div class="form-text">Default <%= fallback %></div>
+                      <div class="form-text">الافتراضي <%= fallback %></div>
                     </div>
                   </div>
                 <% }) %>
@@ -76,16 +76,16 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="star" width="16" height="16"></i>
-                <span class="fw-semibold">Level unlocking</span>
+                <span class="fw-semibold">فتح الألغاز</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <div class="row g-2 align-items-center">
-                  <label class="col-sm-7 small fw-semibold" for="starsPerLevel">Stars per level</label>
+                  <label class="col-sm-7 small fw-semibold" for="starsPerLevel">نجوم لكل لغز</label>
                   <div class="col-sm-5">
                     <input class="form-control" type="number" id="starsPerLevel" name="starsPerLevel" min="0" max="<%= maxStarsPerLevel %>" step="1" required value="<%= values.starsPerLevel %>">
-                    <div class="form-text">Default <%= defaults.starsPerLevel %></div>
+                    <div class="form-text">الافتراضي <%= defaults.starsPerLevel %></div>
                   </div>
-                  <div class="col-12 form-text">Stars a player needs per level to unlock the next ones: level N needs (N−1) × this many stars in total. 0 opens every level.</div>
+                  <div class="col-12 form-text">عدد النجوم اللازم لكل لغز لفتح ما بعده: اللغز N يحتاج (N−1) × هذا العدد من النجوم إجمالاً. الصفر يفتح كل الألغاز.</div>
                 </div>
               </div>
             </div>
@@ -95,7 +95,7 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="search" width="16" height="16"></i>
-                <span class="fw-semibold">Word search helps</span>
+                <span class="fw-semibold">مساعدات البحث عن الكلمات</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <% [
@@ -106,11 +106,11 @@
                     <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
                     <div class="col-sm-5">
                       <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" max="<%= maxWordSearchHelpCost %>" step="1" required value="<%= value %>">
-                      <div class="form-text">Default <%= fallback %></div>
+                      <div class="form-text">الافتراضي <%= fallback %></div>
                     </div>
                   </div>
                 <% }) %>
-                <div class="form-text">Coins for the helps in the daily word search. 0 hides that help in the app.</div>
+                <div class="form-text">عملات المساعدات في البحث اليومي. الصفر يخفي تلك المساعدة في التطبيق.</div>
               </div>
             </div>
           </div>
@@ -119,20 +119,20 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <i data-lucide="link" width="16" height="16"></i>
-                <span class="fw-semibold">Challenge links</span>
+                <span class="fw-semibold">روابط التحدي</span>
               </div>
               <div class="ad-card-body d-grid gap-2">
-                <label class="small fw-semibold" for="appStoreUrl">App Store link</label>
+                <label class="small fw-semibold" for="appStoreUrl">رابط App Store</label>
                 <input class="form-control" type="url" id="appStoreUrl" name="appStoreUrl" value="<%= appStoreUrl %>" placeholder="https://apps.apple.com/app/id…">
-                <div class="form-text">Shown as a button on challenge pages (/c/3). Not part of /api/v1/config.<% if (envAppStoreUrl) { %> Empty uses APP_STORE_URL from the environment: <%= envAppStoreUrl %>.<% } else { %> Empty hides the button.<% } %></div>
+                <div class="form-text">يظهر كزر في صفحات التحدي (‎/c/3). ليس جزءاً من ‎/api/v1/config.<% if (envAppStoreUrl) { %> الفراغ يستعمل APP_STORE_URL من البيئة: <%= envAppStoreUrl %>.<% } else { %> الفراغ يخفي الزر.<% } %></div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="d-flex gap-2 mt-3">
-          <button class="btn btn-kd-accent" type="submit">Save settings</button>
-          <a class="btn btn-kd-ghost" href="/api/v1/config" target="_blank" rel="noopener">View the JSON</a>
+          <button class="btn btn-kd-accent" type="submit">حفظ الإعدادات</button>
+          <a class="btn btn-kd-ghost" href="/api/v1/config" target="_blank" rel="noopener">عرض JSON</a>
         </div>
       </form>
     </div>

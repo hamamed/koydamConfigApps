@@ -42,14 +42,14 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     handler: (req, res) => {
-      req.flash('danger', 'Too many imports in a short time. Wait a few minutes and try again.');
+      req.flash('danger', 'استيراد كثير في وقت قصير. انتظر دقائق ثم أعد المحاولة.');
       res.redirect('/admin/import');
     },
   });
 
   const oneAtATime = (req, res, next) => {
     if (importing) {
-      req.flash('warning', 'Another import is still uploading. Try again when it has finished.');
+      req.flash('warning', 'هناك استيراد آخر قيد الرفع. أعد المحاولة بعد انتهائه.');
       return res.redirect('/admin/import');
     }
     importing = true;
@@ -64,9 +64,9 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
 
   const withUpload = (req, res, next) => upload(req, res, (err) => {
     if (err) {
-      const message = err.code === 'LIMIT_FILE_SIZE' ? 'One of the files is larger than the limit for its kind.'
-        : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE' ? `At most ${MAX_IMPORT_MEDIA} media files per import.`
-          : 'That upload could not be read.';
+      const message = err.code === 'LIMIT_FILE_SIZE' ? 'أحد الملفات أكبر من الحد المسموح لنوعه.'
+        : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE' ? `حتى ${MAX_IMPORT_MEDIA} ملف وسائط في الاستيراد الواحد.`
+          : 'تعذّرت قراءة الملف المرفوع.';
       req.flash('danger', message);
       return res.redirect('/admin/import');
     }
@@ -82,13 +82,13 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
       const name = decodeName(upload.originalname);
       const key = name.toLowerCase();
       if (seen.has(key)) {
-        fileErrors.push({ name, error: 'Two files have this name; only the first was kept.' });
+        fileErrors.push({ name, error: 'ملفان بالاسم نفسه؛ أُبقي الأول فقط.' });
         continue;
       }
       seen.add(key);
       const kind = sniffImage(upload.buffer) ? 'image' : sniffAudio(upload.buffer) ? 'audio' : null;
       if (!kind) {
-        fileErrors.push({ name, error: 'Not a PNG, JPEG or WebP picture, nor an MP3, M4A, AAC or WAV sound.' });
+        fileErrors.push({ name, error: 'ليست صورة PNG أو JPEG أو WebP، ولا صوت MP3 أو M4A أو AAC أو WAV.' });
         continue;
       }
       const saved = await (kind === 'image' ? images : audio).save(upload.buffer);
@@ -109,7 +109,7 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
 
   router.get('/import', (_req, res) => {
     res.render('import', {
-      title: 'Import',
+      title: 'استيراد',
       columns: IMPORT_COLUMNS,
       maxMedia: MAX_IMPORT_MEDIA,
       maxPaste: MAX_PASTE_CHARS,
@@ -124,7 +124,7 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
   const pasteForm = multer({ limits: { fieldSize: MAX_PASTE_CHARS * 4, fields: 10 } }).none();
   const withPaste = (req, res, next) => pasteForm(req, res, (err) => {
     if (err) {
-      req.flash('danger', 'That text is too long for one import. Split it.');
+      req.flash('danger', 'هذا النص أطول من أن يُستورد دفعة واحدة. قسّمه.');
       return res.redirect('/admin/import');
     }
     return csrfProtect(req, res, next);
@@ -144,14 +144,14 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
     try {
       const csv = req.files?.csv?.[0];
       if (!csv?.buffer?.length) {
-        req.flash('danger', 'Choose a CSV file to import.');
+        req.flash('danger', 'اختر ملف CSV للاستيراد.');
         return res.redirect('/admin/import');
       }
       let text;
       try {
         text = new TextDecoder('utf-8', { fatal: true }).decode(csv.buffer);
       } catch {
-        req.flash('danger', 'The CSV is not UTF-8. Save it again as “CSV UTF-8” and upload that.');
+        req.flash('danger', 'ملف CSV ليس بترميز UTF-8. احفظه من جديد بصيغة «CSV UTF-8» وارفعه.');
         return res.redirect('/admin/import');
       }
       const parsed = readImportCsv(text);
@@ -178,7 +178,7 @@ export function registerImport(router, { repo, images, audio, pendingImports, ti
       // What each row says now, for the fields the admin can change here.
       values: new Map(payload.rows.map(({ row, values }) => [row, { ...values, title: values.title || values.category || '' }])),
       titles: titleNames(),
-      title: 'Import preview',
+      title: 'معاينة الاستيراد',
       id: req.params.id,
       fileName: payload.fileName,
       plan,

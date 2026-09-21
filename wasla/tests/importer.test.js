@@ -18,12 +18,12 @@ const media = new Map([
 ]);
 
 test('the CSV needs a header with answer, clue and title, and no unknown columns', () => {
-  assert.match(readImportCsv('').error, /empty/);
+  assert.match(readImportCsv('').error, /فارغ/);
   assert.match(readImportCsv('clue,title\nx,y\n').error, /answer/);
-  assert.match(readImportCsv('answer,clue\nمصر,x\n').error, /title/);
+  assert.match(readImportCsv('answer,clue\nمصر,x\n').error, /الفئة|title/);
   assert.match(readImportCsv('answer,clue,title,colour\nمصر,x,y,red\n').error, /colour/);
   assert.match(readImportCsv('answer,clue,title\n"مصر,x,y\n').error, /quote/);
-  assert.match(readImportCsv('answer,clue,title\n').error, /no rows/);
+  assert.match(readImportCsv('answer,clue,title\n').error, /بلا صفوف/);
 
   const { rows } = readImportCsv('﻿Clue , Answer,Title\n"بلد، فيه النيل",مصر,بلدان\n');
   assert.deepEqual(rows, [{ row: 1, values: { clue: 'بلد، فيه النيل', answer: 'مصر', title: 'بلدان' } }]);
@@ -47,7 +47,7 @@ test('each row is checked with the same rules as the question form', () => {
   const [lion, latin, missing, wrongKind, roar, egypt, untitled] = plan;
   assert.equal(lion.error, null);
   assert.deepEqual([lion.playAnswer, lion.type, lion.title, lion.levelNumber, lion.levelName, lion.levelIsNew],
-    ['اسد', 'image', 'حيوانات', 1, 'Level 1', true]);
+    ['اسد', 'image', 'حيوانات', 1, 'اللغز 1', true]);
   assert.deepEqual([lion.input.zoom, lion.input.focusX, lion.input.blurred], ['2', '0.3', 'yes']);
   assert.match(latin.error, /Arabic letters/);
   assert.match(missing.error, /missing\.jpg/);
@@ -56,7 +56,7 @@ test('each row is checked with the same rules as the question form', () => {
   assert.equal(roar.type, 'audio');
   assert.equal(egypt.type, 'emoji');
   assert.equal(egypt.levelNumber, null);
-  assert.match(untitled.error, /title/i);
+  assert.match(untitled.error, /الفئة|title/i);
 });
 
 test('the level column is a level number: existing, or new levels added one after another', () => {
@@ -77,10 +77,10 @@ test('the level column is a level number: existing, or new levels added one afte
   assert.deepEqual([existing.error, existing.levelNumber, existing.levelIsNew], [null, 1, false]);
   assert.deepEqual([next.error, next.levelNumber, next.levelIsNew], [null, 3, true]);
   assert.deepEqual([after.error, after.levelNumber, after.levelIsNew], [null, 4, true]);
-  assert.match(gap.error, /no Level 6.*use 5/);
-  assert.match(zero.error, /level number/);
-  assert.match(named.error, /level number/);
-  assert.match(fraction.error, /level number/);
+  assert.match(gap.error, /لا يوجد اللغز 6.*استعمل 5/);
+  assert.match(zero.error, /عمود اللغز رقم/);
+  assert.match(named.error, /عمود اللغز رقم/);
+  assert.match(fraction.error, /عمود اللغز رقم/);
 });
 
 test('one file can add several new levels, created in order', () => {
@@ -109,7 +109,7 @@ test('picture, sound and emoji questions may have only a title; text questions n
   const [picture, emoji, text] = planImport(repo, rows, media);
   assert.equal(picture.error, null);
   assert.equal(emoji.error, null);
-  assert.match(text.error, /clue/i);
+  assert.match(text.error, /دليل/);
 });
 
 test('confirming imports only the valid rows, adds the next level and lays levels out', () => {
@@ -136,7 +136,7 @@ test('confirming imports only the valid rows, adds the next level and lays level
   assert.equal(repo.getLevel(existing.id).words.length, 2);
   assert.equal(repo.listQuestions().length, 5);
   assert.equal(repo.listLevels().length, 2);
-  assert.deepEqual(result.levels.map((l) => [l.number, l.name, l.created]), [[1, 'Level 1', false], [2, 'Level 2', true]]);
+  assert.deepEqual(result.levels.map((l) => [l.number, l.name, l.created]), [[1, 'اللغز 1', false], [2, 'اللغز 2', true]]);
 });
 
 test('nothing is imported when a row fails at confirm time', () => {
@@ -145,7 +145,7 @@ test('nothing is imported when a row fails at confirm time', () => {
   // Something changed between preview and confirm that the checks did not see.
   const broken = plan.map((p, i) => (i === 1 ? { ...p, input: { ...p.input, zoom: 99 } } : p));
 
-  assert.throws(() => commitImport(repo, broken), /zoom/i);
+  assert.throws(() => commitImport(repo, broken), /تقريب/);
   assert.equal(repo.listQuestions().length, 0);
 });
 
@@ -164,7 +164,7 @@ test('an old CSV: category stands in for a blank title, and pack is ignored', ()
 
   const result = commitImport(repo, plan);
   assert.equal(result.imported, 2);
-  assert.deepEqual(result.levels.map((l) => [l.name, l.created, l.added]), [['Level 1', true, 2]]);
+  assert.deepEqual(result.levels.map((l) => [l.name, l.created, l.added]), [['اللغز 1', true, 2]]);
   assert.equal('packId' in repo.levelByNumber(1), false);
 });
 

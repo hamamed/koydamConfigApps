@@ -28,20 +28,20 @@ const SETTING = { keyId: 'apnsKeyId', teamId: 'apnsTeamId', topic: 'apnsTopic', 
  * Apple's .p8 download is), else `{ error }`.
  */
 export function checkKeyFile(buffer) {
-  if (!buffer?.length) return { error: 'Choose the .p8 key file Apple gave you.' };
-  if (buffer.length > MAX_KEY_BYTES) return { error: 'That file is too large to be an APNs .p8 key.' };
+  if (!buffer?.length) return { error: 'اختر ملف المفتاح ‎.p8 من Apple.' };
+  if (buffer.length > MAX_KEY_BYTES) return { error: 'هذا الملف أكبر من أن يكون مفتاح ‎.p8 لـAPNs.' };
   const text = buffer.toString('utf8').replace(/^﻿/, '').trim();
   if (!PKCS8_PEM.test(`${text}\n`)) {
-    return { error: 'That is not a .p8 key: it should start with "-----BEGIN PRIVATE KEY-----".' };
+    return { error: 'هذا ليس مفتاح ‎.p8: يجب أن يبدأ بـ "-----BEGIN PRIVATE KEY-----".' };
   }
   let key;
   try {
     key = crypto.createPrivateKey({ key: text, format: 'pem' });
   } catch {
-    return { error: 'That .p8 file could not be read as a private key.' };
+    return { error: 'تعذّرت قراءة ملف ‎.p8 كمفتاح خاص.' };
   }
   if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1') {
-    return { error: 'That key is not an APNs key: APNs keys are EC P-256 private keys.' };
+    return { error: 'هذا ليس مفتاح APNs: مفاتيح APNs من نوع EC P-256.' };
   }
   return { keyPem: `${text}\n` };
 }
@@ -53,8 +53,8 @@ export function checkIds({ keyId, teamId, topic }) {
     teamId: String(teamId ?? '').trim().toUpperCase() || DEFAULT_TEAM_ID,
     topic: String(topic ?? '').trim() || DEFAULT_TOPIC,
   };
-  if (!KEY_ID.test(clean.keyId)) return { error: 'The Key ID is the 10 letters and digits shown beside the key in your Apple developer account.' };
-  if (!TEAM_ID.test(clean.teamId)) return { error: 'The Team ID is 10 letters and digits.' };
+  if (!KEY_ID.test(clean.keyId)) return { error: 'Key ID هو العشرة حروف وأرقام المعروضة بجانب المفتاح في حساب Apple للمطوّرين.' };
+  if (!TEAM_ID.test(clean.teamId)) return { error: 'Team ID عشرة حروف وأرقام.' };
   if (!TOPIC.test(clean.topic)) return { error: 'The topic is the app\'s bundle id, such as koydam.wasla.crosswords.' };
   return { ids: clean };
 }
@@ -115,7 +115,7 @@ export function createApnsCredentials(db, { dir }) {
       if (checked.error) return { error: checked.error };
       keyPem = checked.keyPem;
     } else if (!hasKey()) {
-      return { error: 'Choose the .p8 key file Apple gave you.' };
+      return { error: 'اختر ملف المفتاح ‎.p8 من Apple.' };
     }
 
     if (keyPem) {

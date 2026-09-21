@@ -64,7 +64,7 @@
     const marks = /[ؐ-ًؚ-ٰٟۖ-ۭـ\s]/g;
     const show = () => {
       const letters = [...input.value.replace(marks, '')];
-      out.textContent = letters.length ? `${letters.length} letters: ${letters.join(' · ')}` : '';
+      out.textContent = letters.length ? `${letters.length} حروف: ${letters.join(' · ')}` : '';
     };
     input.addEventListener('input', show);
     show();
@@ -102,12 +102,12 @@
     const has = (selector) => Boolean(form.querySelector(selector)?.files?.length);
     const kept = (editor, removeName) => Boolean(form.querySelector(`${editor}[data-has-file]`))
       && !form.querySelector(`input[name="${removeName}"]`)?.checked;
-    const labels = { text: 'text', image: 'picture', emoji: 'emoji', audio: 'audio' };
+    const labels = { text: 'نص', image: 'صورة', emoji: 'إيموجي', audio: 'صوت' };
     const show = () => {
       const type = has('[data-audio-file]') || kept('[data-audio-editor]', 'removeAudio') ? 'audio'
         : has('[data-zoom-file]') || kept('[data-zoom-editor]', 'removeImage') ? 'image'
           : form.querySelector('[data-emoji]')?.value.trim() ? 'emoji' : 'text';
-      typeSelect.options[0].textContent = `Automatic — ${labels[type]}`;
+      typeSelect.options[0].textContent = `تلقائي — ${labels[type]}`;
     };
     form.addEventListener('change', show);
     form.addEventListener('input', show);

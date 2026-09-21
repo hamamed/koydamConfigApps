@@ -80,7 +80,7 @@ function decide(first, second, order) {
  */
 export function readPastedQuestions(text, { title = '', level = '', order = 'auto' } = {}) {
   const source = String(text ?? '');
-  if (!source.trim()) return { error: 'Paste some questions first.' };
+  if (!source.trim()) return { error: 'الصق بعض الأسئلة أولاً.' };
   if (source.length > MAX_PASTE_CHARS) return { error: `At most ${MAX_PASTE_CHARS.toLocaleString('en')} characters per paste. Split it.` };
   const how = PASTE_ORDERS.includes(order) ? order : 'auto';
 
@@ -155,7 +155,7 @@ export function readPastedQuestions(text, { title = '', level = '', order = 'aut
   }
   flushPending();
 
-  if (!rows.length) return { error: 'No questions were found in the text.' };
-  if (rows.length > MAX_IMPORT_ROWS) return { error: `At most ${MAX_IMPORT_ROWS} questions per import. Split the text.` };
+  if (!rows.length) return { error: 'لم يُعثر على أسئلة في النص.' };
+  if (rows.length > MAX_IMPORT_ROWS) return { error: `حتى ${MAX_IMPORT_ROWS} سؤالاً في الاستيراد الواحد. قسّم النص.` };
   return { rows };
 }

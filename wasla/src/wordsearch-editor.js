@@ -98,8 +98,8 @@ function countProblem(count) {
 /** The theme name shown above the board: 1–40 characters. */
 export function readThemeName(raw) {
   const theme = String(raw ?? '').trim().replace(/\s+/g, ' ');
-  if (!theme) return { error: 'Give the puzzle a theme name.' };
-  if ([...theme].length > MAX_TITLE) return { error: `A theme name can be at most ${MAX_TITLE} characters.` };
+  if (!theme) return { error: 'أعطِ اللغز اسم موضوع.' };
+  if ([...theme].length > MAX_TITLE) return { error: `اسم الموضوع حتى ${MAX_TITLE} حرفاً.` };
   return { theme };
 }
 

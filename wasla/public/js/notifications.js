@@ -37,7 +37,7 @@
       const res = await fetch(`/admin/notifications/audience?${params}`, { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error(String(res.status));
       const { count } = await res.json();
-      badge.textContent = target === 'device' ? (count ? 'registered' : 'not found') : String(count);
+      badge.textContent = target === 'device' ? (count ? 'مسجَّل' : 'غير موجود') : String(count);
     } catch {
       badge.textContent = '?';
     }

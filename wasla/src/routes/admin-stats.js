@@ -10,7 +10,7 @@ export function registerStats(router, { events }) {
     const hard = req.query.hard === '1';
 
     res.render('stats', {
-      title: 'Stats',
+      title: 'الإحصاءات',
       overview: events.overview(),
       questions: events.questionStats({ sort, dir, hard }),
       levels: events.levelStats(),

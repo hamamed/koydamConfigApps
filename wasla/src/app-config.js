@@ -105,7 +105,7 @@ export function createAppConfig(db) {
       clean[key] = value;
     }
     if (clean.streakBonusMax < clean.streakBonusPerDay) {
-      return { error: 'The streak bonus cap cannot be lower than the bonus for one day.' };
+      return { error: 'أقصى مكافأة للسلسلة لا يمكن أن يقل عن مكافأة اليوم الواحد.' };
     }
     const write = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')`);

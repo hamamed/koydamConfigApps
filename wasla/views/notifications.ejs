@@ -5,7 +5,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Notifications', subheading: 'Push a message to players who turned notifications on' }) %>
+    <%- include('partials/topbar', { heading: 'الإشعارات', subheading: 'أرسل رسالة إلى اللاعبين الذين فعّلوا الإشعارات' }) %>
     <div class="ad-content">
       <%- include('partials/notifications-tabs', { active: 'compose' }) %>
       <%- include('partials/flash') %>
@@ -13,17 +13,17 @@
       <% if (!apns.configured) { %>
         <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
           <i data-lucide="key-round" width="17" height="17" class="flex-shrink-0"></i>
-          <span class="me-auto">APNs is not set up yet, so nothing can be sent. Upload the .p8 key first.</span>
-          <a class="btn btn-sm btn-kd" href="/admin/notifications/setup">Set up APNs</a>
+          <span class="me-auto">لم تُعدّ APNs بعد، فلا يمكن الإرسال. ارفع مفتاح ‎.p8 أولاً.</span>
+          <a class="btn btn-sm btn-kd" href="/admin/notifications/setup">إعداد APNs</a>
         </div>
       <% } %>
 
       <div class="row g-3 mb-3">
         <% [
-             ['Devices registered', counts.total, 'smartphone'],
-             ['Notifications on', counts.enabled, 'bell-ring'],
-             ['Production', counts.production, 'store'],
-             ['Sandbox', counts.sandbox, 'flask-conical'],
+             ['أجهزة مسجَّلة', counts.total, 'smartphone'],
+             ['الإشعارات مفعّلة', counts.enabled, 'bell-ring'],
+             ['production', counts.production, 'store'],
+             ['sandbox', counts.sandbox, 'flask-conical'],
            ].forEach(([label, value, glyph]) => { %>
           <div class="col-6 col-xl-3">
             <div class="ad-card ad-kpi">
@@ -43,44 +43,44 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="send" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">New notification</span>
+              <span class="fw-semibold me-auto">إشعار جديد</span>
             </div>
             <div class="ad-card-body d-grid gap-3">
               <div>
-                <label class="form-label small fw-semibold d-flex" for="title">Title <span class="ms-auto kd-faint" data-count-for="title"></span></label>
+                <label class="form-label small fw-semibold d-flex" for="title">العنوان <span class="ms-auto kd-faint" data-count-for="title"></span></label>
                 <input class="form-control wz-ar" id="title" name="title" maxlength="<%= maxTitle %>" required dir="auto" value="<%= values.title %>" data-max="<%= maxTitle %>">
               </div>
               <div>
-                <label class="form-label small fw-semibold d-flex" for="body">Message <span class="ms-auto kd-faint" data-count-for="body"></span></label>
+                <label class="form-label small fw-semibold d-flex" for="body">الرسالة <span class="ms-auto kd-faint" data-count-for="body"></span></label>
                 <textarea class="form-control wz-ar" id="body" name="body" rows="3" maxlength="<%= maxBody %>" required dir="auto" data-max="<%= maxBody %>"><%= values.body %></textarea>
               </div>
               <div>
-                <label class="form-label small fw-semibold" for="level">Open level (optional)</label>
+                <label class="form-label small fw-semibold" for="level">فتح لغز (اختياري)</label>
                 <input class="form-control wz-level-input" id="level" name="level" type="number" min="1" <% if (publishedCount) { %>max="<%= publishedCount %>"<% } %> step="1" value="<%= values.level %>" placeholder="—">
-                <div class="form-text">Tapping opens this level if the player has unlocked it, else the home screen. Published levels: 1–<%= publishedCount || 0 %>.</div>
+                <div class="form-text">الضغط يفتح هذا اللغز إن كان مفتوحاً عند اللاعب، وإلا فالشاشة الرئيسية. الألغاز المنشورة: 1–<%= publishedCount || 0 %>.</div>
               </div>
               <fieldset>
-                <legend class="form-label small fw-semibold">Send to</legend>
+                <legend class="form-label small fw-semibold">الإرسال إلى</legend>
                 <div class="d-grid gap-2">
                   <label class="form-check d-flex align-items-center gap-2">
                     <input class="form-check-input m-0" type="radio" name="target" value="all" <%= values.target === 'all' ? 'checked' : '' %>>
-                    <span>All devices with notifications on</span>
+                    <span>كل الأجهزة التي فعّلت الإشعارات</span>
                     <span class="kd-tag kd-tag-accent ms-auto" data-audience="all"><%= counts.enabled %></span>
                   </label>
                   <label class="form-check d-flex align-items-center gap-2">
                     <input class="form-check-input m-0" type="radio" name="target" value="sandbox" <%= values.target === 'sandbox' ? 'checked' : '' %>>
-                    <span>Sandbox only (builds from Xcode, for testing)</span>
+                    <span>sandbox فقط (نسخ Xcode، للتجربة)</span>
                     <span class="kd-tag ms-auto" data-audience="sandbox"><%= counts.sandbox %></span>
                   </label>
                   <label class="form-check d-flex align-items-center gap-2">
                     <input class="form-check-input m-0" type="radio" name="target" value="device" <%= values.target === 'device' ? 'checked' : '' %>>
-                    <span>Send a test to one device</span>
+                    <span>إرسال تجربة إلى جهاز واحد</span>
                     <span class="kd-tag ms-auto" data-audience="device">—</span>
                   </label>
-                  <input class="form-control form-control-sm font-monospace" name="device" value="<%= values.device %>" placeholder="Device id, e.g. 8a1f5b2e-3c4d-4e5f-9a0b-1c2d3e4f5a6b" aria-label="Device id" data-device-input>
+                  <input class="form-control form-control-sm font-monospace" name="device" value="<%= values.device %>" placeholder="معرّف الجهاز، مثل 8a1f5b2e-3c4d-4e5f-9a0b-1c2d3e4f5a6b" aria-label="معرّف الجهاز" data-device-input>
                 </div>
               </fieldset>
-              <button class="btn btn-kd" type="submit" <%= apns.configured ? '' : 'disabled' %>>Review and send</button>
+              <button class="btn btn-kd" type="submit" <%= apns.configured ? '' : 'disabled' %>>راجع وأرسل</button>
             </div>
           </form>
         </div>
@@ -89,18 +89,18 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="history" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">Sent</span>
+              <span class="fw-semibold me-auto">أُرسلت</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!history.length) { %>
                 <div class="ad-empty">
                   <i data-lucide="bell"></i>
-                  <p class="mb-0">Nothing sent yet.</p>
+                  <p class="mb-0">لم يُرسل شيء بعد.</p>
                 </div>
               <% } else { %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
-                    <thead><tr><th>Message</th><th>To</th><th class="text-end">Sent</th><th class="text-end">Failed</th><th class="text-end">Disabled</th><th>When</th></tr></thead>
+                    <thead><tr><th>الرسالة</th><th>To</th><th class="text-end">أُرسلت</th><th class="text-end">فشلت</th><th class="text-end">معطّلة</th><th>متى</th></tr></thead>
                     <tbody>
                       <% history.forEach((n) => { %>
                         <tr>

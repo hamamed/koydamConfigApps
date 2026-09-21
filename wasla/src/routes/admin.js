@@ -63,7 +63,7 @@ export function adminRouter({
     windowMs: 15 * 60 * 1000,
     limit: 10,
     skipSuccessfulRequests: true,
-    message: 'Too many sign-in attempts. Try again in a few minutes.',
+    message: 'محاولات دخول كثيرة. أعد المحاولة بعد دقائق.',
   });
 
   // One picture and one sound per question, held in memory so each store can
@@ -78,8 +78,8 @@ export function adminRouter({
   const withUpload = (back) => (req, res, next) => uploadMedia(req, res, (err) => {
     if (err) {
       req.flash('danger', err.code === 'LIMIT_FILE_SIZE'
-        ? `That file is larger than ${megabytes(Math.max(config.maxImageBytes, config.maxAudioBytes))} MB.`
-        : 'That upload could not be read.');
+        ? `هذا الملف أكبر من ${megabytes(Math.max(config.maxImageBytes, config.maxAudioBytes))} ميغابايت.`
+        : 'تعذّرت قراءة الملف المرفوع.');
       return res.redirect(back(req));
     }
     return csrfProtect(req, res, next);
@@ -99,13 +99,13 @@ export function adminRouter({
 
   router.get('/login', (req, res) => {
     if (req.user) return res.redirect('/admin');
-    res.render('login', { title: 'Sign in', platformUrl: config.platformUrl });
+    res.render('login', { title: 'تسجيل الدخول', platformUrl: config.platformUrl });
   });
 
   router.post('/login', loginLimiter, (req, res) => {
     const user = verifyCredentials(String(req.body?.username ?? ''), String(req.body?.password ?? ''));
     if (!user) {
-      req.flash('danger', 'That username and password did not match.');
+      req.flash('danger', 'اسم المستخدم أو كلمة المرور غير صحيحة.');
       return res.redirect('/admin/login');
     }
     req.session.userId = user.id;
@@ -122,7 +122,7 @@ export function adminRouter({
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   router.get('/', (_req, res) => {
-    res.render('dashboard', { title: 'Dashboard', counts: repo.counts(), levels: repo.listLevels().slice(0, 8) });
+    res.render('dashboard', { title: 'الرئيسية', counts: repo.counts(), levels: repo.listLevels().slice(0, 8) });
   });
 
   // ── Questions ─────────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export function adminRouter({
     const showAll = asked === ALL_TITLES || (!asked && (search || unused));
     const titleFilter = showAll ? '' : (asked || categories[0]?.name || '');
     res.render('questions', {
-      title: 'Questions',
+      title: 'الأسئلة',
       categories,
       total,
       allTitles: ALL_TITLES,
@@ -169,10 +169,10 @@ export function adminRouter({
     const back = `/admin/questions${params.size ? `?${params}` : ''}`;
     const ids = req.body.ids ?? [];
     if (!(Array.isArray(ids) ? ids.length : ids)) {
-      req.flash('warning', 'Select at least one question first.');
+      req.flash('warning', 'حدّد سؤالاً واحداً على الأقل.');
       return res.redirect(back);
     }
-    const unpublishedNote = (names) => (names.length ? ` Unpublished (no longer publishable): ${names.join(', ')}.` : '');
+    const unpublishedNote = (names) => (names.length ? ` أُلغي نشر (لم تعد صالحة للنشر): ${names.join('، ')}.` : '');
     try {
       switch (req.body.action) {
         case 'delete': {
@@ -183,13 +183,13 @@ export function adminRouter({
               await audio.remove(file);
             }
           }
-          req.flash(deleted ? 'success' : 'warning', `Deleted ${deleted} question(s).`
-            + (kept ? ` ${kept} kept because they are in a level — remove them from their level first.` : ''));
+          req.flash(deleted ? 'success' : 'warning', `حُذف ${deleted} سؤالاً.`
+            + (kept ? ` أُبقي ${kept} لأنها داخل ألغاز — أخرجها من ألغازها أولاً.` : ''));
           break;
         }
         case 'title': {
           const result = repo.setQuestionsTitle(ids, req.body.title);
-          req.flash(result.error ? 'danger' : 'success', result.error ?? `Title set on ${result.updated} question(s).`);
+          req.flash(result.error ? 'danger' : 'success', result.error ?? `عُيّنت الفئة على ${result.updated} سؤالاً.`);
           break;
         }
         case 'move':
@@ -201,17 +201,17 @@ export function adminRouter({
           }
           const loose = result.unplaced ? ` ${result.unplaced} word(s) do not cross the others yet.` : '';
           req.flash(result.unplaced || result.unpublished.length ? 'warning' : 'success',
-            `Moved ${result.moved} question(s) to ${result.level.name}.${loose}${unpublishedNote(result.unpublished)}`);
+            `نُقل ${result.moved} سؤالاً إلى ${result.level.name}.${loose}${unpublishedNote(result.unpublished)}`);
           if (req.body.action === 'new-level') return res.redirect(`/admin/levels/${result.level.id}`);
           break;
         }
         case 'remove': {
           const result = repo.removeQuestionsFromLevels(ids);
-          req.flash('success', `Took ${result.removed} question(s) out of their levels.${unpublishedNote(result.unpublished)}`);
+          req.flash('success', `أُخرج ${result.removed} سؤالاً من ألغازه.${unpublishedNote(result.unpublished)}`);
           break;
         }
         default:
-          req.flash('warning', 'Choose what to do with the selected questions.');
+          req.flash('warning', 'اختر ما تريد فعله بالأسئلة المحدَّدة.');
       }
       res.redirect(back);
     } catch (err) {
@@ -304,8 +304,8 @@ export function adminRouter({
 
   /** "Saved “أسد” — played as اسد." when folding changed the letters. */
   const savedMessage = (question) => (question.playAnswer !== question.answer
-    ? `Saved “${question.answer}” — played in the grid as “${question.playAnswer}”.`
-    : `Saved “${question.answer}”.`);
+    ? `حُفظ «${question.answer}» — ويُلعب في الشبكة «${question.playAnswer}».`
+    : `حُفظ «${question.answer}».`);
 
   router.post('/questions', withUpload(() => '/admin/questions/new'), async (req, res, next) => {
     try {
@@ -322,7 +322,7 @@ export function adminRouter({
       if (level) {
         const ids = [...level.words, ...level.unplaced].map((w) => w.id);
         repo.setLevelQuestions(level.id, [...ids, result.question.id]);
-        req.flash('success', `Added “${result.question.answer}” to ${level.name}.`);
+        req.flash('success', `أُضيف «${result.question.answer}» إلى ${level.name}.`);
         return res.redirect(`/admin/levels/${level.id}`);
       }
       req.flash('success', savedMessage(result.question));
@@ -349,7 +349,7 @@ export function adminRouter({
         await audio.remove(result.previousAudio);
       }
       req.flash(result.unpublished.length ? 'warning' : 'success', result.unpublished.length
-        ? `Saved. The new answer no longer crosses the grid, so these levels were unpublished: ${result.unpublished.join(', ')}.`
+        ? `حُفظ. الجواب الجديد لم يعد يتقاطع في الشبكة، فأُلغي نشر هذه الألغاز: ${result.unpublished.join('، ')}.`
         : savedMessage(result.question));
       res.redirect('/admin/questions');
     } catch (err) {
@@ -370,7 +370,7 @@ export function adminRouter({
       const id = Number(req.params.id);
       const picture = req.files?.image?.[0];
       if (!picture?.buffer?.length) {
-        req.flash('warning', 'Choose a picture first.');
+        req.flash('warning', 'اختر صورة أولاً.');
         return res.redirect(back);
       }
       const saved = await images.save(picture.buffer);
@@ -387,7 +387,7 @@ export function adminRouter({
       if (result.previousImage && result.previousImage !== saved.file && !repo.mediaInUse(result.previousImage)) {
         await images.remove(result.previousImage);
       }
-      req.flash('success', `Picture added to «${result.question.answer}».`);
+      req.flash('success', `أُضيفت الصورة إلى «${result.question.answer}».`);
       res.redirect(back);
     } catch (err) {
       next(err);
@@ -416,7 +416,7 @@ export function adminRouter({
       }
       await images.remove(result.imageFile);
       await audio.remove(result.audioFile);
-      req.flash('success', 'Question deleted.');
+      req.flash('success', 'حُذف السؤال.');
       res.redirect('/admin/questions');
     } catch (err) {
       next(err);
@@ -441,7 +441,7 @@ export function adminRouter({
       counts.set(q.title, row);
     });
     res.render('levels', {
-      title: 'Levels',
+      title: 'الألغاز',
       levels: repo.listLevels(),
       categories: [...counts.values()].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'ar')),
       difficulties: DIFFICULTIES,
@@ -470,7 +470,7 @@ export function adminRouter({
     const size = Math.min(MAX_LEVEL_SIZE, Math.max(MIN_CATEGORIES, Math.round(Number(req.body.size)) || LEVEL_SIZE));
     const publish = truthy(req.body.publish);
     if (difficulty && !DIFFICULTIES.includes(difficulty)) {
-      req.flash('danger', `The difficulty is one of: ${DIFFICULTIES.join(', ')}.`);
+      req.flash('danger', `الصعوبة واحدة من: ${DIFFICULTIES.join('، ')}.`);
       return res.redirect('/admin/levels');
     }
 
@@ -525,25 +525,25 @@ export function adminRouter({
           : noCrossing ? ' The questions left do not cross, so no more levels could be built.' : ''
       : '';
     if (!made.length) {
-      req.flash('warning', `No level could be built.${short}`);
+      req.flash('warning', `تعذّر بناء أي لغز.${short}`);
       return res.redirect('/admin/levels');
     }
     const names = made.length === 1 ? made[0].name : `${made[0].name} – ${made[made.length - 1].name}`;
-    req.flash('success', `Generated ${made.length} level(s) of ${size}: ${names}${publish ? ', published' : ' as drafts'}.${short}`);
+    req.flash('success', `تولّد ${made.length} لغزاً من ${size} أسئلة: ${names}${publish ? '، ومنشورة' : '، كمسودات'}.${short}`);
     res.redirect('/admin/levels');
   });
 
   router.post('/levels/order-by-difficulty', (req, res) => {
     const moved = repo.orderByDifficulty();
     req.flash('success', moved
-      ? `Reordered: ${moved} level(s) moved. Easy levels come first, then medium, then hard; fewer words first within each.`
-      : 'Already in order — nothing moved.');
+      ? `أُعيد الترتيب: تحرّك ${moved} لغزاً. السهلة أولاً ثم المتوسطة ثم الصعبة، والأقل كلمات أولاً داخل كل مجموعة.`
+      : 'مرتّبة أصلاً — لم يتحرك شيء.');
     res.redirect('/admin/levels');
   });
 
   router.post('/levels', (req, res) => {
     const level = repo.createLevel();
-    req.flash('success', `Added ${level.name}. Pick its questions below.`);
+    req.flash('success', `أُضيف ${level.name}. اختر أسئلته أدناه.`);
     res.redirect(`/admin/levels/${level.id}`);
   });
 
@@ -574,7 +574,7 @@ export function adminRouter({
   router.post('/levels/bulk', (req, res) => {
     const ids = req.body.ids ?? [];
     if (!(Array.isArray(ids) ? ids.length : ids)) {
-      req.flash('warning', 'Select at least one level first.');
+      req.flash('warning', 'حدّد لغزاً واحداً على الأقل.');
       return res.redirect('/admin/levels');
     }
     switch (req.body.action) {
@@ -583,24 +583,24 @@ export function adminRouter({
         const on = req.body.action === 'publish';
         const { changed, problems, error } = repo.setLevelsPublished(ids, on);
         if (error) { req.flash('danger', error); break; }
-        const done = `${on ? 'Published' : 'Unpublished'} ${changed.length} level(s).`;
+        const done = `${on ? 'نُشر' : 'أُلغي نشر'} ${changed.length} لغزاً.`;
         req.flash(problems.length ? 'warning' : 'success',
           problems.length ? `${done} ${problems.join(' ')}` : done);
         break;
       }
       case 'difficulty': {
         const { changed, error } = repo.setLevelsDifficulty(ids, req.body.difficulty);
-        req.flash(error ? 'danger' : 'success', error ?? `Difficulty set on ${changed} level(s).`);
+        req.flash(error ? 'danger' : 'success', error ?? `عُيّنت الصعوبة على ${changed} لغزاً.`);
         break;
       }
       case 'delete': {
         const { deleted, error } = repo.deleteLevels(ids);
         req.flash(error ? 'danger' : 'success',
-          error ?? `Deleted ${deleted} level(s). Their questions are back in the bank.`);
+          error ?? `حُذف ${deleted} لغزاً. وعادت أسئلتها إلى البنك.`);
         break;
       }
       default:
-        req.flash('warning', 'Choose what to do with the selected levels.');
+        req.flash('warning', 'اختر ما تريد فعله بالألغاز المحدَّدة.');
     }
     res.redirect('/admin/levels');
   });
@@ -617,7 +617,7 @@ export function adminRouter({
   const levelAction = (path, handler) => router.post(`/levels/:id/${path}`, (req, res) => {
     const id = Number(req.params.id);
     if (!repo.getLevel(id)) {
-      req.flash('danger', 'That level no longer exists.');
+      req.flash('danger', 'هذا اللغز لم يعد موجوداً.');
       return res.redirect('/admin/levels');
     }
     const back = handler(id, req) ?? `/admin/levels/${id}`;
@@ -626,7 +626,7 @@ export function adminRouter({
 
   levelAction('details', (id, req) => {
     const result = repo.setLevelDetails(id, { difficulty: req.body.difficulty });
-    req.flash(result.error ? 'danger' : 'success', result.error ?? 'Difficulty saved.');
+    req.flash(result.error ? 'danger' : 'success', result.error ?? 'حُفظت الصعوبة.');
   });
 
   levelAction('words', (id, req) => {
@@ -634,21 +634,21 @@ export function adminRouter({
     const ids = Array.isArray(raw) ? raw : raw ? [raw] : [];
     const { layout, unpublished, skipped } = repo.setLevelQuestions(id, ids);
     if (skipped.length) {
-      req.flash('warning', `${skipped.length} question(s) were left out because they are already in another level.`);
-    } else if (unpublished) req.flash('warning', 'Saved, and unpublished: the grid can no longer be published as it is.');
-    else if (layout.unplaced.length) req.flash('warning', `Saved. ${layout.unplaced.length} word(s) do not cross the others yet.`);
-    else req.flash('success', `Grid built from ${layout.placements.length} words.`);
+      req.flash('warning', `تُرك ${skipped.length} سؤالاً لأنها في ألغاز أخرى.`);
+    } else if (unpublished) req.flash('warning', 'حُفظ وأُلغي نشره: الشبكة بشكلها الحالي لا تصلح للنشر.');
+    else if (layout.unplaced.length) req.flash('warning', `حُفظ. ${layout.unplaced.length} كلمة لا تتقاطع مع البقية بعد.`);
+    else req.flash('success', `بُنيت الشبكة من ${layout.placements.length} كلمة.`);
   });
 
   levelAction('shuffle', (id, req) => {
     repo.shuffleLevel(id);
-    req.flash('success', 'Shuffled — a new arrangement of the same words.');
+    req.flash('success', 'أُعيد الترتيب — توزيع جديد للكلمات نفسها.');
   });
 
   levelAction('publish', (id, req) => {
     const on = req.body.published === '1';
     const result = repo.setPublished(id, on);
-    req.flash(result.error ? 'danger' : 'success', result.error ?? (on ? 'Published — it is in the app now.' : 'Unpublished.'));
+    req.flash(result.error ? 'danger' : 'success', result.error ?? (on ? 'نُشر — صار في التطبيق الآن.' : 'أُلغي النشر.'));
   });
 
   levelAction('move', (id, req) => {

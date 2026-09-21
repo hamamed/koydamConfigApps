@@ -3,9 +3,9 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Daily puzzle',
-          subheading: 'The daily word search, planned date by date',
-          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/wordsearch">Word themes</a>'
+          heading: 'لغز اليوم',
+          subheading: 'البحث عن الكلمات، مخطَّطاً يوماً بيوم',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/wordsearch">مواضيع البحث</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
@@ -15,19 +15,19 @@
           <div class="ad-card ad-kpi h-100">
             <div class="d-flex align-items-center gap-2 mb-2">
               <i data-lucide="calendar-range" width="17" height="17"></i>
-              <span class="ad-kpi-label">Planned ahead</span>
+              <span class="ad-kpi-label">مخطَّط مسبقاً</span>
             </div>
             <% if (summary.lastDate) { %>
-              <div class="ad-kpi-value">Scheduled until <span class="kd-mono"><%= summary.lastDate %></span></div>
+              <div class="ad-kpi-value">مجدول حتى <span class="kd-mono"><%= summary.lastDate %></span></div>
               <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                <span class="kd-tag <%= summary.low ? 'kd-tag-warn' : 'kd-tag-ok' %>"><%= summary.daysAhead %> day<%= summary.daysAhead === 1 ? '' : 's' %> ahead</span>
-                <% if (summary.low) { %><span class="kd-tag kd-tag-warn">fewer than <%= lowDays %> days left — add more</span><% } %>
-                <% if (summary.gaps) { %><span class="kd-tag kd-tag-warn"><%= summary.gaps %> unplanned date<%= summary.gaps === 1 ? '' : 's' %> in between (automatic)</span><% } %>
+                <span class="kd-tag <%= summary.low ? 'kd-tag-warn' : 'kd-tag-ok' %>"><%= summary.daysAhead %> يوماً مقدّماً</span>
+                <% if (summary.low) { %><span class="kd-tag kd-tag-warn">أقل من <%= lowDays %> أيام متبقية — أضف المزيد</span><% } %>
+                <% if (summary.gaps) { %><span class="kd-tag kd-tag-warn"><%= summary.gaps %> تاريخاً غير مخطَّط بينها (تلقائي)</span><% } %>
               </div>
             <% } else { %>
-              <div class="ad-kpi-value">Nothing planned</div>
+              <div class="ad-kpi-value">لا شيء مخطَّط</div>
               <div class="d-flex flex-wrap gap-2 mt-2">
-                <span class="kd-tag kd-tag-warn">every day is automatic — add days to plan them</span>
+                <span class="kd-tag kd-tag-warn">كل يوم تلقائي — أضف أياماً لتخطيطها</span>
               </div>
             <% } %>
           </div>
@@ -36,18 +36,18 @@
           <div class="ad-card ad-kpi h-100">
             <div class="d-flex align-items-center gap-2 mb-2">
               <i data-lucide="calendar-check" width="17" height="17"></i>
-              <span class="ad-kpi-label">Today · <span class="kd-mono"><%= today %></span> UTC</span>
+              <span class="ad-kpi-label">اليوم · <span class="kd-mono"><%= today %></span> UTC</span>
             </div>
             <div class="ad-kpi-value"><span class="wz-ar"><%= todayTheme ?? '—' %></span></div>
             <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
               <% if (summary.todayScheduled) { %>
-                <span class="ad-status ad-status-published">Scheduled</span>
+                <span class="ad-status ad-status-published">مجدول</span>
               <% } else if (todayTheme) { %>
-                <span class="ad-status ad-status-draft">Automatic</span>
+                <span class="ad-status ad-status-draft">تلقائي</span>
               <% } else { %>
-                <span class="ad-status ad-status-archived">No puzzle</span>
+                <span class="ad-status ad-status-archived">لا لغز</span>
               <% } %>
-              <a class="small ms-auto" href="/admin/daily/<%= today %>">View today’s board</a>
+              <a class="small ms-auto" href="/admin/daily/<%= today %>">عرض شبكة اليوم</a>
             </div>
           </div>
         </div>
@@ -56,25 +56,25 @@
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
           <i data-lucide="calendar-plus" width="16" height="16"></i>
-          <span class="fw-semibold me-auto">Add days</span>
+          <span class="fw-semibold me-auto">إضافة أيام</span>
           <form method="get" action="/admin/daily/plan" class="d-flex gap-2 m-0">
-            <input class="form-control form-control-sm" type="date" name="date" min="<%= today %>" required aria-label="Date to plan">
-            <button class="btn btn-sm btn-kd-outline text-nowrap" type="submit">Plan a date</button>
+            <input class="form-control form-control-sm" type="date" name="date" min="<%= today %>" required aria-label="تاريخ للتخطيط">
+            <button class="btn btn-sm btn-kd-outline text-nowrap" type="submit">خطّط تاريخاً</button>
           </form>
         </div>
         <div class="ad-card-body">
           <form method="post" action="/admin/daily/add" class="d-flex flex-wrap align-items-center gap-2 m-0">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <% addChoices.forEach((n) => { %>
-              <button class="btn btn-kd" type="submit" name="days" value="<%= n %>" <%= playableCount ? '' : 'disabled' %>>Add <%= n %> days</button>
+              <button class="btn btn-kd" type="submit" name="days" value="<%= n %>" <%= playableCount ? '' : 'disabled' %>>أضف <%= n %> يوماً</button>
             <% }) %>
             <span class="small kd-muted ms-lg-2">
               <% if (playableCount) { %>
-                From <%= summary.lastDate ? 'the day after ' + summary.lastDate : 'today' %>. Each day takes the next theme in the rotation
-                (<%= playableCount %> in use, never the same as the day before when another fits) and its weekday size, Monday 7 → Sunday 10.
-                The board is frozen when it is added.
+                من <%= summary.lastDate ? 'اليوم التالي لـ ' + summary.lastDate : 'اليوم' %>. يأخذ كل يوم الموضوع التالي في الدورة
+                (<%= playableCount %> مستعملة، ولا يتكرر موضوع اليوم السابق ما دام غيره يصلح) وحجم يومه، الاثنين 7 ← الأحد 10.
+                تُجمَّد الشبكة لحظة إضافتها.
               <% } else { %>
-                No theme is in use yet — add questions on <a href="/admin/wordsearch">Word themes</a>, or plan a date with typed words.
+                لا موضوع مستعمل بعد — أضف أسئلة في <a href="/admin/wordsearch">مواضيع البحث</a>، أو خطّط تاريخاً بكلمات مكتوبة.
               <% } %>
             </span>
           </form>
@@ -84,36 +84,36 @@
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="calendar-days" width="16" height="16"></i>
-          <span class="fw-semibold me-auto">Scheduled from today</span>
-          <span class="kd-faint small"><%= upcoming.length %> day<%= upcoming.length === 1 ? '' : 's' %></span>
+          <span class="fw-semibold me-auto">المجدول من اليوم</span>
+          <span class="kd-faint small"><%= upcoming.length %> يوماً</span>
         </div>
         <% if (!upcoming.length) { %>
           <div class="ad-empty">
             <i data-lucide="calendar-x"></i>
-            <p class="mb-0">No day is planned. Dates without a plan get the automatic board, which changes when questions change.</p>
+            <p class="mb-0">لا يوم مخطَّط. التواريخ غير المخطَّطة تأخذ الشبكة التلقائية، وهي تتغير مع تغيّر الأسئلة.</p>
           </div>
         <% } else { %>
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Date</th><th>Theme</th><th class="text-end">Size</th><th class="text-end">Words</th><th>Source</th><th></th></tr></thead>
+              <thead><tr><th>التاريخ</th><th>الموضوع</th><th class="text-end">الحجم</th><th class="text-end">الكلمات</th><th>المصدر</th><th></th></tr></thead>
               <tbody>
                 <% upcoming.forEach((d) => { %>
                   <tr>
                     <td class="text-nowrap">
                       <a class="kd-mono" href="/admin/daily/<%= d.date %>"><%= d.date %></a>
                       <span class="wz-ar small kd-muted ms-1"><%= d.weekdayAr %></span>
-                      <% if (d.date === today) { %><span class="kd-tag kd-tag-accent ms-1">today</span><% } %>
+                      <% if (d.date === today) { %><span class="kd-tag kd-tag-accent ms-1">اليوم</span><% } %>
                     </td>
                     <td><span class="wz-ar fw-semibold"><%= d.theme %></span></td>
                     <td class="text-end"><%= d.size %> × <%= d.size %></td>
                     <td class="text-end"><%= d.wordCount %></td>
                     <td><span class="kd-tag"><%= d.source === 'custom' ? 'typed words' : 'theme' %></span></td>
                     <td class="text-end text-nowrap">
-                      <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">Preview</a>
-                      <a class="btn btn-sm btn-kd-outline" href="/admin/daily/<%= d.date %>/edit">Edit</a>
-                      <form method="post" action="/admin/daily/<%= d.date %>/delete" class="d-inline m-0" data-confirm="Delete the puzzle for <%= d.date %>? That day goes back to the automatic board.">
+                      <a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">معاينة</a>
+                      <a class="btn btn-sm btn-kd-outline" href="/admin/daily/<%= d.date %>/edit">تعديل</a>
+                      <form method="post" action="/admin/daily/<%= d.date %>/delete" class="d-inline m-0" data-confirm="حذف لغز <%= d.date %>؟ يعود ذلك اليوم إلى الشبكة التلقائية.">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button class="btn btn-sm btn-kd-danger" type="submit">Delete</button>
+                        <button class="btn btn-sm btn-kd-danger" type="submit">حذف</button>
                       </form>
                     </td>
                   </tr>
@@ -127,15 +127,15 @@
       <details class="ad-card ws-past">
         <summary class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="chevron-right" width="16" height="16" class="ws-past-chevron"></i>
-          <span class="fw-semibold me-auto">Past days</span>
-          <span class="kd-faint small"><%= past.length %><%= past.length >= 60 ? '+' : '' %> · read-only</span>
+          <span class="fw-semibold me-auto">أيام مضت</span>
+          <span class="kd-faint small"><%= past.length %><%= past.length >= 60 ? '+' : '' %> · للعرض فقط</span>
         </summary>
         <% if (!past.length) { %>
-          <p class="small kd-faint m-3">No planned day has passed yet.</p>
+          <p class="small kd-faint m-3">لم يمضِ أي يوم مخطَّط بعد.</p>
         <% } else { %>
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>Date</th><th>Theme</th><th class="text-end">Size</th><th class="text-end">Words</th><th></th></tr></thead>
+              <thead><tr><th>التاريخ</th><th>الموضوع</th><th class="text-end">الحجم</th><th class="text-end">الكلمات</th><th></th></tr></thead>
               <tbody>
                 <% past.forEach((d) => { %>
                   <tr>
@@ -143,7 +143,7 @@
                     <td><span class="wz-ar"><%= d.theme %></span></td>
                     <td class="text-end"><%= d.size %> × <%= d.size %></td>
                     <td class="text-end"><%= d.wordCount %></td>
-                    <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">View</a></td>
+                    <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/daily/<%= d.date %>">عرض</a></td>
                   </tr>
                 <% }) %>
               </tbody>
@@ -153,8 +153,8 @@
       </details>
 
       <p class="small kd-faint mt-3 mb-0">
-        Dates are the player’s own calendar day. The older crossword daily puzzle (<span class="kd-mono">/api/v1/daily</span>) still answers
-        for app builds from before the word search, but is no longer planned here.
+        التواريخ بتقويم اللاعب نفسه. لغز الكلمات المتقاطعة اليومي القديم (<span class="kd-mono">/api/v1/daily</span>) ما زال يجيب
+        نسخ التطبيق الأقدم من البحث عن الكلمات، لكنه لم يعد يُخطَّط هنا.
       </p>
     </div>
   </main>

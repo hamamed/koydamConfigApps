@@ -148,7 +148,7 @@
         if (isOn && flags && !existing) {
           const badge = document.createElement('span');
           badge.className = 'kd-tag kd-tag-accent';
-          badge.textContent = 'Featured';
+          badge.textContent = 'مميّز';
           flags.prepend(badge);
         } else if (!isOn && existing) {
           existing.remove();
@@ -180,8 +180,8 @@
     function reflect() {
       const n = selected().length;
       count.textContent = n === 0
-        ? 'None selected'
-        : `${n} selected`;
+        ? 'لا شيء محدَّد'
+        : `${n} محدَّد`;
       submit.disabled = n === 0;
       if (all) {
         all.checked = n > 0 && n === boxes.length;

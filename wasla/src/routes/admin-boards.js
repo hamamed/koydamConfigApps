@@ -3,11 +3,11 @@ import { todayUtc } from '../daily.js';
 
 /** What each board is, in the app's words and in the panel's. */
 export const BOARD_LABELS = Object.freeze({
-  'today-allgames': { en: "Today's games", ar: 'ألعاب اليوم', note: 'Fastest total for the word search and the five games today', unit: 'time' },
-  'today-wordsearch': { en: "Today's word search", ar: 'كلمات اليوم', note: 'Fastest word search today', unit: 'time' },
-  stars: { en: 'Main game', ar: 'اللعبة الرئيسية', note: 'Most stars from the levels', unit: 'stars' },
-  points: { en: 'Points', ar: 'النقاط', note: 'Most points across everything', unit: 'points' },
-  streak: { en: 'Streaks', ar: 'السلاسل', note: 'Longest run of days still alive', unit: 'days' },
+  'today-allgames': { en: "Today's games", ar: 'ألعاب اليوم', note: 'الأسرع في إنهاء البحث والألعاب الخمس اليوم', unit: 'time' },
+  'today-wordsearch': { en: "Today's word search", ar: 'كلمات اليوم', note: 'الأسرع في البحث عن الكلمات اليوم', unit: 'time' },
+  stars: { en: 'Main game', ar: 'اللعبة الرئيسية', note: 'الأكثر نجوماً في الألغاز', unit: 'stars' },
+  points: { en: 'Points', ar: 'النقاط', note: 'الأكثر نقاطاً في كل الألعاب', unit: 'points' },
+  streak: { en: 'Streaks', ar: 'السلاسل', note: 'أطول سلسلة أيام ما زالت حية', unit: 'days' },
 });
 
 const BOARD_SIZE = 50;
@@ -30,7 +30,7 @@ export function registerBoards(router, { profiles }) {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date ?? '')) ? String(req.query.date) : todayUtc();
     const data = profiles.leaderboard(board, { date, limit: BOARD_SIZE });
     res.render('boards', {
-      title: 'Leaderboards',
+      title: 'المتصدرون',
       boards: BOARDS.map((id) => ({ id, ...BOARD_LABELS[id] })),
       board: { id: board, ...BOARD_LABELS[board] },
       date,

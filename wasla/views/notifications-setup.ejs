@@ -2,7 +2,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Notifications', subheading: 'APNs token authentication: the .p8 key from your Apple developer account' }) %>
+    <%- include('partials/topbar', { heading: 'الإشعارات', subheading: 'مصادقة APNs بالمفتاح: ملف ‎.p8 من حساب Apple للمطوّرين' }) %>
     <div class="ad-content">
       <%- include('partials/notifications-tabs', { active: 'setup' }) %>
       <%- include('partials/flash') %>
@@ -13,20 +13,20 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="key-round" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">APNs key</span>
+              <span class="fw-semibold me-auto">مفتاح APNs</span>
               <% if (apns.configured) { %>
-                <span class="ad-status ad-status-published">Key uploaded (Key ID <%= apns.keyId %>)</span>
+                <span class="ad-status ad-status-published">المفتاح مرفوع (Key ID <%= apns.keyId %>)</span>
               <% } else if (apns.hasKey) { %>
-                <span class="ad-status ad-status-draft">Key file present, Key ID missing</span>
+                <span class="ad-status ad-status-draft">ملف المفتاح موجود، وKey ID ناقص</span>
               <% } else { %>
-                <span class="ad-status ad-status-draft">Not set up</span>
+                <span class="ad-status ad-status-draft">غير مُعَدّ</span>
               <% } %>
             </div>
             <div class="ad-card-body d-grid gap-3">
               <div>
                 <label class="form-label small fw-semibold" for="key"><%= apns.hasKey ? 'Replace the .p8 key (optional)' : '.p8 key file' %></label>
                 <input class="form-control" type="file" id="key" name="key" accept=".p8" <%= apns.hasKey ? '' : 'required' %>>
-                <div class="form-text">Certificates, Identifiers &amp; Profiles → Keys → a key with Apple Push Notifications service. Stored on the server only (data/apns, readable by the service alone); it is never shown again.</div>
+                <div class="form-text">Certificates, Identifiers &amp; Profiles ← Keys ← مفتاح بخدمة Apple Push Notifications. يُحفظ على الخادم فقط (data/apns، لا يقرأه غير الخدمة)، ولا يُعرض مرة أخرى.</div>
               </div>
               <div>
                 <label class="form-label small fw-semibold" for="keyId">Key ID</label>
@@ -38,7 +38,7 @@
                   <input class="form-control font-monospace" id="teamId" name="teamId" maxlength="10" value="<%= values.teamId %>" placeholder="<%= defaults.teamId %>">
                 </div>
                 <div class="col-sm-7">
-                  <label class="form-label small fw-semibold" for="topic">Topic (bundle id)</label>
+                  <label class="form-label small fw-semibold" for="topic">Topic (معرّف الحزمة)</label>
                   <input class="form-control font-monospace" id="topic" name="topic" value="<%= values.topic %>" placeholder="<%= defaults.topic %>">
                 </div>
               </div>
@@ -53,16 +53,16 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="info" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">How sending works</span>
+              <span class="fw-semibold me-auto">كيف يتم الإرسال</span>
             </div>
             <div class="ad-card-body small d-grid gap-2">
-              <p class="mb-0">Each device is sent to Apple's host for its own build: App Store and TestFlight builds to production, builds run from Xcode to sandbox. One key works for both.</p>
-              <p class="mb-0">A token Apple reports as no longer valid (410, BadDeviceToken, Unregistered) is switched off, so later sends skip it. Other failures are counted and tried again next time.</p>
+              <p class="mb-0">يُرسَل كل جهاز إلى خادم Apple الموافق لنسخته: نسخ App Store وTestFlight إلى production، ونسخ Xcode إلى sandbox. المفتاح نفسه يكفي للاثنين.</p>
+              <p class="mb-0">أي رمز تُبلغ Apple أنه لم يعد صالحاً (410 أو BadDeviceToken أو Unregistered) يُعطَّل فتتخطاه الإرسالات التالية. أما الأخطاء الأخرى فتُحصى ويُعاد المحاولة لاحقاً.</p>
               <% if (apns.uploadedAt) { %><p class="mb-0 kd-faint">Key uploaded <%= apns.uploadedAt.replace('T', ' ').slice(0, 16) %> UTC.</p><% } %>
               <% if (apns.hasKey) { %>
-                <form method="post" action="/admin/notifications/setup/remove" class="m-0 mt-2" data-confirm="Remove the APNs key? Nothing can be sent until a key is uploaded again.">
+                <form method="post" action="/admin/notifications/setup/remove" class="m-0 mt-2" data-confirm="حذف مفتاح APNs؟ لن يمكن الإرسال حتى يُرفع مفتاح جديد.">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <button class="btn btn-sm btn-kd-danger" type="submit">Remove key</button>
+                  <button class="btn btn-sm btn-kd-danger" type="submit">حذف المفتاح</button>
                 </form>
               <% } %>
             </div>

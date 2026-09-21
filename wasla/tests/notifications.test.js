@@ -30,15 +30,15 @@ test('compose: title ≤ 60, body ≤ 180, a published level, a known target', (
   assert.equal(readCompose({ title: 'ع'.repeat(MAX_TITLE), body: 'ب'.repeat(MAX_BODY), target: 'all' }, { publishedCount: 0 }).error, undefined);
 
   const bad = [
-    [{ title: '', body: 'b' }, /title/],
+    [{ title: '', body: 'b' }, /عنوان/],
     [{ title: 'ع'.repeat(MAX_TITLE + 1), body: 'b' }, /60/],
-    [{ title: 't', body: '  ' }, /message/],
+    [{ title: 't', body: '  ' }, /الرسالة/],
     [{ title: 't', body: 'ب'.repeat(MAX_BODY + 1) }, /180/],
-    [{ title: 't', body: 'b', level: '4' }, /no level 4/],
-    [{ title: 't', body: 'b', level: '0' }, /level number/],
-    [{ title: 't', body: 'b', level: '2.5' }, /level number/],
-    [{ title: 't', body: 'b', target: 'everyone' }, /receives/],
-    [{ title: 't', body: 'b', target: 'device', device: 'x' }, /device id/],
+    [{ title: 't', body: 'b', level: '4' }, /لا يوجد لغز 4/],
+    [{ title: 't', body: 'b', level: '0' }, /يُكتب برقمه/],
+    [{ title: 't', body: 'b', level: '2.5' }, /يُكتب برقمه/],
+    [{ title: 't', body: 'b', target: 'everyone' }, /يستقبله/],
+    [{ title: 't', body: 'b', target: 'device', device: 'x' }, /معرّف الجهاز/],
   ];
   for (const [input, message] of bad) {
     assert.match(readCompose({ target: 'all', ...input }, { publishedCount: 3 }).error, message, JSON.stringify(input));

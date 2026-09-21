@@ -593,3 +593,55 @@ body {
 .form-label { font-weight: 700; color: var(--kd-ink-2); }
 .wz-date { max-width: 11rem; }
 .wz-rank-col { width: 3.5rem; }
+
+/* ------------------------------------------------- right to left ------- */
+/*
+ * admin.css was written for a left-hand sidebar with physical offsets, so the
+ * few rules that pin things to a side are mirrored here rather than there —
+ * the other panels that read it are still left to right.
+ */
+[dir="rtl"] .ad-sidebar {
+  inset: 0 0 0 auto;
+  border-right: 0;
+  border-left: var(--wz-line) solid var(--wz-ink);
+}
+[dir="rtl"] .ad-main { margin-left: 0; margin-right: var(--ad-sidebar-w); }
+[dir="rtl"] .ad-nav-link .ad-badge { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .wz-to-top { right: auto; left: 1rem; }
+
+@media (max-width: 991.98px) {
+  [dir="rtl"] .ad-sidebar { transform: translateX(100%); }
+  [dir="rtl"] .ad-sidebar.is-open { transform: translateX(0); }
+  [dir="rtl"] .ad-main { margin-right: 0; }
+}
+
+/* Numbers, dates, ids and code read left to right inside an Arabic page. */
+[dir="rtl"] .kd-mono,
+[dir="rtl"] .ad-kpi-value,
+[dir="rtl"] code,
+[dir="rtl"] .wz-ltr { direction: ltr; unicode-bidi: isolate; }
+[dir="rtl"] .ad-kpi-value,
+[dir="rtl"] .wz-ltr-start { text-align: right; }
+
+/*
+ * Bootstrap here is the left-to-right build, where `ms-*` and `me-*` are plain
+ * `margin-left` / `margin-right` rather than logical properties. In an Arabic
+ * page that puts every `ms-auto` on the wrong side, so the utilities the panel
+ * actually uses are mirrored — the markup keeps saying "start" and "end" and
+ * now means it.
+ */
+[dir="rtl"] .ms-auto { margin-left: 0 !important; margin-right: auto !important; }
+[dir="rtl"] .me-auto { margin-right: 0 !important; margin-left: auto !important; }
+[dir="rtl"] .ms-1 { margin-left: 0 !important; margin-right: .25rem !important; }
+[dir="rtl"] .ms-2 { margin-left: 0 !important; margin-right: .5rem !important; }
+[dir="rtl"] .ms-3 { margin-left: 0 !important; margin-right: 1rem !important; }
+[dir="rtl"] .me-1 { margin-right: 0 !important; margin-left: .25rem !important; }
+[dir="rtl"] .me-2 { margin-right: 0 !important; margin-left: .5rem !important; }
+[dir="rtl"] .me-3 { margin-right: 0 !important; margin-left: 1rem !important; }
+[dir="rtl"] .ps-2 { padding-left: 0 !important; padding-right: .5rem !important; }
+[dir="rtl"] .pe-2 { padding-right: 0 !important; padding-left: .5rem !important; }
+[dir="rtl"] .text-start { text-align: right !important; }
+[dir="rtl"] .text-end { text-align: left !important; }
+@media (min-width: 992px) {
+  [dir="rtl"] .ms-lg-2 { margin-left: 0 !important; margin-right: .5rem !important; }
+}

@@ -45,11 +45,11 @@ test('adding takes lines or commas, skips what is there and refuses long names',
 test('renaming renames every question, and a used title cannot be deleted', () => {
   const { question } = repo.createQuestion({ title: 'حيوانات', answer: 'قط', clue: 'يموء' });
 
-  assert.match(titles.remove('حيوانات').error, /1 question/);
+  assert.match(titles.remove('حيوانات').error, /1 سؤال/);
   assert.deepEqual(titles.rename('حيوانات', ' حيوانات أليفة '), { renamed: 1 });
   assert.equal(repo.getQuestion(question.id).title, 'حيوانات أليفة');
   assert.ok(!titles.names().includes('حيوانات'));
-  assert.match(titles.rename('حيوانات أليفة', '').error, /Write/);
+  assert.match(titles.rename('حيوانات أليفة', '').error, /اكتب/);
 });
 
 test('questions can be listed by one title', () => {

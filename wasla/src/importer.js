@@ -26,25 +26,25 @@ export function readImportCsv(text) {
   try {
     table = parseCsv(text);
   } catch (err) {
-    return { error: `The CSV could not be read. ${err.message}` };
+    return { error: `تعذّرت قراءة ملف CSV. ${err.message}` };
   }
-  if (!table.length) return { error: 'The CSV is empty. The first line must name the columns.' };
+  if (!table.length) return { error: 'ملف CSV فارغ. السطر الأول يجب أن يسمّي الأعمدة.' };
 
   const header = table[0].map((name) => name.trim().toLowerCase());
   const unknown = header.filter((name) => !IMPORT_COLUMNS.includes(name) && !IGNORED_COLUMNS.includes(name));
-  if (unknown.length) return { error: `Unknown column${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}. The columns are: ${IMPORT_COLUMNS.join(', ')}.` };
+  if (unknown.length) return { error: `عمود غير معروف: ${unknown.join('، ')}. الأعمدة هي: ${IMPORT_COLUMNS.join('، ')}.` };
   const repeated = header.filter((name, i) => header.indexOf(name) !== i);
-  if (repeated.length) return { error: `Column named twice: ${repeated.join(', ')}.` };
+  if (repeated.length) return { error: `عمود مكرر: ${repeated.join('، ')}.` };
   for (const required of ['answer']) {
-    if (!header.includes(required)) return { error: `The header needs an “${required}” column.` };
+    if (!header.includes(required)) return { error: `يحتاج صف العناوين عموداً باسم «${required}».` };
   }
   if (!header.includes('title') && !header.includes('category')) {
-    return { error: 'The header needs a “title” column: every question has a title, shown above it in the app.' };
+    return { error: 'يحتاج صف العناوين عموداً باسم «title»: لكل سؤال فئة تظهر فوقه في التطبيق.' };
   }
 
   const body = table.slice(1);
-  if (!body.length) return { error: 'The CSV has a header but no rows.' };
-  if (body.length > MAX_IMPORT_ROWS) return { error: `At most ${MAX_IMPORT_ROWS} rows per import. Split the file.` };
+  if (!body.length) return { error: 'في ملف CSV صف عناوين بلا صفوف.' };
+  if (body.length > MAX_IMPORT_ROWS) return { error: `حتى ${MAX_IMPORT_ROWS} صفاً في الاستيراد الواحد. قسّم الملف.` };
 
   return {
     rows: body.map((fields, i) => ({
@@ -85,8 +85,8 @@ function mediaFor(name, kind, media) {
   if (!name) return { file: null };
   const found = media.get(name.toLowerCase());
   const noun = kind === 'image' ? 'picture' : 'audio file';
-  if (!found) return { error: `No file named “${name}” was uploaded with the CSV.` };
-  if (found.kind !== kind) return { error: `“${name}” is not a ${noun}.` };
+  if (!found) return { error: `لم يُرفع ملف باسم «${name}» مع ملف CSV.` };
+  if (found.kind !== kind) return { error: `«${name}» ليس ${noun}.` };
   return { file: found.file };
 }
 
@@ -178,11 +178,11 @@ function readLevelNumber(cell, levelCount, lastAllowed = levelCount) {
   const text = String(cell ?? '').trim();
   if (!text) return { number: null };
   if (!/^\d+$/.test(text) || Number(text) < 1) {
-    return { error: `The level is a level number (1, 2, 3 …), not “${text}”.` };
+    return { error: `عمود اللغز رقم (1، 2، 3 …)، لا «${text}».` };
   }
   const number = Number(text);
   if (number > lastAllowed) {
-    return { error: `There is no ${levelLabel(number)}. ${lastAllowed ? `The last is ${levelLabel(lastAllowed)}; ` : 'There are no levels yet; '}use ${lastAllowed + 1} to add a new one.` };
+    return { error: `لا يوجد ${levelLabel(number)}. ${lastAllowed ? `الأخير هو ${levelLabel(lastAllowed)}؛ ` : 'لا ألغاز بعد؛ '}استعمل ${lastAllowed + 1} لإضافة لغز جديد.` };
   }
   return { number };
 }
@@ -210,7 +210,7 @@ export function commitImport(repo, plan) {
       const existing = repo.levelByNumber(number);
       // Levels are created in ascending order, so a new one is always the next number.
       if (!existing && number !== repo.listLevels().length + 1) {
-        throw Object.assign(new Error(`There is no ${levelLabel(number)} any more.`), { status: 400 });
+        throw Object.assign(new Error(`لم يعد ${levelLabel(number)} موجوداً.`), { status: 400 });
       }
       const level = existing ?? repo.createLevel();
       const current = [...level.words, ...level.unplaced].map((w) => w.id);

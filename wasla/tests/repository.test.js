@@ -29,8 +29,8 @@ test('a question is stored with its answer normalised and its title trimmed', ()
 });
 
 test('a title is required, trimmed, and at most 40 characters of any script', () => {
-  assert.match(repo.createQuestion({ answer: 'مصر', clue: 'x' }).error, /title/i);
-  assert.match(repo.createQuestion({ title: '   ', answer: 'مصر', clue: 'x' }).error, /title/i);
+  assert.match(repo.createQuestion({ answer: 'مصر', clue: 'x' }).error, /الفئة/);
+  assert.match(repo.createQuestion({ title: '   ', answer: 'مصر', clue: 'x' }).error, /الفئة/);
   assert.match(repo.createQuestion({ title: 'ع'.repeat(41), answer: 'مصر', clue: 'x' }).error, /40/);
   assert.equal(repo.createQuestion({ title: 'ع'.repeat(40), answer: 'مصر', clue: 'x' }).error, undefined);
   assert.equal(repo.createQuestion({ title: 'Capitals 🌍', answer: 'مصر', clue: 'x' }).question.title, 'Capitals 🌍');
@@ -42,7 +42,7 @@ test('an edit keeps the title unless a new one is given, and cannot clear it', (
 
   assert.equal(repo.updateQuestion(id, { clue: 'y' }).question.title, 'بلدان');
   assert.equal(repo.updateQuestion(id, { title: 'عواصم' }).question.title, 'عواصم');
-  assert.match(repo.updateQuestion(id, { title: '' }).error, /title/i);
+  assert.match(repo.updateQuestion(id, { title: '' }).error, /الفئة/);
 });
 
 test('a question search matches its title', () => {
@@ -64,13 +64,13 @@ test('an untitled question from before titles still loads, lays out and publishe
   assert.equal(legacy.setPublished(level.id, true).error, undefined);
   assert.deepEqual(legacy.publishedLevel(1).words.map((w) => w.title), ['', '']);
   // Saving it from the form needs a title now.
-  assert.match(legacy.updateQuestion(ids[0], { clue: 'y' }).error, /title/i);
+  assert.match(legacy.updateQuestion(ids[0], { clue: 'y' }).error, /الفئة/);
 });
 
 test('an invalid question is refused with a reason and nothing is stored', () => {
   assert.match(repo.createQuestion({ title: 'عام', answer: 'Paris', clue: 'x' }).error, /Arabic letters/);
-  assert.match(repo.createQuestion({ title: 'عام', answer: 'مصر', clue: '' }).error, /clue/i);
-  assert.match(repo.createQuestion({ title: 'عام', answer: 'مصر', clue: 'x', zoom: 9 }).error, /zoom/i);
+  assert.match(repo.createQuestion({ title: 'عام', answer: 'مصر', clue: '' }).error, /دليل/);
+  assert.match(repo.createQuestion({ title: 'عام', answer: 'مصر', clue: 'x', zoom: 9 }).error, /تقريب/);
   assert.equal(repo.listQuestions().length, 0);
 });
 
@@ -90,7 +90,7 @@ test('only published, fully placed levels reach the app, numbered in order', () 
 
   assert.deepEqual(repo.publishedLevels(), []);
   assert.equal(repo.setPublished(level.id, true).error, undefined);
-  assert.match(repo.setPublished(draft.id, true).error, /at least 2/);
+  assert.match(repo.setPublished(draft.id, true).error, /على الأقل|كلمتين/);
 
   const levels = repo.publishedLevels();
   assert.equal(levels.length, 1);
@@ -115,7 +115,7 @@ test('a level with a word that cannot cross the others cannot be published', () 
 test('a question used by a level cannot be deleted', () => {
   const { ids } = sampleLevel();
 
-  assert.match(repo.deleteQuestion(ids[0]).error, /Level 1/);
+  assert.match(repo.deleteQuestion(ids[0]).error, /اللغز 1/);
   const unused = repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x' }).question.id;
   assert.equal(repo.deleteQuestion(unused).error, undefined);
 });
@@ -126,7 +126,7 @@ test('changing an answer re-lays the levels using it and unpublishes one that br
 
   const result = repo.updateQuestion(ids[1], { answer: 'جحخ', clue: 'x' });
 
-  assert.deepEqual(result.unpublished, ['Level 1']);
+  assert.deepEqual(result.unpublished, ['اللغز 1']);
   assert.equal(repo.getLevel(level.id).published, false);
 });
 
@@ -137,7 +137,7 @@ test('levels can be reordered', () => {
   repo.moveLevel(two.id, 'up');
 
   assert.deepEqual(repo.listLevels().map((l) => l.id), [two.id, one.id]);
-  assert.deepEqual(repo.listLevels().map((l) => l.name), ['Level 1', 'Level 2']);
+  assert.deepEqual(repo.listLevels().map((l) => l.name), ['اللغز 1', 'اللغز 2']);
 });
 
 test('levels are named by their place in the list, with the app number beside a published one after a draft', () => {
@@ -145,13 +145,13 @@ test('levels are named by their place in the list, with the app number beside a 
   const { level } = sampleLevel();
   repo.setPublished(level.id, true);
 
-  assert.equal(draft.name, 'Level 1');
+  assert.equal(draft.name, 'اللغز 1');
   const listed = repo.listLevels();
   assert.deepEqual(listed.map((l) => [l.number, l.publishedNumber, l.name]), [
-    [1, null, 'Level 1'],
-    [2, 1, 'Level 2 (app 1)'],
+    [1, null, 'اللغز 1'],
+    [2, 1, 'اللغز 2 (في التطبيق 1)'],
   ]);
-  assert.equal(repo.getLevel(level.id).name, 'Level 2 (app 1)');
+  assert.equal(repo.getLevel(level.id).name, 'اللغز 2 (في التطبيق 1)');
   assert.equal(repo.levelByNumber(2).id, level.id);
   assert.equal(repo.levelByNumber(3), null);
   // The app gets a number-based title; the legacy column is not used.
@@ -208,7 +208,7 @@ test('a chosen type needs the media it names', () => {
   assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'audio' }).error, /audio/i);
   assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'image' }).error, /picture/i);
   assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'emoji' }).error, /emoji/i);
-  assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'video' }).error, /type/i);
+  assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'video' }).error, /نوع السؤال/);
   assert.match(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', emoji: 'abc' }).error, /emoji/i);
   assert.equal(repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'x', type: 'text', emoji: '🌙' }).question.type, 'text');
 });
@@ -239,7 +239,7 @@ test('published levels are one numbered run carrying their difficulty and no pac
 
 test('a level refuses an unknown difficulty', () => {
   const level = repo.createLevel();
-  assert.match(repo.setLevelDetails(level.id, { difficulty: 'extreme' }).error, /difficulty/i);
+  assert.match(repo.setLevelDetails(level.id, { difficulty: 'extreme' }).error, /الصعوبة/);
   assert.equal(repo.setLevelDetails(level.id, { difficulty: 'easy' }).level.difficulty, 'easy');
 });
 
@@ -331,7 +331,7 @@ test('bulk title sets one trimmed title and refuses an empty or long one', () =>
 
   assert.deepEqual(repo.setQuestionsTitle([a, String(b)], ' بلدان '), { updated: 2 });
   assert.equal(repo.getQuestion(a).title, 'بلدان');
-  assert.match(repo.setQuestionsTitle([a], '  ').error, /title/);
+  assert.match(repo.setQuestionsTitle([a], '  ').error, /الفئة/);
   assert.match(repo.setQuestionsTitle([a], 'ع'.repeat(41)).error, /40/);
 });
 
@@ -344,7 +344,7 @@ test('moving questions takes them out of their old level and lays out both', () 
   assert.equal(result.moved, 3);
   assert.equal(repo.getLevel(other.id).words.length + repo.getLevel(other.id).unplaced.length, 3);
   assert.equal(repo.getLevel(level.id).words.length + repo.getLevel(level.id).unplaced.length, 2);
-  assert.match(repo.moveQuestionsToLevel(ids, 424242).error, /level/);
+  assert.match(repo.moveQuestionsToLevel(ids, 424242).error, /اللغز|لغز/);
 });
 
 test('moving unpublishes a published level left with too few words, and says so', () => {
@@ -367,7 +367,7 @@ test('a new level can be made from selected questions, and questions can leave e
 
   assert.deepEqual(repo.removeQuestionsFromLevels(ids).removed, 5);
   assert.equal(repo.levelsUsing(ids[0]).length, 0);
-  assert.match(repo.newLevelFromQuestions([]).error, /Select/);
+  assert.match(repo.newLevelFromQuestions([]).error, /حدّد/);
 });
 
 test('a two-word answer keeps its space to show and is played without it', () => {
@@ -390,7 +390,7 @@ test('a picture keeps its credit, and only a real web address is accepted', () =
   assert.equal(question.imageAuthor, 'Tasnim News Agency');
   assert.equal(question.imageLicence, 'CC BY 4.0');
   assert.deepEqual(repo.credited().map((q) => q.answer), ['ميسي']);
-  assert.match(repo.createQuestion({ title: 'ت', answer: 'زيدان', clue: '', type: 'image', imageFile: 'b.jpg', imageSource: 'ftp://x' }).error, /web address/);
+  assert.match(repo.createQuestion({ title: 'ت', answer: 'زيدان', clue: '', type: 'image', imageFile: 'b.jpg', imageSource: 'ftp://x' }).error, /رابطاً/);
 
   // A question with no picture keeps no credit.
   const text = repo.createQuestion({ title: 'ت', answer: 'كرة', clue: 'يلعب بها', imageAuthor: 'someone' }).question;
@@ -438,12 +438,12 @@ test('levels: several can be published, re-graded and deleted at once', () => {
   const published = repo.setLevelsPublished([first.id, second.id, empty.id], true);
   assert.equal(published.changed.length, 2, 'the two laid-out levels go live');
   assert.equal(published.problems.length, 1, 'the empty one says why it cannot');
-  assert.match(published.problems[0], /at least 2 words/);
+  assert.match(published.problems[0], /كلمتين على الأقل/);
   assert.ok(repo.getLevel(first.id).published);
 
   assert.deepEqual(repo.setLevelsDifficulty([first.id, second.id], 'hard'), { changed: 2 });
   assert.equal(repo.getLevel(second.id).difficulty, 'hard');
-  assert.match(repo.setLevelsDifficulty([first.id], 'impossible').error, /difficulty is one of/);
+  assert.match(repo.setLevelsDifficulty([first.id], 'impossible').error, /الصعوبة واحدة من/);
 
   const off = repo.setLevelsPublished([first.id, second.id], false);
   assert.equal(off.changed.length, 2);
@@ -454,5 +454,5 @@ test('levels: several can be published, re-graded and deleted at once', () => {
   assert.equal(repo.listLevels()[0].number, 1, 'the numbers close up behind a deleted level');
   // The questions of a deleted level are free again, not lost.
   assert.equal(repo.listQuestions({ unused: true }).length, 3);
-  assert.match(repo.deleteLevels([]).error, /at least one level/);
+  assert.match(repo.deleteLevels([]).error, /لغزاً واحداً على الأقل/);
 });

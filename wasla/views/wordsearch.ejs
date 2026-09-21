@@ -3,18 +3,17 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Word themes',
-          subheading: 'The question titles the daily word search is built from',
-          actions: '<a class="btn btn-sm btn-kd" href="/admin/daily">Daily puzzle schedule</a>'
+          heading: 'مواضيع البحث',
+          subheading: 'فئات الأسئلة التي يُبنى منها البحث اليومي عن الكلمات',
+          actions: '<a class="btn btn-sm btn-kd" href="/admin/daily">جدول لغز اليوم</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <p class="small kd-muted">
-        A question title with at least <%= minWords %> different answers of 3–8 letters is a theme. <strong>Add days</strong> on the
-        <a href="/admin/daily">Daily puzzle</a> page takes the themes in title order, skipping excluded ones, and freezes each board when
-        it is added — so editing questions here never changes a planned day. Dates that are not planned get an automatic board from the
-        same rotation, which does follow question edits.
+        الفئة التي فيها على الأقل <%= minWords %> أجوبة مختلفة من 3 إلى 8 حروف تصلح موضوعاً. زر <strong>إضافة أيام</strong> في
+        صفحة <a href="/admin/daily">لغز اليوم</a> يأخذ المواضيع بترتيب الفئات، ويتخطى المستبعدة، ويجمّد كل شبكة لحظة إضافتها —
+        فتعديل الأسئلة هنا لا يغيّر يوماً مخطَّطاً. أما التواريخ غير المخطَّطة فتأخذ شبكة تلقائية من الدورة نفسها، وهي تتبع تعديلات الأسئلة.
       </p>
 
       <div class="row g-3">
@@ -22,35 +21,35 @@
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="tags" width="16" height="16"></i>
-              <span class="fw-semibold">Themes</span>
-              <span class="kd-faint small ms-auto"><%= playableCount %> in use · <%= eligible.length - playableCount %> excluded</span>
+              <span class="fw-semibold">المواضيع</span>
+              <span class="kd-faint small ms-auto"><%= playableCount %> مستعملة · <%= eligible.length - playableCount %> مستبعدة</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!eligible.length) { %>
-                <div class="ad-empty"><i data-lucide="tags"></i><p class="mb-0">No title has <%= minWords %> usable answers yet.</p></div>
+                <div class="ad-empty"><i data-lucide="tags"></i><p class="mb-0">لا فئة فيها <%= minWords %> أجوبة صالحة بعد.</p></div>
               <% } else { %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
-                    <thead><tr><th>Theme</th><th class="text-end">Words</th><th>Status</th><th></th></tr></thead>
+                    <thead><tr><th>الموضوع</th><th class="text-end">الكلمات</th><th>الحالة</th><th></th></tr></thead>
                     <tbody>
                       <% eligible.forEach((t) => { %>
                         <tr>
                           <td>
                             <a class="wz-ar fw-semibold" href="/admin/questions?q=<%= encodeURIComponent(t.title) %>"><%= t.title %></a>
                             <% if (t.skipped.length) { %>
-                              <div class="small kd-faint" title="<%= t.skipped.map((s) => s.display + ' (' + s.reason + ')').join(', ') %>"><%= t.skipped.length %> answer(s) not usable</div>
+                              <div class="small kd-faint" title="<%= t.skipped.map((s) => s.display + ' (' + s.reason + ')').join(', ') %>"><%= t.skipped.length %> جواباً غير صالح</div>
                             <% } %>
                           </td>
                           <td class="text-end"><%= t.words.length %></td>
                           <td>
-                            <% if (t.excluded) { %><span class="ad-status ad-status-archived">Excluded</span><% } else { %><span class="ad-status ad-status-published">In use</span><% } %>
+                            <% if (t.excluded) { %><span class="ad-status ad-status-archived">مستبعدة</span><% } else { %><span class="ad-status ad-status-published">مستعملة</span><% } %>
                           </td>
                           <td class="text-end">
                             <form method="post" action="/admin/wordsearch/exclude" class="m-0">
                               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                               <input type="hidden" name="title" value="<%= t.title %>">
                               <input type="hidden" name="excluded" value="<%= t.excluded ? '0' : '1' %>">
-                              <button class="btn btn-sm <%= t.excluded ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= t.excluded ? 'Include' : 'Exclude' %></button>
+                              <button class="btn btn-sm <%= t.excluded ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= t.excluded ? 'إدراج' : 'استبعاد' %></button>
                             </form>
                           </td>
                         </tr>
@@ -67,18 +66,18 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="list-plus" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">Almost themes</span>
+              <span class="fw-semibold me-auto">تكاد تصلح</span>
             </div>
             <div class="ad-card-body">
               <% if (!close.length) { %>
-                <p class="small kd-muted mb-0">No title has 4 or 5 usable answers.</p>
+                <p class="small kd-muted mb-0">لا فئة فيها 4 أو 5 أجوبة صالحة.</p>
               <% } else { %>
                 <ul class="list-unstyled d-grid gap-2 mb-0">
                   <% close.forEach((t) => { %>
                     <li class="d-flex align-items-center gap-2">
                       <a class="wz-ar fw-semibold" href="/admin/questions?q=<%= encodeURIComponent(t.title) %>"><%= t.title %></a>
-                      <span class="kd-faint small"><%= t.words.length %> words</span>
-                      <span class="kd-tag kd-tag-warn ms-auto">needs <%= t.missing %> more question<%= t.missing === 1 ? '' : 's' %></span>
+                      <span class="kd-faint small"><%= t.words.length %> كلمات</span>
+                      <span class="kd-tag kd-tag-warn ms-auto">تحتاج <%= t.missing %> سؤالاً آخر</span>
                     </li>
                   <% }) %>
                 </ul>

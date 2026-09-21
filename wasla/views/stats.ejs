@@ -12,16 +12,16 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Stats', subheading: 'Anonymous gameplay events from the app, kept ' + retentionDays + ' days' }) %>
+    <%- include('partials/topbar', { heading: 'الإحصاءات', subheading: 'أحداث لعب مجهولة من التطبيق، محفوظة ' + retentionDays + ' يوماً' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <div class="row g-3 mb-3">
         <% [
-             ['Players', overview.devices, 'users'],
-             ['Players, last 7 days', overview.devicesWeek, 'user-check'],
-             ['Events stored', overview.events, 'activity'],
-             ['Since', overview.since ? overview.since.slice(0, 10) : '—', 'calendar-days'],
+             ['اللاعبون', overview.devices, 'users'],
+             ['اللاعبون، آخر 7 أيام', overview.devicesWeek, 'user-check'],
+             ['الأحداث المحفوظة', overview.events, 'activity'],
+             ['منذ', overview.since ? overview.since.slice(0, 10) : '—', 'calendar-days'],
            ].forEach(([label, value, glyph]) => { %>
           <div class="col-6 col-xl-3">
             <div class="ad-card ad-kpi">
@@ -38,14 +38,14 @@
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
           <i data-lucide="message-circle-question" width="16" height="16"></i>
-          <span class="fw-semibold">Questions</span>
-          <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Filter">
-            <a class="btn <%= hard ? 'btn-kd-outline' : 'btn-kd' %>" href="/admin/stats?sort=<%= sort %>&dir=<%= dir %>">All</a>
-            <a class="btn <%= hard ? 'btn-kd' : 'btn-kd-outline' %>" href="/admin/stats?sort=solveRate&dir=asc&hard=1">Hard questions</a>
+          <span class="fw-semibold">الأسئلة</span>
+          <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="تصفية">
+            <a class="btn <%= hard ? 'btn-kd-outline' : 'btn-kd' %>" href="/admin/stats?sort=<%= sort %>&dir=<%= dir %>">الكل</a>
+            <a class="btn <%= hard ? 'btn-kd' : 'btn-kd-outline' %>" href="/admin/stats?sort=solveRate&dir=asc&hard=1">أسئلة صعبة</a>
           </div>
         </div>
         <% if (hard) { %>
-          <p class="small kd-muted mx-3 mt-2 mb-0">Solved in under <%= Math.round(hardRule.rate * 100) %>% of opens, with at least <%= hardRule.opens %> opens.</p>
+          <p class="small kd-muted mx-3 mt-2 mb-0">حُلّت في أقل من <%= Math.round(hardRule.rate * 100) %>% of opens, with at least <%= hardRule.opens %> مرة فتح.</p>
         <% } %>
         <div class="ad-card-body p-0">
           <% if (!questions.length) { %>
@@ -59,14 +59,14 @@
                 <thead>
                   <tr>
                     <th></th>
-                    <th><a href="<%= link('answer') %>">Answer<%= arrow('answer') %></a></th>
-                    <th class="text-end"><a href="<%= link('opens') %>">Opens<%= arrow('opens') %></a></th>
-                    <th class="text-end"><a href="<%= link('solves') %>">Solves<%= arrow('solves') %></a></th>
-                    <th class="text-end"><a href="<%= link('solveRate') %>">Solve rate<%= arrow('solveRate') %></a></th>
-                    <th class="text-end"><a href="<%= link('avgSeconds') %>">Avg time<%= arrow('avgSeconds') %></a></th>
-                    <th class="text-end"><a href="<%= link('helps') %>">Helps / open<%= arrow('helps') %></a></th>
-                    <th class="text-end"><a href="<%= link('left') %>">Left unsolved<%= arrow('left') %></a></th>
-                    <th class="text-end"><a href="<%= link('devices') %>">Players<%= arrow('devices') %></a></th>
+                    <th><a href="<%= link('answer') %>">الجواب<%= arrow('answer') %></a></th>
+                    <th class="text-end"><a href="<%= link('opens') %>">فُتحت<%= arrow('opens') %></a></th>
+                    <th class="text-end"><a href="<%= link('solves') %>">حُلّت<%= arrow('solves') %></a></th>
+                    <th class="text-end"><a href="<%= link('solveRate') %>">نسبة الحل<%= arrow('solveRate') %></a></th>
+                    <th class="text-end"><a href="<%= link('avgSeconds') %>">متوسط الوقت<%= arrow('avgSeconds') %></a></th>
+                    <th class="text-end"><a href="<%= link('helps') %>">مساعدات لكل فتح<%= arrow('helps') %></a></th>
+                    <th class="text-end"><a href="<%= link('left') %>">تُركت دون حل<%= arrow('left') %></a></th>
+                    <th class="text-end"><a href="<%= link('devices') %>">اللاعبون<%= arrow('devices') %></a></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -75,7 +75,7 @@
                       <td><%- include('partials/qimage', { q, size: 'xs' }) %></td>
                       <td>
                         <a class="wz-answer" href="/admin/questions/<%= q.questionId %>"><%= q.answer %></a>
-                        <% if (q.isHard) { %><span class="kd-tag wz-tag-hard">hard</span><% } %>
+                        <% if (q.isHard) { %><span class="kd-tag wz-tag-hard">صعب</span><% } %>
                         <div class="wz-ar small kd-faint text-truncate wz-stats-clue"><% if (q.title) { %><span class="kd-tag wz-ar me-1"><%= q.title %></span><% } %><%= q.clue %></div>
                       </td>
                       <td class="text-end"><%= q.opens %></td>
@@ -107,21 +107,21 @@
       <div class="ad-card">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="grid-3x3" width="16" height="16"></i>
-          <span class="fw-semibold">Levels</span>
+          <span class="fw-semibold">الألغاز</span>
         </div>
         <div class="ad-card-body p-0">
           <% if (!levels.length) { %>
-            <div class="ad-empty"><i data-lucide="grid-3x3"></i><p class="mb-0">No levels yet.</p></div>
+            <div class="ad-empty"><i data-lucide="grid-3x3"></i><p class="mb-0">لا ألغاز بعد.</p></div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">
-                <thead><tr><th>Level</th><th class="text-end">Completions</th><th class="text-end">Avg time</th><th class="text-end">Avg stars</th><th class="text-end">Players</th></tr></thead>
+                <thead><tr><th>اللغز</th><th class="text-end">مرات الإنهاء</th><th class="text-end">متوسط الوقت</th><th class="text-end">متوسط النجوم</th><th class="text-end">اللاعبون</th></tr></thead>
                 <tbody>
                   <% levels.forEach((l) => { %>
                     <tr>
                       <td>
                         <% if (l.levelId) { %><a class="fw-semibold" href="/admin/levels/<%= l.levelId %>"><%= l.name %></a><% } else { %><span class="fw-semibold"><%= l.name %></span><% } %>
-                        <% if (!l.published) { %><span class="ad-status ad-status-draft">Draft</span><% } %>
+                        <% if (!l.published) { %><span class="ad-status ad-status-draft">مسودة</span><% } %>
                       </td>
                       <td class="text-end"><%= l.completions %></td>
                       <td class="text-end"><%= secs(l.avgSeconds) %></td>

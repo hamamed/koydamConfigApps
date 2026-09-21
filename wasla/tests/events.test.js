@@ -122,7 +122,7 @@ test('level stats average time and stars over completions, keyed to the level pl
 
   const rows = events.levelStats();
   const played = rows.find((r) => r.levelId === level.id);
-  assert.deepEqual([played.name, played.completions, played.avgSeconds, played.avgStars], ['Level 2', 2, 75, 2.5]);
+  assert.deepEqual([played.name, played.completions, played.avgSeconds, played.avgStars], ['اللغز 2', 2, 75, 2.5]);
   const daily = rows.find((r) => r.levelId === null);
   assert.deepEqual([daily.name, daily.completions], ['Daily puzzle', 1]);
 });

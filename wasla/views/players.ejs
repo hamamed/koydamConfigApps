@@ -7,7 +7,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Players', subheading: 'From anonymous gameplay events · days are UTC · today is ' + today }) %>
+    <%- include('partials/topbar', { heading: 'الأجهزة', subheading: 'من أحداث لعب مجهولة · الأيام بتوقيت UTC · اليوم هو ' + today }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
@@ -16,8 +16,8 @@
              ['Players today', kpis.today, 'user-check'],
              ['Last 7 days', kpis.week, 'users'],
              ['Last 30 days', kpis.month, 'users-round'],
-             ['Levels completed today', kpis.levelsCompletedToday, 'trophy'],
-             ['Daily puzzles today', kpis.dailyCompletedToday, 'calendar-check'],
+             ['ألغاز أُنهيت اليوم', kpis.levelsCompletedToday, 'trophy'],
+             ['ألغاز اليوم المنتهية', kpis.dailyCompletedToday, 'calendar-check'],
              ['Notifications on', kpis.notificationsEnabled, 'bell-ring'],
            ].forEach(([label, value, glyph]) => { %>
           <div class="col-6 col-md-4 col-xl-2">
@@ -35,16 +35,16 @@
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="chart-column" width="16" height="16"></i>
-          <span class="fw-semibold">Players per day</span>
-          <span class="kd-faint small ms-auto">distinct devices, last 30 days</span>
+          <span class="fw-semibold">اللاعبون يومياً</span>
+          <span class="kd-faint small ms-auto">أجهزة مختلفة، آخر 30 يوماً</span>
         </div>
         <div class="ad-card-body">
           <div class="wz-chart-wrap"><%- chart %></div>
           <details class="mt-2">
-            <summary class="small kd-muted">Show as a table</summary>
+            <summary class="small kd-muted">عرض كجدول</summary>
             <div class="ad-table-wrap mt-2">
               <table class="ad-table">
-                <thead><tr><th>Day</th><th class="text-end">Players</th></tr></thead>
+                <thead><tr><th>اليوم</th><th class="text-end">اللاعبون</th></tr></thead>
                 <tbody>
                   <% [...perDay].reverse().forEach((d) => { %>
                     <tr><td><%= d.date %></td><td class="text-end"><%= d.players %></td></tr>
@@ -61,17 +61,17 @@
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="filter" width="16" height="16"></i>
-              <span class="fw-semibold">Level funnel</span>
-              <span class="kd-faint small ms-auto">distinct devices, every retained event</span>
+              <span class="fw-semibold">مسار الألغاز</span>
+              <span class="kd-faint small ms-auto">أجهزة مختلفة، كل الأحداث المحفوظة</span>
             </div>
             <div class="ad-card-body p-0">
               <% if (!funnel.rows.length) { %>
-                <div class="ad-empty"><i data-lucide="filter"></i><p class="mb-0">No published levels.</p></div>
+                <div class="ad-empty"><i data-lucide="filter"></i><p class="mb-0">لا ألغاز منشورة.</p></div>
               <% } else { %>
                 <% if (funnel.drop) { %>
                   <p class="small mx-3 mt-3 mb-2">
-                    <span class="kd-tag kd-tag-warn">Biggest drop</span>
-                    <%= funnel.drop.lost %> player(s)
+                    <span class="kd-tag kd-tag-warn">أكبر تسرّب</span>
+                    <%= funnel.drop.lost %> لاعب
                     <%= funnel.drop.stage === 'within'
                         ? 'opened level ' + funnel.rows[funnel.drop.index].number + ' and did not complete it'
                         : 'completed level ' + funnel.rows[funnel.drop.index].number + ' and did not open level ' + (funnel.rows[funnel.drop.index].number + 1) %>.
@@ -79,15 +79,15 @@
                 <% } %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
-                    <thead><tr><th>Level</th><th class="text-end">Opened</th><th class="text-end">Completed</th><th class="wz-funnel-col">of level 1 openers</th></tr></thead>
+                    <thead><tr><th>اللغز</th><th class="text-end">فُتح</th><th class="text-end">أُنهي</th><th class="wz-funnel-col">ممن فتحوا اللغز 1</th></tr></thead>
                     <tbody>
                       <% funnel.rows.forEach((r, i) => { %>
                         <tr class="<%= dropAt(i, 'within') || dropAt(i, 'between') ? 'wz-drop-row' : '' %>">
-                          <td class="text-nowrap">Level <%= r.number %></td>
+                          <td class="text-nowrap">اللغز <%= r.number %></td>
                           <td class="text-end <%= dropAt(i - 1, 'between') ? 'wz-drop-cell' : '' %>"><%= r.opened %> <span class="kd-faint small"><%= pct(r.openedShare) %></span></td>
                           <td class="text-end <%= dropAt(i, 'within') ? 'wz-drop-cell' : '' %>"><%= r.completed %> <span class="kd-faint small"><%= pct(r.completedShare) %></span></td>
                           <td class="wz-funnel-col">
-                            <span class="wz-funnel" title="Opened <%= pct(r.openedShare) %>, completed <%= pct(r.completedShare) %>">
+                            <span class="wz-funnel" title="فُتح <%= pct(r.openedShare) %>، أُنهي <%= pct(r.completedShare) %>">
                               <span class="wz-funnel-open" style="--wz-share: <%= Math.round((r.openedShare || 0) * 100) %>%"></span>
                               <span class="wz-funnel-done" style="--wz-share: <%= Math.round((r.completedShare || 0) * 100) %>%"></span>
                             </span>
@@ -106,8 +106,8 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="life-buoy" width="16" height="16"></i>
-              <span class="fw-semibold">Helps</span>
-              <span class="kd-faint small ms-auto"><%= helps.total %> used, last 30 days</span>
+              <span class="fw-semibold">المساعدات</span>
+              <span class="kd-faint small ms-auto"><%= helps.total %> استُعملت، آخر 30 يوماً</span>
             </div>
             <div class="ad-card-body d-grid gap-2">
               <% helps.rows.forEach((h) => { %>
@@ -123,7 +123,7 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="repeat" width="16" height="16"></i>
-              <span class="fw-semibold me-auto">Retention</span>
+              <span class="fw-semibold me-auto">العودة</span>
             </div>
             <div class="ad-card-body">
               <div class="row g-3">
@@ -131,27 +131,27 @@
                   <div class="col-6">
                     <div class="ad-kpi-label"><%= label %></div>
                     <div class="ad-kpi-value"><%= pct(r.rate) %></div>
-                    <div class="small kd-faint"><%= r.returned %> of <%= r.cohort %> new players came back on day <%= r.days %></div>
+                    <div class="small kd-faint"><%= r.returned %> of <%= r.cohort %> من اللاعبين الجدد عادوا في اليوم <%= r.days %></div>
                   </div>
                 <% }) %>
               </div>
-              <p class="small kd-muted mt-3 mb-0">Players first seen on day X who played again on day X + 1 (or X + 7), over the last 30 first days whose return day has ended. "First seen" is the earliest event kept (<%= retentionDays %> days).</p>
+              <p class="small kd-muted mt-3 mb-0">لاعبون ظهروا أول مرة في اليوم X ولعبوا مجدداً في اليوم X + 1 (أو X + 7)، على آخر 30 يوماً انتهى يوم عودتها. «أول ظهور» هو أقدم حدث محفوظ (<%= retentionDays %> يوماً).</p>
             </div>
           </div>
 
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="search" width="16" height="16"></i>
-              <span class="fw-semibold">Daily word search</span>
-              <span class="kd-faint small ms-auto">last <%= wordSearch.days %> days · <%= kpis.wordSearchCompletedToday %> completed today</span>
+              <span class="fw-semibold">البحث عن الكلمات</span>
+              <span class="kd-faint small ms-auto">آخر <%= wordSearch.days %> يوماً · <%= kpis.wordSearchCompletedToday %> أُنهي اليوم</span>
             </div>
             <div class="ad-card-body">
               <div class="row g-3">
                 <% [
-                     ['Completed', wordSearch.completed, wordSearch.started + ' started · ' + pct(wordSearch.completionRate) + ' finished'],
+                     ['أُنهيت', wordSearch.completed, wordSearch.started + ' بدأت · ' + pct(wordSearch.completionRate) + ' أُنهيت'],
                      ['Players', wordSearch.players, 'completed at least one'],
-                     ['Average time', duration(wordSearch.avgSeconds), 'per completed board'],
-                     ['Average stars', wordSearch.avgStars === null ? '—' : wordSearch.avgStars.toFixed(1), wordSearch.wordsFound + ' words found'],
+                     ['متوسط الوقت', duration(wordSearch.avgSeconds), 'لكل شبكة منتهية'],
+                     ['متوسط النجوم', wordSearch.avgStars === null ? '—' : wordSearch.avgStars.toFixed(1), wordSearch.wordsFound + ' words found'],
                    ].forEach(([label, value, note]) => { %>
                   <div class="col-6">
                     <div class="ad-kpi-label"><%= label %></div>

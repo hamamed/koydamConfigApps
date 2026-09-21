@@ -2,7 +2,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Import', subheading: 'Many questions at once: paste them from a website, or upload a CSV with pictures and sounds' }) %>
+    <%- include('partials/topbar', { heading: 'استيراد', subheading: 'أسئلة كثيرة دفعة واحدة: الصقها من موقع، أو ارفع ملف CSV بالصور والأصوات' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
@@ -10,40 +10,40 @@
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="clipboard-paste" width="16" height="16"></i>
-          <span class="fw-semibold">Paste from a website</span>
-          <span class="small kd-faint ms-auto">Nothing is added until you confirm.</span>
+          <span class="fw-semibold">لصق من موقع</span>
+          <span class="small kd-faint ms-auto">لا يُضاف شيء قبل التأكيد.</span>
         </div>
         <div class="ad-card-body row g-3">
           <div class="col-lg-8">
-            <label class="form-label small fw-semibold" for="pasteText">Questions</label>
+            <label class="form-label small fw-semibold" for="pasteText">الأسئلة</label>
             <textarea class="form-control wz-ar wz-paste" id="pasteText" name="text" rows="12" dir="rtl" required maxlength="<%= maxPaste %>"
                       placeholder="# عواصم&#10;ما عاصمة مصر؟ القاهرة&#10;1- عاصمة المغرب - الرباط&#10;س: أكبر محيط في العالم&#10;ج: الهادي&#10;حيوان يلقب بملك الغابة&#10;الأسد"></textarea>
-            <div class="form-text">Copy the questions from any page and paste them here — one question per line
-              (<span class="kd-mono">clue - answer</span>, <span class="kd-mono">clue: answer</span>, a tab, or <span class="kd-mono">…؟ answer</span>),
-              <span class="kd-mono">س:</span>/<span class="kd-mono">ج:</span> pairs, or a clue line followed by its answer line.
-              Numbers and bullets are ignored. A line starting with <span class="kd-mono">#</span> sets the title for the lines below it.</div>
+            <div class="form-text">انسخ الأسئلة من أي صفحة والصقها هنا — سؤال في كل سطر
+              (<span class="kd-mono">دليل - جواب</span>، أو <span class="kd-mono">دليل: جواب</span>، أو مسافة جدولة، أو <span class="kd-mono">…؟ جواب</span>)،
+              <span class="kd-mono">س:</span>/<span class="kd-mono">ج:</span> أزواج، أو سطر دليل يليه سطر جوابه.
+              Numbers and bullets are ignored. A line starting with <span class="kd-mono">#</span> يحدّد فئة السطور التي تليه.</div>
           </div>
           <div class="col-lg-4 d-grid gap-3 align-content-start">
             <div>
-              <label class="form-label small fw-semibold" for="pasteTitle">Title</label>
+              <label class="form-label small fw-semibold" for="pasteTitle">الفئة</label>
               <input class="form-control wz-ar" id="pasteTitle" name="title" list="pasteTitles" maxlength="40" dir="auto" placeholder="e.g. حيوانات">
               <datalist id="pasteTitles"><% titles.forEach((t) => { %><option value="<%= t %>"><% }) %></datalist>
-              <div class="form-text">Used unless a <span class="kd-mono">#</span> line gives one.</div>
+              <div class="form-text">تُستعمل ما لم يعطِ سطر <span class="kd-mono">#</span> فئة أخرى.</div>
             </div>
             <div>
-              <label class="form-label small fw-semibold" for="pasteOrder">Which side is the answer?</label>
+              <label class="form-label small fw-semibold" for="pasteOrder">أي جانب هو الجواب؟</label>
               <select class="form-select" id="pasteOrder" name="order">
-                <option value="auto">Guess (the side with ؟ is the question)</option>
-                <option value="clue-first">Question first, then answer</option>
-                <option value="answer-first">Answer first, then question</option>
+                <option value="auto">خمّن (الجانب الذي فيه ؟ هو السؤال)</option>
+                <option value="clue-first">السؤال أولاً ثم الجواب</option>
+                <option value="answer-first">الجواب أولاً ثم السؤال</option>
               </select>
             </div>
             <div>
-              <label class="form-label small fw-semibold" for="pasteLevel">Add to level</label>
-              <input class="form-control" id="pasteLevel" name="level" type="number" min="1" max="<%= levelCount + 1 %>" placeholder="None">
-              <div class="form-text">Optional. <%= levelCount + 1 %> makes a new level.</div>
+              <label class="form-label small fw-semibold" for="pasteLevel">أضف إلى اللغز</label>
+              <input class="form-control" id="pasteLevel" name="level" type="number" min="1" max="<%= levelCount + 1 %>" placeholder="بلا">
+              <div class="form-text">اختياري. <%= levelCount + 1 %> يصنع لغزاً جديداً.</div>
             </div>
-            <button class="btn btn-kd" type="submit">Preview</button>
+            <button class="btn btn-kd" type="submit">معاينة</button>
           </div>
         </div>
       </form>
@@ -54,22 +54,22 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="file-up" width="16" height="16"></i>
-              <span class="fw-semibold">Upload a CSV</span>
+              <span class="fw-semibold">رفع ملف CSV</span>
             </div>
             <div class="ad-card-body d-grid gap-3">
               <div>
-                <label class="form-label small fw-semibold" for="csv">CSV file</label>
+                <label class="form-label small fw-semibold" for="csv">ملف CSV</label>
                 <input class="form-control" type="file" id="csv" name="csv" accept=".csv,text/csv" required>
-                <div class="form-text">UTF-8, comma-separated, with a header row.</div>
+                <div class="form-text">UTF-8، مفصول بفواصل، مع صف عناوين.</div>
               </div>
               <div>
-                <label class="form-label small fw-semibold" for="media">Pictures and sounds</label>
+                <label class="form-label small fw-semibold" for="media">صور وأصوات</label>
                 <input class="form-control" type="file" id="media" name="media" multiple accept=".png,.jpg,.jpeg,.webp,.mp3,.m4a,.aac,.wav">
-                <div class="form-text">Up to <%= maxMedia %> files. The CSV's <span class="kd-mono">image</span> and <span class="kd-mono">audio</span> columns name them.</div>
+                <div class="form-text">Up to <%= maxMedia %> من الملفات. أعمدة <span class="kd-mono">image</span> and <span class="kd-mono">audio</span> تسمّيها.</div>
               </div>
               <div class="d-flex gap-2 align-items-center">
-                <button class="btn btn-kd" type="submit">Upload and preview</button>
-                <span class="small kd-faint">Nothing is added until you confirm.</span>
+                <button class="btn btn-kd" type="submit">ارفع وعايِن</button>
+                <span class="small kd-faint">لا يُضاف شيء قبل التأكيد.</span>
               </div>
             </div>
           </form>
@@ -79,31 +79,31 @@
           <div class="ad-card">
             <div class="ad-card-head d-flex align-items-center gap-2">
               <i data-lucide="table" width="16" height="16"></i>
-              <span class="fw-semibold">Columns</span>
+              <span class="fw-semibold">الأعمدة</span>
               <a class="btn btn-sm btn-kd-outline ms-auto" href="/assets/import-example.csv" download="wasla-import-example.csv">
-                <i data-lucide="download" width="14" height="14" class="me-1"></i>Example CSV
+                <i data-lucide="download" width="14" height="14" class="me-1"></i>مثال CSV
               </a>
             </div>
             <div class="ad-card-body p-0">
               <table class="ad-table">
                 <tbody>
                   <% [
-                       ['answer', 'Required. As it is spelled, e.g. أسد — it is played as اسد.'],
-                       ['clue', 'The question the player reads. Required for text questions; picture, sound and emoji questions may leave it empty and go on the title alone.'],
-                       ['title', 'Required. Shown above the question in the app, up to 40 characters, e.g. حيوانات. An old category column is used when title is blank.'],
-                       ['type', 'text, image, emoji or audio. Blank: follows the media.'],
-                       ['emoji', '1 to 8 emoji, for emoji questions.'],
-                       ['image', 'File name of a picture uploaded alongside.'],
-                       ['zoom', '1 to 5. Blank is 1.'],
-                       ['focus_x', '0 to 1, where the zoom centres. Blank is 0.5.'],
-                       ['focus_y', '0 to 1. Blank is 0.5.'],
-                       ['blurred', 'yes / 1 / true to start the picture blurred.'],
-                       ['audio', 'File name of a sound uploaded alongside.'],
-                       ['difficulty', 'easy, medium or hard. Blank: not set.'],
-                       ['image_author', 'Who took the picture — shown on the credits page.'],
-                       ['image_licence', 'The picture licence, e.g. CC BY-SA 4.0.'],
-                       ['image_source', 'Web address the picture came from.'],
-                       ['level', 'Level number to add the question to (1, 2, 3 … as on the Levels page). New levels are added when their numbers follow on from the last level without a gap — one file can add several (e.g. 4, 5, 6 after level 3). Blank: no level.'],
+                       ['answer', 'مطلوب. كما يُكتب، مثل أسد — ويُلعب اسد.'],
+                       ['clue', 'السؤال الذي يقرأه اللاعب. مطلوب للأسئلة النصية؛ وأسئلة الصور والأصوات والإيموجي يمكن أن تتركه فارغاً وتكتفي بالفئة.'],
+                       ['title', 'مطلوب. تظهر فوق السؤال في التطبيق، حتى 40 حرفاً، مثل حيوانات. ويُستعمل عمود category القديم إذا كان فارغاً.'],
+                       ['type', 'text أو image أو emoji أو audio. الفراغ: يتبع الوسيط.'],
+                       ['emoji', 'من 1 إلى 8 إيموجي، لأسئلة الإيموجي.'],
+                       ['image', 'اسم ملف صورة مرفوعة مع الملف.'],
+                       ['zoom', 'من 1 إلى 5. الفراغ = 1.'],
+                       ['focus_x', 'من 0 إلى 1، مركز التقريب. الفراغ = 0.5.'],
+                       ['focus_y', 'من 0 إلى 1. الفراغ = 0.5.'],
+                       ['blurred', 'yes أو 1 أو true لتبدأ الصورة مموّهة.'],
+                       ['audio', 'اسم ملف صوت مرفوع مع الملف.'],
+                       ['difficulty', 'easy أو medium أو hard. الفراغ: غير محدَّدة.'],
+                       ['image_author', 'من التقط الصورة — يظهر في صفحة الشكر.'],
+                       ['image_licence', 'رخصة الصورة، مثل CC BY-SA 4.0.'],
+                       ['image_source', 'الرابط الذي جاءت منه الصورة.'],
+                       ['level', 'رقم اللغز الذي يُضاف إليه السؤال (1، 2، 3 … كما في صفحة الألغاز). تُضاف ألغاز جديدة إذا تتابعت أرقامها بعد آخر لغز بلا فجوة — ويمكن لملف واحد أن يضيف عدة ألغاز (مثل 4 و5 و6 بعد اللغز 3). الفراغ: بلا لغز.'],
                      ].forEach(([name, text]) => { %>
                     <tr><td class="kd-mono small"><%= name %></td><td class="small"><%= text %></td></tr>
                   <% }) %>

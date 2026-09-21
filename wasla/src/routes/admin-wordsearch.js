@@ -15,7 +15,7 @@ export function registerWordSearch(router, { wordSearch }) {
     const themes = wordSearch.themes();
     const eligible = themes.filter((t) => t.eligible);
     res.render('wordsearch', {
-      title: 'Word themes',
+      title: 'مواضيع البحث',
       eligible,
       close: themes.filter((t) => !t.eligible && t.words.length >= CLOSE_THEME_WORDS),
       playableCount: eligible.filter((t) => !t.excluded).length,

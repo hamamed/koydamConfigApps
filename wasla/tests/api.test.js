@@ -179,7 +179,7 @@ test('the daily puzzle refuses a malformed date', async () => {
   for (const date of ['2026-02-30', '17-09-2026', 'today', '2026-09-17T10:00']) {
     const res = await fetch(`${base}/daily?date=${encodeURIComponent(date)}`);
     assert.equal(res.status, 400, date);
-    assert.match((await res.json()).error, /date/);
+    assert.match((await res.json()).error, /تاريخ/);
   }
 });
 
@@ -194,7 +194,7 @@ test('the word search refuses a malformed date', async () => {
   for (const date of ['2026-02-30', '17-09-2026', 'today', '2026-09-17T10:00', '']) {
     const res = await fetch(`${base}/wordsearch?date=${encodeURIComponent(date)}`);
     assert.equal(res.status, 400, date);
-    assert.match((await res.json()).error, /date/);
+    assert.match((await res.json()).error, /تاريخ/);
   }
 });
 

@@ -63,7 +63,7 @@ export const truthy = (value) => value === true || value === 1 || ['1', 'true', 
  */
 function readType(input, current, media) {
   const chosen = input.type !== undefined && input.type !== '' ? String(input.type) : null;
-  if (chosen && !QUESTION_TYPES.includes(chosen)) return { error: `A question type is one of: ${QUESTION_TYPES.join(', ')}.` };
+  if (chosen && !QUESTION_TYPES.includes(chosen)) return { error: `نوع السؤال واحد من: ${QUESTION_TYPES.join('، ')}.` };
 
   const candidate = chosen ?? current.type ?? null;
   const need = candidate && TYPE_NEEDS[candidate];
@@ -93,20 +93,20 @@ function readQuestion(input, current = {}) {
 
   // Checked against the type below: a picture, sound or emoji can stand on its title alone.
   const clue = String(input.clue ?? current.clue ?? '').trim();
-  if (clue.length > MAX_CLUE) return { error: `A clue can be at most ${MAX_CLUE} characters.` };
+  if (clue.length > MAX_CLUE) return { error: `الدليل حتى ${MAX_CLUE} حرفاً.` };
 
   const title = String(input.title ?? current.title ?? '').trim();
-  if (!title) return { error: 'A title is required — it is shown above the question in the app.' };
-  if ([...title].length > MAX_TITLE) return { error: `A title can be at most ${MAX_TITLE} characters.` };
+  if (!title) return { error: 'الفئة مطلوبة — تظهر فوق السؤال في التطبيق.' };
+  if ([...title].length > MAX_TITLE) return { error: `الفئة حتى ${MAX_TITLE} حرفاً.` };
 
   const zoom = Number(input.zoom ?? current.zoom ?? 1);
   if (!Number.isFinite(zoom) || zoom < 1 || zoom > MAX_ZOOM) {
-    return { error: `Image zoom must be between 1 and ${MAX_ZOOM}.` };
+    return { error: `تقريب الصورة بين 1 و${MAX_ZOOM}.` };
   }
 
   const focusX = Number(input.focusX ?? current.focusX ?? 0.5);
   const focusY = Number(input.focusY ?? current.focusY ?? 0.5);
-  if (!Number.isFinite(focusX) || !Number.isFinite(focusY)) return { error: 'The image focus point is not valid.' };
+  if (!Number.isFinite(focusX) || !Number.isFinite(focusY)) return { error: 'مركز تركيز الصورة غير صالح.' };
 
   const emoji = normalizeEmoji(input.emoji !== undefined ? input.emoji : current.emoji);
   if (emoji) {
@@ -122,7 +122,7 @@ function readQuestion(input, current = {}) {
   const { type, error } = readType(input, current, media);
   if (error) return { error };
   if (type === 'text' && !clue) {
-    return { error: 'A text question needs a clue — it is all the player has to go on. Pictures, sounds and emoji may leave it empty.' };
+    return { error: 'السؤال النصي يحتاج دليلاً — هو كل ما لدى اللاعب. أسئلة الصور والأصوات والإيموجي يمكن أن تتركه فارغاً.' };
   }
 
   const blurred = input.blurred !== undefined ? truthy(input.blurred) : Boolean(current.blurred);
@@ -137,7 +137,7 @@ function readQuestion(input, current = {}) {
   const imageLicence = credit('imageLicence');
   const imageSource = credit('imageSource');
   if (imageSource && !/^https?:\/\//i.test(imageSource)) {
-    return { error: 'The picture source must be a web address starting with http:// or https://.' };
+    return { error: 'مصدر الصورة يجب أن يكون رابطاً يبدأ بـ http:// أو https://.' };
   }
 
   return {
@@ -225,7 +225,7 @@ export function createRepository(db) {
    */
   function updateQuestion(id, input) {
     const current = getQuestion(id);
-    if (!current) return { error: 'That question no longer exists.' };
+    if (!current) return { error: 'هذا السؤال لم يعد موجوداً.' };
     const { fields, error } = readQuestion(input, current);
     if (error) return { error };
 
@@ -254,7 +254,7 @@ export function createRepository(db) {
   function deleteQuestion(id) {
     const using = levelsUsing(id);
     if (using.length) {
-      return { error: `Remove it from these levels first: ${using.map((l) => l.name).join(', ')}.` };
+      return { error: `أخرجه من هذه الألغاز أولاً: ${using.map((l) => l.name).join('، ')}.` };
     }
     const current = getQuestion(id);
     db.prepare('DELETE FROM questions WHERE id = ?').run(id);
@@ -294,9 +294,9 @@ export function createRepository(db) {
    */
   function moveQuestionsToLevel(ids, levelId) {
     const target = getLevel(Number(levelId));
-    if (!target) return { error: 'Choose a level to move them to.' };
+    if (!target) return { error: 'اختر لغزاً لنقلها إليه.' };
     const clean = cleanIds(ids);
-    if (!clean.length) return { error: 'Select at least one question.' };
+    if (!clean.length) return { error: 'حدّد سؤالاً واحداً على الأقل.' };
     return tx(() => {
       const inTarget = new Set(db.prepare('SELECT question_id FROM level_words WHERE level_id = ?').all(target.id).map((r) => r.question_id));
       const toMove = clean.filter((id) => !inTarget.has(id));
@@ -315,15 +315,15 @@ export function createRepository(db) {
 
   /** A new level (at the end) made of these questions. `{ level, moved, unplaced, unpublished }` or `{ error }`. */
   function newLevelFromQuestions(ids) {
-    if (!cleanIds(ids).length) return { error: 'Select at least one question.' };
+    if (!cleanIds(ids).length) return { error: 'حدّد سؤالاً واحداً على الأقل.' };
     return tx(() => moveQuestionsToLevel(ids, createLevel().id));
   }
 
   /** Gives every question the same title (its word-search theme). `{ updated }` or `{ error }`. */
   function setQuestionsTitle(ids, rawTitle) {
     const title = String(rawTitle ?? '').trim();
-    if (!title) return { error: 'Write the title to give them.' };
-    if ([...title].length > MAX_TITLE) return { error: `A title can be at most ${MAX_TITLE} characters.` };
+    if (!title) return { error: 'اكتب الفئة التي ستُعطى لها.' };
+    if ([...title].length > MAX_TITLE) return { error: `الفئة حتى ${MAX_TITLE} حرفاً.` };
     const clean = cleanIds(ids);
     return tx(() => {
       const set = db.prepare("UPDATE questions SET title = ?, updated_at = datetime('now') WHERE id = ?");
@@ -428,7 +428,7 @@ export function createRepository(db) {
   /** A validated difficulty, or `{ error }`. */
   function readLevelDetails({ difficulty } = {}) {
     const level = difficulty ?? 'medium';
-    if (!DIFFICULTIES.includes(level)) return { error: `The difficulty is one of: ${DIFFICULTIES.join(', ')}.` };
+    if (!DIFFICULTIES.includes(level)) return { error: `الصعوبة واحدة من: ${DIFFICULTIES.join('، ')}.` };
     return { difficulty: level };
   }
 
@@ -514,7 +514,7 @@ export function createRepository(db) {
   }
 
   function publishProblem(level) {
-    if (level.words.length + level.unplaced.length < MIN_WORDS) return `A level needs at least ${MIN_WORDS} words.`;
+    if (level.words.length + level.unplaced.length < MIN_WORDS) return `اللغز يحتاج ${MIN_WORDS === 2 ? 'كلمتين' : `${MIN_WORDS} كلمات`} على الأقل.`;
     const waiting = [...level.words, ...level.unplaced].filter((w) => w.needsPicture);
     if (waiting.length) return `Add the picture first: ${waiting.map((w) => w.answer).join('، ')}.`;
     if (level.unplaced.length) {
@@ -529,7 +529,7 @@ export function createRepository(db) {
 
   function setPublished(id, on) {
     const level = getLevel(id);
-    if (!level) return { error: 'That level no longer exists.' };
+    if (!level) return { error: 'هذا اللغز لم يعد موجوداً.' };
     if (on) {
       const problem = publishProblem(level);
       if (problem) return { error: problem };
@@ -548,7 +548,7 @@ export function createRepository(db) {
    */
   function setLevelsPublished(ids, on) {
     const clean = cleanIds(ids);
-    if (!clean.length) return { error: 'Select at least one level.' };
+    if (!clean.length) return { error: 'حدّد لغزاً واحداً على الأقل.' };
     return tx(() => {
       const changed = [];
       const problems = [];
@@ -565,7 +565,7 @@ export function createRepository(db) {
 
   function setLevelsDifficulty(ids, difficulty) {
     const clean = cleanIds(ids);
-    if (!clean.length) return { error: 'Select at least one level.' };
+    if (!clean.length) return { error: 'حدّد لغزاً واحداً على الأقل.' };
     const { error } = readLevelDetails({ difficulty });
     if (error) return { error };
     return tx(() => {
@@ -582,7 +582,7 @@ export function createRepository(db) {
   /** Deletes levels. Their questions stay in the bank, free for another level. */
   function deleteLevels(ids) {
     const clean = cleanIds(ids);
-    if (!clean.length) return { error: 'Select at least one level.' };
+    if (!clean.length) return { error: 'حدّد لغزاً واحداً على الأقل.' };
     return tx(() => {
       const deleted = clean.filter((id) => getLevel(id));
       deleted.forEach((id) => deleteLevel(id));

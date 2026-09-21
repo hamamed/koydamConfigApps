@@ -2,16 +2,16 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'Dashboard', subheading: 'What the Shabbik app is serving right now' }) %>
+    <%- include('partials/topbar', { heading: 'الرئيسية', subheading: 'ما يقدّمه تطبيق شبّك الآن' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <div class="row g-3 mb-3">
         <% [
-             ['Published levels', counts.published + ' / ' + counts.levels, 'grid-3x3'],
-             ['Questions', counts.questions, 'message-circle-question'],
-             ['With a picture', counts.withImages, 'image'],
-             ['Not in any level', counts.unused, 'inbox'],
+             ['ألغاز منشورة', counts.published + ' / ' + counts.levels, 'grid-3x3'],
+             ['الأسئلة', counts.questions, 'message-circle-question'],
+             ['بصورة', counts.withImages, 'image'],
+             ['خارج الألغاز', counts.unused, 'inbox'],
            ].forEach(([label, value, glyph]) => { %>
           <div class="col-6 col-xl-3">
             <div class="ad-card ad-kpi">
@@ -28,29 +28,29 @@
       <div class="ad-card">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <i data-lucide="grid-3x3" width="16" height="16"></i>
-          <span class="fw-semibold">Levels</span>
+          <span class="fw-semibold">الألغاز</span>
           <div class="ms-auto d-flex gap-2">
-            <a class="btn btn-sm btn-kd-outline" href="/admin/questions/new">New question</a>
-            <a class="btn btn-sm btn-kd" href="/admin/levels">Manage levels</a>
+            <a class="btn btn-sm btn-kd-outline" href="/admin/questions/new">سؤال جديد</a>
+            <a class="btn btn-sm btn-kd" href="/admin/levels">إدارة الألغاز</a>
           </div>
         </div>
         <div class="ad-card-body p-0">
           <% if (!levels.length) { %>
             <div class="ad-empty">
               <i data-lucide="grid-3x3"></i>
-              <p class="mb-0">No levels yet. Add a few questions, then build a level from them.</p>
+              <p class="mb-0">لا ألغاز بعد. أضف بعض الأسئلة ثم كوّن منها لغزاً.</p>
             </div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">
-                <thead><tr><th>Level</th><th>Words</th><th>Grid</th><th>State</th></tr></thead>
+                <thead><tr><th>اللغز</th><th>الكلمات</th><th>الشبكة</th><th>الحالة</th></tr></thead>
                 <tbody>
                   <% levels.forEach((l) => { %>
                     <tr>
                       <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>"><%= l.name %></a></td>
-                      <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> not crossing</span><% } %></td>
+                      <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> بلا تقاطع</span><% } %></td>
                       <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>
-                      <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'Published' : 'Draft' %></span></td>
+                      <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'منشور' : 'مسودة' %></span></td>
                     </tr>
                   <% }) %>
                 </tbody>

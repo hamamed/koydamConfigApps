@@ -16,9 +16,9 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Preview · Level ' + level.number,
-          subheading: (level.published ? 'Level ' + level.publishedNumber + ' in the app' : 'Draft — shown as it would look once published') + ' · iPhone 390 × 844',
-          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/levels/' + level.id + '">Back to level</a>'
+          heading: 'معاينة · اللغز ' + level.number,
+          subheading: (level.published ? 'اللغز ' + level.publishedNumber + ' في التطبيق' : 'مسودة — معروضة كما ستبدو بعد النشر') + ' · آيفون 390 × 844',
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/levels/' + level.id + '">العودة إلى اللغز</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
@@ -26,7 +26,7 @@
       <% if (!preview.words.length) { %>
         <div class="ad-card ad-empty">
           <i data-lucide="smartphone"></i>
-          <p class="mb-0">This level has no grid yet. Pick questions that cross, then preview it.</p>
+          <p class="mb-0">لا شبكة لهذا اللغز بعد. اختر أسئلة تتقاطع ثم عاينه.</p>
         </div>
       <% } else { %>
       <div class="wp-layout" data-preview>
@@ -139,7 +139,7 @@
           <div class="ad-card-head d-flex align-items-center gap-2">
             <i data-lucide="list" width="16" height="16"></i>
             <span class="fw-semibold">Pages</span>
-            <span class="kd-faint small ms-auto">or tap a tile</span>
+            <span class="kd-faint small ms-auto">أو اضغط خانة</span>
           </div>
           <div class="ad-card-body d-grid gap-1">
             <button class="wp-list-item is-active" type="button" data-show="grid">
@@ -153,9 +153,9 @@
               </button>
             <% }) %>
             <% if (level.unplaced.length) { %>
-              <p class="small kd-muted mt-2 mb-0">Not in the grid (they do not cross): <% level.unplaced.forEach((u) => { %><span class="wz-answer"><%= u.answer %></span> <% }) %></p>
+              <p class="small kd-muted mt-2 mb-0">خارج الشبكة (لا تتقاطع): <% level.unplaced.forEach((u) => { %><span class="wz-answer"><%= u.answer %></span> <% }) %></p>
             <% } %>
-            <p class="small kd-faint mt-2 mb-0">Sizes follow the app's layout for a 390 × 844 screen. Letter banks use a fixed shuffle per word; the app shuffles on every open.</p>
+            <p class="small kd-faint mt-2 mb-0">الأحجام تتبع تخطيط التطبيق لشاشة 390 × 844. بنوك الحروف تستعمل خلطاً ثابتاً لكل كلمة؛ والتطبيق يخلطها عند كل فتح.</p>
           </div>
         </aside>
       </div>

@@ -175,13 +175,13 @@ test('a key file must be a PKCS#8 P-256 private key', () => {
   const p384 = crypto.generateKeyPairSync('ec', { namedCurve: 'secp384r1', privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } }).privateKey;
   const sec1 = crypto.createPrivateKey(privateKey).export({ type: 'sec1', format: 'pem' });
 
-  assert.match(checkKeyFile(Buffer.from('')).error, /Choose/);
+  assert.match(checkKeyFile(Buffer.from('')).error, /اختر/);
   assert.match(checkKeyFile(Buffer.from('hello')).error, /BEGIN PRIVATE KEY/);
   assert.match(checkKeyFile(Buffer.from(publicKey)).error, /BEGIN PRIVATE KEY/);
   assert.match(checkKeyFile(Buffer.from(sec1)).error, /BEGIN PRIVATE KEY/);
   assert.match(checkKeyFile(Buffer.from(rsa)).error, /P-256/);
   assert.match(checkKeyFile(Buffer.from(p384)).error, /P-256/);
-  assert.match(checkKeyFile(Buffer.from('-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n')).error, /could not be read/);
+  assert.match(checkKeyFile(Buffer.from('-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n')).error, /تعذّرت قراءة/);
 });
 
 test('ids: a 10-character Key ID; team and topic default to the app', () => {

@@ -3,31 +3,30 @@
   <%- include('partials/sidebar') %>
   <main class="ad-main">
     <%- include('partials/topbar', {
-          heading: 'Profiles',
-          subheading: count.n + ' player username(s) · ' + count.banned + ' banned',
-          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/leaderboards/points" target="_blank" rel="noopener">Points board JSON</a>'
+          heading: 'الحسابات',
+          subheading: count.n + ' اسم لاعب · ' + count.banned + ' محظور',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/leaderboards/points" target="_blank" rel="noopener">لوحة النقاط JSON</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <form class="d-flex gap-2 mb-3" method="get" action="/admin/profiles">
-        <input class="form-control" type="search" name="q" value="<%= search %>" placeholder="Search usernames">
-        <button class="btn btn-kd-outline" type="submit">Search</button>
+        <input class="form-control" type="search" name="q" value="<%= search %>" placeholder="ابحث في أسماء اللاعبين">
+        <button class="btn btn-kd-outline" type="submit">بحث</button>
       </form>
 
       <p class="small kd-muted">
-        Players pick a public username and an avatar icon; nothing else identifies them. <strong>Ban</strong> hides a player from every
-        leaderboard and stops new scores; <strong>Rename</strong> fixes a name that breaks the rules without losing their scores.
+        يختار اللاعب اسماً ظاهراً وصورة رمزية فقط؛ لا شيء آخر يعرّف عنه. <strong>الحظر</strong> يخفي اللاعب من كل لوحات المتصدرين ويمنع تسجيل نتائج جديدة؛ <strong>إعادة التسمية</strong> تصلح اسماً مخالفاً دون فقدان نتائجه.
       </p>
 
       <div class="ad-card">
         <div class="ad-card-body p-0">
           <% if (!rows.length) { %>
-            <div class="ad-empty"><i data-lucide="user-round"></i><p class="mb-0">No profiles<%= search ? ' match “' + search + '”' : ' yet' %>.</p></div>
+            <div class="ad-empty"><i data-lucide="user-round"></i><p class="mb-0">لا حسابات<%= search ? ' match “' + search + '”' : ' yet' %>.</p></div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">
-                <thead><tr><th>Player</th><th class="text-end">Points</th><th class="text-end">Streak</th><th class="text-end">Levels</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>اللاعب</th><th class="text-end">النقاط</th><th class="text-end">السلسلة</th><th class="text-end">الألغاز</th><th>انضم</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                 <tbody>
                   <% rows.forEach((p) => { %>
                     <tr>
@@ -36,14 +35,14 @@
                       <td class="text-end"><%= p.streak %> <span class="kd-faint small">/ <%= p.best_streak %></span></td>
                       <td class="text-end"><%= p.levels_completed %></td>
                       <td class="small kd-mono"><%= p.created_at.slice(0, 10) %></td>
-                      <td><% if (p.banned) { %><span class="ad-status ad-status-archived">Banned</span><% } else { %><span class="ad-status ad-status-published">Active</span><% } %></td>
+                      <td><% if (p.banned) { %><span class="ad-status ad-status-archived">محظور</span><% } else { %><span class="ad-status ad-status-published">نشِط</span><% } %></td>
                       <td>
                         <div class="d-flex flex-wrap gap-1">
                           <form method="post" action="/admin/profiles/<%= p.id %>/rename" class="d-flex gap-1 m-0">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="q" value="<%= search %>">
-                            <input class="form-control form-control-sm" name="username" value="<%= p.username %>" aria-label="New username" required>
-                            <button class="btn btn-sm btn-kd-outline" type="submit">Rename</button>
+                            <input class="form-control form-control-sm" name="username" value="<%= p.username %>" aria-label="اسم جديد" required>
+                            <button class="btn btn-sm btn-kd-outline" type="submit">إعادة تسمية</button>
                           </form>
                           <form method="post" action="/admin/profiles/<%= p.id %>/ban" class="m-0">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -51,15 +50,15 @@
                             <input type="hidden" name="banned" value="<%= p.banned ? '0' : '1' %>">
                             <button class="btn btn-sm <%= p.banned ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= p.banned ? 'Unban' : 'Ban' %></button>
                           </form>
-                          <form method="post" action="/admin/profiles/<%= p.id %>/recovery-code" class="m-0" data-confirm="Make a new recovery code for “<%= p.username %>”? The old one stops working.">
+                          <form method="post" action="/admin/profiles/<%= p.id %>/recovery-code" class="m-0" data-confirm="إنشاء رمز استرجاع جديد لـ«<%= p.username %>»؟ الرمز القديم يتوقف.">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="q" value="<%= search %>">
-                            <button class="btn btn-sm btn-kd-ghost" type="submit">New code</button>
+                            <button class="btn btn-sm btn-kd-ghost" type="submit">رمز جديد</button>
                           </form>
-                          <form method="post" action="/admin/profiles/<%= p.id %>/delete" class="m-0" data-confirm="Delete “<%= p.username %>” and all its scores?">
+                          <form method="post" action="/admin/profiles/<%= p.id %>/delete" class="m-0" data-confirm="حذف «<%= p.username %>» وكل نتائجه؟">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="q" value="<%= search %>">
-                            <button class="btn btn-sm btn-kd-danger" type="submit">Delete</button>
+                            <button class="btn btn-sm btn-kd-danger" type="submit">حذف</button>
                           </form>
                         </div>
                       </td>

@@ -47,9 +47,9 @@ export function createDaily(db, repo) {
 
   function schedule(date, levelId) {
     const parsed = parseDay(date);
-    if (!parsed) return { error: 'That is not a valid date.' };
+    if (!parsed) return { error: 'هذا ليس تاريخاً صحيحاً.' };
     const id = Number(levelId);
-    if (!repo.publishedLevelIds().includes(id)) return { error: 'Only a published level can be the daily puzzle.' };
+    if (!repo.publishedLevelIds().includes(id)) return { error: 'لا يكون لغز اليوم إلا لغزاً منشوراً.' };
     db.prepare(`INSERT INTO daily_levels (date, level_id) VALUES (?, ?)
       ON CONFLICT(date) DO UPDATE SET level_id = excluded.level_id, created_at = datetime('now')`).run(parsed.date, id);
     return {};

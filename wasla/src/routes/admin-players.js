@@ -2,12 +2,12 @@ import { barChart } from '../charts.js';
 import { RETENTION_DAYS } from '../events.js';
 
 const HELP_LABELS = {
-  revealLetter: 'Reveal a letter',
-  removeLetters: 'Remove 3 letters',
-  solveWord: 'Solve the word',
-  unzoomImage: 'Zoom out picture',
-  unblurImage: 'Sharpen picture',
-  askFriend: 'Ask a friend',
+  revealLetter: 'كشف حرف',
+  removeLetters: 'حذف 3 حروف',
+  solveWord: 'حل الكلمة',
+  unzoomImage: 'إبعاد الصورة',
+  unblurImage: 'توضيح الصورة',
+  askFriend: 'اسأل صديقاً',
 };
 
 /** The players dashboard. */
@@ -16,8 +16,8 @@ export function registerPlayers(router, { players }) {
     const data = players.dashboard();
     const chart = barChart(
       data.perDay.map((d) => ({ label: `${d.date.slice(8, 10)}/${d.date.slice(5, 7)}`, value: d.players, title: `${d.date}: ${d.players} player(s)` })),
-      { label: 'Players per day, last 30 days' },
+      { label: 'اللاعبون يومياً، آخر 30 يوماً' },
     );
-    res.render('players', { title: 'Players', ...data, chart, helpLabels: HELP_LABELS, retentionDays: RETENTION_DAYS });
+    res.render('players', { title: 'الأجهزة', ...data, chart, helpLabels: HELP_LABELS, retentionDays: RETENTION_DAYS });
   });
 }

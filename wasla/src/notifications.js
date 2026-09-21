@@ -23,22 +23,22 @@ export function readCompose(input, { publishedCount }) {
   const target = String(input?.target ?? 'all');
   const device = String(input?.device ?? '').trim();
 
-  if (!title) return { error: 'Write a title.' };
-  if (length(title) > MAX_TITLE) return { error: `The title is at most ${MAX_TITLE} characters.` };
-  if (!body) return { error: 'Write the message.' };
-  if (length(body) > MAX_BODY) return { error: `The message is at most ${MAX_BODY} characters.` };
+  if (!title) return { error: 'اكتب عنواناً.' };
+  if (length(title) > MAX_TITLE) return { error: `العنوان حتى ${MAX_TITLE} حرفاً.` };
+  if (!body) return { error: 'اكتب الرسالة.' };
+  if (length(body) > MAX_BODY) return { error: `الرسالة حتى ${MAX_BODY} حرفاً.` };
 
   let level = null;
   if (rawLevel) {
-    if (!/^\d+$/.test(rawLevel) || Number(rawLevel) < 1) return { error: 'The level is a level number, such as 3.' };
+    if (!/^\d+$/.test(rawLevel) || Number(rawLevel) < 1) return { error: 'اللغز يُكتب برقمه، مثل 3.' };
     level = Number(rawLevel);
     if (level > publishedCount) {
-      return { error: publishedCount ? `There is no level ${level} in the app: levels 1 to ${publishedCount} are published.` : 'No level is published yet, so a notification cannot open one.' };
+      return { error: publishedCount ? `لا يوجد لغز ${level} في التطبيق: المنشور من 1 إلى ${publishedCount}.` : 'لا لغز منشور بعد، فلا يمكن للإشعار أن يفتح لغزاً.' };
     }
   }
 
-  if (!TARGETS.includes(target)) return { error: 'Choose who receives it.' };
-  if (target === 'device' && !isDeviceId(device)) return { error: 'For a test send, paste the device id (the install id the app reports).' };
+  if (!TARGETS.includes(target)) return { error: 'اختر من يستقبله.' };
+  if (target === 'device' && !isDeviceId(device)) return { error: 'للإرسال التجريبي، الصق معرّف الجهاز (معرّف التثبيت الذي يرسله التطبيق).' };
 
   return { message: { title, body, level, target, device: target === 'device' ? device : null } };
 }
