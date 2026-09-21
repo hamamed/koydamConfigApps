@@ -860,3 +860,7 @@ html[dir="rtl"] { overflow-x: hidden; }
 
 /* On the teal brand bar the tiles carry the bar, so the wordmark sits beside them. */
 .ad-brand .wz-logo { margin-inline-end: .1rem; }
+
+/* The brand bar holds the logo alone, so it is centred and given room. */
+.wz-brand { justify-content: center; padding-block: 1.1rem; }
+.wz-brand .wz-logo { margin-inline-end: 0; }
