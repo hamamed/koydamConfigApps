@@ -862,7 +862,7 @@ html[dir="rtl"] { overflow-x: hidden; }
 .ad-brand .wz-logo { margin-inline-end: .1rem; }
 
 /* The brand bar holds the logo alone, so it is centred and given room. */
-.wz-brand { justify-content: center; padding-block: 1.1rem; }
+.wz-brand { justify-content: center; padding-block: 1.15rem 1.3rem; }
 .wz-brand .wz-logo { margin-inline-end: 0; }
 
 /* The tagline ribbon under the pieces, as the app draws it: the display face in
@@ -888,3 +888,33 @@ html[dir="rtl"] { overflow-x: hidden; }
   color: #fff;
   white-space: nowrap;
 }
+
+/* ----------------------------------------------------- scrollbars ------- */
+/*
+ * Two problems in one: macOS draws overlay scrollbars, which float *over* a
+ * card and sit on its ink border, and the default grey belongs to no part of
+ * this design. Styling them takes them out of the content and into the pack's
+ * colours — a mint track and a teal thumb, rounded like everything else.
+ */
+* { scrollbar-width: thin; scrollbar-color: var(--wz-teal) var(--wz-board); }
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: var(--wz-board); border-radius: 99px; }
+::-webkit-scrollbar-thumb {
+  background: var(--wz-teal);
+  border: 3px solid var(--wz-board);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--wz-teal-deep); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* The page keeps room for its scrollbar, so nothing shifts when it appears. */
+html { scrollbar-gutter: stable; }
+
+/* A card holds its contents inside its own border: a table header's fill used
+   to paint over the rounded ink corner, and a scrolling table's bar sat on it.
+   The ledge underneath is the card's own shadow, so it is not clipped. */
+.ad-card { overflow: hidden; }
+
+/* The scrolling parts inside a card get the thin bar, tucked away from the edge. */
+.ad-table-wrap, .ad-nav, textarea.form-control { scrollbar-width: thin; }
