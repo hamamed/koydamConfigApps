@@ -32,7 +32,9 @@
               <div class="ad-section-label d-flex align-items-center gap-2">
                 <span>Categories to draw from</span>
                 <span class="small kd-faint">tick none to use them all</span>
-                <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-generator-clear>Clear</button>
+                <button class="btn btn-kd-ghost btn-sm ms-auto" type="button" data-generator-all>
+                  Select all <span class="wz-category-count" data-generator-all-count><%= categories.length %></span></button>
+                <button class="btn btn-kd-ghost btn-sm" type="button" data-generator-clear>Clear</button>
               </div>
               <div class="wz-generate-categories">
                 <% categories.forEach((c) => { %>

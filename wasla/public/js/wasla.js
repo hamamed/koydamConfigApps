@@ -147,6 +147,15 @@
     form.querySelector('[data-generator-clear]')?.addEventListener('click', () => {
       categories.forEach((box) => { box.checked = false; });
     });
+    // "Select all" ticks every category that still has a question at this difficulty;
+    // the empty ones are disabled and stay untouched.
+    const all = form.querySelector('[data-generator-all]');
+    const allCount = form.querySelector('[data-generator-all-count]');
+    const countable = () => categories.filter((box) => !box.disabled);
+    all?.addEventListener('click', () => {
+      countable().forEach((box) => { box.checked = true; });
+    });
+    const showCount = () => { if (allCount) allCount.textContent = countable().length; };
     if (!difficulty) return;
 
     difficulty.addEventListener('change', () => {
@@ -161,7 +170,9 @@
         if (free === 0) box.checked = false;
         label?.classList.toggle('is-disabled', free === 0);
       });
+      showCount();
     });
+    showCount();
   });
 
   // ── Question picker ───────────────────────────────────────────────────────
