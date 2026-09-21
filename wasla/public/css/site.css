@@ -184,3 +184,41 @@
   .wz-stores { justify-content: center; }
   .wz-numbers { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ------------------------------------------------------------ icons ---- */
+/* The game's own icons, drawn as it draws them: on a paper plate with the
+   pack's ink border and its ledge. */
+.wz-feature-icon,
+.wz-hero-points img,
+.wz-number-icon { flex: none; }
+
+.wz-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: .7rem;
+  border: 2px solid var(--wz-ink, #1f2d3a);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--wz-ink, #1f2d3a);
+}
+.wz-number-icon { display: block; margin: 0 auto .35rem; }
+
+.wz-hero-points {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.4rem;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  font-weight: 700;
+  color: #3d5a5e;
+}
+.wz-hero-points li { display: flex; align-items: center; gap: .45rem; }
+
+@media (max-width: 767.98px) {
+  .wz-feature-icon { margin-inline: auto; }
+  .wz-feature { text-align: center; }
+  .wz-hero-points { justify-content: center; }
+}
