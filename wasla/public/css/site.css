@@ -31,14 +31,28 @@
   grid-template-columns: 1.15fr .85fr;
   align-items: center;
   gap: 2.5rem;
-  padding-block: 3.5rem 2.5rem;
+  padding-block: 1.75rem 2.5rem;
 }
+/* The logo stands in the middle of the page, above everything else. */
+.wz-topline {
+  display: flex;
+  justify-content: center;
+  padding: 2.75rem 1.25rem 0;
+}
+
+/* The hero reads down the middle: the line, the two buttons, the points. */
+.wz-hero-text { text-align: center; }
+.wz-hero-text .wz-logo-wrap { display: flex; margin-inline: auto; }
+.wz-hero-text .wz-stores,
+.wz-hero-text .wz-hero-points { justify-content: center; }
+.wz-hero-lede { margin-inline: auto; }
+
 .wz-hero-title {
   font-family: "Lalezar", "Tajawal", sans-serif;
   font-size: clamp(2.1rem, 5vw, 3.1rem);
   line-height: 1.35;
   color: var(--wz-teal-deep, #0e7f7a);
-  margin: 1.2rem 0 .6rem;
+  margin: 0 0 .6rem;
 }
 .wz-hero-lede {
   font-size: 1.08rem;
