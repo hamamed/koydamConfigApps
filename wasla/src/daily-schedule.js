@@ -13,13 +13,13 @@ import { parseDay } from './daily.js';
 
 /** The seven days, Sunday first — the order `weekdayOf` counts in. */
 export const WEEK = Object.freeze([
-  'bubbles', // الأحد
-  'groups', // الاثنين
-  'wheel', // الثلاثاء
-  'guess', // الأربعاء
-  'wordsearch', // الخميس
+  'wheel', // الأحد
+  'guess', // الاثنين
+  'wordsearch', // الثلاثاء
+  'wheel', // الأربعاء
+  'guess', // الخميس
   'marathon', // الجمعة
-  'scramble', // السبت
+  'wordsearch', // السبت
 ]);
 
 /** Every kind a day can hold, including the two that are not in GAME_KINDS. */
@@ -28,9 +28,6 @@ export const SCHEDULED_KINDS = Object.freeze([...new Set(WEEK)]);
 export const WEEKDAY_NAMES = Object.freeze(['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']);
 
 export const KIND_NAMES = Object.freeze({
-  scramble: 'رتّب الحروف',
-  bubbles: 'فقاعات الكلمات',
-  groups: 'صِل المجموعات',
   wheel: 'عجلة الحروف',
   guess: 'خمّن الكلمتين',
   wordsearch: 'البحث عن الكلمات',

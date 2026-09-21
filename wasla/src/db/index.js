@@ -74,6 +74,9 @@ export function openDatabase(file) {
   // Rows that already have a title (every row saved since) are left alone.
   database.exec(`UPDATE questions SET title = substr(trim(category), 1, 40)
     WHERE title IS NULL AND category IS NOT NULL AND trim(category) <> ''`);
+  // Days planned for games that no longer exist (contract §9): the kinds are
+  // gone from the code, so their rows would only ever be dead weight.
+  database.exec("DELETE FROM daily_game_days WHERE kind IN ('scramble', 'bubbles', 'groups')");
   // Indexes on added columns can only be made once the columns exist. (idx_levels_pack: unused legacy.)
   database.exec('CREATE INDEX IF NOT EXISTS idx_levels_pack ON levels(pack_id)');
   return database;

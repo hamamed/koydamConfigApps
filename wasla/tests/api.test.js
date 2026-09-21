@@ -208,7 +208,7 @@ test('the word search board has the contract shape, matches its rows and is the 
   const body = await res.json();
 
   assert.deepEqual(Object.keys(body).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
-  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 9, 30]);
+  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 10, 30]);
   assert.equal(body.rows.length, body.size);
   for (const row of body.rows) assert.equal([...row].length, body.size);
   assert.ok(body.words.length >= 6 && body.words.length <= 10);
@@ -314,8 +314,6 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   // The rewards are the ones in the config, not numbers copied into the test.
   assert.deepEqual([body.date, body.coins, body.allBonus],
     ['2026-09-18', DEFAULT_CONFIG.dailyGameCoins, DEFAULT_CONFIG.dailyAllGamesBonus]);
-  // Only two titles have questions here: never enough for four groups.
-  assert.equal(body.groups, null);
   assert.equal(body.guess.tries, 8);
   assert.equal(body.guess.words.length, 2);
   assert.equal([...body.guess.word].length, 5);
@@ -324,11 +322,11 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   assert.equal(body.kind, 'marathon');
   assert.equal(body.weekday, 5);
   assert.deepEqual(body.schedule.map((d) => d.kind),
-    ['bubbles', 'groups', 'wheel', 'guess', 'wordsearch', 'marathon', 'scramble']);
+    ['wheel', 'guess', 'wordsearch', 'wheel', 'guess', 'marathon', 'wordsearch']);
   assert.ok(body.marathon.rounds.length >= 2, 'Friday runs the games back to back');
   assert.ok(body.marathon.rounds.every((r) => r.game));
   assert.equal(body.marathon.bonus, DEFAULT_CONFIG.dailyAllGamesBonus);
-  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'scramble');
+  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'wordsearch');
   assert.deepEqual(await (await fetch(`${base}/daily-games?date=2026-09-18`)).json(), body);
 });
 

@@ -63,24 +63,24 @@ test('an excluded theme is kept out, and can be let back in', () => {
   assert.ok(wordSearch.setExcluded('  ', true).error);
 });
 
-test('the size rises through the week, and Thursday takes the whole board', () => {
-  // 2026-09-14 is a Monday; Thursday is the day the week gives the word search.
+test('the size rises through the week, and its own days take the whole board', () => {
+  // 2026-09-14 is a Monday; the week gives the word search Tuesday and Saturday.
   const sizes = Array.from({ length: 7 }, (_, i) => sizeForDay(parseDay('2026-09-14').day + i));
-  assert.deepEqual(sizes, [7, 7, 8, 10, 9, 9, 10]);
+  assert.deepEqual(sizes, [7, 10, 8, 8, 9, 10, 10]);
 });
 
 test('a date gets a deterministic board from its theme, matching the contract', () => {
   add('حيوانات', ANIMALS);
   add('فواكه', FRUITS);
-  const board = wordSearch.forDate('2026-09-19'); // a Saturday with no event: size 9
+  const board = wordSearch.forDate('2026-09-19'); // a Saturday: the word search's own day, so the whole board
   assert.deepEqual(Object.keys(board).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
   assert.equal(board.date, '2026-09-19');
-  assert.equal(board.size, 9);
+  assert.equal(board.size, 10);
   assert.equal(board.coins, 30);
   assert.ok(['حيوانات', 'فواكه'].includes(board.theme));
-  assert.ok(board.words.length >= 6 && board.words.length <= 10);
+  assert.ok(board.words.length >= 6 && board.words.length <= 12);
   const grid = board.rows.map((r) => [...r]);
-  assert.equal(grid.length, 9);
+  assert.equal(grid.length, 10);
   for (const w of board.words) {
     assert.equal(cellsOf(w).map(([r, c]) => grid[r][c]).join(''), w.word);
     assert.ok([...w.word].length >= 3 && [...w.word].length <= 8);

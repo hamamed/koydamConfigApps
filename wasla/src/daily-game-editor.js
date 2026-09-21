@@ -17,9 +17,7 @@
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import {
-  BUBBLE_LETTERS, GROUP_COUNT, GROUP_LETTERS, GROUP_MIN_COUNT, GROUP_SIZE, GUESS_LETTERS, GUESS_TRIES,
-  GUESS_WORDS, SCRAMBLE_LETTERS,
-  parseWheelSets, scrambleLetters, splitParts,
+  GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS, parseWheelSets, scrambleLetters,
 } from './daily-games.js';
 import { random, shuffled } from './wordsearch.js';
 
@@ -42,87 +40,6 @@ function readWord(raw, [min, max], line) {
   const count = letters(word).length;
   if (!inRange(count, [min, max])) return { error: `Line ${line}: “${display}” has ${count} letters; use ${min}–${max}.` };
   return { word, display };
-}
-
-// ── Scramble ─────────────────────────────────────────────────────────────────
-
-export const scrambleText = (game) => (game?.words ?? []).map((w) => `${w.display} | ${w.clue}`).join('\n');
-
-export function readScramble(text, seed = newSeed()) {
-  const rand = random(seed);
-  const errors = [];
-  const words = [];
-  const seen = new Set();
-  lines(text).forEach((line, i) => {
-    const [answer, ...rest] = line.split('|');
-    const clue = rest.join('|').trim();
-    const read = readWord(answer, [Math.max(3, SCRAMBLE_LETTERS[0]), SCRAMBLE_RANGE[1]], i + 1);
-    if (read.error) return errors.push(read.error);
-    if (!clue) return errors.push(`Line ${i + 1}: add a clue after “|”.`);
-    if (seen.has(read.word)) return errors.push(`Line ${i + 1}: “${read.display}” is listed twice.`);
-    const shuffledLetters = scrambleLetters(read.word, rand);
-    if (!shuffledLetters) return errors.push(`Line ${i + 1}: “${read.display}” needs at least two different letters.`);
-    seen.add(read.word);
-    words.push({ id: TYPED_ID_BASE + i + 1, ...read, clue, letters: shuffledLetters });
-  });
-  if (!errors.length && (words.length < 3 || words.length > 8)) errors.push('Give 3 to 8 words, one per line.');
-  return errors.length ? { errors } : { game: { words } };
-}
-
-// ── Bubbles ──────────────────────────────────────────────────────────────────
-
-export const bubblesText = (game) => (game ? [game.theme, ...game.words.map((w) => w.display)].join('\n') : '');
-
-export function readBubbles(text, seed = newSeed()) {
-  const [themeLine, ...wordLines] = lines(text);
-  const errors = [];
-  const theme = String(themeLine ?? '').trim();
-  if (!theme) errors.push('Line 1 is the theme.');
-  else if ([...theme].length > 40) errors.push('The theme can be at most 40 characters.');
-  const words = [];
-  const seen = new Set();
-  wordLines.forEach((line, i) => {
-    const read = readWord(line, [Math.max(BUBBLE_RANGE[0], 3), BUBBLE_LETTERS[1]], i + 2);
-    if (read.error) return errors.push(read.error);
-    if (seen.has(read.word)) return errors.push(`Line ${i + 2}: “${read.display}” is listed twice.`);
-    seen.add(read.word);
-    words.push({ id: TYPED_ID_BASE + i + 1, ...read, parts: splitParts(read.word) });
-  });
-  if (!errors.length && (words.length < 3 || words.length > 8)) errors.push('Give 3 to 8 words under the theme.');
-  if (errors.length) return { errors };
-  return { game: { theme, words, bubbles: shuffled(words.flatMap((w) => w.parts), random(seed)) } };
-}
-
-// ── Groups ───────────────────────────────────────────────────────────────────
-
-export const groupsText = (game) => (game?.groups ?? [])
-  .map((g) => `${g.title}: ${g.words.map((w) => w.display).join('، ')}`).join('\n');
-
-export function readGroups(text, seed = newSeed()) {
-  const errors = [];
-  const groups = [];
-  const seen = new Set();
-  let nextId = TYPED_ID_BASE + 1;
-  const rows = lines(text);
-  rows.forEach((line, i) => {
-    const at = line.search(/[:：]/);
-    const title = at > 0 ? line.slice(0, at).trim() : '';
-    if (!title) return errors.push(`Line ${i + 1}: write “title: word، word، word، word”.`);
-    const parts = line.slice(at + 1).split(/[،,]+/).map((w) => w.trim()).filter(Boolean);
-    if (parts.length !== GROUP_SIZE) return errors.push(`Line ${i + 1}: “${title}” needs exactly ${GROUP_SIZE} words, separated by commas.`);
-    const words = [];
-    for (const part of parts) {
-      const read = readWord(part, GROUP_LETTERS, i + 1);
-      if (read.error) return errors.push(read.error);
-      if (seen.has(read.word)) return errors.push(`Line ${i + 1}: “${read.display}” is in two groups.`);
-      seen.add(read.word);
-      words.push({ id: nextId++, ...read });
-    }
-    groups.push({ title, words });
-  });
-  if (!errors.length && (rows.length < GROUP_MIN_COUNT || rows.length > GROUP_COUNT)) errors.push(`أعطِ ${GROUP_MIN_COUNT} إلى ${GROUP_COUNT} مجموعات، واحدة في كل سطر.`);
-  if (errors.length) return { errors };
-  return { game: { groups, order: shuffled(groups.flatMap((g) => g.words.map((w) => w.id)), random(seed)) } };
 }
 
 // ── Wheel ────────────────────────────────────────────────────────────────────
@@ -159,9 +76,6 @@ export function readGuess(text) {
 
 /** Each game's text form and parser, by kind. */
 export const EDITORS = Object.freeze({
-  scramble: { toText: scrambleText, read: readScramble },
-  bubbles: { toText: bubblesText, read: readBubbles },
-  groups: { toText: groupsText, read: readGroups },
   wheel: { toText: wheelText, read: readWheel },
   guess: { toText: guessText, read: readGuess },
 });

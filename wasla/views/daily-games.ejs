@@ -25,49 +25,6 @@
         <div class="row g-3 mb-3">
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('shuffle', 16) %><span class="fw-semibold"><span class="wz-ar">رتّب الحروف</span></span></div>
-              <div class="ad-card-body">
-                <% if (!set.scramble) { %><p class="small kd-muted mb-0">يحتاج 5 أسئلة بدليل وجواب من 3 إلى 7 حروف.</p><% } else { %>
-                  <ul class="list-unstyled d-grid gap-2 mb-0">
-                    <% set.scramble.words.forEach((w) => { %>
-                      <li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-tag wz-ar"><%= w.letters %></span><div class="small kd-muted wz-ar"><%= w.clue %></div></li>
-                    <% }) %>
-                  </ul>
-                <% } %>
-              </div>
-            </div>
-          </div>
-          <div class="col-xl-4 col-md-6">
-            <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dot', 16) %><span class="fw-semibold"><span class="wz-ar">فقاعات الكلمات</span></span></div>
-              <div class="ad-card-body">
-                <% if (!set.bubbles) { %><p class="small kd-muted mb-0">يحتاج فئة فيها 5 أجوبة من 4 إلى 8 حروف.</p><% } else { %>
-                  <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= set.bubbles.theme %></span></div>
-                  <ul class="list-unstyled d-grid gap-1 mb-2">
-                    <% set.bubbles.words.forEach((w) => { %>
-                      <li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-faint small wz-ar"><%= w.parts.join(' · ') %></span></li>
-                    <% }) %>
-                  </ul>
-                <% } %>
-              </div>
-            </div>
-          </div>
-          <div class="col-xl-4 col-md-6">
-            <div class="ad-card h-100">
-              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('layout-grid', 16) %><span class="fw-semibold"><span class="wz-ar">صِل المجموعات</span></span></div>
-              <div class="ad-card-body">
-                <% if (!set.groups) { %><p class="small kd-muted mb-0">يحتاج 4 فئات، في كل واحدة 4 أجوبة مختلفة من 3 إلى 8 حروف.</p><% } else { %>
-                  <ul class="list-unstyled d-grid gap-2 mb-0">
-                    <% set.groups.groups.forEach((g) => { %>
-                      <li><span class="kd-tag kd-tag-accent wz-ar"><%= g.title %></span> <span class="wz-ar"><%= g.words.map((w) => w.display).join('، ') %></span></li>
-                    <% }) %>
-                  </ul>
-                <% } %>
-              </div>
-            </div>
-          </div>
-          <div class="col-xl-4 col-md-6">
-            <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dashed', 16) %><span class="fw-semibold"><span class="wz-ar">عجلة الحروف</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.wheel) { %><p class="small kd-muted mb-0">قائمة عجلة الحروف فارغة.</p><% } else { %>

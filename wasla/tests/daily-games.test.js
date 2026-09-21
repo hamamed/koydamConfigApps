@@ -5,9 +5,8 @@ import { createAppConfig, DEFAULT_CONFIG } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import { openDatabase } from '../src/db/index.js';
 import {
-  buildBubbles, buildGroups, buildGuess, buildScramble, buildWheel, createDailyGames, GROUP_COUNT,
-  GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS, parseGuessWords, parseWheelSets, SCRAMBLE_WORDS, spelledFrom,
-  splitParts, titleGroups,
+  buildGuess, buildWheel, createDailyGames, GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS,
+  parseGuessWords, parseWheelSets, spelledFrom,
 } from '../src/daily-games.js';
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from '../src/daily-games-words.js';
 import { parseDay } from '../src/daily.js';
@@ -35,64 +34,6 @@ beforeEach(() => {
 });
 
 const rows = () => db.prepare('SELECT id, answer, clue, title FROM questions ORDER BY id').all();
-
-test('pieces are two letters, the last taking an odd one, never a single letter', () => {
-  assert.deepEqual(splitParts('طبيب'), ['طب', 'يب']);
-  assert.deepEqual(splitParts('مراكش'), ['مر', 'اكش']);
-  assert.deepEqual(splitParts('جغرافيا'), ['جغ', 'را', 'فيا']);
-  for (const word of ['مدرسة', 'مستشفيات', 'ابو']) {
-    const parts = splitParts(word);
-    assert.equal(parts.join(''), word);
-    assert.ok(parts.every((p) => letters(p).length >= 2));
-  }
-});
-
-test('the scramble takes ten clued words, shortest first, each shuffled away from itself', () => {
-  const scramble = buildScramble(rows(), 42);
-  assert.equal(scramble.words.length, SCRAMBLE_WORDS);
-  const lengths = scramble.words.map((w) => letters(w.word).length);
-  assert.deepEqual(lengths, [...lengths].sort((a, b) => a - b));
-  for (const w of scramble.words) {
-    assert.notEqual(w.letters, w.word);
-    assert.deepEqual([...w.letters].sort(), [...w.word].sort());
-    assert.ok(w.clue);
-  }
-});
-
-test('the scramble plays short rather than not at all, and gives up below five words', () => {
-  const eight = rows().slice(0, 8);
-  assert.equal(buildScramble(eight, 1).words.length, 8, 'a thin bank shortens the round');
-  const few = rows().slice(0, 4);
-  assert.equal(buildScramble(few, 1), null);
-  const noClues = rows().map((r) => ({ ...r, clue: '  ' }));
-  assert.equal(buildScramble(noClues, 1), null);
-});
-
-test('bubbles use one theme with five words, and the bubbles are exactly their pieces', () => {
-  const bubbles = buildBubbles(titleGroups(rows(), [4, 8]), 10, 7);
-  assert.equal(bubbles.words.length, 5);
-  assert.ok(Object.keys(CONTENT).includes(bubbles.theme));
-  assert.deepEqual([...bubbles.bubbles].sort(), bubbles.words.flatMap((w) => w.parts).sort());
-  for (const w of bubbles.words) assert.equal(w.parts.join(''), w.word);
-});
-
-test('groups are five titles of four different words, in a shuffled order of all twenty ids', () => {
-  const set = buildGroups(titleGroups(rows(), [3, 8]), 99);
-  assert.equal(set.groups.length, GROUP_COUNT);
-  const ids = set.groups.flatMap((g) => g.words.map((w) => w.id));
-  assert.equal(new Set(ids).size, GROUP_COUNT * 4);
-  assert.deepEqual([...set.order].sort(), [...ids].sort());
-  const words = set.groups.flatMap((g) => g.words.map((w) => w.word));
-  assert.equal(new Set(words).size, GROUP_COUNT * 4);
-  assert.equal(new Set(set.groups.map((g) => g.title)).size, GROUP_COUNT);
-});
-
-test('groups fall back to four titles, and need four', () => {
-  const four = rows().filter((r) => r.title !== 'حيوانات');
-  assert.equal(buildGroups(titleGroups(four, [3, 8]), 1).groups.length, 4);
-  const three = rows().filter((r) => r.title !== 'مهن' && r.title !== 'حيوانات');
-  assert.equal(buildGroups(titleGroups(three, [3, 8]), 1), null);
-});
 
 test('the built-in lists are clean', () => {
   const guess = parseGuessWords(DEFAULT_GUESS_WORDS);
@@ -157,7 +98,7 @@ test('a date always gets the same set, and different dates different ones', () =
   assert.equal(a.date, '2026-09-18');
   assert.equal(a.coins, DEFAULT_CONFIG.dailyGameCoins);
   assert.equal(a.allBonus, DEFAULT_CONFIG.dailyAllGamesBonus);
-  for (const kind of ['scramble', 'bubbles', 'groups', 'wheel', 'guess']) assert.ok(a[kind], kind);
+  for (const kind of ['wheel', 'guess']) assert.ok(a[kind], kind);
 });
 
 test('a bad date gets nothing', () => {
@@ -165,12 +106,9 @@ test('a bad date gets nothing', () => {
   assert.equal(games.forDate('tomorrow'), null);
 });
 
-test('games without enough questions are null while the lists still make wheel and guess', () => {
+test('the lists make wheel and guess even with no questions at all', () => {
   db.prepare('DELETE FROM questions').run();
   const set = games.forDate('2026-09-18');
-  assert.equal(set.scramble, null);
-  assert.equal(set.bubbles, null);
-  assert.equal(set.groups, null);
   assert.ok(set.wheel);
   assert.ok(set.guess);
 });
@@ -198,12 +136,10 @@ test('a saved list is used for new days and can go back to the built-in one', ()
 test('another pick differs from the automatic one, and is a playable game', () => {
   const date = '2026-09-22';
   const auto = games.automatic(date);
-  const again = games.pickAgain(date, 'scramble', 7);
-  assert.ok(again?.words?.length, 'a scramble came back');
-  assert.notDeepEqual(again, auto.scramble);
-  again.words.forEach((word) => {
-    assert.equal(letters(word.letters).length, letters(word.word).length, `${word.word} keeps its letters`);
-  });
+  const again = games.pickAgain(date, 'wheel', 7);
+  assert.ok(again?.words?.length, 'a wheel came back');
+  assert.notDeepEqual(again, auto.wheel);
+  again.words.forEach((word) => assert.ok(spelledFrom(word, again.letters), `${word} is spelled from the letters`));
 });
 
 test('another pick moves the guess word and the wheel set on too', () => {
@@ -228,12 +164,12 @@ test('another pick refuses a kind or a date it does not know', () => {
 test('copying a day puts the games it would serve on another date', () => {
   const from = '2026-09-22';
   const onto = '2026-09-23';
-  const picked = games.pickAgain(from, 'scramble', 3);
-  games.saveGame(from, 'scramble', picked, 'typed');
+  const picked = games.pickAgain(from, 'wheel', 3);
+  games.saveGame(from, 'wheel', picked, 'typed');
 
   const result = games.copyDay(onto, from);
-  assert.equal(result.copied, 5, 'all five games were copied');
-  assert.deepEqual(games.forDate(onto).scramble, picked, 'the typed game came across');
+  assert.equal(result.copied, 2, 'both games were copied');
+  assert.deepEqual(games.forDate(onto).wheel, picked, 'the typed game came across');
   // The automatic games of that day are copied as they stood, not recomputed for the new date.
   assert.deepEqual(games.forDate(onto).guess, games.forDate(from).guess);
   assert.equal(games.saved(onto).guess.source, 'auto');
@@ -248,10 +184,10 @@ test('clearing a day takes every game back to automatic', () => {
   const date = '2026-09-22';
   const auto = games.automatic(date);
   games.freeze(date);
-  assert.equal(Object.keys(games.saved(date)).length, 5);
+  assert.equal(Object.keys(games.saved(date)).length, 2);
 
-  assert.equal(games.clearDay(date), 5, 'five rows went');
+  assert.equal(games.clearDay(date), 2, 'both rows went');
   assert.deepEqual(games.saved(date), {});
-  assert.deepEqual(games.forDate(date).scramble, auto.scramble, 'the automatic pick is served again');
+  assert.deepEqual(games.forDate(date).wheel, auto.wheel, 'the automatic pick is served again');
   assert.equal(games.clearDay(date), 0, 'clearing an automatic day changes nothing');
 });

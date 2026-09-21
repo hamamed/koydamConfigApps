@@ -12,9 +12,16 @@ import { levelLabel } from './level-label.js';
 export const EVENT_TYPES = ['question_opened', 'question_solved', 'help_used', 'question_left', 'level_completed'];
 /** The daily word search (contract §5). Always `level: 0`; `word` is a question id. */
 export const WORD_SEARCH_TYPES = ['wordsearch_started', 'wordsearch_word_found', 'wordsearch_completed'];
-/** The daily games (contract §6, §9): one event each when finished, `level: 0`, with `seconds` and `stars`.
- * `marathon_completed` is Friday's run, sent once when the last round ends. */
-export const DAILY_GAME_TYPES = ['scramble_completed', 'bubbles_completed', 'groups_completed', 'wheel_completed', 'guess_completed', 'marathon_completed'];
+/**
+ * The daily games (contract §6, §9): one event each when finished, `level: 0`,
+ * with `seconds` and `stars`. `marathon_completed` is Friday's run.
+ *
+ * The first three games are gone from the app, but their events are still
+ * accepted: a phone that has not updated yet is still playing them, and its
+ * history should not be thrown away at the door.
+ */
+export const DAILY_GAME_TYPES = ['wheel_completed', 'guess_completed', 'marathon_completed',
+  'scramble_completed', 'bubbles_completed', 'groups_completed'];
 const DAILY_TYPES = [...WORD_SEARCH_TYPES, ...DAILY_GAME_TYPES];
 const KNOWN_TYPES = [...EVENT_TYPES, ...DAILY_TYPES];
 /** The crossword's per-question events, which the question stats count. */

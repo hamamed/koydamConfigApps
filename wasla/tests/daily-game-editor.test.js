@@ -3,47 +3,8 @@ import { beforeEach, test } from 'node:test';
 
 import { createAppConfig } from '../src/app-config.js';
 import { openDatabase } from '../src/db/index.js';
-import {
-  EDITORS, readBubbles, readGroups, readGuess, readScramble, readWheel, TYPED_ID_BASE,
-} from '../src/daily-game-editor.js';
+import { EDITORS, readGuess, readWheel } from '../src/daily-game-editor.js';
 import { createDailyGames } from '../src/daily-games.js';
-
-test('scramble: "answer | clue" lines, letters shuffled, hamza folded', () => {
-  const { game } = readScramble('أسد | ملك الغابة\nقلم | للكتابة\nباب | ندخل منه', 7);
-  assert.equal(game.words.length, 3);
-  assert.deepEqual(game.words[0], { ...game.words[0], id: TYPED_ID_BASE + 1, word: 'اسد', display: 'أسد', clue: 'ملك الغابة' });
-  assert.notEqual(game.words[0].letters, 'اسد');
-  assert.deepEqual([...game.words[0].letters].sort(), [...'اسد'].sort());
-});
-
-test('scramble: every problem is reported by line', () => {
-  const { errors } = readScramble('أسد\nab | x\nقلم | ك\nقلم | ك');
-  assert.equal(errors.length, 3);
-  assert.match(errors[0], /Line 1: add a clue/);
-  assert.match(errors[1], /Line 2/);
-  assert.match(errors[2], /Line 4: .* twice/);
-  assert.match(readScramble('قلم | ك').errors[0], /3 to 8/);
-});
-
-test('bubbles: theme first, then words cut into pieces, all pieces mixed', () => {
-  const { game } = readBubbles('مدن\nطنجة\nمراكش\nفاس', 3);
-  assert.equal(game.theme, 'مدن');
-  assert.deepEqual(game.words.map((w) => w.parts), [['طن', 'جة'], ['مر', 'اكش'], ['فاس']]);
-  assert.deepEqual([...game.bubbles].sort(), ['اكش', 'جة', 'طن', 'فاس', 'مر'].sort());
-  assert.match(readBubbles('مدن\nطنجة').errors[0], /3 to 8/);
-});
-
-test('groups: four or five lines of title and four words, no word twice', () => {
-  const text = 'مدن: طنجة، فاس، رباط، وجدة\nمهن: طبيب، معلم، مهندس، طاهي\nحيوانات: قرد، دجاج، سمكة، عصفور\nفواكه: تفاح، موز، عنب، رمان';
-  const { game } = readGroups(text, 5);
-  assert.equal(game.groups.length, 4);
-  assert.equal(new Set(game.order).size, 16);
-  const five = `${text}\nألوان: أحمر، أزرق، أخضر، أصفر`;
-  assert.equal(readGroups(five, 5).game.groups.length, 5);
-  assert.match(readGroups('مدن: طنجة، فاس').errors[0], /exactly 4 words/);
-  assert.match(readGroups(text.replace('موز', 'فاس')).errors[0], /two groups/);
-  assert.match(readGroups(text.split('\n').slice(0, 3).join('\n')).errors[0], /4 إلى 5/);
-});
 
 test('wheel and guess reuse the list rules', () => {
   const { game } = readWheel('حملا: حمل حلم حامل', 2);
@@ -61,11 +22,8 @@ test('wheel and guess reuse the list rules', () => {
 
 test('every game turns into text and back into the same words', () => {
   const samples = {
-    scramble: readScramble('أسد | ملك\nقلم | كتابة\nباب | مدخل', 1).game,
-    bubbles: readBubbles('مدن\nطنجة\nمراكش\nفاس', 1).game,
-    groups: readGroups('أ: قرد، دجاج، سمكة، عصفور\nب: طبيب، معلم، مهندس، طاهي\nج: طنجة، فاس، رباط، وجدة\nد: تفاح، موز، عنب، رمان', 1).game,
     wheel: readWheel('حملا: حمل حلم حامل', 1).game,
-    guess: readGuess('مدرسة').game,
+    guess: readGuess('مدرسة\nملعقة').game,
   };
   const words = (g) => JSON.stringify(g, (k, v) => (['letters', 'bubbles', 'order'].includes(k) ? undefined : v));
   for (const [kind, game] of Object.entries(samples)) {
