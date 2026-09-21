@@ -1,0 +1,96 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'ألعاب المختبر',
+          subheading: 'محتوى جِذر وقوافي · يقرأه التطبيق من /api/v1/lab',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/lab" target="_blank" rel="noopener">عرض JSON</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <p class="small kd-muted">
+        هاتان اللعبتان تحت التجربة داخل التطبيق: لا تمنحان عملات ولا نجوماً. كان محتواهما مكتوباً داخل التطبيق، وصار يُحرَّر هنا —
+        ويبقى في التطبيق نسخة مدمجة يلعب بها الهاتف إذا لم يصله رد.
+      </p>
+
+      <% lists.forEach((list) => { %>
+        <% const label = labels[list.name]; %>
+        <div class="ad-card mb-3" id="<%= list.name %>">
+          <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+            <i data-lucide="<%= list.name === 'roots' ? 'spline' : 'quote' %>" width="16" height="16"></i>
+            <span class="fw-semibold me-auto"><%= label.title %></span>
+            <span class="kd-tag"><%= list.count %> مدخلاً</span>
+            <span class="kd-tag <%= list.edited ? 'kd-tag-accent' : '' %>"><%= list.edited ? 'محرَّرة' : 'مدمجة' %></span>
+          </div>
+          <div class="ad-card-body">
+            <p class="small kd-muted mb-1"><%= label.note %></p>
+            <p class="small kd-faint mb-2"><%= label.hint %> مثال: <span class="wz-ar kd-mono"><%= label.example %></span></p>
+
+            <% const found = problems[list.name] || list.problems; %>
+            <% if (found && found.length) { %>
+              <ul class="small text-danger mb-2">
+                <% found.slice(0, 12).forEach((p) => { %>
+                  <li>السطر <%= p.line %> <span class="wz-ar">«<%= p.text %>»</span>: <%= p.reason %></li>
+                <% }) %>
+              </ul>
+            <% } %>
+
+            <form method="post" action="/admin/lab/<%= list.name %>" class="d-grid gap-2">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <textarea class="form-control wz-ar ws-words-input" name="text" rows="<%= list.name === 'roots' ? 12 : 14 %>" spellcheck="false"><%= list.text %></textarea>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm btn-kd-accent" type="submit">حفظ</button>
+                <% if (list.edited) { %>
+                  <button class="btn btn-sm btn-kd-ghost" type="submit" form="reset-<%= list.name %>">العودة إلى القائمة المدمجة</button>
+                <% } %>
+              </div>
+            </form>
+            <% if (list.edited) { %>
+              <form id="reset-<%= list.name %>" method="post" action="/admin/lab/<%= list.name %>/reset" class="d-none"
+                    data-confirm="استبدال هذه القائمة بالمدمجة؟">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              </form>
+            <% } %>
+
+            <% if (list.items.length) { %>
+              <details class="mt-3">
+                <summary class="small fw-semibold">ما يصل التطبيق (<%= list.items.length %>)</summary>
+                <div class="ad-table-wrap mt-2">
+                  <table class="ad-table">
+                    <% if (list.name === 'roots') { %>
+                      <thead><tr><th>الجذر</th><th class="text-end">الكلمات</th><th>الكلمات المقبولة</th></tr></thead>
+                      <tbody>
+                        <% list.items.forEach((root) => { %>
+                          <tr>
+                            <td class="wz-ar fw-semibold"><%= root.root %></td>
+                            <td class="text-end"><%= root.words.length %></td>
+                            <td class="wz-ar small"><%= root.words.join('، ') %></td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                    <% } else { %>
+                      <thead><tr><th>النص</th><th>الجواب</th><th>البدائل</th><th>المصدر</th></tr></thead>
+                      <tbody>
+                        <% list.items.forEach((riddle) => { %>
+                          <tr>
+                            <td class="wz-ar small"><%= riddle.before %> <span class="kd-tag">___</span> <%= riddle.after %></td>
+                            <td class="wz-ar fw-semibold"><%= riddle.answer %></td>
+                            <td class="wz-ar small kd-muted"><%= riddle.decoys.join('، ') %></td>
+                            <td class="wz-ar small"><%= riddle.source %></td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                    <% } %>
+                  </table>
+                </div>
+              </details>
+            <% } %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

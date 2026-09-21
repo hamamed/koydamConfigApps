@@ -777,3 +777,22 @@ html[dir="rtl"] { overflow-x: hidden; }
   background: var(--wz-paper);
   box-shadow: 0 var(--wz-ledge) 0 rgba(31, 45, 58, .1);
 }
+
+/* The avatar catalogue: a wall of ids, the locked ones marked. */
+.wz-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: .5rem;
+}
+.wz-avatar-cell {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .4rem .55rem;
+  border: 1.5px solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--wz-paper);
+}
+.wz-avatar-cell.is-locked { border-color: var(--wz-gold); background: #fffaf0; }
+.wz-avatar-id { font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wz-avatar-worn { margin-inline-start: auto; font-weight: 800; font-size: .8rem; color: var(--wz-teal-deep); }

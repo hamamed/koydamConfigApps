@@ -1,0 +1,102 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'الشارات',
+          subheading: 'ما يمنحه التطبيق للاعبين · ' + earnedTotal + ' شارة عند ' + players + ' لاعباً'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <p class="small kd-muted">
+        التطبيق هو من يقرر متى تُكتسب الشارة، ويرسلها مع نتائج اللاعب. هذه الصفحة تعرض ما وصل: كم لاعباً نال كل شارة، ومن هم.
+      </p>
+
+      <% if (unknown.length) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <i data-lucide="triangle-alert" width="16" height="16"></i>
+            <span class="fw-semibold">شارات لا تعرفها اللوحة</span>
+          </div>
+          <div class="ad-card-body small">
+            وصلت هذه المعرّفات من التطبيق وليست في قائمة الشارات هنا — غالباً شارة جديدة في نسخة أحدث:
+            <% unknown.forEach((u) => { %><span class="kd-tag kd-mono"><%= u.id %> · <%= u.count %></span> <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="row g-3">
+        <% kinds.forEach((group) => { %>
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <i data-lucide="award" width="16" height="16"></i>
+                <span class="fw-semibold me-auto"><%= group.title %></span>
+                <span class="kd-tag"><%= group.badges.length %></span>
+              </div>
+              <div class="ad-card-body p-0">
+                <p class="small kd-muted px-3 pt-3 mb-2"><%= group.note %></p>
+                <div class="ad-table-wrap">
+                  <table class="ad-table">
+                    <thead><tr><th>الشارة</th><th class="text-end">اللاعبون</th><th></th></tr></thead>
+                    <tbody>
+                      <% group.badges.forEach((badge) => { %>
+                        <tr>
+                          <td>
+                            <span class="fw-semibold"><%= badge.title %></span>
+                            <div class="kd-faint small kd-mono"><%= badge.id %></div>
+                          </td>
+                          <td class="text-end fw-semibold"><%= badge.count %></td>
+                          <td class="text-end">
+                            <% if (badge.count) { %>
+                              <a class="btn btn-sm btn-kd-ghost" href="/admin/badges?badge=<%= encodeURIComponent(badge.id) %>#earners">من نالها</a>
+                            <% } %>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (chosen) { %>
+        <div class="ad-card mt-3" id="earners">
+          <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+            <i data-lucide="users" width="16" height="16"></i>
+            <span class="fw-semibold me-auto">من نال «<%= chosen.title %>»</span>
+            <span class="kd-tag"><%= chosen.count %> لاعباً</span>
+            <a class="btn btn-sm btn-kd-ghost" href="/admin/badges">إغلاق</a>
+          </div>
+          <% if (!earners.length) { %>
+            <div class="ad-empty">لم ينلها أحد بعد.</div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>اللاعب</th><th class="text-end">النجوم</th><th>نالها في</th><th></th></tr></thead>
+                <tbody>
+                  <% earners.forEach((p) => { %>
+                    <tr>
+                      <td class="wz-ar fw-semibold"><%= p.username %></td>
+                      <td class="text-end kd-muted"><%= p.stars %></td>
+                      <td class="kd-mono small"><%= (p.earned_at || '').slice(0, 10) %></td>
+                      <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/profiles?q=<%= encodeURIComponent(p.username) %>">فتح الحساب</a></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+            <% if (chosen.count > earnersShown) { %>
+              <div class="ad-card-body small kd-muted">تُعرض أول <%= earnersShown %> بحسب تاريخ النيل.</div>
+            <% } %>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

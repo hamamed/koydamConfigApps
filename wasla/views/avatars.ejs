@@ -1,0 +1,90 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'الصور والإطارات',
+          subheading: avatars.length + ' صورة رمزية · ' + locked + ' منها مقفلة · ' + frames.length + ' إطار'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <p class="small kd-muted">
+        الصور مرسومة داخل التطبيق وهو الذي يفتحها؛ الخادم يقبل أي صورة من القائمة. العمود الأخير يقول كم لاعباً يلبسها الآن.
+      </p>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="lock" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">الصور المقفلة</span>
+          <span class="kd-tag"><%= locked %></span>
+        </div>
+        <div class="ad-table-wrap">
+          <table class="ad-table">
+            <thead><tr><th>الصورة</th><th>كيف تُفتح</th><th class="text-end">يلبسها</th></tr></thead>
+            <tbody>
+              <% avatars.filter((a) => a.lock).forEach((a) => { %>
+                <tr>
+                  <td class="kd-mono"><%= a.id %></td>
+                  <td>
+                    <span class="kd-tag <%= a.lock.kind === 'coins' ? 'kd-tag-warn' : a.lock.kind === 'badge' ? 'kd-tag-accent' : '' %>">
+                      <%= a.lock.kind === 'coins' ? 'بالعملات' : a.lock.kind === 'badge' ? 'بشارة' : 'بمناسبة' %>
+                    </span>
+                    <span class="wz-ar"><%= a.note %></span>
+                  </td>
+                  <td class="text-end fw-semibold"><%= a.worn %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-xl-7">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+              <i data-lucide="smile" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">كل الصور</span>
+              <span class="kd-tag"><%= players %> لاعباً</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="wz-avatar-grid">
+                <% avatars.forEach((a) => { %>
+                  <div class="wz-avatar-cell <%= a.lock ? 'is-locked' : '' %>" title="<%= a.note || 'مفتوحة للجميع' %>">
+                    <span class="wz-avatar-id kd-mono"><%= a.id %></span>
+                    <span class="wz-avatar-worn"><%= a.worn %></span>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-5">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+              <i data-lucide="frame" width="16" height="16"></i>
+              <span class="fw-semibold me-auto">الإطارات</span>
+              <span class="kd-tag"><%= profilesWithFrame %> يلبسونها</span>
+            </div>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>الإطار</th><th>كيف يُفتح</th><th class="text-end">يلبسه</th></tr></thead>
+                <tbody>
+                  <% frames.forEach((f) => { %>
+                    <tr>
+                      <td><span class="fw-semibold"><%= f.title %></span> <span class="kd-faint small kd-mono"><%= f.id %></span></td>
+                      <td class="small wz-ar"><%= f.note %></td>
+                      <td class="text-end fw-semibold"><%= f.worn %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -284,3 +284,14 @@ CREATE TABLE IF NOT EXISTS profile_badges (
   earned_at   TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (profile_id, badge)
 );
+
+-- ── v8 ──────────────────────────────────────────────────────────────────────
+
+-- The lab games' content (جِذر and قوافي), written in the panel as plain text
+-- and served to the app by /api/v1/lab. One row per list, like
+-- daily_game_lists; absent means the built-in list is served.
+CREATE TABLE IF NOT EXISTS lab_lists (
+  name        TEXT PRIMARY KEY,
+  body        TEXT NOT NULL,
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

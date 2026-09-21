@@ -15,6 +15,7 @@ import { createAudioStore } from './audio.js';
 import { config } from './config.js';
 import { createDaily } from './daily.js';
 import { createDailyGames } from './daily-games.js';
+import { createLab } from './lab.js';
 import { createDevices } from './devices.js';
 import { db } from './db/index.js';
 import { createEvents } from './events.js';
@@ -52,6 +53,7 @@ const players = createPlayers(db, { repo });
 const wordSearch = createWordSearch(db, { appConfig });
 const wordSearchDays = createWordSearchSchedule(db, { wordSearch, appConfig });
 const dailyGames = createDailyGames(db, { appConfig });
+const lab = createLab(db);
 const profiles = createProfiles(db);
 const titles = createTitles(db);
 
@@ -73,7 +75,7 @@ app.use('/api', rateLimit({
   legacyHeaders: false,
   handler: (_req, res) => res.status(429).json({ error: 'Too many requests. Try again in a minute.' }),
 }));
-app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, profiles, notifications }));
+app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications }));
 
 // Question pictures and sounds. A replaced file gets a new generated name, so
 // a file at a given name never changes and can be cached for a long time.
@@ -111,7 +113,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, profiles, titles,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, lab, profiles, titles,
 }));
 app.get('/', (_req, res) => res.redirect('/admin'));
 app.get('/health', (_req, res) => res.json({ ok: true }));

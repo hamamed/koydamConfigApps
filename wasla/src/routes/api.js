@@ -13,7 +13,7 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, profiles, notifications }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications }) {
   const router = express.Router();
 
   const imageOf = (word) => (word.imageFile ? {
@@ -117,6 +117,14 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     const set = dailyGames.forDate(parsed.date);
     if (!set) return res.status(404).json({ error: 'There are no daily games yet.' });
     res.json(set);
+  });
+
+  // The lab games' content (جِذر and قوافي). The app ships with the same lists
+  // and falls back to them, so this answering late — or not at all — only means
+  // the phone plays the built-in ones.
+  router.get('/lab', cacheable, (_req, res) => {
+    if (!lab) return res.status(503).json({ error: 'محتوى المختبر غير متاح.' });
+    res.json(lab.content());
   });
 
   if (profiles) registerProfileApi(router, { profiles, notifications });

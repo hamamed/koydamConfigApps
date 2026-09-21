@@ -32,9 +32,17 @@
       <i data-lucide="list" width="17" height="17"></i>
       <span>قوائم الكلمات</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/lab') ? 'is-active' : '' %>" href="/admin/lab">
+      <i data-lucide="flask-conical" width="17" height="17"></i>
+      <span>ألعاب المختبر</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/wordsearch') ? 'is-active' : '' %>" href="/admin/wordsearch">
       <i data-lucide="tags" width="17" height="17"></i>
       <span>مواضيع البحث</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/events') ? 'is-active' : '' %>" href="/admin/events">
+      <i data-lucide="moon" width="17" height="17"></i>
+      <span>المناسبات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/import') ? 'is-active' : '' %>" href="/admin/import">
       <i data-lucide="file-up" width="17" height="17"></i>
@@ -53,6 +61,14 @@
     <a class="ad-nav-link <%= currentPath.startsWith('/boards') ? 'is-active' : '' %>" href="/admin/boards">
       <i data-lucide="trophy" width="17" height="17"></i>
       <span>المتصدرون</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/badges') ? 'is-active' : '' %>" href="/admin/badges">
+      <i data-lucide="award" width="17" height="17"></i>
+      <span>الشارات</span>
+    </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/avatars') ? 'is-active' : '' %>" href="/admin/avatars">
+      <i data-lucide="smile" width="17" height="17"></i>
+      <span>الصور والإطارات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/stats') ? 'is-active' : '' %>" href="/admin/stats">
       <i data-lucide="chart-column" width="17" height="17"></i>

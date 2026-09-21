@@ -1,0 +1,77 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'المناسبات',
+          subheading: 'رمضان والعيدان والجمعة · ما يقع في الـ' + aheadDays + ' يوماً القادمة'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <p class="small kd-muted">
+        التواريخ من تقويم أم القرى، وهي التي يسأل عنها البحث عن الكلمات ومخطِّط الأيام — فما تراه هنا هو ما سيصل اللاعبين.
+        اليوم المخطَّط يدوياً يبقى كما خطّطته: المناسبة لا تغيّر يوماً مجمَّداً.
+      </p>
+
+      <% if (hijriMissing) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-body small">
+            تعذّر حساب التقويم الهجري على هذا الخادم، فلا مناسبات تظهر. الجمعة وحدها ستبقى تعمل.
+          </div>
+        </div>
+      <% } %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="moon" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">المواسم القادمة</span>
+          <span class="kd-tag"><%= seasons.length %></span>
+        </div>
+        <% if (!seasons.length) { %>
+          <div class="ad-empty">لا موسم في الـ<%= aheadDays %> يوماً القادمة.</div>
+        <% } else { %>
+          <div class="ad-table-wrap">
+            <table class="ad-table align-middle">
+              <thead><tr><th>المناسبة</th><th>من</th><th>إلى</th><th class="text-end">أيام</th><th>يبدأ بعد</th><th>ما يتغيّر</th></tr></thead>
+              <tbody>
+                <% seasons.forEach((s) => { %>
+                  <tr>
+                    <td class="fw-semibold text-nowrap"><%= s.title %></td>
+                    <td class="kd-mono"><%= s.from %></td>
+                    <td class="kd-mono"><%= s.to %></td>
+                    <td class="text-end"><%= s.days %></td>
+                    <td class="kd-muted text-nowrap"><%= s.starts === 0 ? 'جارٍ الآن' : s.starts + ' يوماً' %></td>
+                    <td class="small">
+                      <span class="kd-tag kd-tag-accent wz-ar"><%= s.themeTitle %></span>
+                      <span class="kd-faint"><%= s.words %> كلمة</span>
+                      <div class="kd-muted mt-1"><%= s.note %></div>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="calendar-check" width="16" height="16"></i>
+          <span class="fw-semibold me-auto">الجُمَع القادمة</span>
+          <span class="kd-tag kd-tag-accent wz-ar"><%= fridayTheme %></span>
+          <span class="kd-faint small"><%= fridayWords %> كلمة</span>
+        </div>
+        <div class="ad-card-body">
+          <p class="small kd-muted mb-2"><%= fridayNote %> رمضان والعيدان تسبق الجمعة إذا وقعتا في اليوم نفسه.</p>
+          <div class="d-flex flex-wrap gap-2">
+            <% fridays.forEach((f) => { %>
+              <a class="btn btn-sm btn-kd-outline kd-mono" href="/admin/days/<%= f.from %>"><%= f.from %></a>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
