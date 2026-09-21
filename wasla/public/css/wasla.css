@@ -533,7 +533,15 @@ body {
   box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
   background: var(--wz-paper);
 }
-.ad-card-head { border-bottom: var(--wz-line) solid var(--kd-line); }
+/*
+ * The shared head spreads its children to both ends, which is right for a head
+ * that carries buttons — those all claim the far end with `me-auto` — but threw
+ * a bare title across the card, away from its own icon. Start at the start.
+ */
+.ad-card-head {
+  border-bottom: var(--wz-line) solid var(--kd-line);
+  justify-content: flex-start;
+}
 .ad-table thead th {
   background: var(--wz-board);
   color: var(--wz-teal-deep);
