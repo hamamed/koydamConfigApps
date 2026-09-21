@@ -808,3 +808,55 @@ html[dir="rtl"] { overflow-x: hidden; }
 
 /* The mark in an empty picture frame: a question with no picture. */
 .wz-none-mark { font-size: .72rem; font-weight: 800; color: var(--kd-faint); }
+
+/* ------------------------------------------------------- the logo ------- */
+/*
+ * The app's logo, in CSS: three game pieces that overlap and lean a little,
+ * each with the pack's ink border and the ledge under it. Drawn rather than
+ * shipped as a picture so it stays sharp at any size and needs no file.
+ */
+.wz-logo {
+  display: inline-flex;
+  align-items: center;
+  direction: rtl;
+  padding-bottom: 3px;
+  flex: none;
+}
+.wz-logo-tile {
+  --wz-tile: 26px;
+  width: var(--wz-tile);
+  height: var(--wz-tile);
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--wz-ink);
+  border-radius: calc(var(--wz-tile) * 0.26);
+  box-shadow: 0 3px 0 var(--wz-ink);
+  font-family: "Tajawal", sans-serif;
+  font-weight: 900;
+  font-size: calc(var(--wz-tile) * 0.56);
+  line-height: 1;
+  color: #fff;
+  /* The letter is outlined in ink, as the app outlines it. */
+  -webkit-text-stroke: calc(var(--wz-tile) * 0.03) var(--wz-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 calc(var(--wz-tile) * 0.04) 0 rgba(31, 45, 58, .35);
+  margin-inline-start: calc(var(--wz-tile) * -0.12);
+}
+.wz-logo-tile:first-child { margin-inline-start: 0; }
+/* The shine the app draws across the top of a piece. */
+.wz-logo-tile::before {
+  content: "";
+  position: absolute;
+  width: 58%;
+  height: 13%;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .34);
+  transform: translateY(calc(var(--wz-tile) * -0.29));
+}
+.wz-logo-tile { position: relative; overflow: hidden; }
+.wz-logo-a { background: linear-gradient(180deg, #2cc4bb, var(--wz-teal)); transform: rotate(-7deg); z-index: 3; }
+.wz-logo-b { background: linear-gradient(180deg, #ffe79a, var(--wz-gold)); transform: rotate(5deg) translateY(-6%); z-index: 2; }
+.wz-logo-c { background: linear-gradient(180deg, #6e69b8, var(--wz-indigo)); transform: rotate(-4deg) translateY(2%); z-index: 1; }
+
+/* On the teal brand bar the tiles carry the bar, so the wordmark sits beside them. */
+.ad-brand .wz-logo { margin-inline-end: .1rem; }

@@ -1,0 +1,7 @@
+<%# The game's logo, drawn rather than fetched: three tiles, tilted and overlapping,
+    the way LogoView draws them in the app. `size` is a tile's side in pixels. %>
+<span class="wz-logo" style="--wz-tile: <%= typeof size === 'undefined' ? 26 : size %>px" role="img" aria-label="شبّك">
+  <span class="wz-logo-tile wz-logo-a">ش</span>
+  <span class="wz-logo-tile wz-logo-b">بّ</span>
+  <span class="wz-logo-tile wz-logo-c">ك</span>
+</span>
