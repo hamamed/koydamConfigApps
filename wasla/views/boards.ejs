@@ -1,0 +1,81 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'Leaderboards',
+          subheading: 'The five boards the app shows, exactly as players see them',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/leaderboards/' + board.id + '" target="_blank" rel="noopener">This board as JSON</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <% boards.forEach((b) => { %>
+          <a class="btn btn-sm <%= b.id === board.id ? 'btn-kd' : 'btn-kd-outline' %>"
+             href="/admin/boards?board=<%= b.id %><%= b.unit === 'time' ? '&date=' + date : '' %>">
+            <%= b.en %> · <span class="wz-ar"><%= b.ar %></span>
+          </a>
+        <% }) %>
+        <% if (board.unit === 'time') { %>
+          <form method="get" action="/admin/boards" class="d-flex align-items-center gap-2 ms-auto m-0">
+            <input type="hidden" name="board" value="<%= board.id %>">
+            <input class="form-control form-control-sm wz-date" type="date" name="date" value="<%= date %>" max="<%= today %>">
+            <button class="btn btn-sm btn-kd-outline" type="submit">Show</button>
+          </form>
+        <% } %>
+      </div>
+
+      <div class="ad-card">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <i data-lucide="trophy" width="16" height="16"></i>
+          <span class="fw-semibold me-auto"><%= board.note %><% if (board.unit === 'time') { %> · <%= date %><% } %></span>
+          <span class="kd-tag"><%= data ? data.total : 0 %> on the board</span>
+        </div>
+        <% if (!data || !data.entries.length) { %>
+          <div class="ad-empty">
+            <% if (board.unit === 'time') { %>
+              No one has finished <%= date === today ? "today's" : "that day's" %> puzzle yet.
+            <% } else { %>
+              No player has a score on this board yet.
+            <% } %>
+          </div>
+        <% } else { %>
+          <div class="ad-table-wrap">
+            <table class="table ad-table align-middle">
+              <thead>
+                <tr>
+                  <th class="wz-rank-col">#</th>
+                  <th>Player</th>
+                  <th>Stars</th>
+                  <th><%= board.unit === 'time' ? 'Time' : board.unit === 'days' ? 'Days' : board.unit === 'stars' ? 'Stars' : 'Points' %></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% data.entries.forEach((row) => { %>
+                  <tr>
+                    <td class="fw-semibold"><%= row.rank %></td>
+                    <td>
+                      <span class="wz-ar fw-semibold"><%= row.username %></span>
+                      <% if (row.frame) { %><span class="kd-tag"><%= row.frame %></span><% } %>
+                    </td>
+                    <td class="kd-muted"><%= row.stars ?? 0 %></td>
+                    <td class="fw-semibold"><%= board.unit === 'time' ? clockText(row.value) : row.value.toLocaleString('en') %></td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-kd-ghost" href="/admin/profiles?q=<%= encodeURIComponent(row.username) %>">Open profile</a>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <div class="ad-card-body small kd-muted">
+            Top <%= size %> shown. Banned players never appear here, in the panel or in the app.
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

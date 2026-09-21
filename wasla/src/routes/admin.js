@@ -19,6 +19,7 @@ import { registerDays } from './admin-days.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { registerPlayers } from './admin-players.js';
+import { registerBoards } from './admin-boards.js';
 import { registerProfiles } from './admin-profiles.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
@@ -667,6 +668,7 @@ export function adminRouter({
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });
   if (profiles) registerProfiles(router, { profiles });
+  if (profiles) registerBoards(router, { profiles });
   if (wordSearch && wordSearchDays) {
     registerDaily(router, { wordSearch, wordSearchDays });
     registerWordSearch(router, { wordSearch });

@@ -182,6 +182,70 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     res.redirect(`/admin/days/${parsed.date}#${kind}`);
   });
 
+  /** A different pick for one game: built fresh, then saved like any other plan. */
+  router.post('/days/:date/games/:kind/again', (req, res) => {
+    const parsed = dateParam(req, res);
+    if (!parsed) return;
+    const { kind } = req.params;
+    if (!GAME_KINDS.includes(kind)) return res.redirect(`/admin/days/${parsed.date}`);
+    if (isPast(parsed.date)) {
+      req.flash('danger', 'Past days cannot change.');
+      return res.redirect(`/admin/days/${parsed.date}`);
+    }
+    // The nonce only has to differ from the last one; the pick it produces is
+    // saved, so nothing downstream depends on the number itself.
+    const game = dailyGames.pickAgain(parsed.date, kind, Math.floor(Math.random() * 100_000) + 1);
+    if (!game) {
+      req.flash('danger', `${GAME_LABELS[kind].en}: there is nothing to pick from — add questions or list entries first.`);
+    } else {
+      dailyGames.saveGame(parsed.date, kind, game, 'auto');
+      req.flash('success', `${GAME_LABELS[kind].en}: a new pick for ${parsed.date}.`);
+    }
+    res.redirect(`/admin/days/${parsed.date}#${kind}`);
+  });
+
+  /** Copies another day's games (and its word search) onto this one. */
+  router.post('/days/:date/copy', (req, res) => {
+    const parsed = dateParam(req, res);
+    if (!parsed) return;
+    if (isPast(parsed.date)) {
+      req.flash('danger', 'Past days cannot change.');
+      return res.redirect(`/admin/days/${parsed.date}`);
+    }
+    const from = String(req.body.from ?? '').trim();
+    const result = dailyGames.copyDay(parsed.date, from);
+    if (result.error) {
+      req.flash('danger', result.error);
+      return res.redirect(`/admin/days/${parsed.date}`);
+    }
+    const source = wordSearchDays.get(from);
+    let words = false;
+    if (source?.board) {
+      const saved = wordSearchDays.save(parsed.date, {
+        theme: source.theme, size: source.size, words: source.words, seed: source.seed, board: source.board, source: 'custom',
+      });
+      words = !saved.error;
+    }
+    req.flash('success', `Copied ${from}: ${result.copied} game(s)${words ? ' and the word search' : ''}.`);
+    res.redirect(`/admin/days/${parsed.date}`);
+  });
+
+  /** The whole day back to automatic. */
+  router.post('/days/:date/clear', (req, res) => {
+    const parsed = dateParam(req, res);
+    if (!parsed) return;
+    if (isPast(parsed.date)) {
+      req.flash('danger', 'Past days cannot change.');
+      return res.redirect(`/admin/days/${parsed.date}`);
+    }
+    const cleared = dailyGames.clearDay(parsed.date);
+    const hadWords = wordSearchDays.remove(parsed.date);
+    req.flash('success', cleared || hadWords
+      ? `${parsed.date} is automatic again: ${cleared} game(s)${hadWords ? ' and the word search' : ''} cleared.`
+      : `${parsed.date} was already automatic.`);
+    res.redirect(`/admin/days/${parsed.date}`);
+  });
+
   router.post('/days/:date/games/:kind/auto', (req, res) => {
     const parsed = dateParam(req, res);
     if (!parsed) return;

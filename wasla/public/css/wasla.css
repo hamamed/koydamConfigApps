@@ -427,3 +427,169 @@
 .wz-generate-category:hover { border-color: var(--kd-line-strong); }
 .wz-generate-field { display: grid; gap: .2rem; min-width: 8rem; }
 .wz-generate-category.is-disabled { opacity: .45; cursor: not-allowed; }
+
+/* ===================================================================== *
+ *  شبّك — the panel wears the game's clothes.
+ *
+ *  koydam.css is written entirely in `--kd-*` tokens, so the whole shell
+ *  can be re-coloured from here without touching the shared stylesheet
+ *  (which five other panels read). What tokens cannot express — the ink
+ *  outline and the ledge under every plate, the two game faces — is added
+ *  below, class by class, using the names admin.css already defines.
+ * ===================================================================== */
+
+:root {
+  /* The game's palette, from Wasla/DesignSystem/Palette.swift */
+  --wz-ink: #1f2d3a;
+  --wz-teal-deep: #0e7f7a;
+  --wz-gold: #f5c33b;
+  --wz-gold-light: #ffe79a;
+  --wz-coral: #ff7a59;
+  --wz-green: #2e9b74;
+  --wz-green-deep: #1f7155;
+  --wz-red: #d8483b;
+  --wz-paper: #ffffff;
+  --wz-board-1: #e9f6f3;
+  /* Every plate in the app is drawn with this border and this ledge. */
+  --wz-line: 2px;
+  --wz-ledge: 3px;
+
+  /* Shell tokens */
+  --kd-bg: var(--wz-board-1);
+  --kd-surface: var(--wz-paper);
+  --kd-surface-2: var(--wz-board);
+  --kd-ink: var(--wz-ink);
+  --kd-ink-2: #2b3f4d;
+  --kd-muted: #5d7c80;
+  --kd-faint: #8aa7ab;
+  --kd-line: #cfe4e0;
+  --kd-line-strong: #a9cfc9;
+  --kd-accent: var(--wz-teal);
+  --kd-accent-ink: var(--wz-teal-deep);
+  --kd-accent-soft: var(--wz-board-1);
+  --kd-ok: var(--wz-green-deep);
+  --kd-warn: #8a5300;
+  --kd-danger: var(--wz-red);
+  --kd-radius: 18px;
+  --kd-radius-sm: 12px;
+  --kd-radius-lg: 24px;
+  --kd-shadow: 0 var(--wz-ledge) 0 rgba(31, 45, 58, .16);
+  --kd-shadow-lift: 0 6px 0 rgba(31, 45, 58, .18);
+  --bs-body-font-family: "Tajawal", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(120% 80% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    var(--kd-bg);
+}
+
+/* Lalezar is the app's display face: titles, figures, the brand. */
+.ad-page-title, .ad-kpi-value, .ad-brand, .kd-h1, .kd-h2, .kd-h3, .kd-h4, .wz-display {
+  font-family: "Lalezar", "Tajawal", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.ad-page-title { color: var(--wz-teal-deep); font-size: 1.65rem; }
+.ad-kpi-value { color: var(--wz-ink); }
+
+/* ----------------------------------------------------------- shell ---- */
+
+.ad-sidebar {
+  background: var(--wz-paper);
+  border-right: var(--wz-line) solid var(--wz-ink);
+}
+.ad-brand {
+  background: var(--wz-teal);
+  color: var(--wz-paper);
+  border-bottom: var(--wz-line) solid var(--wz-ink);
+  font-size: 1.25rem;
+}
+.ad-brand small { color: rgba(255, 255, 255, .75); }
+.ad-nav-label { color: var(--wz-teal-deep); letter-spacing: .08em; }
+.ad-nav-link { border-radius: var(--kd-radius-sm); font-weight: 700; color: var(--kd-ink-2); }
+.ad-nav-link:hover { background: var(--wz-board-1); color: var(--wz-ink); }
+/* The chosen page is a tile, like a pressed piece in the game. */
+.ad-nav-link.is-active {
+  background: var(--wz-gold-light);
+  color: var(--wz-ink);
+  border: var(--wz-line) solid var(--wz-ink);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  margin-bottom: var(--wz-ledge);
+}
+.ad-nav-link.is-active .lucide { color: var(--wz-ink); }
+.ad-nav-link.is-active .ad-badge { background: var(--wz-ink); color: var(--wz-paper); }
+.ad-sidebar-foot { border-top: var(--wz-line) solid var(--kd-line); }
+
+.ad-topbar {
+  background: rgba(233, 246, 243, .9);
+  border-bottom: var(--wz-line) solid var(--wz-ink);
+}
+
+/* ------------------------------------------------------ plates -------- */
+
+.ad-card, .ad-kpi, .ad-login-card, .ad-editor, .ad-preview, .ad-drop {
+  border: var(--wz-line) solid var(--wz-ink);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  background: var(--wz-paper);
+}
+.ad-card-head { border-bottom: var(--wz-line) solid var(--kd-line); }
+.ad-table thead th {
+  background: var(--wz-board);
+  color: var(--wz-teal-deep);
+  border-bottom: var(--wz-line) solid var(--kd-line);
+  letter-spacing: .04em;
+}
+.ad-table tbody td { border-top: 1px solid var(--kd-line); }
+.ad-table tbody tr:hover > td { background: var(--wz-board-1); }
+
+/* Status pills: the game's own faces, outlined like its badges. */
+.ad-status {
+  border: 1.5px solid var(--wz-ink);
+  font-weight: 800;
+  padding: .12rem .55rem;
+}
+.ad-status-published { background: var(--wz-green); color: #fff; }
+.ad-status-draft     { background: var(--wz-board); color: var(--kd-ink-2); }
+.ad-status-archived  { background: var(--wz-red); color: #fff; }
+.ad-status-sent      { background: var(--wz-gold-light); color: #6b4300; }
+
+/* ------------------------------------------------------ controls ------ */
+
+/* Every button is one of the game's plates: a face, an ink border, a ledge
+   under it, and a press that drops the plate onto the ledge. */
+.btn-kd, .btn-kd-accent, .btn-kd-outline, .btn-kd-danger {
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-sm);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  font-weight: 800;
+  transform: translateY(0);
+  transition: transform var(--kd-fast) var(--kd-ease), box-shadow var(--kd-fast) var(--kd-ease);
+}
+.btn-kd:active, .btn-kd-accent:active, .btn-kd-outline:active, .btn-kd-danger:active {
+  transform: translateY(var(--wz-ledge));
+  box-shadow: 0 0 0 var(--wz-ink);
+}
+.btn-kd { background: var(--wz-gold); color: var(--wz-ink); }
+.btn-kd:hover { background: var(--wz-gold-light); color: var(--wz-ink); }
+.btn-kd-accent { background: var(--wz-teal); color: var(--wz-paper); }
+.btn-kd-accent:hover { background: var(--wz-teal-deep); color: var(--wz-paper); }
+.btn-kd-outline { background: var(--wz-paper); color: var(--wz-ink); }
+.btn-kd-outline:hover { background: var(--wz-board-1); color: var(--wz-ink); }
+.btn-kd-danger { background: var(--wz-red); color: #fff; }
+.btn-kd-danger:hover { background: #b93a2f; color: #fff; }
+.btn-kd-ghost { color: var(--wz-teal-deep); font-weight: 700; }
+.btn-kd-ghost:hover { background: var(--wz-board-1); color: var(--wz-ink); }
+
+.form-control, .form-select {
+  border: var(--wz-line) solid var(--kd-line-strong);
+  border-radius: var(--kd-radius-sm);
+  font-weight: 500;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--wz-teal);
+  box-shadow: 0 0 0 3px rgba(20, 164, 158, .18);
+}
+.form-label { font-weight: 700; color: var(--kd-ink-2); }
+.wz-date { max-width: 11rem; }
+.wz-rank-col { width: 3.5rem; }

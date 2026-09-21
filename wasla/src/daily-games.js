@@ -256,6 +256,32 @@ export function createDailyGames(db, { appConfig }) {
     };
   }
 
+  /**
+   * Another pick for one game on a date.
+   *
+   * The automatic pick is a pure function of the date, so asking for "a
+   * different one" needs a number from outside it: `nonce` shifts both the
+   * rotation (which words the day lands on) and the seed (how they are
+   * scrambled). The caller saves whatever comes back, so the nonce itself
+   * never has to be remembered.
+   */
+  function pickAgain(date, kind, nonce = 1) {
+    const parsed = parseDay(date);
+    if (!parsed || !GAME_KINDS.includes(kind)) return null;
+    const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 1;
+    const day = parsed.day + step;
+    const seed = (seedFor(parsed.day, kind) ^ Math.imul(step + 1, 2654435761)) >>> 0;
+    const rows = questions();
+    switch (kind) {
+      case 'scramble': return buildScramble(rows, seed);
+      case 'bubbles': return buildBubbles(titleGroups(rows, BUBBLE_LETTERS), day, seed);
+      case 'groups': return buildGroups(titleGroups(rows, GROUP_LETTERS), seed);
+      case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
+      case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
+      default: return null;
+    }
+  }
+
   // ── Days planned in the panel ─────────────────────────────────────────────
 
   /** `{ kind: { game, source, updatedAt } }` saved for a date (absent kinds are automatic). */
@@ -282,6 +308,30 @@ export function createDailyGames(db, { appConfig }) {
 
   /** Back to automatic for that game and date. */
   const resetGame = (date, kind) => db.prepare('DELETE FROM daily_game_days WHERE date = ? AND kind = ?').run(date, kind).changes > 0;
+
+  /** Every game on a date back to automatic; the number of rows that went. */
+  const clearDay = (date) => db.prepare('DELETE FROM daily_game_days WHERE date = ?').run(date).changes;
+
+  /**
+   * Puts the games of `from` on `date` — what players actually got (or would
+   * get) that day, planned or automatic, so a good day can be run again.
+   */
+  function copyDay(date, from) {
+    if (!parseDay(date) || !parseDay(from)) return { error: 'That is not a valid date.' };
+    if (date === from) return { error: 'Pick a different day to copy from.' };
+    const auto = automatic(from) ?? {};
+    const have = saved(from);
+    let copied = 0;
+    db.transaction(() => {
+      for (const kind of GAME_KINDS) {
+        const game = have[kind]?.game ?? auto[kind];
+        if (!game) continue;
+        saveGame(date, kind, game, 'auto');
+        copied++;
+      }
+    })();
+    return { copied };
+  }
 
   /** Saves the automatic pick of every game not yet saved for the date, so later edits to questions or lists leave it alone. */
   function freeze(date) {
@@ -320,5 +370,5 @@ export function createDailyGames(db, { appConfig }) {
     return { date: parsed.date, coins: config.dailyGameCoins, allBonus: config.dailyAllGamesBonus, ...games };
   }
 
-  return { forDate, automatic, saved, saveGame, resetGame, freeze, plannedBetween, lists, saveList, resetList };
+  return { forDate, automatic, pickAgain, saved, saveGame, resetGame, clearDay, copyDay, freeze, plannedBetween, lists, saveList, resetList };
 }

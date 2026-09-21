@@ -178,3 +178,64 @@ test('a saved list is used for new days and can go back to the built-in one', ()
   assert.equal(games.saveList('nope', 'x').error, 'Unknown list.');
   assert.match(games.saveList('wheel', '').error, /at least one/);
 });
+
+test('another pick differs from the automatic one, and is a playable game', () => {
+  const date = '2026-09-22';
+  const auto = games.automatic(date);
+  const again = games.pickAgain(date, 'scramble', 7);
+  assert.ok(again?.words?.length, 'a scramble came back');
+  assert.notDeepEqual(again, auto.scramble);
+  again.words.forEach((word) => {
+    assert.equal(letters(word.letters).length, letters(word.word).length, `${word.word} keeps its letters`);
+  });
+});
+
+test('another pick moves the guess word and the wheel set on too', () => {
+  const date = '2026-09-22';
+  const auto = games.automatic(date);
+  const guesses = new Set();
+  const wheels = new Set();
+  for (let nonce = 1; nonce <= 6; nonce++) {
+    guesses.add(games.pickAgain(date, 'guess', nonce).word);
+    wheels.add(games.pickAgain(date, 'wheel', nonce).letters);
+  }
+  assert.ok(guesses.size > 1, 'the guess word is not the same every time');
+  assert.ok(wheels.size > 1, 'the wheel letters are not the same every time');
+  assert.ok([...guesses].some((word) => word !== auto.guess.word), 'at least one differs from the automatic pick');
+});
+
+test('another pick refuses a kind or a date it does not know', () => {
+  assert.equal(games.pickAgain('2026-09-22', 'nonsense', 1), null);
+  assert.equal(games.pickAgain('not-a-date', 'guess', 1), null);
+});
+
+test('copying a day puts the games it would serve on another date', () => {
+  const from = '2026-09-22';
+  const onto = '2026-09-23';
+  const picked = games.pickAgain(from, 'scramble', 3);
+  games.saveGame(from, 'scramble', picked, 'typed');
+
+  const result = games.copyDay(onto, from);
+  assert.equal(result.copied, 5, 'all five games were copied');
+  assert.deepEqual(games.forDate(onto).scramble, picked, 'the typed game came across');
+  // The automatic games of that day are copied as they stood, not recomputed for the new date.
+  assert.deepEqual(games.forDate(onto).guess, games.forDate(from).guess);
+  assert.equal(games.saved(onto).guess.source, 'auto');
+});
+
+test('a day cannot be copied onto itself, and an unknown date is refused', () => {
+  assert.equal(games.copyDay('2026-09-22', '2026-09-22').error, 'Pick a different day to copy from.');
+  assert.equal(games.copyDay('2026-09-22', 'yesterday').error, 'That is not a valid date.');
+});
+
+test('clearing a day takes every game back to automatic', () => {
+  const date = '2026-09-22';
+  const auto = games.automatic(date);
+  games.freeze(date);
+  assert.equal(Object.keys(games.saved(date)).length, 5);
+
+  assert.equal(games.clearDay(date), 5, 'five rows went');
+  assert.deepEqual(games.saved(date), {});
+  assert.deepEqual(games.forDate(date).scramble, auto.scramble, 'the automatic pick is served again');
+  assert.equal(games.clearDay(date), 0, 'clearing an automatic day changes nothing');
+});

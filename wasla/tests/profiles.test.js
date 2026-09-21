@@ -5,7 +5,7 @@ import express from 'express';
 
 import { openDatabase } from '../src/db/index.js';
 import {
-  AVATARS, createProfiles, FRAMES, readDailyTime, readFrame, readStats, readUsername, usernameKey,
+  AVATARS, BOARDS, createProfiles, FRAMES, readDailyTime, readFrame, readStats, readUsername, usernameKey,
 } from '../src/profiles.js';
 import { apiRouter } from '../src/routes/api.js';
 
@@ -313,4 +313,16 @@ test('HTTP: frames are listed, set and cleared through PATCH, and a bad one is a
   const cleared = await call('/profile/me', { method: 'PATCH', token, body: { frame: '' } });
   assert.equal((await cleared.json()).profile.frame, null);
   assert.equal((await call('/profile/me', { method: 'DELETE', token })).status, 204);
+});
+
+test('every board the app can ask for has a panel label', async () => {
+  const { BOARD_LABELS, clockText } = await import('../src/routes/admin-boards.js');
+  for (const board of BOARDS) {
+    assert.ok(BOARD_LABELS[board], `${board} is missing from the panel's board labels`);
+    assert.ok(BOARD_LABELS[board].ar, `${board} has no Arabic name`);
+  }
+  assert.equal(Object.keys(BOARD_LABELS).length, BOARDS.length, 'no label is left over from a board that went');
+  assert.equal(clockText(0), '0:00');
+  assert.equal(clockText(65), '1:05');
+  assert.equal(clockText(600), '10:00');
 });
