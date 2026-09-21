@@ -67,3 +67,20 @@ authRouter.post('/api/logout', async (req, res) => {
   await destroySession(req, res);
   res.json({ ok: true });
 });
+
+/**
+ * Sign out, for the panels that share this session.
+ *
+ * The cookie is set on `.hamaprojects.com`, so a panel that only destroys its
+ * own session is signed straight back in on the next page — its "sign out"
+ * appears to do nothing. This ends the session here and returns the person to
+ * the panel they came from.
+ *
+ * A GET because it is a plain link in another service's page. The worst a
+ * forged one can do is sign somebody out, and `next` goes through the same
+ * allowlist single sign-on uses, so it cannot bounce them anywhere else.
+ */
+authRouter.get('/logout', async (req, res) => {
+  await destroySession(req, res);
+  res.redirect(safeRedirect(req.query?.next) ?? '/login');
+});

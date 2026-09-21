@@ -122,8 +122,18 @@ export function adminRouter({
     res.redirect('/admin');
   });
 
+  /**
+   * Sign out of the panel — and of the platform that signed us in.
+   *
+   * The platform's cookie is set on the parent domain and `loadUser` prefers
+   * it, so destroying this session alone left the next page signed in again.
+   */
   router.post('/logout', (req, res) => {
-    req.session.destroy(() => res.redirect('/admin/login'));
+    const back = `${config.publicUrl}/admin/login`;
+    const platform = config.platformUrl
+      ? `${config.platformUrl}/logout?next=${encodeURIComponent(back)}`
+      : '/admin/login';
+    req.session.destroy(() => res.redirect(platform));
   });
 
   router.use(requireAuth);

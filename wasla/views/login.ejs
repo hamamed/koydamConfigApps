@@ -1,32 +1,35 @@
 <%- include('partials/head') %>
-<div class="kd-auth">
-  <div class="kd-auth-card">
-    <div class="mb-3"><%- include('partials/brand', { size: 48 }) %></div>
-    <h1 class="kd-h4 mb-1">لوحة تحكم شبّك</h1>
-    <p class="kd-muted small mb-4">ألغاز الكلمات المتقاطعة وأسئلتها وصورها.</p>
+<div class="wz-auth">
+  <div class="wz-auth-card">
+    <div class="wz-auth-logo"><%- include('partials/brand', { size: 54 }) %></div>
+    <p class="wz-auth-lede">لوحة تحكم اللعبة: الألغاز والأسئلة وصورها ولغز اليوم.</p>
 
     <%- include('partials/flash') %>
 
     <% if (platformUrl) { %>
-      <a class="btn btn-kd w-100 mb-3" href="<%= platformUrl %>/sso/wasla">
+      <a class="btn btn-kd w-100" href="<%= platformUrl %>/sso/wasla">
         <span class="me-1"><%- icon('log-in', 16) %></span>
         الدخول عبر Koydam
       </a>
-      <div class="kd-divider my-3"><span>or</span></div>
+      <div class="wz-auth-or"><span>أو</span></div>
     <% } %>
 
-    <form method="post" action="/admin/login">
+    <form method="post" action="/admin/login" class="d-grid gap-2 text-end">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <div class="mb-2">
+      <div>
         <label class="form-label small fw-semibold" for="username">اسم المستخدم</label>
         <input class="form-control" id="username" name="username" autocomplete="username" required autofocus>
       </div>
-      <div class="mb-3">
+      <div>
         <label class="form-label small fw-semibold" for="password">كلمة المرور</label>
         <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
       </div>
-      <button class="btn btn-kd-outline w-100" type="submit">دخول</button>
+      <button class="btn btn-kd-accent w-100 mt-1" type="submit">دخول</button>
     </form>
   </div>
+
+  <p class="wz-auth-foot">
+    <a href="/privacy">سياسة الخصوصية</a> · <a href="/support">الدعم</a>
+  </p>
 </div>
 <%- include('partials/foot') %>

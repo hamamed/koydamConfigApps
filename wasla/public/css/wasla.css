@@ -966,3 +966,57 @@ html { scrollbar-gutter: stable; }
 @media (max-width: 575.98px) {
   .wz-page-icon { display: none; }
 }
+
+/* ------------------------------------------------------ signing in ------ */
+/*
+ * The way into the panel looks like the game it administers: the mint ground
+ * with its light falling from above, the logo and its ribbon, and one paper
+ * plate holding the form.
+ */
+.wz-auth {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  background:
+    radial-gradient(120% 70% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 62%),
+    var(--wz-board-1);
+}
+.wz-auth-card {
+  width: min(24rem, 100%);
+  background: var(--wz-paper);
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: 0 5px 0 var(--wz-ink);
+  padding: 1.6rem 1.5rem 1.7rem;
+  text-align: center;
+}
+.wz-auth-logo { margin-bottom: 1rem; }
+.wz-auth-lede {
+  color: var(--kd-muted);
+  font-size: .92rem;
+  font-weight: 500;
+  margin: 0 0 1.25rem;
+}
+/* "أو" on the line between the two ways in. */
+.wz-auth-or {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.1rem 0;
+  color: var(--kd-faint);
+  font-size: .82rem;
+  font-weight: 700;
+}
+.wz-auth-or::before,
+.wz-auth-or::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--kd-line);
+  border-radius: 99px;
+}
+.wz-auth-foot { font-size: .82rem; color: var(--kd-muted); margin: 0; }
+.wz-auth-foot a { color: var(--wz-teal-deep); font-weight: 700; }
