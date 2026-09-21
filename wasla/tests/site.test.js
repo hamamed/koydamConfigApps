@@ -59,13 +59,15 @@ test('a store badge is shown only while there is a listing to send someone to', 
 
   siteSettings.savePlayUrl('https://play.google.com/store/apps/details?id=koydam.wasla');
   html = await landing();
-  assert.match(html, /badge-google-play\.png/);
+  assert.match(html, /badge-google-play-ar\.png/, 'an Arabic page asks Google for its Arabic badge');
+  assert.ok(html.indexOf('badge-app-store') < html.indexOf('badge-google-play'),
+    'Apple asks for the App Store badge first in the lineup');
 });
 
 test('a link that is not https is refused, and clearing one takes its badge away', async () => {
   assert.ok(siteSettings.savePlayUrl('http://play.google.com/store').error, 'http is refused');
   assert.ok(siteSettings.savePlayUrl('not a url').error);
-  assert.match(await landing(), /badge-google-play\.png/, 'the stored link is untouched by a refused one');
+  assert.match(await landing(), /badge-google-play-ar\.png/, 'the stored link is untouched by a refused one');
 
   siteSettings.savePlayUrl('');
   assert.doesNotMatch(await landing(), /badge-google-play/);

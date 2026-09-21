@@ -72,19 +72,28 @@
   margin-inline: auto;
 }
 
-/* The stores' own buttons, unaltered, side by side. */
+/* The stores' own buttons, unaltered, side by side.
+   --wz-badge is how tall the badge itself is drawn: past Apple's 40px floor
+   and Google's 28px one. Both ask for a quarter of that height as clear space,
+   which is what the gap and the margins are. Google's file bakes its own clear
+   space in — 168 of its 250 pixels are badge — so the Play badge is drawn
+   250/168 taller to end up the same size as Apple's, never smaller, which is
+   Google's rule when the two sit together. */
 .wz-stores {
+  --wz-badge: 52px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .9rem;
+  gap: max(.9rem, calc(var(--wz-badge) / 4));
+  margin-block: max(1.25rem, calc(var(--wz-badge) / 4));
 }
 .wz-store { display: inline-flex; }
-.wz-store img { display: block; height: 52px; width: auto; }
+.wz-store img { display: block; height: var(--wz-badge); width: auto; }
+.wz-store-play img { height: calc(var(--wz-badge) * 250 / 168); }
 .wz-store-soon {
   display: inline-flex;
   align-items: center;
-  height: 52px;
+  height: var(--wz-badge);
   padding-inline: 1.1rem;
   border: 2px dashed #a9cfc9;
   border-radius: 12px;

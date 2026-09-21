@@ -29,23 +29,7 @@
       بلا إعلانات، ويُلعب بلا حساب.
     </p>
 
-    <div class="wz-stores">
-      <% if (appStoreUrl) { %>
-        <a class="wz-store" href="<%= appStoreUrl %>" rel="noopener">
-          <img src="/assets/site/badge-app-store.svg?v=<%= assetVersion %>" alt="حمّلها من App Store" height="52">
-        </a>
-      <% } else { %>
-        <span class="wz-store-soon">قريباً على App Store</span>
-      <% } %>
-
-      <% if (playUrl) { %>
-        <a class="wz-store" href="<%= playUrl %>" rel="noopener">
-          <img src="/assets/site/badge-google-play.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" height="52">
-        </a>
-      <% } else { %>
-        <span class="wz-store-soon">قريباً على Google Play</span>
-      <% } %>
-    </div>
+    <%- include('stores') %>
 
     <ul class="wz-hero-points">
       <% [['star', 'ألغاز بثلاث نجوم'], ['gamepad-2', 'ست ألعاب كل يوم'], ['trophy', 'لوحات متصدرين']].forEach(([glyph, text]) => { %>
@@ -109,22 +93,7 @@
 
 <section class="wz-cta">
   <h2 class="wz-h2">جاهز؟</h2>
-  <div class="wz-stores">
-    <% if (appStoreUrl) { %>
-      <a class="wz-store" href="<%= appStoreUrl %>" rel="noopener">
-        <img src="/assets/site/badge-app-store.svg?v=<%= assetVersion %>" alt="حمّلها من App Store" height="52">
-      </a>
-    <% } else { %>
-      <span class="wz-store-soon">قريباً على App Store</span>
-    <% } %>
-    <% if (playUrl) { %>
-      <a class="wz-store" href="<%= playUrl %>" rel="noopener">
-        <img src="/assets/site/badge-google-play.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" height="52">
-      </a>
-    <% } else { %>
-      <span class="wz-store-soon">قريباً على Google Play</span>
-    <% } %>
-  </div>
+  <%- include('stores') %>
 </section>
 
 <footer class="wz-site-foot">

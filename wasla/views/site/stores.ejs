@@ -1,0 +1,23 @@
+<%# The two stores' own badges, drawn as they ship them and shown only while
+    that listing exists. Apple asks for the black badge, at least 40px tall,
+    first in the lineup; Google asks for at least 28px and that its badge is
+    never smaller than another store's — its file carries its own clear space
+    (168 of its 250 pixels are badge), so `wz-store-play` draws it taller to
+    leave the two marks the same size. %>
+<div class="wz-stores">
+  <% if (appStoreUrl) { %>
+    <a class="wz-store" href="<%= appStoreUrl %>" rel="noopener">
+      <img src="/assets/site/badge-app-store.svg?v=<%= assetVersion %>" alt="حمّلها من App Store" width="156" height="52">
+    </a>
+  <% } else { %>
+    <span class="wz-store-soon">قريباً على App Store</span>
+  <% } %>
+
+  <% if (playUrl) { %>
+    <a class="wz-store wz-store-play" href="<%= playUrl %>" rel="noopener">
+      <img src="/assets/site/badge-google-play-ar.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" width="200" height="77">
+    </a>
+  <% } else { %>
+    <span class="wz-store-soon">قريباً على Google Play</span>
+  <% } %>
+</div>
