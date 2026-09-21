@@ -208,10 +208,10 @@ test('the word search board has the contract shape, matches its rows and is the 
   const body = await res.json();
 
   assert.deepEqual(Object.keys(body).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
-  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 10, 30]);
+  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 9, 30]);
   assert.equal(body.rows.length, body.size);
   for (const row of body.rows) assert.equal([...row].length, body.size);
-  assert.ok(body.words.length >= 6 && body.words.length <= 10);
+  assert.ok(body.words.length >= 6 && body.words.length <= 12);
   const grid = body.rows.map((r) => [...r]);
   for (const w of body.words) {
     assert.deepEqual(Object.keys(w).sort(), ['col', 'dCol', 'dRow', 'display', 'id', 'row', 'word']);
@@ -322,11 +322,11 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   assert.equal(body.kind, 'marathon');
   assert.equal(body.weekday, 5);
   assert.deepEqual(body.schedule.map((d) => d.kind),
-    ['wheel', 'guess', 'wordsearch', 'wheel', 'guess', 'marathon', 'wordsearch']);
+    ['wordsearch', 'guess', 'wheel', 'guess', 'wordsearch', 'marathon', 'wheel']);
   assert.ok(body.marathon.rounds.length >= 2, 'Friday runs the games back to back');
   assert.ok(body.marathon.rounds.every((r) => r.game));
   assert.equal(body.marathon.bonus, DEFAULT_CONFIG.dailyAllGamesBonus);
-  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'wordsearch');
+  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'wheel');
   assert.deepEqual(await (await fetch(`${base}/daily-games?date=2026-09-18`)).json(), body);
 });
 

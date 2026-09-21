@@ -13,13 +13,13 @@ import { parseDay } from './daily.js';
 
 /** The seven days, Sunday first — the order `weekdayOf` counts in. */
 export const WEEK = Object.freeze([
-  'wheel', // الأحد
+  'wordsearch', // الأحد
   'guess', // الاثنين
-  'wordsearch', // الثلاثاء
-  'wheel', // الأربعاء
-  'guess', // الخميس
+  'wheel', // الثلاثاء
+  'guess', // الأربعاء
+  'wordsearch', // الخميس
   'marathon', // الجمعة
-  'wordsearch', // السبت
+  'wheel', // السبت
 ]);
 
 /** Every kind a day can hold, including the two that are not in GAME_KINDS. */
