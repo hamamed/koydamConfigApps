@@ -86,6 +86,7 @@ test('boards rank fastest first for times and highest first for points, with my 
   const board = profiles.leaderboard('today-allgames', { viewer: players[0], limit: 3 });
   assert.deepEqual(board.entries.map((e) => [e.rank, e.username, e.value]), [[1, 'bbb', 200], [2, 'ddd', 200], [3, 'ccc', 300]]);
   assert.deepEqual(board.me, { rank: 4, value: 400 });
+  assert.equal(board.total, 4, 'the whole field, not just the page shown');
   assert.equal(board.date, '2026-09-18');
   assert.equal(profiles.leaderboard('today-allgames', { date: '2026-09-17' }).entries.length, 0);
 
@@ -95,6 +96,7 @@ test('boards rank fastest first for times and highest first for points, with my 
   const points = profiles.leaderboard('points', { viewer: players[0] });
   assert.deepEqual(points.entries.map((e) => e.username), ['ddd', 'ccc']);
   assert.equal(points.me, null);
+  assert.equal(points.total, 2, 'players with no points are not on the board at all');
 });
 
 test('a streak counts only while it is alive, and banned players leave every board', () => {

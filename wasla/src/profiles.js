@@ -375,8 +375,10 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
         me = { rank: ahead + 1, value: mine.value };
       }
     }
+    // How many players the board holds, so a rank can be read as "7th of 213".
+    const total = db.prepare(`SELECT COUNT(*) AS n ${q.from}`).get(q.params).n;
     const isDaily = board.startsWith('today-');
-    return { board, date: isDaily ? date : null, entries: entries.map(({ isMe, ...e }) => ({ ...e, isMe })), me };
+    return { board, date: isDaily ? date : null, total, entries: entries.map(({ isMe, ...e }) => ({ ...e, isMe })), me };
   }
 
   // ── Views ─────────────────────────────────────────────────────────────────
