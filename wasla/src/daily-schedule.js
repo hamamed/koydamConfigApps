@@ -19,7 +19,7 @@ export const WEEK = Object.freeze([
   'guess', // الأربعاء
   'wordsearch', // الخميس
   'marathon', // الجمعة
-  'picture', // السبت
+  'bubbles', // السبت
 ]);
 
 /** Every kind a day can hold, including the two that are not in GAME_KINDS. */
@@ -28,8 +28,8 @@ export const SCHEDULED_KINDS = Object.freeze([...new Set(WEEK)]);
 export const WEEKDAY_NAMES = Object.freeze(['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']);
 
 export const KIND_NAMES = Object.freeze({
+  bubbles: 'فقاعات الكلمات',
   wheel: 'عجلة الحروف',
-  picture: 'صِل بالصورة',
   guess: 'خمّن الكلمتين',
   wordsearch: 'البحث عن الكلمات',
   marathon: 'ماراثون الجمعة',

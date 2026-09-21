@@ -76,21 +76,22 @@ export function openDatabase(file) {
     WHERE title IS NULL AND category IS NOT NULL AND trim(category) <> ''`);
   // Days planned for games that no longer exist (contract §9): the kinds are
   // gone from the code, so their rows would only ever be dead weight.
-  database.exec("DELETE FROM daily_game_days WHERE kind IN ('scramble', 'bubbles', 'groups')");
-  // The kinds a planned day may hold live in a CHECK, which SQLite cannot alter:
-  // a database made before صِل بالصورة has to be rebuilt once to accept it.
+  database.exec("DELETE FROM daily_game_days WHERE kind IN ('scramble', 'groups', 'picture')");
+  database.exec('DROP TABLE IF EXISTS picture_rounds');
+  // The kinds a planned day may hold live in a CHECK, which SQLite cannot alter,
+  // so a database written under an older list of games is rebuilt once.
   const plannedDays = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'daily_game_days'").pluck().get();
-  if (plannedDays && !plannedDays.includes("'picture'")) {
+  if (plannedDays && !plannedDays.includes("'bubbles', 'wheel', 'guess'")) {
     database.exec(`
       CREATE TABLE daily_game_days_new (
         date        TEXT NOT NULL,
-        kind        TEXT NOT NULL CHECK (kind IN ('wheel', 'guess', 'picture')),
+        kind        TEXT NOT NULL CHECK (kind IN ('bubbles', 'wheel', 'guess')),
         game        TEXT NOT NULL,
         source      TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto', 'typed')),
         updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
         PRIMARY KEY (date, kind)
       );
-      INSERT INTO daily_game_days_new SELECT * FROM daily_game_days;
+      INSERT INTO daily_game_days_new SELECT * FROM daily_game_days WHERE kind IN ('bubbles', 'wheel', 'guess');
       DROP TABLE daily_game_days;
       ALTER TABLE daily_game_days_new RENAME TO daily_game_days;
     `);

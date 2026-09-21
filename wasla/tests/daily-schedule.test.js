@@ -13,7 +13,7 @@ test('day zero is a Thursday, and the week counts from Sunday', () => {
 
 test('each weekday carries one game, and Friday the marathon', () => {
   assert.deepEqual(WEEK.length, 7);
-  assert.equal(kindForDate('2026-09-19'), 'picture', 'Saturday');
+  assert.equal(kindForDate('2026-09-19'), 'bubbles', 'Saturday');
   assert.equal(kindForDate('2026-09-20'), 'wordsearch', 'Sunday');
   assert.equal(kindForDate('2026-09-21'), 'guess', 'Monday');
   assert.equal(kindForDate('2026-09-22'), 'wheel', 'Tuesday');

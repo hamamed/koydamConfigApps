@@ -17,7 +17,7 @@
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import {
-  GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS, parseWheelSets, scrambleLetters,
+  BUBBLE_LETTERS, GUESS_LETTERS, GUESS_TRIES, GUESS_WORDS, parseWheelSets, scrambleLetters, splitParts,
 } from './daily-games.js';
 import { random, shuffled } from './wordsearch.js';
 
@@ -40,6 +40,30 @@ function readWord(raw, [min, max], line) {
   const count = letters(word).length;
   if (!inRange(count, [min, max])) return { error: `Line ${line}: “${display}” has ${count} letters; use ${min}–${max}.` };
   return { word, display };
+}
+
+// ── Bubbles ──────────────────────────────────────────────────────────────────
+
+export const bubblesText = (game) => (game ? [game.theme, ...game.words.map((w) => w.display)].join('\n') : '');
+
+export function readBubbles(text, seed = newSeed()) {
+  const [themeLine, ...wordLines] = lines(text);
+  const errors = [];
+  const theme = String(themeLine ?? '').trim();
+  if (!theme) errors.push('Line 1 is the theme.');
+  else if ([...theme].length > 40) errors.push('The theme can be at most 40 characters.');
+  const words = [];
+  const seen = new Set();
+  wordLines.forEach((line, i) => {
+    const read = readWord(line, [Math.max(BUBBLE_RANGE[0], 3), BUBBLE_LETTERS[1]], i + 2);
+    if (read.error) return errors.push(read.error);
+    if (seen.has(read.word)) return errors.push(`Line ${i + 2}: “${read.display}” is listed twice.`);
+    seen.add(read.word);
+    words.push({ id: TYPED_ID_BASE + i + 1, ...read, parts: splitParts(read.word) });
+  });
+  if (!errors.length && (words.length < 3 || words.length > 8)) errors.push('Give 3 to 8 words under the theme.');
+  if (errors.length) return { errors };
+  return { game: { theme, words, bubbles: shuffled(words.flatMap((w) => w.parts), random(seed)) } };
 }
 
 // ── Wheel ────────────────────────────────────────────────────────────────────
@@ -76,6 +100,7 @@ export function readGuess(text) {
 
 /** Each game's text form and parser, by kind. */
 export const EDITORS = Object.freeze({
+  bubbles: { toText: bubblesText, read: readBubbles },
   wheel: { toText: wheelText, read: readWheel },
   guess: { toText: guessText, read: readGuess },
 });

@@ -25,6 +25,21 @@
         <div class="row g-3 mb-3">
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dot', 16) %><span class="fw-semibold"><span class="wz-ar">فقاعات الكلمات</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.bubbles) { %><p class="small kd-muted mb-0">يحتاج فئة فيها 5 أجوبة من 4 إلى 10 حروف.</p><% } else { %>
+                  <div class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= set.bubbles.theme %></span></div>
+                  <ul class="list-unstyled d-grid gap-1 mb-2">
+                    <% set.bubbles.words.forEach((w) => { %>
+                      <li><span class="wz-ar fw-semibold"><%= w.display %></span> <span class="kd-faint small wz-ar"><%= w.parts.join(' · ') %></span></li>
+                    <% }) %>
+                  </ul>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('circle-dashed', 16) %><span class="fw-semibold"><span class="wz-ar">عجلة الحروف</span></span></div>
               <div class="ad-card-body">
                 <% if (!set.wheel) { %><p class="small kd-muted mb-0">قائمة عجلة الحروف فارغة.</p><% } else { %>

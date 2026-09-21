@@ -2,13 +2,14 @@
  * The daily games that are not the word search (contract §6, §9): one set per
  * calendar date, the same for everyone.
  *
+ *   bubbles — one theme's words cut into pieces, all the pieces mixed
  *   wheel   — a handful of letters and the words they spell
  *   guess   — two hidden five-letter words at once, eight tries for both
  *   picture — one picture and the five words of ten that belong to it
  *
- * The first two come from the word lists edited on the Daily games page
- * (src/daily-games-words.js until edited); the picture rounds are written by
- * hand (src/picture-rounds.js). Every choice comes from a seed made
+ * فقاعات الكلمات is built from the question bank's titles; the other two come
+ * from the word lists edited on the Daily games page (src/daily-games-words.js
+ * until edited). Every choice comes from a seed made
  * of the date, so every request answers the same for the same date.
  *
  * A game saved for a date in the panel (`daily_game_days`, planned from the
@@ -22,8 +23,12 @@ import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedul
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from './daily-games-words.js';
 import { random, shuffled } from './wordsearch.js';
 
-export const GAME_KINDS = Object.freeze(['wheel', 'guess', 'picture']);
+export const GAME_KINDS = Object.freeze(['bubbles', 'wheel', 'guess']);
 
+/* How big each game aims to be, and the least it may be built at. */
+export const BUBBLE_WORDS = 8;
+export const BUBBLE_MIN_WORDS = 5;
+export const BUBBLE_LETTERS = Object.freeze([4, 10]);
 export const GUESS_LETTERS = 5;
 export const GUESS_WORDS = 2;
 export const GUESS_TRIES = 8;
@@ -56,6 +61,36 @@ export function scrambleLetters(word, rand) {
   return [...list.slice(1), list[0]].join('');
 }
 
+/**
+ * Pieces of two letters, the last taking the odd one: 4 → 2+2, 5 → 2+3,
+ * 7 → 2+2+3. Never a single letter, which would fit almost anywhere.
+ */
+export function splitParts(word) {
+  const list = letters(word);
+  const parts = [];
+  for (let i = 0; i < list.length; i += 2) parts.push(list.slice(i, i + 2).join(''));
+  if (parts.length > 1 && letters(parts.at(-1)).length === 1) parts.splice(-2, 2, parts.at(-2) + parts.at(-1));
+  return parts;
+}
+
+/** Questions grouped by title: `[{ title, words: [{ id, word, display }] }]`, one entry per played word, by title. */
+export function titleGroups(questions, [min, max]) {
+  const groups = new Map();
+  for (const q of questions) {
+    const title = String(q.title ?? '').trim();
+    const word = played(q.answer);
+    if (!title || !inRange(letters(word).length, [min, max])) continue;
+    const group = groups.get(title) ?? { title, words: [], seen: new Set() };
+    if (group.seen.has(word)) continue;
+    group.seen.add(word);
+    group.words.push({ id: q.id, word, display: normalizeAnswer(q.answer) });
+    groups.set(title, group);
+  }
+  return [...groups.values()]
+    .map(({ title, words }) => ({ title, words }))
+    .sort((a, b) => codePointOrder(a.title, b.title));
+}
+
 /** True when `word` can be spelled from `pool`, each letter used at most as often as it is there. */
 export function spelledFrom(word, pool) {
   const counts = new Map();
@@ -66,6 +101,20 @@ export function spelledFrom(word, pool) {
     counts.set(ch, left - 1);
   }
   return true;
+}
+
+export function buildBubbles(groups, day, seed) {
+  // Themes deep enough for a full round when there are any, else whatever can
+  // still make a short one — a day with a thin bank plays small, not empty.
+  const deep = groups.filter((g) => g.words.length >= BUBBLE_WORDS);
+  const themes = deep.length ? deep : groups.filter((g) => g.words.length >= BUBBLE_MIN_WORDS);
+  if (!themes.length) return null;
+  const rand = random(seed);
+  // Offset from the word search's rotation, so the two rarely share a theme.
+  const theme = themes[(day + 3) % themes.length];
+  const words = shuffled(theme.words, rand).slice(0, BUBBLE_WORDS)
+    .map((w) => ({ ...w, parts: splitParts(w.word) }));
+  return { theme: theme.title, words, bubbles: shuffled(words.flatMap((w) => w.parts), rand) };
 }
 
 /** `{ words: [{ word, display }], problems: [{ line, text, reason }] }` from the guess list. */
@@ -157,33 +206,33 @@ export function buildGuess(words, day) {
  * shorter, and with no second chances between them.
  */
 
-export const MARATHON_ROUNDS = Object.freeze(['wheel', 'guess', 'picture', 'wordsearch']);
-export const MARATHON_SIZES = Object.freeze({ wheel: 6, guess: 1, picture: 3, board: 7 });
+export const MARATHON_ROUNDS = Object.freeze(['bubbles', 'wheel', 'guess', 'wordsearch']);
+export const MARATHON_SIZES = Object.freeze({ bubbles: 4, wheel: 6, guess: 1, board: 7 });
 export const MARATHON_GUESS_TRIES = 5;
 
 /** The same game, cut to marathon length; null stays null. */
 export function trimForMarathon(kind, game, rand) {
   if (!game) return null;
   switch (kind) {
+    case 'bubbles': {
+      const words = game.words.slice(0, MARATHON_SIZES.bubbles);
+      return { theme: game.theme, words, bubbles: shuffled(words.flatMap((w) => w.parts), rand) };
+    }
     case 'wheel':
       return { letters: game.letters, words: game.words.slice(0, MARATHON_SIZES.wheel) };
     case 'guess': {
       const words = game.words.slice(0, MARATHON_SIZES.guess);
       return { words, word: words[0].word, display: words[0].display, tries: MARATHON_GUESS_TRIES };
     }
-    case 'picture': {
-      const answers = game.answers.slice(0, MARATHON_SIZES.picture);
-      const decoys = game.words.filter((word) => !game.answers.includes(word)).slice(0, MARATHON_SIZES.picture);
-      return { ...game, words: shuffled([...answers, ...decoys], rand), answers, mistakes: 2 };
-    }
     default:
       return game;
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
+  const questions = () => db.prepare('SELECT id, answer, trim(IFNULL(title, \'\')) AS title FROM questions ORDER BY id').all();
   const listText = (name) => db.prepare('SELECT body FROM daily_game_lists WHERE name = ?').pluck().get(name) ?? DEFAULTS[name];
   const isEdited = (name) => Boolean(db.prepare('SELECT 1 FROM daily_game_lists WHERE name = ?').get(name));
 
@@ -220,9 +269,9 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
     if (!parsed) return null;
     const { day } = parsed;
     return {
+      bubbles: buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
-      picture: pictures?.forDate(parsed.date) ?? null,
     };
   }
 
@@ -242,9 +291,9 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
     const day = parsed.day + step;
     const seed = (seedFor(parsed.day, kind) ^ Math.imul(step + 1, 2654435761)) >>> 0;
     switch (kind) {
+      case 'bubbles': return buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
-      case 'picture': return pictures?.forDate(parsed.date, step) ?? null;
       default: return null;
     }
   }

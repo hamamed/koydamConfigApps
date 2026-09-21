@@ -322,11 +322,11 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   assert.equal(body.kind, 'marathon');
   assert.equal(body.weekday, 5);
   assert.deepEqual(body.schedule.map((d) => d.kind),
-    ['wordsearch', 'guess', 'wheel', 'guess', 'wordsearch', 'marathon', 'picture']);
+    ['wordsearch', 'guess', 'wheel', 'guess', 'wordsearch', 'marathon', 'bubbles']);
   assert.ok(body.marathon.rounds.length >= 2, 'Friday runs the games back to back');
   assert.ok(body.marathon.rounds.every((r) => r.game));
   assert.equal(body.marathon.bonus, DEFAULT_CONFIG.dailyAllGamesBonus);
-  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'picture');
+  assert.equal((await (await fetch(`${base}/daily-games?date=2026-09-19`)).json()).kind, 'bubbles');
   assert.deepEqual(await (await fetch(`${base}/daily-games?date=2026-09-18`)).json(), body);
 });
 

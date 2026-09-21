@@ -98,7 +98,8 @@
               <ol class="wz-marathon mb-0">
                 <% marathon.rounds.forEach((r) => { %>
                   <li><span class="wz-ar fw-semibold"><%= kindNames[r.kind] %></span>
-                    <span class="small kd-muted wz-ar"><%= r.kind === 'wheel' ? r.game.words.length + ' كلمات · ' + [...r.game.letters].join(' ')
+                    <span class="small kd-muted wz-ar"><%= r.kind === 'bubbles' ? r.game.words.length + ' كلمات · ' + r.game.theme
+                      : r.kind === 'wheel' ? r.game.words.length + ' كلمات · ' + [...r.game.letters].join(' ')
                       : r.kind === 'guess' ? r.game.words.map((w) => w.display).join('، ') + ' · ' + r.game.tries + ' محاولات'
                       : r.game.size + '×' + r.game.size + ' · ' + r.game.theme %></span></li>
                 <% }) %>
@@ -130,6 +131,8 @@
               <div class="ad-card-body">
                 <% if (!g.game) { %>
                   <p class="small kd-muted">لا شيء للعب: أضف أسئلة (أو مدخلات للقائمة)، أو اكتب هذه اللعبة أدناه.</p>
+                <% } else if (g.kind === 'bubbles') { %>
+                  <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
                 <% } else if (g.kind === 'wheel') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...g.game.letters].join(' ') %></span> <span class="wz-ar"><%= g.game.words.join('، ') %></span></p>
                 <% } else if (g.kind === 'guess') { %>

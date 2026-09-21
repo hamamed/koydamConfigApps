@@ -11,9 +11,9 @@ export const PLAN_CHOICES = Object.freeze([7, 14, 30]);
 const CALENDAR_DAYS = 30;
 
 export const GAME_LABELS = Object.freeze({
+  bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (حتى 8 كلمات، كل واحدة من 4 إلى 10 حروف).' },
   wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'سطر واحد: حروف: كلمة كلمة كلمة (كل كلمة تُكتب من تلك الحروف).' },
   guess: { en: 'Guess', ar: 'خمّن الكلمتين', icon: 'square-asterisk', hint: 'كلمة أو كلمتان، كل واحدة في سطر ومن خمسة حروف بالضبط.' },
-  picture: { en: 'Picture', ar: 'صِل بالصورة', icon: 'image', hint: 'تُكتب في صفحة «صِل بالصورة»، لا هنا.' },
 });
 
 /**

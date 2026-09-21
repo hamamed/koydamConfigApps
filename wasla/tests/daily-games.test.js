@@ -98,7 +98,7 @@ test('a date always gets the same set, and different dates different ones', () =
   assert.equal(a.date, '2026-09-18');
   assert.equal(a.coins, DEFAULT_CONFIG.dailyGameCoins);
   assert.equal(a.allBonus, DEFAULT_CONFIG.dailyAllGamesBonus);
-  for (const kind of ['wheel', 'guess']) assert.ok(a[kind], kind);
+  for (const kind of ['bubbles', 'wheel', 'guess']) assert.ok(a[kind], kind);
 });
 
 test('a bad date gets nothing', () => {
@@ -168,7 +168,7 @@ test('copying a day puts the games it would serve on another date', () => {
   games.saveGame(from, 'wheel', picked, 'typed');
 
   const result = games.copyDay(onto, from);
-  assert.equal(result.copied, 2, 'both games were copied');
+  assert.equal(result.copied, 3, 'every game of the day was copied');
   assert.deepEqual(games.forDate(onto).wheel, picked, 'the typed game came across');
   // The automatic games of that day are copied as they stood, not recomputed for the new date.
   assert.deepEqual(games.forDate(onto).guess, games.forDate(from).guess);
@@ -184,9 +184,9 @@ test('clearing a day takes every game back to automatic', () => {
   const date = '2026-09-22';
   const auto = games.automatic(date);
   games.freeze(date);
-  assert.equal(Object.keys(games.saved(date)).length, 2);
+  assert.equal(Object.keys(games.saved(date)).length, 3);
 
-  assert.equal(games.clearDay(date), 2, 'both rows went');
+  assert.equal(games.clearDay(date), 3, 'every row went');
   assert.deepEqual(games.saved(date), {});
   assert.deepEqual(games.forDate(date).wheel, auto.wheel, 'the automatic pick is served again');
   assert.equal(games.clearDay(date), 0, 'clearing an automatic day changes nothing');
