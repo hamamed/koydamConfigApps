@@ -21,10 +21,6 @@
 </head>
 <body class="wz-site">
 
-<div class="wz-topline">
-  <%- include('../partials/brand', { size: 'clamp(58px, 8vw, 104px)' }) %>
-</div>
-
 <header class="wz-hero">
   <div class="wz-hero-text">
     <h1 class="wz-hero-title">كلمات متقاطعة… بالعربي</h1>
@@ -63,8 +59,8 @@
     <p class="wz-hero-note">مجانية · بالعربية · للآيفون والآيباد</p>
   </div>
 
-  <div class="wz-hero-shot">
-    <img src="/assets/site/screen-home.png?v=<%= assetVersion %>" alt="شاشة الألغاز في شبّك" width="280" loading="eager">
+  <div class="wz-hero-mark">
+    <%- include('../partials/brand', { size: 'clamp(76px, 11vw, 148px)' }) %>
   </div>
 </header>
 
@@ -106,6 +102,7 @@
 </section>
 
 <section class="wz-shots">
+  <img src="/assets/site/screen-home.png?v=<%= assetVersion %>" alt="شاشة الألغاز في شبّك" width="260" loading="lazy">
   <img src="/assets/site/screen-daily.png?v=<%= assetVersion %>" alt="لغز اليوم وألعابه الست" width="260" loading="lazy">
   <img src="/assets/site/screen-level.png?v=<%= assetVersion %>" alt="شبكة لغز داخل اللعبة" width="260" loading="lazy">
 </section>

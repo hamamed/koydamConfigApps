@@ -28,18 +28,11 @@
 
 .wz-hero {
   display: grid;
-  grid-template-columns: 1.15fr .85fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 2.5rem;
-  padding-block: 1.75rem 2.5rem;
+  padding-block: 3rem 2.5rem;
 }
-/* The logo stands in the middle of the page, above everything else. */
-.wz-topline {
-  display: flex;
-  justify-content: center;
-  padding: 2.75rem 1.25rem 0;
-}
-
 /* The hero reads down the middle: the line, the two buttons, the points. */
 .wz-hero-text { text-align: center; }
 .wz-hero-text .wz-logo-wrap { display: flex; margin-inline: auto; }
@@ -65,6 +58,9 @@
   font-size: .9rem;
   color: #5d7c80;
 }
+/* The logo is the hero's picture: the screens are further down the page. */
+.wz-hero-mark { display: flex; justify-content: center; }
+
 .wz-hero-shot img {
   width: 100%;
   max-width: 280px;
