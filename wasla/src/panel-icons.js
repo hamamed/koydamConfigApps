@@ -61,18 +61,22 @@ export function createPanelIcons({ dir = config.iconsDir } = {}) {
     return NAME.test(String(name)) && available.has(name) ? path.join(dir, `${name}.svg`) : null;
   }
 
+  /** The Lucide element the markup named, for pages the pack cannot reach. */
+  function lucide(name, size = 17) {
+    const side = Number.isFinite(Number(size)) ? Number(size) : 17;
+    return `<i data-lucide="${name}" width="${side}" height="${side}"></i>`;
+  }
+
   /**
    * The markup for one icon: the pack's picture when it is there, else the
    * Lucide element the page would have used.
    */
   function markup(name, size = 17) {
     const side = Number.isFinite(Number(size)) ? Number(size) : 17;
-    if (!available.has(name)) {
-      return `<i data-lucide="${name}" width="${side}" height="${side}"></i>`;
-    }
+    if (!available.has(name)) return lucide(name, side);
     return `<img class="wz-i" src="/admin/icons/${name}.svg?v=${config.assetVersion}" `
       + `width="${side + 3}" height="${side + 3}" alt="" aria-hidden="true">`;
   }
 
-  return { markup, file, count: available.size };
+  return { markup, lucide, file, count: available.size };
 }

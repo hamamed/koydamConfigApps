@@ -99,7 +99,9 @@ export function adminRouter({
     res.locals.assetVersion = config.assetVersion;
     res.locals.imageUrl = (file) => `/media/questions/${file}`;
     res.locals.audioUrl = (file) => `/media/audio/${file}`;
-    res.locals.icon = (name, size) => icons.markup(name, size);
+    // The pack is served to signed-in people only, so the sign-in page — which
+    // by definition has nobody signed in — draws the Lucide outline instead.
+    res.locals.icon = (name, size) => (req.user ? icons.markup(name, size) : icons.lucide(name, size));
     res.locals.pageIcon = pageIconFor(req.path);
     next();
   });
