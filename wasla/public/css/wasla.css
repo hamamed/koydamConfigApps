@@ -918,3 +918,37 @@ html { scrollbar-gutter: stable; }
 
 /* The scrolling parts inside a card get the thin bar, tucked away from the edge. */
 .ad-table-wrap, .ad-nav, textarea.form-control { scrollbar-width: thin; }
+
+/* ------------------------------------------------- the page heading ----- */
+/*
+ * The display face has tall ascenders, and the bar's fixed 60px cut the tops
+ * off them — «الألغاز» arrived with its alef shaved. The bar grows with its
+ * contents now, and the heading sits on the page's own icon, on a plate.
+ */
+.ad-topbar {
+  height: auto;
+  min-height: var(--ad-topbar-h);
+  padding-block: .6rem .7rem;
+  align-items: center;
+}
+.ad-page-title {
+  line-height: 1.45;
+  padding-top: .1rem;
+}
+.ad-page-sub { margin-top: 0; }
+
+.wz-page-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: 14px;
+  background: var(--wz-paper);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  margin-bottom: 3px;
+}
+@media (max-width: 575.98px) {
+  .wz-page-icon { display: none; }
+}

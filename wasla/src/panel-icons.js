@@ -13,6 +13,38 @@ import { config } from './config.js';
  */
 const NAME = /^[a-z0-9-]+$/;
 
+/**
+ * The icon a page wears in its heading, by the path it lives at — the same one
+ * the sidebar shows beside its name, so a page and its nav entry match.
+ */
+const PAGE_ICONS = Object.freeze([
+  ['/levels', 'grid-3x3'],
+  ['/questions', 'message-circle-question'],
+  ['/titles', 'tag'],
+  ['/days', 'calendar-days'],
+  ['/daily-games', 'list'],
+  ['/daily', 'calendar-days'],
+  ['/lab', 'flask-conical'],
+  ['/wordsearch', 'tags'],
+  ['/events', 'moon'],
+  ['/import', 'file-up'],
+  ['/players', 'users'],
+  ['/profiles', 'user-round'],
+  ['/boards', 'trophy'],
+  ['/badges', 'award'],
+  ['/avatars', 'smile'],
+  ['/stats', 'chart-column'],
+  ['/notifications', 'bell'],
+  ['/settings', 'settings'],
+  ['/login', 'log-in'],
+]);
+
+/** The icon for a path inside /admin; the dashboard's when nothing else fits. */
+export function pageIconFor(path = '/') {
+  const found = PAGE_ICONS.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`));
+  return found ? found[1] : 'layout-dashboard';
+}
+
 export function createPanelIcons({ dir = config.iconsDir } = {}) {
   let available = new Set();
   try {

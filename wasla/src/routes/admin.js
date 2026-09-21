@@ -8,7 +8,7 @@ import { config } from '../config.js';
 import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
-import { createPanelIcons } from '../panel-icons.js';
+import { createPanelIcons, pageIconFor } from '../panel-icons.js';
 import { LEVEL_SIZE, MAIN_CATEGORY, MAIN_SLOTS, MIN_CATEGORIES, planLevels } from '../level-builder.js';
 import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
@@ -100,6 +100,7 @@ export function adminRouter({
     res.locals.imageUrl = (file) => `/media/questions/${file}`;
     res.locals.audioUrl = (file) => `/media/audio/${file}`;
     res.locals.icon = (name, size) => icons.markup(name, size);
+    res.locals.pageIcon = pageIconFor(req.path);
     next();
   });
 

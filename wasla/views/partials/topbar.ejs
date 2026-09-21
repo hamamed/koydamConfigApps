@@ -3,6 +3,8 @@
     <%- icon('menu', 16) %>
   </button>
 
+  <span class="wz-page-icon"><%- icon(typeof pageIcon === 'undefined' ? 'layout-dashboard' : pageIcon, 22) %></span>
+
   <div class="min-w-0">
     <h1 class="ad-page-title mb-0"><%= heading %></h1>
     <% if (typeof subheading !== 'undefined' && subheading) { %>
