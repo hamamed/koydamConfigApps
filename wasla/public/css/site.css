@@ -1,0 +1,186 @@
+/*
+ * The landing page: the game's clothes on a web page — the mint ground, the
+ * paper plates with their ink border and ledge, and the two faces the app
+ * uses. It shares wasla.css for the logo and the colour tokens; everything
+ * here is its own.
+ */
+
+.wz-site {
+  margin: 0;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    var(--wz-board-1, #e9f6f3);
+  color: var(--wz-ink, #1f2d3a);
+  font-family: "Tajawal", system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.8;
+}
+
+.wz-site section,
+.wz-hero,
+.wz-site-foot {
+  max-width: 62rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+/* ------------------------------------------------------------ hero ----- */
+
+.wz-hero {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  align-items: center;
+  gap: 2.5rem;
+  padding-block: 3.5rem 2.5rem;
+}
+.wz-hero-title {
+  font-family: "Lalezar", "Tajawal", sans-serif;
+  font-size: clamp(2.1rem, 5vw, 3.1rem);
+  line-height: 1.35;
+  color: var(--wz-teal-deep, #0e7f7a);
+  margin: 1.2rem 0 .6rem;
+}
+.wz-hero-lede {
+  font-size: 1.08rem;
+  color: #3d5a5e;
+  margin: 0 0 1.6rem;
+  max-width: 34rem;
+}
+.wz-hero-note {
+  margin: 1rem 0 0;
+  font-size: .9rem;
+  color: #5d7c80;
+}
+.wz-hero-shot img {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border-radius: 28px;
+  border: 3px solid var(--wz-ink, #1f2d3a);
+  box-shadow: 0 8px 0 var(--wz-ink, #1f2d3a);
+  display: block;
+  margin-inline: auto;
+}
+
+/* The stores' own buttons, unaltered, side by side. */
+.wz-stores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .9rem;
+}
+.wz-store { display: inline-flex; }
+.wz-store img { display: block; height: 52px; width: auto; }
+.wz-store-soon {
+  display: inline-flex;
+  align-items: center;
+  height: 52px;
+  padding-inline: 1.1rem;
+  border: 2px dashed #a9cfc9;
+  border-radius: 12px;
+  color: #5d7c80;
+  font-weight: 700;
+  font-size: .95rem;
+}
+
+/* --------------------------------------------------------- numbers ----- */
+
+.wz-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding-block: 1rem 2.5rem;
+}
+.wz-number {
+  background: #fff;
+  border: 2px solid var(--wz-ink, #1f2d3a);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a);
+  padding: 1rem .75rem;
+  text-align: center;
+}
+.wz-number-value {
+  display: block;
+  font-family: "Lalezar", sans-serif;
+  font-size: 1.9rem;
+  color: var(--wz-teal-deep, #0e7f7a);
+  line-height: 1.2;
+}
+.wz-number-label { font-size: .88rem; color: #5d7c80; font-weight: 700; }
+
+/* -------------------------------------------------------- features ----- */
+
+.wz-h2 {
+  font-family: "Lalezar", sans-serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.1rem);
+  color: var(--wz-ink, #1f2d3a);
+  margin: 0 0 1.4rem;
+  text-align: center;
+}
+.wz-features { padding-block: 2rem 1rem; }
+.wz-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+.wz-feature {
+  background: #fff;
+  border: 2px solid var(--wz-ink, #1f2d3a);
+  border-radius: 20px;
+  box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a);
+  padding: 1.2rem 1.25rem 1.35rem;
+}
+.wz-feature h3 {
+  font-family: "Lalezar", sans-serif;
+  font-size: 1.28rem;
+  color: var(--wz-teal-deep, #0e7f7a);
+  margin: 0 0 .4rem;
+}
+.wz-feature p { margin: 0; color: #3d5a5e; font-size: .98rem; }
+
+/* ----------------------------------------------------------- shots ----- */
+
+.wz-shots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  padding-block: 2.5rem 1rem;
+}
+.wz-shots img {
+  width: 260px;
+  max-width: 44vw;
+  height: auto;
+  border-radius: 26px;
+  border: 3px solid var(--wz-ink, #1f2d3a);
+  box-shadow: 0 8px 0 var(--wz-ink, #1f2d3a);
+}
+
+/* ------------------------------------------------------------- cta ----- */
+
+.wz-cta { padding-block: 2.5rem 3rem; text-align: center; }
+.wz-cta .wz-stores { justify-content: center; }
+
+/* ---------------------------------------------------------- footer ----- */
+
+.wz-site-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 1.5rem 2.5rem;
+  border-top: 2px solid #cfe4e0;
+  font-size: .9rem;
+}
+.wz-site-foot a { color: var(--wz-teal-deep, #0e7f7a); font-weight: 700; text-decoration: none; }
+.wz-site-foot a:hover { text-decoration: underline; }
+.wz-site-copy { color: #8aa7ab; }
+
+@media (max-width: 767.98px) {
+  .wz-hero { grid-template-columns: 1fr; padding-block: 2.5rem 1.5rem; text-align: center; }
+  .wz-hero .wz-logo-wrap { margin-inline: auto; }
+  .wz-hero-lede { margin-inline: auto; }
+  .wz-stores { justify-content: center; }
+  .wz-numbers { grid-template-columns: repeat(2, 1fr); }
+}

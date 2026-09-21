@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %></title>
+  <meta name="description" content="شبّك لعبة كلمات متقاطعة عربية: ألغاز مرسومة بخط اليد، لغز يومي بست ألعاب، ولوحات متصدرين. حمّلها مجاناً.">
+  <meta name="theme-color" content="#e9f6f3">
+  <link rel="icon" href="/assets/favicon.png?v=<%= assetVersion %>" type="image/png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="شبّك">
+  <meta property="og:title" content="<%= title %>">
+  <meta property="og:description" content="ألغاز كلمات متقاطعة عربية، ولغز يومي بست ألعاب.">
+  <meta property="og:locale" content="ar_AR">
+  <meta property="og:image" content="/assets/site/screen-home.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Lalezar&display=swap" rel="stylesheet">
+  <link href="/assets/css/wasla.css?v=<%= assetVersion %>" rel="stylesheet">
+  <link href="/assets/css/site.css?v=<%= assetVersion %>" rel="stylesheet">
+</head>
+<body class="wz-site">
+
+<header class="wz-hero">
+  <div class="wz-hero-text">
+    <%- include('../partials/brand', { size: 62 }) %>
+    <h1 class="wz-hero-title">كلمات متقاطعة… بالعربي</h1>
+    <p class="wz-hero-lede">
+      ألغاز مكتوبة بأيدينا، ولغز يومي فيه ست ألعاب صغيرة، ولوحات متصدرين تتجدد كل يوم.
+      بلا إعلانات، ويُلعب بلا حساب.
+    </p>
+
+    <div class="wz-stores">
+      <% if (appStoreUrl) { %>
+        <a class="wz-store" href="<%= appStoreUrl %>" rel="noopener">
+          <img src="/assets/site/badge-app-store.svg?v=<%= assetVersion %>" alt="حمّلها من App Store" height="52">
+        </a>
+      <% } else { %>
+        <span class="wz-store-soon">قريباً على App Store</span>
+      <% } %>
+
+      <% if (playUrl) { %>
+        <a class="wz-store" href="<%= playUrl %>" rel="noopener">
+          <img src="/assets/site/badge-google-play.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" height="52">
+        </a>
+      <% } else { %>
+        <span class="wz-store-soon">قريباً على Google Play</span>
+      <% } %>
+    </div>
+
+    <p class="wz-hero-note">مجانية · بالعربية · للآيفون والآيباد</p>
+  </div>
+
+  <div class="wz-hero-shot">
+    <img src="/assets/site/screen-home.png?v=<%= assetVersion %>" alt="شاشة الألغاز في شبّك" width="280" loading="eager">
+  </div>
+</header>
+
+<section class="wz-numbers">
+  <% [
+       [levels || 150, 'لغزاً منشوراً'],
+       [questions || 4400, 'سؤالاً في البنك'],
+       [6, 'ألعاب في لغز اليوم'],
+       [5, 'لوحات متصدرين'],
+     ].forEach(([value, label]) => { %>
+    <div class="wz-number">
+      <span class="wz-number-value"><%= value.toLocaleString('en') %></span>
+      <span class="wz-number-label"><%= label %></span>
+    </div>
+  <% }) %>
+</section>
+
+<section class="wz-features">
+  <h2 class="wz-h2">ماذا في اللعبة؟</h2>
+  <div class="wz-feature-grid">
+    <% [
+         ['الألغاز', 'شبكة كلمات متقاطعة، تُختار حروفها بسحب الإصبع. كل لغز عشرة أسئلة من فئات مختلفة، وثلاث نجوم لمن يُنهيه دون مساعدة.'],
+         ['لغز اليوم', 'بحث عن كلمات، ورتّب الحروف، وفقاعات الكلمات، وصِل المجموعات، وعجلة الحروف، وخمّن الكلمة — ستة كل يوم، ومكافأة لمن أنهاها كلها.'],
+         ['سلسلة الأيام', 'العب كل يوم لتكبر سلسلتك ومكافأتها، ولك حماية تشتريها بالعملات إذا فاتك يوم.'],
+         ['المتصدرون', 'خمس لوحات: أسرع من أنهى ألعاب اليوم، وأسرع بحث، وأطول سلسلة، وأكثر نقاطاً، وأكثر نجوماً.'],
+         ['أسئلة يكتبها بشر', 'أكثر من عشرين فئة: معلومات عامة، أمثال عربية، إسلاميات، خرائط، شعارات، أطباق، نحو وإعراب، وغيرها — لا أسئلة مولّدة بلا مراجعة.'],
+         ['بلا إعلانات', 'لا إعلانات ولا متابعة. اسم اللاعب اختياري، ويكفي أن تفتح اللعبة لتلعب.'],
+       ].forEach(([title, text]) => { %>
+      <article class="wz-feature">
+        <h3><%= title %></h3>
+        <p><%= text %></p>
+      </article>
+    <% }) %>
+  </div>
+</section>
+
+<section class="wz-shots">
+  <img src="/assets/site/screen-daily.png?v=<%= assetVersion %>" alt="لغز اليوم وألعابه الست" width="260" loading="lazy">
+  <img src="/assets/site/screen-level.png?v=<%= assetVersion %>" alt="شبكة لغز داخل اللعبة" width="260" loading="lazy">
+</section>
+
+<section class="wz-cta">
+  <h2 class="wz-h2">جاهز؟</h2>
+  <div class="wz-stores">
+    <% if (appStoreUrl) { %>
+      <a class="wz-store" href="<%= appStoreUrl %>" rel="noopener">
+        <img src="/assets/site/badge-app-store.svg?v=<%= assetVersion %>" alt="حمّلها من App Store" height="52">
+      </a>
+    <% } else { %>
+      <span class="wz-store-soon">قريباً على App Store</span>
+    <% } %>
+    <% if (playUrl) { %>
+      <a class="wz-store" href="<%= playUrl %>" rel="noopener">
+        <img src="/assets/site/badge-google-play.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" height="52">
+      </a>
+    <% } else { %>
+      <span class="wz-store-soon">قريباً على Google Play</span>
+    <% } %>
+  </div>
+</section>
+
+<footer class="wz-site-foot">
+  <a href="/privacy">سياسة الخصوصية</a>
+  <a href="/support">الدعم</a>
+  <a href="/credits">شكر الصور</a>
+  <a href="mailto:<%= supportEmail %>"><%= supportEmail %></a>
+  <span class="wz-site-copy">© <%= new Date().getFullYear() %> Koydam</span>
+</footer>
+
+</body>
+</html>

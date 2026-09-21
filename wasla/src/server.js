@@ -37,6 +37,7 @@ import { adminRouter } from './routes/admin.js';
 import { apiRouter } from './routes/api.js';
 import { challengeRouter } from './routes/challenge.js';
 import { legalRouter } from './routes/legal.js';
+import { siteRouter } from './routes/site.js';
 
 const repo = createRepository(db);
 const images = createImageStore(config.imagesDir, { maxBytes: config.maxImageBytes });
@@ -123,7 +124,8 @@ app.use(loadUser);
 app.use('/admin', adminRouter({
   repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, lab, profiles, titles,
 }));
-app.get('/', (_req, res) => res.redirect('/admin'));
+// The landing page. It answers `/`, which used to bounce everyone to the panel.
+app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.use(notFound);

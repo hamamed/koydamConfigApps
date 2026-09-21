@@ -119,12 +119,16 @@
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <%- icon('link', 16) %>
-                <span class="fw-semibold">روابط التحدي</span>
+                <span class="fw-semibold">روابط المتجرين</span>
               </div>
               <div class="ad-card-body d-grid gap-2">
                 <label class="small fw-semibold" for="appStoreUrl">رابط App Store</label>
                 <input class="form-control" type="url" id="appStoreUrl" name="appStoreUrl" value="<%= appStoreUrl %>" placeholder="https://apps.apple.com/app/id…">
-                <div class="form-text">يظهر كزر في صفحات التحدي (‎/c/3). ليس جزءاً من ‎/api/v1/config.<% if (envAppStoreUrl) { %> الفراغ يستعمل APP_STORE_URL من البيئة: <%= envAppStoreUrl %>.<% } else { %> الفراغ يخفي الزر.<% } %></div>
+                <div class="form-text">يظهر شعار App Store في الصفحة الرئيسية للموقع، وكزر في صفحات التحدي (‎/c/3). ليس جزءاً من ‎/api/v1/config.<% if (envAppStoreUrl) { %> الفراغ يستعمل APP_STORE_URL من البيئة: <%= envAppStoreUrl %>.<% } else { %> الفراغ يخفي الزر ويكتب «قريباً».<% } %></div>
+
+                <label class="small fw-semibold mt-2" for="playUrl">رابط Google Play</label>
+                <input class="form-control" type="url" id="playUrl" name="playUrl" value="<%= playUrl %>" placeholder="https://play.google.com/store/apps/details?id=…">
+                <div class="form-text">يظهر شعار Google Play في الصفحة الرئيسية حين يُملأ. اتركه فارغاً ما دامت اللعبة ليست على المتجر — Google لا تسمح بعرض شعارها لتطبيق غير منشور عندها.</div>
               </div>
             </div>
           </div>
