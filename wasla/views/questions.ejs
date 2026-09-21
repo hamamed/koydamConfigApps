@@ -10,7 +10,7 @@
     <div class="ad-content">
       <%- include('partials/flash') %>
 
-      <form class="ad-toolbar d-flex flex-wrap gap-2 align-items-center mb-3" method="get" action="/admin/questions">
+      <form class="wz-toolbar d-flex flex-wrap gap-2 align-items-center mb-3" method="get" action="/admin/questions">
         <input class="form-control wz-search" name="q" value="<%= search %>" placeholder="ابحث في الأجوبة والأدلة والفئات" dir="auto">
         <div class="form-check m-0">
           <input class="form-check-input" type="checkbox" id="unused" name="unused" value="1" <%= unused ? 'checked' : '' %>>

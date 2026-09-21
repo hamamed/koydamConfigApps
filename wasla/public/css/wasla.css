@@ -570,16 +570,19 @@ body {
   transform: translateY(var(--wz-ledge));
   box-shadow: 0 0 0 var(--wz-ink);
 }
+/* koydam.css styles `:hover` and `:focus-visible` together, and a pseudo-class
+   beats a plain class — so a focused button fell back to the old ink palette
+   until these said otherwise. */
 .btn-kd { background: var(--wz-gold); color: var(--wz-ink); }
-.btn-kd:hover { background: var(--wz-gold-light); color: var(--wz-ink); }
+.btn-kd:hover, .btn-kd:focus-visible { background: var(--wz-gold-light); border-color: var(--wz-ink); color: var(--wz-ink); }
 .btn-kd-accent { background: var(--wz-teal); color: var(--wz-paper); }
-.btn-kd-accent:hover { background: var(--wz-teal-deep); color: var(--wz-paper); }
+.btn-kd-accent:hover, .btn-kd-accent:focus-visible { background: var(--wz-teal-deep); border-color: var(--wz-ink); color: var(--wz-paper); }
 .btn-kd-outline { background: var(--wz-paper); color: var(--wz-ink); }
-.btn-kd-outline:hover { background: var(--wz-board-1); color: var(--wz-ink); }
+.btn-kd-outline:hover, .btn-kd-outline:focus-visible { background: var(--wz-board-1); border-color: var(--wz-ink); color: var(--wz-ink); }
 .btn-kd-danger { background: var(--wz-red); color: #fff; }
-.btn-kd-danger:hover { background: #b93a2f; color: #fff; }
+.btn-kd-danger:hover, .btn-kd-danger:focus-visible { background: #b93a2f; border-color: var(--wz-ink); color: #fff; }
 .btn-kd-ghost { color: var(--wz-teal-deep); font-weight: 700; }
-.btn-kd-ghost:hover { background: var(--wz-board-1); color: var(--wz-ink); }
+.btn-kd-ghost:hover, .btn-kd-ghost:focus-visible { background: var(--wz-board-1); color: var(--wz-ink); }
 
 .form-control, .form-select {
   border: var(--wz-line) solid var(--kd-line-strong);
@@ -644,4 +647,133 @@ body {
 [dir="rtl"] .text-end { text-align: left !important; }
 @media (min-width: 992px) {
   [dir="rtl"] .ms-lg-2 { margin-left: 0 !important; margin-right: .5rem !important; }
+}
+
+/* ---------------------------------------------------- no phantom scroll -- */
+/*
+ * The off-canvas sidebar parks itself at `translateX(100%)`. In a left-to-right
+ * page that is off the left edge, which browsers ignore; in a right-to-left one
+ * it is off the RIGHT edge, which is scrollable — so every page opened on a
+ * phone started scrolled sideways, with the cards cut off at both sides.
+ */
+html[dir="rtl"] { overflow-x: hidden; }
+
+/* -------------------------------------------------- controls, all of them -- */
+
+/* Every button is a plate: a ghost with no edge looked broken beside its
+   neighbours, and on a pale card it read as plain text. */
+.btn-kd-ghost {
+  border: var(--wz-line) solid var(--kd-line-strong);
+  border-radius: var(--kd-radius-sm);
+  background: var(--wz-paper);
+  box-shadow: 0 2px 0 rgba(31, 45, 58, .12);
+}
+.btn-kd-ghost:hover, .btn-kd-ghost:focus-visible { background: var(--wz-board-1); border-color: var(--wz-ink); color: var(--wz-ink); }
+.btn:focus-visible, .form-control:focus-visible, .form-select:focus-visible {
+  outline: 3px solid rgba(20, 164, 158, .35);
+  outline-offset: 1px;
+}
+
+/* A select is drawn like the other plates, and its arrow follows the text. */
+.form-select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--wz-ink) 50%),
+                    linear-gradient(135deg, var(--wz-ink) 50%, transparent 50%);
+  background-position: left 1.05rem top 55%, left .75rem top 55%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-left: 2.2rem;
+  padding-right: .75rem;
+  font-weight: 700;
+  box-shadow: 0 2px 0 rgba(31, 45, 58, .12);
+}
+[dir="ltr"] .form-select,
+.form-select[dir="ltr"] {
+  background-position: right 1.05rem top 55%, right .75rem top 55%;
+  padding-right: 2.2rem;
+  padding-left: .75rem;
+}
+/* The open list is the browser's own window; these are the parts it does let a
+   page colour. */
+.form-select option { background: var(--wz-paper); color: var(--wz-ink); font-weight: 600; }
+.form-select option:checked { background: var(--wz-board); }
+
+.form-control, .form-select { box-shadow: 0 2px 0 rgba(31, 45, 58, .12); }
+.form-control::placeholder { color: var(--kd-faint); font-weight: 500; }
+
+/* Ticks and radios in the pack's ink, filled teal. */
+.form-check-input {
+  border: var(--wz-line) solid var(--wz-ink);
+  width: 1.15em;
+  height: 1.15em;
+  margin-top: .1em;
+}
+.form-check-input:checked { background-color: var(--wz-teal); border-color: var(--wz-ink); }
+.form-check-input:focus { border-color: var(--wz-ink); box-shadow: 0 0 0 3px rgba(20, 164, 158, .25); }
+.form-range::-webkit-slider-thumb { background: var(--wz-teal); border: 2px solid var(--wz-ink); }
+.form-range::-moz-range-thumb { background: var(--wz-teal); border: 2px solid var(--wz-ink); }
+
+/* Bootstrap's own overlays, on the rare page that uses one. */
+.dropdown-menu {
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-sm);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  padding: .35rem;
+}
+.dropdown-item { border-radius: 10px; font-weight: 700; }
+.dropdown-item:hover, .dropdown-item:focus { background: var(--wz-board-1); color: var(--wz-ink); }
+.dropdown-item.active, .dropdown-item:active { background: var(--wz-gold-light); color: var(--wz-ink); }
+.modal-content {
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+}
+.modal-header, .modal-footer { border-color: var(--kd-line); }
+.modal-backdrop.show { background: rgba(31, 45, 58, .45); opacity: 1; }
+
+/* ------------------------------------------------------- the ask box ----- */
+/*
+ * `window.confirm` is a browser box with none of the panel around it, and in an
+ * Arabic page it even asks in the browser's language. This is the same question
+ * on one of the game's plates.
+ */
+.wz-dialog {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  max-width: min(30rem, calc(100vw - 2rem));
+}
+.wz-dialog::backdrop { background: rgba(31, 45, 58, .45); }
+.wz-dialog-card {
+  background: var(--wz-paper);
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-lg);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+  padding: 1.35rem 1.35rem 1.1rem;
+  display: grid;
+  gap: 1.1rem;
+}
+.wz-dialog-text {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--wz-ink);
+  line-height: 1.7;
+}
+.wz-dialog-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+
+/*
+ * A search bar, not an editor's toolbar.
+ *
+ * admin.css's `.ad-toolbar` is built to sit on top of `.ad-editor`: it has no
+ * bottom border and square bottom corners, and it strips the border and colour
+ * off any button inside it. Used around the question search that read as a box
+ * with its contents hanging out of the open bottom edge, and a search button
+ * with no edge at all — so the search bar has its own plate instead.
+ */
+.wz-toolbar {
+  padding: .6rem;
+  border: var(--wz-line) solid var(--kd-line-strong);
+  border-radius: var(--kd-radius);
+  background: var(--wz-paper);
+  box-shadow: 0 var(--wz-ledge) 0 rgba(31, 45, 58, .1);
 }

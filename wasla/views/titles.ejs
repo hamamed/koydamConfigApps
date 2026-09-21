@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'الفئات',
-          subheading: titles.length + ' titles · ' + used + ' with questions — shown above each question in the app, and offered in every title box'
+          subheading: titles.length + ' فئة · ' + used + ' فيها أسئلة — تظهر فوق كل سؤال في التطبيق، وتُعرض في كل صندوق فئة'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
@@ -50,7 +50,7 @@
                   </td>
                   <td class="text-end text-nowrap">
                     <a class="btn btn-sm btn-kd-ghost" href="/admin/questions/new?title=<%= encodeURIComponent(t.name) %>">
-                      <i data-lucide="plus" width="14" height="14" class="me-1"></i>Question
+                      <i data-lucide="plus" width="14" height="14" class="me-1"></i>سؤال
                     </a>
                     <% if (!t.questions && t.listed) { %>
                       <form class="d-inline m-0" method="post" action="/admin/titles/delete" data-confirm="حذف «<%= t.name %>» من القائمة؟">

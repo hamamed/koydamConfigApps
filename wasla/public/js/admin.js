@@ -106,9 +106,55 @@
   });
 
   // ── Destructive action confirmation ─────────────────────────────────────
+
+  // ── Asking, on one of the panel's own plates ────────────────────────────
+  //
+  // `window.confirm` is a browser box: it carries none of the design around it
+  // and answers in the browser's language, not the page's. This is the same
+  // question, asked on a plate, and it resolves to true or false just as
+  // confirm() returned them.
+  let askBox = null;
+  function ask(message) {
+    if (!window.HTMLDialogElement) return Promise.resolve(window.confirm(message));
+    if (!askBox) {
+      askBox = document.createElement('dialog');
+      askBox.className = 'wz-dialog';
+      askBox.innerHTML = '<form method="dialog" class="wz-dialog-card">'
+        + '<p class="wz-dialog-text"></p>'
+        + '<div class="wz-dialog-actions">'
+        + '<button class="btn btn-kd-outline btn-sm" value="no" type="submit">إلغاء</button>'
+        + '<button class="btn btn-kd btn-sm" value="yes" type="submit">تأكيد</button>'
+        + '</div></form>';
+      document.body.appendChild(askBox);
+    }
+    askBox.querySelector('.wz-dialog-text').textContent = message;
+    askBox.returnValue = 'no';
+    askBox.showModal();
+    askBox.querySelector('[value="yes"]').focus();
+    return new Promise((resolve) => {
+      askBox.addEventListener('close', () => resolve(askBox.returnValue === 'yes'), { once: true });
+    });
+  }
+
+  /** Runs `again` once the question is answered yes; the flag stops it asking twice. */
+  function confirmThen(element, message, again) {
+    if (element.dataset.answered === 'yes') {
+      delete element.dataset.answered;
+      return true;
+    }
+    ask(message).then((yes) => {
+      if (!yes) return;
+      element.dataset.answered = 'yes';
+      again();
+    });
+    return false;
+  }
+
   document.querySelectorAll('form[data-confirm]').forEach((form) => {
     form.addEventListener('submit', (event) => {
-      if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+      const submitter = event.submitter;
+      if (confirmThen(form, form.dataset.confirm, () => form.requestSubmit(submitter))) return;
+      event.preventDefault();
     });
   });
 
@@ -204,11 +250,11 @@
       // Named rather than counted when it is one, because "delete 1 item" reads
       // like a rounding error and this removes files.
       const what = n === 1
-        ? `“${selected()[0].closest('.ad-skin-card-wrap')?.querySelector('.ad-skin-title')?.textContent?.trim() ?? 'this item'}”`
-        : `${n} items`;
-      if (!window.confirm(`Delete ${what}? This removes their files too and can't be undone.`)) {
-        event.preventDefault();
-      }
+        ? `«${selected()[0].closest('.ad-skin-card-wrap')?.querySelector('.ad-skin-title')?.textContent?.trim() ?? 'هذا العنصر'}»`
+        : `${n} عناصر`;
+      const question = `حذف ${what}؟ هذا يحذف ملفاتها أيضاً ولا يمكن التراجع عنه.`;
+      if (confirmThen(bulkForm, question, () => bulkForm.requestSubmit(event.submitter))) return;
+      event.preventDefault();
     });
 
     reflect();
@@ -274,9 +320,10 @@
     });
     const remove = bulk.querySelector('[data-bulk-delete-button]');
     remove?.addEventListener('click', (event) => {
-      const ask = (remove.dataset.bulkDeleteAsk || 'Delete %n question(s)? Questions that are in a level are kept.')
+      const question = (remove.dataset.bulkDeleteAsk || 'حذف %n سؤالاً؟ الأسئلة التي داخل ألغاز تبقى.')
         .replace('%n', String(selected()));
-      if (!window.confirm(ask)) event.preventDefault();
+      if (confirmThen(remove, question, () => remove.click())) return;
+      event.preventDefault();
     });
     reflect();
   });
@@ -287,7 +334,8 @@
   // (the import preview: save, remove a row, import) asks only for this one.
   document.querySelectorAll('[data-confirm-click]').forEach((button) => {
     button.addEventListener('click', (event) => {
-      if (!window.confirm(button.dataset.confirmClick)) event.preventDefault();
+      if (confirmThen(button, button.dataset.confirmClick, () => button.click())) return;
+      event.preventDefault();
     });
   });
 
