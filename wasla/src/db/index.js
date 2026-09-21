@@ -77,6 +77,24 @@ export function openDatabase(file) {
   // Days planned for games that no longer exist (contract §9): the kinds are
   // gone from the code, so their rows would only ever be dead weight.
   database.exec("DELETE FROM daily_game_days WHERE kind IN ('scramble', 'bubbles', 'groups')");
+  // The kinds a planned day may hold live in a CHECK, which SQLite cannot alter:
+  // a database made before صِل بالصورة has to be rebuilt once to accept it.
+  const plannedDays = database.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'daily_game_days'").pluck().get();
+  if (plannedDays && !plannedDays.includes("'picture'")) {
+    database.exec(`
+      CREATE TABLE daily_game_days_new (
+        date        TEXT NOT NULL,
+        kind        TEXT NOT NULL CHECK (kind IN ('wheel', 'guess', 'picture')),
+        game        TEXT NOT NULL,
+        source      TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto', 'typed')),
+        updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (date, kind)
+      );
+      INSERT INTO daily_game_days_new SELECT * FROM daily_game_days;
+      DROP TABLE daily_game_days;
+      ALTER TABLE daily_game_days_new RENAME TO daily_game_days;
+    `);
+  }
   // Indexes on added columns can only be made once the columns exist. (idx_levels_pack: unused legacy.)
   database.exec('CREATE INDEX IF NOT EXISTS idx_levels_pack ON levels(pack_id)');
   return database;

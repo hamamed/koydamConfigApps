@@ -19,7 +19,7 @@ export const WEEK = Object.freeze([
   'guess', // الأربعاء
   'wordsearch', // الخميس
   'marathon', // الجمعة
-  'wheel', // السبت
+  'picture', // السبت
 ]);
 
 /** Every kind a day can hold, including the two that are not in GAME_KINDS. */
@@ -29,6 +29,7 @@ export const WEEKDAY_NAMES = Object.freeze(['الأحد', 'الاثنين', 'ا�
 
 export const KIND_NAMES = Object.freeze({
   wheel: 'عجلة الحروف',
+  picture: 'صِل بالصورة',
   guess: 'خمّن الكلمتين',
   wordsearch: 'البحث عن الكلمات',
   marathon: 'ماراثون الجمعة',

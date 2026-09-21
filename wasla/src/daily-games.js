@@ -2,11 +2,13 @@
  * The daily games that are not the word search (contract §6, §9): one set per
  * calendar date, the same for everyone.
  *
- *   wheel — a handful of letters and the words they spell
- *   guess — two hidden five-letter words at once, eight tries for both
+ *   wheel   — a handful of letters and the words they spell
+ *   guess   — two hidden five-letter words at once, eight tries for both
+ *   picture — one picture and the five words of ten that belong to it
  *
- * Both come from the word lists edited on the Daily games page
- * (src/daily-games-words.js until edited). Every choice comes from a seed made
+ * The first two come from the word lists edited on the Daily games page
+ * (src/daily-games-words.js until edited); the picture rounds are written by
+ * hand (src/picture-rounds.js). Every choice comes from a seed made
  * of the date, so every request answers the same for the same date.
  *
  * A game saved for a date in the panel (`daily_game_days`, planned from the
@@ -20,7 +22,7 @@ import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedul
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from './daily-games-words.js';
 import { random, shuffled } from './wordsearch.js';
 
-export const GAME_KINDS = Object.freeze(['wheel', 'guess']);
+export const GAME_KINDS = Object.freeze(['wheel', 'guess', 'picture']);
 
 export const GUESS_LETTERS = 5;
 export const GUESS_WORDS = 2;
@@ -155,8 +157,8 @@ export function buildGuess(words, day) {
  * shorter, and with no second chances between them.
  */
 
-export const MARATHON_ROUNDS = Object.freeze(['wheel', 'guess', 'wordsearch']);
-export const MARATHON_SIZES = Object.freeze({ wheel: 6, guess: 1, board: 7 });
+export const MARATHON_ROUNDS = Object.freeze(['wheel', 'guess', 'picture', 'wordsearch']);
+export const MARATHON_SIZES = Object.freeze({ wheel: 6, guess: 1, picture: 3, board: 7 });
 export const MARATHON_GUESS_TRIES = 5;
 
 /** The same game, cut to marathon length; null stays null. */
@@ -169,12 +171,17 @@ export function trimForMarathon(kind, game, rand) {
       const words = game.words.slice(0, MARATHON_SIZES.guess);
       return { words, word: words[0].word, display: words[0].display, tries: MARATHON_GUESS_TRIES };
     }
+    case 'picture': {
+      const answers = game.answers.slice(0, MARATHON_SIZES.picture);
+      const decoys = game.words.filter((word) => !game.answers.includes(word)).slice(0, MARATHON_SIZES.picture);
+      return { ...game, words: shuffled([...answers, ...decoys], rand), answers, mistakes: 2 };
+    }
     default:
       return game;
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const listText = (name) => db.prepare('SELECT body FROM daily_game_lists WHERE name = ?').pluck().get(name) ?? DEFAULTS[name];
@@ -215,6 +222,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null }) {
     return {
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
+      picture: pictures?.forDate(parsed.date) ?? null,
     };
   }
 
@@ -236,6 +244,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null }) {
     switch (kind) {
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
+      case 'picture': return pictures?.forDate(parsed.date, step) ?? null;
       default: return null;
     }
   }

@@ -24,6 +24,7 @@ import { registerBoards } from './admin-boards.js';
 import { registerCatalogue } from './admin-catalogue.js';
 import { registerEvents } from './admin-events.js';
 import { registerLab } from './admin-lab.js';
+import { registerPictures } from './admin-pictures.js';
 import { registerProfiles } from './admin-profiles.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
@@ -47,7 +48,7 @@ function share(total, parts) {
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, lab = null, profiles, titles = null,
+  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
 }) {
   const router = express.Router();
 
@@ -704,6 +705,7 @@ export function adminRouter({
   if (profiles) registerCatalogue(router, { db, profiles });
   registerEvents(router);
   if (lab) registerLab(router, { lab });
+  if (pictures) registerPictures(router, { pictures, images, withUpload });
   if (wordSearch && wordSearchDays) {
     registerDaily(router, { wordSearch, wordSearchDays });
     registerWordSearch(router, { wordSearch });

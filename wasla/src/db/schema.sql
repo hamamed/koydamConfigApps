@@ -200,11 +200,27 @@ CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
 -- is automatic. `game` is the JSON the API sends for that game.
 CREATE TABLE IF NOT EXISTS daily_game_days (
   date        TEXT NOT NULL,
-  kind        TEXT NOT NULL CHECK (kind IN ('scramble', 'bubbles', 'groups', 'wheel', 'guess')),
+  kind        TEXT NOT NULL CHECK (kind IN ('wheel', 'guess', 'picture')),
   game        TEXT NOT NULL,
   source      TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto', 'typed')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (date, kind)
+);
+
+-- صِل بالصورة (contract §10): one picture, the five words that belong to it and
+-- five that do not. Written by hand in the panel; a round is played once published.
+CREATE TABLE IF NOT EXISTS picture_rounds (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  image_file  TEXT,
+  zoom        REAL NOT NULL DEFAULT 1,
+  focus_x     REAL NOT NULL DEFAULT 0.5,
+  focus_y     REAL NOT NULL DEFAULT 0.5,
+  words       TEXT NOT NULL,
+  decoys      TEXT NOT NULL,
+  published   INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS daily_game_lists (
