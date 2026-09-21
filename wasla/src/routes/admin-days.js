@@ -130,7 +130,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
     const wsDay = wordSearchDays.get(date);
     const board = wordSearchDays.boardFor(date);
     res.render('day', {
-      title: `Daily · ${date}`,
+      title: `يوم ${date}`,
       date,
       event: eventLabel(eventFor(date)),
       weekday: WEEKDAY_NAMES[weekdayOf(day)],

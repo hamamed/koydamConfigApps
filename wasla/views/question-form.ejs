@@ -177,7 +177,7 @@
 
       <% if (question.id) { %>
         <form method="post" action="/admin/questions/<%= question.id %>/delete" class="mt-4"
-              onsubmit="return confirm('Delete this question?')">
+              data-confirm="حذف هذا السؤال؟">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button class="btn btn-sm btn-kd-danger" type="submit" <%= levels.length ? 'disabled' : '' %>>حذف السؤال</button>
           <% if (levels.length) { %><span class="small kd-faint ms-2">أخرجه من ألغازه أولاً.</span><% } %>

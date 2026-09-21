@@ -61,7 +61,7 @@
                       <% } %>
                     </td>
                     <% kinds.forEach((k) => { const s = d.games[k]; %>
-                      <td><span class="kd-tag <%= s === 'typed' ? 'kd-tag-accent' : s ? 'kd-tag-ok' : '' %>"><%= s === 'typed' ? 'typed' : s ? 'planned' : 'auto' %></span></td>
+                      <td><span class="kd-tag <%= s === 'typed' ? 'kd-tag-accent' : s ? 'kd-tag-ok' : '' %>"><%= s === 'typed' ? 'مكتوب' : s ? 'مخطَّط' : 'تلقائي' %></span></td>
                     <% }) %>
                     <td class="text-end"><a class="btn btn-sm <%= d.isPast ? 'btn-kd-ghost' : 'btn-kd-outline' %>" href="/admin/days/<%= d.date %>"><%= d.isPast ? 'عرض' : 'فتح' %></a></td>
                   </tr>

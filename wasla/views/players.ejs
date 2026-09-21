@@ -13,12 +13,12 @@
 
       <div class="row g-3 mb-3">
         <% [
-             ['Players today', kpis.today, 'user-check'],
-             ['Last 7 days', kpis.week, 'users'],
-             ['Last 30 days', kpis.month, 'users-round'],
+             ['لاعبو اليوم', kpis.today, 'user-check'],
+             ['آخر 7 أيام', kpis.week, 'users'],
+             ['آخر 30 يوماً', kpis.month, 'users-round'],
              ['ألغاز أُنهيت اليوم', kpis.levelsCompletedToday, 'trophy'],
              ['ألغاز اليوم المنتهية', kpis.dailyCompletedToday, 'calendar-check'],
-             ['Notifications on', kpis.notificationsEnabled, 'bell-ring'],
+             ['الإشعارات مفعّلة', kpis.notificationsEnabled, 'bell-ring'],
            ].forEach(([label, value, glyph]) => { %>
           <div class="col-6 col-md-4 col-xl-2">
             <div class="ad-card ad-kpi wz-kpi h-100">
@@ -127,7 +127,7 @@
             </div>
             <div class="ad-card-body">
               <div class="row g-3">
-                <% [['Day 1', retention.d1], ['Day 7', retention.d7]].forEach(([label, r]) => { %>
+                <% [['اليوم 1', retention.d1], ['اليوم 7', retention.d7]].forEach(([label, r]) => { %>
                   <div class="col-6">
                     <div class="ad-kpi-label"><%= label %></div>
                     <div class="ad-kpi-value"><%= pct(r.rate) %></div>
@@ -149,9 +149,9 @@
               <div class="row g-3">
                 <% [
                      ['أُنهيت', wordSearch.completed, wordSearch.started + ' بدأت · ' + pct(wordSearch.completionRate) + ' أُنهيت'],
-                     ['Players', wordSearch.players, 'completed at least one'],
+                     ['اللاعبون', wordSearch.players, 'أنهى واحدة على الأقل'],
                      ['متوسط الوقت', duration(wordSearch.avgSeconds), 'لكل شبكة منتهية'],
-                     ['متوسط النجوم', wordSearch.avgStars === null ? '—' : wordSearch.avgStars.toFixed(1), wordSearch.wordsFound + ' words found'],
+                     ['متوسط النجوم', wordSearch.avgStars === null ? '—' : wordSearch.avgStars.toFixed(1), wordSearch.wordsFound + ' كلمة وُجدت'],
                    ].forEach(([label, value, note]) => { %>
                   <div class="col-6">
                     <div class="ad-kpi-label"><%= label %></div>

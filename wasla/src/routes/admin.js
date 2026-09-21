@@ -246,7 +246,7 @@ export function adminRouter({
   };
 
   const renderForm = (res, question, extra = {}) => res.render('question-form', {
-    title: question.id ? 'Edit question' : 'New question',
+    title: question.id ? 'تعديل السؤال' : 'سؤال جديد',
     question,
     maxZoom: MAX_ZOOM,
     maxTitle: MAX_TITLE,
@@ -419,7 +419,7 @@ export function adminRouter({
     const question = repo.getQuestion(Number(req.params.id));
     if (!question) return next();
     res.render('question-preview', {
-      title: `Preview · ${question.answer}`,
+      title: `معاينة · ${question.answer}`,
       question,
       preview: previewQuestion(question, { pictureSize }),
       coins: STARTING_COINS,
@@ -630,7 +630,7 @@ export function adminRouter({
     const level = repo.getLevel(Number(req.params.id));
     if (!level) return next();
     res.render('level-preview', {
-      title: `Preview · ${level.name}`, level, preview: previewLevel(level, { pictureSize }), coins: STARTING_COINS,
+      title: `معاينة · ${level.name}`, level, preview: previewLevel(level, { pictureSize }), coins: STARTING_COINS,
     });
   });
 

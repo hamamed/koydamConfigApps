@@ -618,13 +618,27 @@ body {
   [dir="rtl"] .ad-main { margin-right: 0; }
 }
 
-/* Numbers, dates, ids and code read left to right inside an Arabic page. */
+/*
+ * Numbers, dates, ids and code read left to right inside an Arabic page — but
+ * the same boxes also hold Arabic (a format example, "لا شيء مخطَّط"), and
+ * forcing them left to right turned that back to front. `plaintext` takes the
+ * direction from what is actually in the box, one box at a time.
+ */
 [dir="rtl"] .kd-mono,
 [dir="rtl"] .ad-kpi-value,
-[dir="rtl"] code,
+[dir="rtl"] code { unicode-bidi: plaintext; }
 [dir="rtl"] .wz-ltr { direction: ltr; unicode-bidi: isolate; }
 [dir="rtl"] .ad-kpi-value,
 [dir="rtl"] .wz-ltr-start { text-align: right; }
+
+/*
+ * A number column in an Arabic table still reads from the right: `text-end`
+ * means "the far side" in Bootstrap, and mirroring it left every count hugging
+ * the left edge of its cell while the rest of the row read the other way.
+ */
+[dir="rtl"] .ad-table .text-end,
+[dir="rtl"] .ad-table th.text-end,
+[dir="rtl"] .ad-table td.text-end { text-align: right !important; }
 
 /*
  * Bootstrap here is the left-to-right build, where `ms-*` and `me-*` are plain
