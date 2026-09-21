@@ -805,3 +805,6 @@ html[dir="rtl"] { overflow-x: hidden; }
   flex: none;
 }
 .ad-nav-link .wz-i { margin-inline-end: .1rem; }
+
+/* The mark in an empty picture frame: a question with no picture. */
+.wz-none-mark { font-size: .72rem; font-weight: 800; color: var(--kd-faint); }

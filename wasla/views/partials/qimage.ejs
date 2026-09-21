@@ -6,5 +6,6 @@
     <% if (q.zoom > 1) { %><span class="wz-badge">×<%= q.zoom %></span><% } %>
   </span>
 <% } else { %>
-  <span class="wz-frame wz-none <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"><%- icon('type', 16) %></span>
+  <%# A plain mark, not an icon: inside the picture frame an icon is stretched to fill it. %>
+  <span class="wz-frame wz-none <%= typeof size !== 'undefined' ? 'wz-' + size : '' %>"><span class="wz-none-mark">نص</span></span>
 <% } %>
