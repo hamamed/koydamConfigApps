@@ -198,6 +198,8 @@
 
 @media (max-width: 767.98px) {
   .wz-hero { grid-template-columns: 1fr; padding-block: 2.5rem 1.5rem; text-align: center; }
+  /* Stacked, the logo comes first: it is what the page is, and the words follow. */
+  .wz-hero-mark { order: -1; margin-bottom: .5rem; }
   .wz-hero .wz-logo-wrap { margin-inline: auto; }
   .wz-hero-lede { margin-inline: auto; }
   .wz-stores { justify-content: center; }

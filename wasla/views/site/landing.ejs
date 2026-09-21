@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= title %></title>
-  <meta name="description" content="شبّك لعبة كلمات متقاطعة عربية: ألغاز مرسومة بخط اليد، لغز يومي بست ألعاب، ولوحات متصدرين. حمّلها مجاناً.">
+  <meta name="description" content="شبّك لعبة كلمات متقاطعة عربية: ألغاز مرسومة بخط اليد، ولعبة جديدة كل يوم، ولوحات متصدرين. حمّلها مجاناً.">
   <meta name="theme-color" content="#e9f6f3">
   <link rel="icon" href="/assets/favicon.png?v=<%= assetVersion %>" type="image/png">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="شبّك">
   <meta property="og:title" content="<%= title %>">
-  <meta property="og:description" content="ألغاز كلمات متقاطعة عربية، ولغز يومي بست ألعاب.">
+  <meta property="og:description" content="ألغاز كلمات متقاطعة عربية، ولعبة جديدة كل يوم.">
   <meta property="og:locale" content="ar_AR">
   <meta property="og:image" content="/assets/site/screen-home.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,14 +25,14 @@
   <div class="wz-hero-text">
     <h1 class="wz-hero-title">كلمات متقاطعة… بالعربي</h1>
     <p class="wz-hero-lede">
-      ألغاز مكتوبة بأيدينا، ولغز يومي فيه ست ألعاب صغيرة، ولوحات متصدرين تتجدد كل يوم.
+      ألغاز مكتوبة بأيدينا، ولعبة جديدة كل يوم من أيام الأسبوع، ولوحات متصدرين تتجدد كل يوم.
       بلا إعلانات، ويُلعب بلا حساب.
     </p>
 
     <%- include('stores') %>
 
     <ul class="wz-hero-points">
-      <% [['star', 'ألغاز بثلاث نجوم'], ['gamepad-2', 'ست ألعاب كل يوم'], ['trophy', 'لوحات متصدرين']].forEach(([glyph, text]) => { %>
+      <% [['star', 'ألغاز بثلاث نجوم'], ['gamepad-2', 'لعبة كل يوم'], ['trophy', 'لوحات متصدرين']].forEach(([glyph, text]) => { %>
         <li>
           <% if (hasIcons) { %><img src="<%= iconUrl(glyph) %>" alt="" width="24" height="24" loading="lazy"><% } %>
           <span><%= text %></span>
@@ -52,7 +52,7 @@
   <% [
        [levels || 150, 'لغزاً منشوراً', 'grid-3x3'],
        [questions || 4400, 'سؤالاً في البنك', 'message-circle-question'],
-       [6, 'ألعاب في لغز اليوم', 'gamepad-2'],
+       [7, 'أيام، ولكل يوم لعبته', 'calendar-days'],
        [5, 'لوحات متصدرين', 'trophy'],
      ].forEach(([value, label, glyph]) => { %>
     <div class="wz-number">
@@ -68,9 +68,9 @@
   <div class="wz-feature-grid">
     <% [
          ['الألغاز', 'شبكة كلمات متقاطعة، تُختار حروفها بسحب الإصبع. كل لغز عشرة أسئلة من فئات مختلفة، وثلاث نجوم لمن يُنهيه دون مساعدة.', 'grid-3x3'],
-         ['لغز اليوم', 'بحث عن كلمات، ورتّب الحروف، وفقاعات الكلمات، وصِل المجموعات، وعجلة الحروف، وخمّن الكلمة — ستة كل يوم، ومكافأة لمن أنهاها كلها.', 'calendar-days'],
+         ['لغز اليوم', 'لكل يوم لعبته: البحث عن الكلمات، وفقاعات الكلمات على صورة، وعجلة الحروف، وخمّن الكلمتين — والجمعة ماراثون يجمعها كلها.', 'calendar-days'],
          ['سلسلة الأيام', 'العب كل يوم لتكبر سلسلتك ومكافأتها، ولك حماية تشتريها بالعملات إذا فاتك يوم.', 'fire'],
-         ['المتصدرون', 'خمس لوحات: أسرع من أنهى ألعاب اليوم، وأسرع بحث، وأطول سلسلة، وأكثر نقاطاً، وأكثر نجوماً.', 'trophy'],
+         ['المتصدرون', 'خمس لوحات: أسرع من أنهى لعبة اليوم، وأسرع بحث، وأطول سلسلة، وأكثر نقاطاً، وأكثر نجوماً.', 'trophy'],
          ['أسئلة يكتبها بشر', 'أكثر من عشرين فئة: معلومات عامة، أمثال عربية، إسلاميات، خرائط، شعارات، أطباق، نحو وإعراب، وغيرها — لا أسئلة مولّدة بلا مراجعة.', 'message-circle-question'],
          ['بلا إعلانات', 'لا إعلانات ولا متابعة. اسم اللاعب اختياري، ويكفي أن تفتح اللعبة لتلعب.', 'shield'],
        ].forEach(([title, text, glyph]) => { %>
