@@ -146,12 +146,16 @@ test('a proverb with no emoji is asked in words', () => {
   assert.equal(pool[0].clue, 'أكمل المثل');
 });
 
-test('the proverbs and the bank share the rotation', () => {
+test('one board in four is a proverb, so a handful of them is not buried', () => {
   const riddles = [{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '😑⏳🔑' }];
-  const seen = new Set();
-  for (let i = 0; i < 12; i++) {
+  const flavours = Array.from({ length: 12 }, (_, i) => {
     const board = connectForDate(rows, `2026-09-${String(i + 10).padStart(2, '0')}`, { riddles });
-    seen.add(board.display === 'الصبر مفتاح الفرج' ? 'مثل' : 'بنك');
-  }
-  assert.deepEqual([...seen].sort(), ['بنك', 'مثل'], 'both turn up inside a fortnight');
+    return board.display === 'الصبر مفتاح الفرج' ? 'مثل' : 'بنك';
+  });
+  assert.equal(flavours.filter((f) => f === 'مثل').length, 3, 'three of twelve');
+  assert.ok(flavours.includes('بنك'));
+
+  // With no proverb that fits, every board comes from the bank.
+  const short = connectForDate(rows, '2026-09-10', { riddles: [{ before: 'من جدّ', after: '', answer: 'وجد' }] });
+  assert.notEqual(short.display, 'الصبر مفتاح الفرج');
 });

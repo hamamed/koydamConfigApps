@@ -26,6 +26,8 @@ import { random, shuffled } from './wordsearch.js';
 export const CONNECT_LETTERS = Object.freeze([8, 20]);
 /** Neither side of the board may be thinner than this, or longer than this. */
 export const CONNECT_SIDES = Object.freeze([2, 5]);
+/** One board in four is a proverb, when the قوافي list has one that fits. */
+export const PROVERB_EVERY = 4;
 
 const ARABIC_WORD = /^[ء-غف-ي]+$/u;
 
@@ -189,12 +191,15 @@ export function proverbPool(riddles) {
 export function connectForDate(questions, date, { nonce = 0, riddles = [] } = {}) {
   const parsed = parseDay(date);
   if (!parsed) return null;
-  // The proverbs come first in the list, so every few days one comes round.
-  const pool = [...proverbPool(riddles), ...connectPool(questions)];
-  if (!pool.length) return null;
-
   const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
   const day = parsed.day + step;
+
+  // A proverb every fourth board. The bank holds thousands of questions and the
+  // قوافي list a handful, so sharing one rotation would bury the proverbs.
+  const proverbs = proverbPool(riddles);
+  const pool = proverbs.length && day % PROVERB_EVERY === 0 ? proverbs : connectPool(questions);
+  if (!pool.length) return null;
+
   const list = shuffled([...pool].sort((a, b) => a.id - b.id), random(0x517e));
 
 
