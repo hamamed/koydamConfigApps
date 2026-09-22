@@ -6,29 +6,17 @@
  *   npm run seed-pictures -- --draw      # draws the pictures into the picture folder
  *   npm run seed-pictures                # saves the rounds that have a picture
  *
- * Each line is `source | العنوان | كلمة، كلمة، …`. The source is one of three:
- *
- *   an emoji's English name   the Twemoji drawing of it — flat and bold
- *                             (CC BY 4.0, https://github.com/jdecked/twemoji)
- *   fluent:<Asset name>       Microsoft's Fluent Emoji, soft and rounded
- *                             (MIT, https://github.com/microsoft/fluentui-emoji)
- *   openclipart:<id>          a drawing of something emoji has none of —
- *                             الرمان، البامية، الجوافة — from Openclipart,
- *                             which is public domain (CC0, https://openclipart.org)
- *
- * Either way the drawing is fetched as SVG and drawn at 512 px on nothing: it
- * keeps its own shape, the card it is shown on provides the background, and it
- * is drawn inside a margin so the rounded frame the app draws around a picture
- * never cuts a corner of it.
+ * Each line is `source | العنوان | كلمة، كلمة، …`, and a line `@ تصنيف` files
+ * everything under it in that category. The sources a line may name, and how a
+ * drawing is fetched and stored, are in src/drawings.js.
  *
  * Drawing needs `sharp`, which the service does not: draw on a machine that has
- * it, copy the files over, and save the rounds there. A round's file name comes
- * from the emoji, so both steps agree on it without being told. Running it again
+ * it, copy the files over, and save the rounds there. A drawing's file name
+ * comes from its source, so both steps agree on it without being told. Running it again
  * adds only the titles that are not in the bank yet, so the file can be grown a
  * few rounds at a time.
  */
 
-import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,36 +25,11 @@ import { letters, foldForPlay } from '../src/arabic.js';
 import { buildConnect, connectPool } from '../src/connect.js';
 import { config } from '../src/config.js';
 import { db } from '../src/db/index.js';
+import { drawOrPlain, emojiNames, fileFor, sourceOf } from '../src/drawings.js';
 import { createBubblePictures, readRound } from '../src/bubble-pictures.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SEED = path.join(HERE, 'picture-seed.txt');
-const NAMES = 'https://unicode.org/Public/emoji/15.1/emoji-test.txt';
-const TWEMOJI = (code) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
-const OPENCLIPART = (id) => `https://openclipart.org/download/${id}/`;
-const OPENCLIPART_PAGE = (id) => `https://openclipart.org/detail/${id}/`;
-const FLUENT = (name) => 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/'
-  // The file keeps the name's hyphens (t-shirt_color.svg) and turns the rest into _.
-  + `${encodeURIComponent(name)}/Color/${name.toLowerCase().replace(/[^a-z0-9-]+/g, '_')}_color.svg`;
-/** Sources that name a drawing rather than an emoji. */
-const CLIPART = /^openclipart:(\d+)$/;
-const FLUENT_SOURCE = /^fluent:(.+)$/;
-const SIDE = 512;
-/** The margin the drawing keeps on every side, so no edge of it is clipped. */
-const MARGIN = 52;
-
-/** `{ name: codepoints }` for every emoji Unicode lists, by its English name. */
-async function emojiNames() {
-  const text = await (await fetch(NAMES)).text();
-  const names = new Map();
-  for (const line of text.split('\n')) {
-    if (line.startsWith('#') || !line.includes('; fully-qualified')) continue;
-    const [codes, rest] = line.split(';');
-    const name = rest.match(/#\s+\S+\s+E\d+\.\d+\s+(.+?)\s*$/)?.[1];
-    if (name) names.set(name.toLowerCase(), codes.trim().split(/\s+/).map((c) => c.toLowerCase()).join('-'));
-  }
-  return names;
-}
 
 /** The rounds as written: `{ rounds, problems }`. */
 export function readSeed(text) {
@@ -102,42 +65,6 @@ const fitsConnect = (round) => Boolean(buildConnect(
   round.title.length + round.words.length,
 ));
 
-/** The name a round's picture is stored under: its source, and nothing else. */
-const fileFor = (code) => `${crypto.createHash('md5').update(code).digest('hex').slice(0, 24)}.png`;
-
-/**
- * The drawing's file. Openclipart's `/download/<id>/` sometimes answers 500
- * rather than redirecting, so its page is read for the file's own address.
- */
-async function fetchDrawing(source) {
-  const fluent = source.match(FLUENT_SOURCE);
-  if (fluent) return fetch(FLUENT(fluent[1]), { headers: { 'User-Agent': 'wasla-seed' } });
-
-  const clipart = source.match(CLIPART);
-  if (!clipart) return fetch(TWEMOJI(source), { headers: { 'User-Agent': 'wasla-seed' } });
-
-  const direct = await fetch(OPENCLIPART(clipart[1]), { headers: { 'User-Agent': 'wasla-seed' } });
-  if (direct.ok) return direct;
-  const page = await fetch(OPENCLIPART_PAGE(clipart[1]), { headers: { 'User-Agent': 'wasla-seed' } });
-  if (!page.ok) return direct;
-  const file = (await page.text()).match(new RegExp(`/download/${clipart[1]}/[^"']+\\.svg`))?.[0];
-  return file ? fetch(`https://openclipart.org${file}`, { headers: { 'User-Agent': 'wasla-seed' } }) : direct;
-}
-
-async function draw(source) {
-  const svg = await fetchDrawing(source);
-  if (!svg.ok) return null;
-  const { default: sharp } = await import('sharp');
-  return sharp(Buffer.from(await svg.arrayBuffer()), { density: 600 })
-    .resize(SIDE - MARGIN * 2, SIDE - MARGIN * 2, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
-    .extend({
-      top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN,
-      background: { r: 255, g: 255, b: 255, alpha: 0 },
-    })
-    .png()
-    .toBuffer();
-}
-
 const check = process.argv.includes('--check');
 const { rounds, problems } = readSeed(await fs.readFile(SEED, 'utf8'));
 problems.forEach((problem) => console.error(`✗ ${problem}`));
@@ -151,10 +78,8 @@ if (thin.length) {
 
 const names = await emojiNames();
 /** What a round's picture is fetched by: a drawing's id, or an emoji's codepoints. */
-const sourceOf = (round) => (CLIPART.test(round.name) || FLUENT_SOURCE.test(round.name)
-  ? round.name
-  : names.get(round.name.toLowerCase()));
-const unknown = rounds.filter((round) => !sourceOf(round));
+const drawingOf = (round) => sourceOf(round.name, names);
+const unknown = rounds.filter((round) => !drawingOf(round));
 unknown.forEach((round) => console.error(`✗ «${round.title}»: no emoji named «${round.name}»`));
 
 if (check) process.exit(problems.length || unknown.length ? 1 : 0);
@@ -169,11 +94,10 @@ if (process.argv.includes('--draw')) {
   let drawn = 0;
   let failed = 0;
   for (const round of rounds) {
-    const code = sourceOf(round);
+    const code = drawingOf(round);
     const file = path.join(config.imagesDir, fileFor(code));
     if (await fs.access(file).then(() => true, () => false)) continue;
-    // Twemoji leaves the variation selector out of the files it ships.
-    const png = await draw(code) ?? await draw(code.replace(/-fe0f/g, ''));
+    const png = await drawOrPlain(code);
     if (!png) {
       console.error(`✗ «${round.title}»: no drawing for ${code}`);
       failed++;
@@ -199,7 +123,7 @@ for (const round of rounds) {
     // A round already in the bank keeps its words — they may have been edited
     // in the panel — but follows the file for its category and its picture, so
     // changing a source here swaps the drawing on the next run.
-    const wanted = fileFor(sourceOf(round));
+    const wanted = fileFor(drawingOf(round));
     const drawn = await fs.access(path.join(config.imagesDir, wanted)).then(() => true, () => false);
     const file = drawn ? wanted : already.imageFile;
     if ((already.category ?? '') !== round.category || already.imageFile !== file) {
@@ -216,7 +140,7 @@ for (const round of rounds) {
     }
     continue;
   }
-  const file = fileFor(sourceOf(round));
+  const file = fileFor(drawingOf(round));
   if (!await fs.access(path.join(config.imagesDir, file)).then(() => true, () => false)) {
     console.error(`✗ «${round.title}»: no picture drawn yet (run --draw)`);
     missing++;

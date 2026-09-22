@@ -1,0 +1,57 @@
+# صور أسئلة البنك المرسومة: الجواب | المصدر (نفس مصادر scripts/picture-seed.txt).
+# السؤال يُعرف بجوابه داخل عنوانه، والمصدر يُرسم مرة واحدة ويُشارَك مع بنك الصور.
+# ما لا رسم له — بشت، عقال، طربوش، قفطان، جلابية، عمامة، نقاب، طاقية، حزام،
+# ملفوف، كرفس، بقدونس، نعناع، كركم — يبقى بصورته الفوتوغرافية.
+
+@ فواكه وخضار
+تفاح | red apple
+موز | banana
+برتقال | tangerine
+عنب | grapes
+بطيخ | watermelon
+شمام | melon
+فراولة | strawberry
+مانجو | mango
+أناناس | pineapple
+كيوي | kiwi fruit
+رمان | openclipart:340398
+تين | openclipart:353378
+مشمش | openclipart:304705
+خوخ | peach
+كرز | cherries
+ليمون | lemon
+جوافة | openclipart:321373
+كمثرى | pear
+جوز الهند | coconut
+طماطم | tomato
+بصل | onion
+ثوم | garlic
+جزر | carrot
+بطاطا | potato
+باذنجان | eggplant
+فلفل | hot pepper
+قرنبيط | openclipart:291347
+بروكلي | broccoli
+خس | leafy green
+فجل | openclipart:325790
+لفت | openclipart:326639
+بامية | openclipart:217046
+فاصوليا | beans
+بازلاء | pea pod
+قرع | openclipart:203193
+شمندر | openclipart:320629
+زنجبيل | ginger root
+زيتون | olive
+
+@ ملابس وأزياء
+قميص | fluent:T-shirt
+بنطال | fluent:Jeans
+معطف | fluent:Coat
+فستان | fluent:Dress
+نظارة | fluent:Glasses
+خاتم | fluent:Ring
+حذاء | fluent:Mans shoe
+جورب | fluent:Socks
+قبعة | fluent:Top hat
+ساري | fluent:Sari
+كيمونو | fluent:Kimono
