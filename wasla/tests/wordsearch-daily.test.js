@@ -63,6 +63,25 @@ test('an excluded theme is kept out, and can be let back in', () => {
   assert.ok(wordSearch.setExcluded('  ', true).error);
 });
 
+test('the panel chooses the whole set of themes at once', () => {
+  add('حيوانات', ANIMALS);
+  add('فواكه', FRUITS);
+  add('مدن', ['طنجة', 'مراكش', 'الرباط', 'فاس', 'اغادير', 'مكناس']);
+
+  assert.deepEqual(wordSearch.setPlayableTitles([' حيوانات ', 'مدن']), { used: 2, excluded: 1 });
+  assert.deepEqual(wordSearch.playable().map((t) => t.title), ['حيوانات', 'مدن']);
+
+  // Choosing again lets a theme back in and takes another out, in one save.
+  assert.deepEqual(wordSearch.setPlayableTitles('فواكه'), { used: 1, excluded: 2 });
+  assert.deepEqual(wordSearch.playable().map((t) => t.title), ['فواكه']);
+
+  // A title too thin for a board is not a choice, so choosing only it is nothing.
+  add('ألوان', ['أحمر', 'أزرق']);
+  assert.ok(wordSearch.setPlayableTitles(['ألوان']).error);
+  assert.ok(wordSearch.setPlayableTitles([]).error);
+  assert.deepEqual(wordSearch.playable().map((t) => t.title), ['فواكه'], 'a refused choice changes nothing');
+});
+
 test('the size rises through the week, and its own days take the whole board', () => {
   // 2026-09-14 is a Monday; the week gives the word search Thursday and Sunday.
   const sizes = Array.from({ length: 7 }, (_, i) => sizeForDay(parseDay('2026-09-14').day + i));

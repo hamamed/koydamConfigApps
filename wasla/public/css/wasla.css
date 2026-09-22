@@ -1052,3 +1052,22 @@ html { scrollbar-gutter: stable; }
 .wz-week-game { font-weight: 700; font-size: .85rem; color: var(--kd-ink); }
 .wz-marathon { margin: 0; padding-inline-start: 1.2rem; display: grid; gap: .3rem; }
 .wz-marathon li { line-height: 1.5; }
+
+/* The word search's chooser: a box per category, two to a row on a wide panel. */
+.wz-ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .4rem; }
+.wz-ws-pick {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0;
+  padding: .45rem .6rem;
+  border: var(--wz-line) solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+}
+.wz-ws-pick:hover { border-color: var(--wz-teal-deep); }
+.wz-ws-pick:has(input:checked) { background: var(--kd-accent-soft); border-color: var(--wz-indigo); }
+.wz-ws-pick input { flex: none; margin: 0; }
+.wz-ws-name { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; min-width: 0; }
+.wz-ws-open { flex: none; margin-inline-start: auto; display: inline-flex; }

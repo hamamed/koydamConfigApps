@@ -259,5 +259,32 @@ export function createWordSearch(db, { appConfig }) {
     return {};
   }
 
-  return { themes, playable, pickForDate, eventPickForDate, automaticPick, forDate, marathonBoard, setExcluded };
+  /**
+   * The panel's chooser: exactly these titles are used for new days, and every
+   * other title that could make a board is excluded — one save instead of a
+   * toggle each. A title too thin for a board is not a choice, so it is
+   * ignored, and an empty choice is refused: the daily word search would have
+   * nothing to build from.
+   *
+   * Returns `{ used, excluded }`, or `{ error }`.
+   */
+  function setPlayableTitles(chosen) {
+    const wanted = new Set([chosen ?? []].flat().map((t) => String(t).trim()).filter(Boolean));
+    const eligible = themes().filter((t) => t.eligible);
+    const keep = eligible.filter((t) => wanted.has(t.title));
+    if (!keep.length) return { error: 'اختر فئة واحدة على الأقل؛ بدونها لا يجد البحث اليومي ما يبني منه شبكة.' };
+    const drop = eligible.filter((t) => !wanted.has(t.title));
+    const exclude = db.prepare('INSERT INTO wordsearch_excluded_titles (title) VALUES (?) ON CONFLICT(title) DO NOTHING');
+    const include = db.prepare('DELETE FROM wordsearch_excluded_titles WHERE title = ?');
+    db.transaction(() => {
+      for (const theme of drop) exclude.run(theme.title);
+      for (const theme of keep) include.run(theme.title);
+    })();
+    return { used: keep.length, excluded: drop.length };
+  }
+
+  return {
+    themes, playable, pickForDate, eventPickForDate, automaticPick, forDate, marathonBoard,
+    setExcluded, setPlayableTitles,
+  };
 }

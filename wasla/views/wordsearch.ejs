@@ -4,62 +4,66 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'مواضيع البحث',
-          subheading: 'فئات الأسئلة التي يُبنى منها البحث اليومي عن الكلمات',
+          subheading: 'اختر الفئات التي يُبنى منها البحث اليومي عن الكلمات',
           actions: '<a class="btn btn-sm btn-kd" href="/admin/daily">جدول لغز اليوم</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <p class="small kd-muted">
-        الفئة التي فيها على الأقل <%= minWords %> أجوبة مختلفة من 3 إلى 8 حروف تصلح موضوعاً. زر <strong>إضافة أيام</strong> في
-        صفحة <a href="/admin/daily">لغز اليوم</a> يأخذ المواضيع بترتيب الفئات، ويتخطى المستبعدة، ويجمّد كل شبكة لحظة إضافتها —
-        فتعديل الأسئلة هنا لا يغيّر يوماً مخطَّطاً. أما التواريخ غير المخطَّطة فتأخذ شبكة تلقائية من الدورة نفسها، وهي تتبع تعديلات الأسئلة.
+        الفئة التي فيها على الأقل <%= minWords %> أجوبة مختلفة من 3 إلى 8 حروف تصلح موضوعاً، وما تختاره هنا هو ما يدور على الأيام.
+        زر <strong>إضافة أيام</strong> في صفحة <a href="/admin/daily">لغز اليوم</a> يأخذ المختار بترتيب الفئات ويجمّد كل شبكة لحظة إضافتها —
+        فتعديل الاختيار لا يغيّر يوماً مخطَّطاً. أما التواريخ غير المخطَّطة فتأخذ شبكة تلقائية من الدورة نفسها، وهي تتبع ما هنا.
       </p>
 
       <div class="row g-3">
         <div class="col-xl-7">
-          <div class="ad-card h-100">
-            <div class="ad-card-head d-flex align-items-center gap-2">
+          <form class="ad-card h-100" method="post" action="/admin/wordsearch/choose" id="wsChoose">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="ad-card-head d-flex align-items-center gap-2 flex-wrap">
               <%- icon('tags', 16) %>
-              <span class="fw-semibold">المواضيع</span>
-              <span class="kd-faint small ms-auto"><%= playableCount %> مستعملة · <%= eligible.length - playableCount %> مستبعدة</span>
+              <span class="fw-semibold">الفئات</span>
+              <span class="kd-faint small" id="wsCount"><%= playableCount %> من <%= eligible.length %> مختارة</span>
+              <div class="ms-auto d-flex gap-1">
+                <button class="btn btn-sm btn-kd-ghost" type="button" data-ws-all="1">تحديد الكل</button>
+                <button class="btn btn-sm btn-kd-ghost" type="button" data-ws-all="0">إلغاء الكل</button>
+              </div>
             </div>
-            <div class="ad-card-body p-0">
+            <div class="ad-card-body">
               <% if (!eligible.length) { %>
                 <div class="ad-empty"><%- icon('tags', 28) %><p class="mb-0">لا فئة فيها <%= minWords %> أجوبة صالحة بعد.</p></div>
               <% } else { %>
-                <div class="ad-table-wrap">
-                  <table class="ad-table">
-                    <thead><tr><th>الموضوع</th><th class="text-end">الكلمات</th><th>الحالة</th><th></th></tr></thead>
-                    <tbody>
-                      <% eligible.forEach((t) => { %>
-                        <tr>
-                          <td>
-                            <a class="wz-ar fw-semibold" href="/admin/questions?q=<%= encodeURIComponent(t.title) %>"><%= t.title %></a>
-                            <% if (t.skipped.length) { %>
-                              <div class="small kd-faint" title="<%= t.skipped.map((s) => s.display + ' (' + s.reason + ')').join(', ') %>"><%= t.skipped.length %> جواباً غير صالح</div>
-                            <% } %>
-                          </td>
-                          <td class="text-end"><%= t.words.length %></td>
-                          <td>
-                            <% if (t.excluded) { %><span class="ad-status ad-status-archived">مستبعدة</span><% } else { %><span class="ad-status ad-status-published">مستعملة</span><% } %>
-                          </td>
-                          <td class="text-end">
-                            <form method="post" action="/admin/wordsearch/exclude" class="m-0">
-                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                              <input type="hidden" name="title" value="<%= t.title %>">
-                              <input type="hidden" name="excluded" value="<%= t.excluded ? '0' : '1' %>">
-                              <button class="btn btn-sm <%= t.excluded ? 'btn-kd-outline' : 'btn-kd-ghost' %>" type="submit"><%= t.excluded ? 'إدراج' : 'استبعاد' %></button>
-                            </form>
-                          </td>
-                        </tr>
-                      <% }) %>
-                    </tbody>
-                  </table>
+                <div class="wz-ws-grid">
+                  <% eligible.forEach((t, i) => { %>
+                    <label class="wz-ws-pick" for="wsTitle<%= i %>">
+                      <input class="form-check-input" type="checkbox" id="wsTitle<%= i %>" name="titles"
+                             value="<%= t.title %>" <%= t.excluded ? '' : 'checked' %>>
+                      <span class="wz-ws-name">
+                        <span class="wz-ar fw-semibold"><%= t.title %></span>
+                        <span class="kd-faint small"><%= t.words.length %> كلمة</span>
+                        <% if (t.words.length < fullWords) { %>
+                          <span class="kd-tag kd-tag-warn" title="أكبر شبكة تطلب <%= fullWords %> كلمة؛ هذه الفئة تأخذ يوماً أصغر">لوح أصغر</span>
+                        <% } %>
+                        <% if (t.skipped.length) { %>
+                          <span class="kd-faint small" title="<%= t.skipped.map((s) => s.display + ' (' + s.reason + ')').join('، ') %>">
+                            · <%= t.skipped.length %> جواباً غير صالح
+                          </span>
+                        <% } %>
+                      </span>
+                      <a class="wz-ws-open kd-faint" href="/admin/questions?q=<%= encodeURIComponent(t.title) %>"
+                         title="أسئلة <%= t.title %>" aria-label="أسئلة <%= t.title %>"><%- icon('external-link', 14) %></a>
+                    </label>
+                  <% }) %>
                 </div>
               <% } %>
             </div>
-          </div>
+            <% if (eligible.length) { %>
+              <div class="ad-card-body border-top d-flex align-items-center gap-2">
+                <button class="btn btn-kd-accent" type="submit">حفظ الاختيار</button>
+                <span class="form-text m-0">فئة واحدة على الأقل. الأيام المخطَّطة تحتفظ بشبكاتها.</span>
+              </div>
+            <% } %>
+          </form>
         </div>
 
         <div class="col-xl-5 d-grid gap-3 align-content-start">
@@ -89,4 +93,28 @@
     </div>
   </main>
 </div>
+<script>
+  // The chooser: the two buttons tick or clear every box, and the head counts
+  // what is ticked so the choice reads at a glance before it is saved.
+  (() => {
+    const form = document.getElementById('wsChoose');
+    if (!form) return;
+    const boxes = [...form.querySelectorAll('input[name="titles"]')];
+    const count = document.getElementById('wsCount');
+    const tally = () => {
+      const on = boxes.filter((b) => b.checked).length;
+      count.textContent = on + ' من ' + boxes.length + ' مختارة';
+      count.classList.toggle('text-danger', on === 0);
+    };
+    form.querySelectorAll('[data-ws-all]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const on = button.dataset.wsAll === '1';
+        boxes.forEach((b) => { b.checked = on; });
+        tally();
+      });
+    });
+    boxes.forEach((b) => b.addEventListener('change', tally));
+    tally();
+  })();
+</script>
 <%- include('partials/foot') %>
