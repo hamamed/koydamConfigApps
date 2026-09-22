@@ -8,7 +8,8 @@
  *
  * Each line is `emoji name | العنوان | كلمة، كلمة، …`. The picture is the
  * Twemoji drawing of that emoji (CC BY 4.0, https://github.com/jdecked/twemoji),
- * fetched as SVG and drawn at 512 px onto white.
+ * fetched as SVG and drawn at 512 px on nothing: the drawing keeps its own
+ * shape, and the card it is shown on provides the background.
  *
  * Drawing needs `sharp`, which the service does not: draw on a machine that has
  * it, copy the files over, and save the rounds there. A round's file name comes
@@ -84,7 +85,6 @@ async function draw(code) {
   const { default: sharp } = await import('sharp');
   return sharp(Buffer.from(await svg.arrayBuffer()), { density: 600 })
     .resize(SIDE, SIDE, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
-    .flatten({ background: '#FFFFFF' })
     .png()
     .toBuffer();
 }
