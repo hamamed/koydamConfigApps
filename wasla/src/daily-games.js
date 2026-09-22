@@ -5,8 +5,7 @@
  *   bubbles — a picture and its words, cut into pieces and mixed
  *   wheel   — a handful of letters and the words they spell
  *   guess   — one hidden five-letter word, six tries
- *   connect — a board of letters, and the answers spelled out of it: a
- *             title's questions, a picture's words, or a proverb in emoji
+ *   connect — one picture, and its eight words spelled out of one board
  *   picture — one picture and the five words of ten that belong to it
  *
  * فقاعات الكلمات is played on the pictures written in the panel
@@ -308,7 +307,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, wordSearchD
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
-      connect: connectForDate(questions(), parsed.date, { pictures, riddles: lab?.riddles() ?? [] }),
+      connect: connectForDate(null, parsed.date, { pictures }),
     };
   }
 
@@ -332,8 +331,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, wordSearchD
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
-      case 'connect': return connectForDate(questions(), parsed.date,
-        { nonce: step, pictures, riddles: lab?.riddles() ?? [] });
+      case 'connect': return connectForDate(null, parsed.date, { nonce: step, pictures });
       default: return null;
     }
   }
