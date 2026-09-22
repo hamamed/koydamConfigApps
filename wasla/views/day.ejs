@@ -99,6 +99,7 @@
                 <% marathon.rounds.forEach((r) => { %>
                   <li><span class="wz-ar fw-semibold"><%= kindNames[r.kind] %></span>
                     <span class="small kd-muted wz-ar"><%= r.kind === 'bubbles' ? r.game.words.length + ' كلمات · ' + r.game.theme
+                      : r.kind === 'proverb' ? r.game.answerDisplay + ' · ' + r.game.letters.length + ' حروف'
                       : r.kind === 'wheel' ? r.game.words.length + ' كلمات · ' + [...r.game.letters].join(' ')
                       : r.kind === 'guess' ? r.game.words.map((w) => w.display).join('، ') + ' · ' + r.game.tries + ' محاولات'
                       : r.game.size + '×' + r.game.size + ' · ' + r.game.theme %></span></li>
@@ -133,6 +134,12 @@
                   <p class="small kd-muted">لا شيء للعب: أضف أسئلة (أو مدخلات للقائمة)، أو اكتب هذه اللعبة أدناه.</p>
                 <% } else if (g.kind === 'bubbles') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
+                <% } else if (g.kind === 'proverb') { %>
+                  <p class="mb-1">
+                    <% if (g.game.emoji) { %><span class="wz-emoji"><%= g.game.emoji %></span> <% } %>
+                    <span class="wz-ar"><%= g.game.words.map((w) => w.hidden ? '«' + w.text + '»' : w.text).join(' ') %></span>
+                  </p>
+                  <p class="small kd-muted mb-2 wz-ar"><%= g.game.letters.map((t) => t.letter).join(' ') %> · <%= g.game.source %></p>
                 <% } else if (g.kind === 'wheel') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= [...g.game.letters].join(' ') %></span> <span class="wz-ar"><%= g.game.words.join('، ') %></span></p>
                 <% } else if (g.kind === 'guess') { %>
@@ -140,7 +147,11 @@
                     <span class="small kd-muted"><%= g.game.tries %> محاولات للكلمتين</span></p>
                 <% } %>
 
-                <% if (!past) { %>
+                <% if (!past && g.text === null) { %>
+                  <p class="small kd-muted mb-0"><%= g.label.hint %></p>
+                <% } %>
+
+                <% if (!past && g.text !== null) { %>
                   <details <%= g.isOpen ? 'open' : '' %>>
                     <summary class="small fw-semibold">تعديل <%= g.label.ar %></summary>
                     <p class="small kd-muted mt-2 mb-1"><%= g.label.hint %></p>

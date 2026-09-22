@@ -16,7 +16,7 @@ export const WEEK = Object.freeze([
   'wordsearch', // الأحد
   'guess', // الاثنين
   'wheel', // الثلاثاء
-  'guess', // الأربعاء
+  'proverb', // الأربعاء
   'wordsearch', // الخميس
   'marathon', // الجمعة
   'bubbles', // السبت
@@ -29,6 +29,7 @@ export const WEEKDAY_NAMES = Object.freeze(['الأحد', 'الاثنين', 'ا�
 
 export const KIND_NAMES = Object.freeze({
   bubbles: 'فقاعات الكلمات',
+  proverb: 'اكشف المثل',
   wheel: 'عجلة الحروف',
   guess: 'خمّن الكلمتين',
   wordsearch: 'البحث عن الكلمات',

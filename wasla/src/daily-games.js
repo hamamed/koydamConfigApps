@@ -5,6 +5,7 @@
  *   bubbles — a picture and its words, cut into pieces and mixed
  *   wheel   — a handful of letters and the words they spell
  *   guess   — two hidden five-letter words at once, eight tries for both
+ *   proverb — a proverb with one word missing, spelled from its own letters
  *   picture — one picture and the five words of ten that belong to it
  *
  * فقاعات الكلمات is played on the pictures written in the panel
@@ -21,10 +22,11 @@
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import { parseDay } from './daily.js';
 import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedule.js';
+import { proverbForDate } from './proverbs.js';
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from './daily-games-words.js';
 import { random, shuffled } from './wordsearch.js';
 
-export const GAME_KINDS = Object.freeze(['bubbles', 'wheel', 'guess']);
+export const GAME_KINDS = Object.freeze(['bubbles', 'wheel', 'guess', 'proverb']);
 
 /* How big each game aims to be, and the least it may be built at. */
 export const BUBBLE_WORDS = 8;
@@ -226,7 +228,7 @@ export function buildGuess(words, day) {
  * shorter, and with no second chances between them.
  */
 
-export const MARATHON_ROUNDS = Object.freeze(['bubbles', 'wheel', 'guess', 'wordsearch']);
+export const MARATHON_ROUNDS = Object.freeze(['bubbles', 'proverb', 'wheel', 'guess', 'wordsearch']);
 export const MARATHON_SIZES = Object.freeze({ bubbles: 4, wheel: 6, guess: 1, board: 7 });
 export const MARATHON_GUESS_TRIES = 5;
 
@@ -249,7 +251,7 @@ export function trimForMarathon(kind, game, rand) {
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null, lab = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const questions = () => db.prepare('SELECT id, answer, trim(IFNULL(title, \'\')) AS title FROM questions ORDER BY id').all();
@@ -293,6 +295,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
+      proverb: proverbForDate(lab?.riddles() ?? [], parsed.date),
     };
   }
 
@@ -316,6 +319,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
+      case 'proverb': return proverbForDate(lab?.riddles() ?? [], parsed.date, { nonce: step });
       default: return null;
     }
   }

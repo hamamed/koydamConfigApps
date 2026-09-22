@@ -8,7 +8,7 @@
  * The text formats are the ones a person would write by hand:
  *
  *   جِذر    `كتب: كتب كتاب كاتب مكتبة`
- *   قوافي   `الصديق وقت ــــ | الضيق | الفرح، السفر، العمل | مثل سائر`
+ *   قوافي   `الصديق وقت ــــ | الضيق | الفرح، السفر، العمل | مثل سائر | 🤝⏳`
  *
  * In a riddle the `ــــ` marks the gap: what comes before it and after it are
  * shown, and the answer fills it. A line with no gap mark is read as a gap at
@@ -64,9 +64,11 @@ export function parseRiddles(text) {
   const problems = [];
   for (const { line, raw } of lines(text)) {
     const parts = raw.split('|').map((part) => part.trim());
-    const [body, answer, decoyText, source] = parts;
+    // A fifth part is the emoji clue اكشف المثل shows over its board; it is optional.
+    const [body, answer, decoyText, source, emoji] = parts;
     const decoys = (decoyText ?? '').split(/[،,]+/).map((word) => word.trim()).filter(Boolean);
-    const problem = parts.length !== 4 ? 'السطر أربعة أجزاء مفصولة بـ | : النص | الجواب | البدائل | المصدر'
+    const problem = parts.length !== 4 && parts.length !== 5
+      ? 'السطر أربعة أجزاء مفصولة بـ | : النص | الجواب | البدائل | المصدر (ويمكن جزء خامس للإيموجي)'
       : !body ? 'النص فارغ'
         : !answer ? 'الجواب فارغ'
           : decoys.length !== RIDDLE_DECOYS ? `البدائل ${RIDDLE_DECOYS} كلمات مفصولة بفواصل، وهنا ${decoys.length}`
@@ -82,7 +84,7 @@ export function parseRiddles(text) {
     const gap = body.search(GAP);
     const before = (gap === -1 ? body : body.slice(0, gap)).trim();
     const after = gap === -1 ? '' : body.slice(gap).replace(GAP, '').trim();
-    riddles.push({ before, after, answer, decoys, source });
+    riddles.push({ before, after, answer, decoys, source, emoji: emoji ?? '' });
   }
   return { riddles, problems };
 }
@@ -103,6 +105,9 @@ export function createLab(db) {
       return { name, text, edited: stored(name) !== null, count: items.length, items, problems: parsed.problems };
     });
   }
+
+  /** The قوافي list as اكشف المثل reads it: only the lines that parse. */
+  const riddles = () => parseRiddles(body('riddles')).riddles;
 
   /** Saves a list when every line is usable; `{ error, problems }` otherwise. */
   function saveList(name, text) {
@@ -129,5 +134,5 @@ export function createLab(db) {
     };
   }
 
-  return { lists, saveList, resetList, content };
+  return { riddles, lists, saveList, resetList, content };
 }

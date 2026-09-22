@@ -14,6 +14,7 @@ export const GAME_LABELS = Object.freeze({
   bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (حتى 8 كلمات، كل واحدة من 4 إلى 10 حروف).' },
   wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'سطر واحد: حروف: كلمة كلمة كلمة (كل كلمة تُكتب من تلك الحروف).' },
   guess: { en: 'Guess', ar: 'خمّن الكلمتين', icon: 'square-asterisk', hint: 'كلمة أو كلمتان، كل واحدة في سطر ومن خمسة حروف بالضبط.' },
+  proverb: { en: 'Proverb', ar: 'اكشف المثل', icon: 'quote', hint: 'تُكتب في قائمة قوافي بصفحة «ألعاب المختبر»، لا هنا.' },
 });
 
 /**
@@ -126,7 +127,8 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
         game,
         source: saved[kind]?.source ?? null,
         updatedAt: saved[kind]?.updatedAt ?? null,
-        text: drafts[kind] ?? EDITORS[kind].toText(game),
+        // اكشف المثل has no text form here: it is written in the قوافي list.
+        text: EDITORS[kind] ? drafts[kind] ?? EDITORS[kind].toText(game) : null,
         errors: errors[kind] ?? [],
         isOpen: Boolean(errors[kind]?.length),
       };
