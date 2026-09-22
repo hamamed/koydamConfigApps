@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS wordsearch_excluded_titles (
 -- is automatic. `game` is the JSON the API sends for that game.
 CREATE TABLE IF NOT EXISTS daily_game_days (
   date        TEXT NOT NULL,
-  kind        TEXT NOT NULL CHECK (kind IN ('bubbles', 'wheel', 'guess')),
+  kind        TEXT NOT NULL CHECK (kind IN ('bubbles', 'wheel', 'guess', 'connect')),
   game        TEXT NOT NULL,
   source      TEXT NOT NULL DEFAULT 'auto' CHECK (source IN ('auto', 'typed')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now')),

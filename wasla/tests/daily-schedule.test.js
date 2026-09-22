@@ -17,7 +17,7 @@ test('each weekday carries one game, and Friday the marathon', () => {
   assert.equal(kindForDate('2026-09-20'), 'wordsearch', 'Sunday');
   assert.equal(kindForDate('2026-09-21'), 'guess', 'Monday');
   assert.equal(kindForDate('2026-09-22'), 'wheel', 'Tuesday');
-  assert.equal(kindForDate('2026-09-23'), 'proverb', 'Wednesday');
+  assert.equal(kindForDate('2026-09-23'), 'connect', 'Wednesday');
   assert.equal(kindForDate('2026-09-24'), 'wordsearch', 'Thursday');
   assert.equal(kindForDate('2026-09-25'), 'marathon', 'Friday');
 });
