@@ -135,7 +135,9 @@
                 <% } else if (g.kind === 'bubbles') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
                 <% } else if (g.kind === 'connect') { %>
-                  <p class="mb-2 wz-ar"><span class="fw-semibold"><%= g.game.clue || g.game.title %></span>
+                  <p class="mb-2 wz-ar">
+                    <% if (g.game.emoji) { %><span class="wz-emoji"><%= g.game.emoji %></span> <% } %>
+                    <span class="fw-semibold"><%= g.game.clue || g.game.title %></span>
                     <span class="kd-tag kd-tag-accent wz-ar"><%= g.game.display %></span></p>
                   <div class="wz-board mb-2">
                     <div class="wz-grid" style="--wz-cols: <%= g.game.cols %>; --wz-rows: <%= g.game.rows.length %>">

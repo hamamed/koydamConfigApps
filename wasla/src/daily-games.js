@@ -251,10 +251,10 @@ export function trimForMarathon(kind, game, rand) {
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null, lab = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
-  const questions = () => db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue,
+  const questions = () => db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue, IFNULL(emoji, '') AS emoji,
     trim(IFNULL(title, '')) AS title FROM questions ORDER BY id`).all();
   const listText = (name) => db.prepare('SELECT body FROM daily_game_lists WHERE name = ?').pluck().get(name) ?? DEFAULTS[name];
   const isEdited = (name) => Boolean(db.prepare('SELECT 1 FROM daily_game_lists WHERE name = ?').get(name));
@@ -296,7 +296,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
-      connect: connectForDate(questions(), parsed.date),
+      connect: connectForDate(questions(), parsed.date, { riddles: lab?.riddles() ?? [] }),
     };
   }
 
@@ -320,7 +320,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
-      case 'connect': return connectForDate(questions(), parsed.date, { nonce: step });
+      case 'connect': return connectForDate(questions(), parsed.date, { nonce: step, riddles: lab?.riddles() ?? [] });
       default: return null;
     }
   }

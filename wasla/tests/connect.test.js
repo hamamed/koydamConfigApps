@@ -4,7 +4,7 @@ import { beforeEach, test } from 'node:test';
 import { createAppConfig } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import {
-  boardShape, buildConnect, CONNECT_LETTERS, CONNECT_SIDES, connectForDate, connectPool, snake,
+  boardShape, buildConnect, CONNECT_LETTERS, CONNECT_SIDES, connectForDate, connectPool, proverbPool, snake,
 } from '../src/connect.js';
 import { createDailyGames } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
@@ -36,7 +36,8 @@ beforeEach(() => {
   db = openDatabase(':memory:');
   const repo = createRepository(db);
   BANK.forEach(([clue, answer]) => repo.createQuestion({ title: 'عام', answer, clue }));
-  rows = db.prepare("SELECT id, answer, IFNULL(clue, '') AS clue, trim(IFNULL(title, '')) AS title FROM questions ORDER BY id").all();
+  rows = db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue, IFNULL(emoji, '') AS emoji,
+    trim(IFNULL(title, '')) AS title FROM questions ORDER BY id`).all();
 });
 
 test('the board is the pair of sides closest to a square, or no board at all', () => {
@@ -111,4 +112,46 @@ test('the day the week gives it sends a board', () => {
   assert.equal(set.kind, 'connect');
   assert.ok(set.connect.rows.length >= CONNECT_SIDES[0]);
   assert.ok(letters(set.connect.answer).length >= CONNECT_LETTERS[0]);
+});
+
+
+test('an emoji question asks with its emoji, and needs no clue', () => {
+  const asked = [
+    { id: 1, answer: 'جمهورية مصر', clue: '', emoji: '🇪🇬🐪' },
+    { id: 2, answer: 'مدينة نيويورك', clue: '', emoji: '' },
+  ];
+  const pool = connectPool(asked);
+  assert.deepEqual(pool.map((entry) => entry.answer), ['جمهورية مصر']);
+  assert.equal(pool[0].emoji, '🇪🇬🐪');
+  assert.equal(buildConnect(pool[0], 3).emoji, '🇪🇬🐪', 'the board carries it to the app');
+});
+
+test('a proverb is a board of its own, with its emoji as the question', () => {
+  const pool = proverbPool([
+    { before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '😑⏳🔑' },
+    { before: 'من جدّ', after: '', answer: 'وجد', source: 'مثل سائر', emoji: '💪🏆' },
+  ]);
+  assert.deepEqual(pool.map((entry) => entry.answer), ['الصبر مفتاح الفرج'], '«من جدّ وجد» is too short for a board');
+  assert.equal(pool[0].emoji, '😑⏳🔑');
+  assert.equal(pool[0].title, 'مثل سائر');
+
+  const board = buildConnect(pool[0], 4);
+  assert.equal(board.display, 'الصبر مفتاح الفرج');
+  assert.equal(board.rows.length * board.cols, 15, 'fifteen letters, so 3×5');
+  assert.equal(board.clue, '', 'the emoji asks it');
+});
+
+test('a proverb with no emoji is asked in words', () => {
+  const pool = proverbPool([{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '' }]);
+  assert.equal(pool[0].clue, 'أكمل المثل');
+});
+
+test('the proverbs and the bank share the rotation', () => {
+  const riddles = [{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '😑⏳🔑' }];
+  const seen = new Set();
+  for (let i = 0; i < 12; i++) {
+    const board = connectForDate(rows, `2026-09-${String(i + 10).padStart(2, '0')}`, { riddles });
+    seen.add(board.display === 'الصبر مفتاح الفرج' ? 'مثل' : 'بنك');
+  }
+  assert.deepEqual([...seen].sort(), ['بنك', 'مثل'], 'both turn up inside a fortnight');
 });

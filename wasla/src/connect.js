@@ -6,6 +6,14 @@
  * visits every box once. Nothing is filler: every letter on the board is a
  * letter of the answer, in an order only the answer knows.
  *
+ * The question comes three ways, and the app shows it in the same card the main
+ * game asks its questions in:
+ *
+ *   نص      a question with a clue to read: «أكبر مدن المغرب»
+ *   إيموجي  an emoji question, where the emoji is the whole question: 🇪🇬🐪
+ *   مثل     a proverb from the قوافي list, with its emoji over it: the board is
+ *           the proverb itself
+ *
  * The player reads the question, works out the answer, then drags a finger
  * through it from its first letter to its last.
  */
@@ -112,27 +120,64 @@ export function buildConnect(entry, seed) {
     answer,
     display,
     clue: String(entry.clue ?? '').trim(),
+    emoji: String(entry.emoji ?? '').trim(),
     title: String(entry.title ?? '').trim(),
   };
 }
 
+/** True when the letters of `answer` can fill a board. */
+const fits = (answer) => {
+  const count = letters(answer).length;
+  return ARABIC_WORD.test(answer) && count >= CONNECT_LETTERS[0]
+    && count <= CONNECT_LETTERS[1] && Boolean(boardShape(count));
+};
+
 /**
- * Every question that can make a board: its answer fills one, and it has a clue
- * to read. A picture question's clue is its picture — «علم أي دولة» on its own
- * asks nothing — so those are left out.
+ * Every question that can make a board: its answer fills one, and it asks
+ * something — a clue to read, or emoji to read instead. A picture question is
+ * left out: its picture is the question, and «علم أي دولة» alone asks nothing.
  */
 export function connectPool(questions) {
   const seen = new Set();
   const pool = [];
   for (const row of questions) {
     const answer = foldForPlay(normalizeAnswer(row.answer ?? ''));
-    const count = letters(answer).length;
     const clue = String(row.clue ?? '').trim();
-    if (!clue || seen.has(answer) || !ARABIC_WORD.test(answer)) continue;
-    if (count < CONNECT_LETTERS[0] || count > CONNECT_LETTERS[1] || !boardShape(count)) continue;
+    const emoji = String(row.emoji ?? '').trim();
+    if ((!clue && !emoji) || seen.has(answer) || !fits(answer)) continue;
     seen.add(answer);
-    pool.push({ id: row.id, answer: normalizeAnswer(row.answer), clue, title: String(row.title ?? '').trim() });
+    pool.push({
+      id: row.id,
+      answer: normalizeAnswer(row.answer),
+      clue,
+      emoji,
+      title: String(row.title ?? '').trim(),
+    });
   }
+  return pool;
+}
+
+/**
+ * The proverbs that can make a board: the whole proverb is the answer, and its
+ * emoji is the question. «الصبر مفتاح الفرج» is fifteen letters, so 3×5.
+ */
+export function proverbPool(riddles) {
+  const seen = new Set();
+  const pool = [];
+  (riddles ?? []).forEach((riddle, index) => {
+    const phrase = [riddle.before, riddle.answer, riddle.after].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    const answer = foldForPlay(normalizeAnswer(phrase));
+    if (!phrase || seen.has(answer) || !fits(answer)) return;
+    seen.add(answer);
+    pool.push({
+      // Far above any question id, so the two pools never collide.
+      id: 900_000 + index,
+      answer: phrase,
+      clue: String(riddle.emoji ?? '').trim() ? '' : 'أكمل المثل',
+      emoji: String(riddle.emoji ?? '').trim(),
+      title: String(riddle.source ?? '').trim() || 'مثل عربي',
+    });
+  });
   return pool;
 }
 
@@ -141,15 +186,17 @@ export function connectPool(questions) {
  * always asks the same one. A question whose answer will not lay out passes the
  * day to the next.
  */
-export function connectForDate(questions, date, { nonce = 0 } = {}) {
+export function connectForDate(questions, date, { nonce = 0, riddles = [] } = {}) {
   const parsed = parseDay(date);
   if (!parsed) return null;
-  const pool = connectPool(questions);
+  // The proverbs come first in the list, so every few days one comes round.
+  const pool = [...proverbPool(riddles), ...connectPool(questions)];
   if (!pool.length) return null;
 
   const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
   const day = parsed.day + step;
   const list = shuffled([...pool].sort((a, b) => a.id - b.id), random(0x517e));
+
 
   for (let attempt = 0; attempt < Math.min(list.length, 40); attempt++) {
     const entry = list[(((day + attempt) % list.length) + list.length) % list.length];
