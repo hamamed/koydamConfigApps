@@ -11,13 +11,13 @@ test('wheel and guess reuse the list rules', () => {
   assert.deepEqual(game.words, ['حلم', 'حمل', 'حامل']);
   assert.deepEqual([...game.letters].sort(), [...'حملا'].sort());
   assert.ok(readWheel('قلمع: قلم سمك عمل').errors[0].includes('سمك'));
-  const guess = readGuess('مدرسة\nملعقة').game;
-  assert.deepEqual(guess.words, [{ word: 'مدرسة', display: 'مدرسة' }, { word: 'ملعقة', display: 'ملعقة' }]);
-  assert.equal(guess.word, 'مدرسة', 'older app builds read one word');
-  assert.equal(guess.tries, 8);
-  assert.equal(readGuess('مدرسة').game.words.length, 1);
+  const guess = readGuess('مدرسة').game;
+  assert.deepEqual(guess.words, [{ word: 'مدرسة', display: 'مدرسة' }]);
+  assert.equal(guess.word, 'مدرسة', 'the word the app reads');
+  assert.equal(guess.tries, 6, 'six tries for the one word');
+  assert.ok(readGuess('مدرسة\nملعقة').errors, 'the day hides one word now');
   assert.match(readGuess('قلم').errors[0], /5–5/);
-  assert.ok(readGuess('مدرسة\nمدرسة').errors[0].includes('مرتين'));
+  assert.ok(readGuess('مدرسة\nمدرسة').errors, 'two lines are two words, whatever they say');
 });
 
 test('every game turns into text and back into the same words', () => {

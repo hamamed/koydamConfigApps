@@ -66,7 +66,7 @@ test('an excluded theme is kept out, and can be let back in', () => {
 test('the size rises through the week, and its own days take the whole board', () => {
   // 2026-09-14 is a Monday; the week gives the word search Thursday and Sunday.
   const sizes = Array.from({ length: 7 }, (_, i) => sizeForDay(parseDay('2026-09-14').day + i));
-  assert.deepEqual(sizes, [7, 7, 8, 10, 9, 9, 10]);
+  assert.deepEqual(sizes, [7, 8, 8, 10, 10, 10, 10]);
 });
 
 test('a date gets a deterministic board from its theme, matching the contract', () => {

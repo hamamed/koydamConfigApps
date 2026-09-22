@@ -34,14 +34,14 @@ export const MAX_BOARD_WORDS = 12;
 export const CLOSE_THEME_WORDS = 4;
 
 /**
- * Board size by weekday, Monday first: 7, 7, 8, 8, 9, 9, 10 — small early in
- * the week, largest on Sunday. Indexed by `SIZE_BY_WEEKDAY[(day + 3) % 7]`,
+ * Board size by weekday, Monday first: 7, 8, 8, 9, 10, 10, 10 — smallest on
+ * Monday, largest from Friday on. Indexed by `SIZE_BY_WEEKDAY[(day + 3) % 7]`,
  * since 1970-01-01 (day 0) was a Thursday.
  *
  * The day the week hands the word search (contract §9) ignores the ramp and
  * takes the largest board there is: on its own day it is the whole puzzle.
  */
-export const SIZE_BY_WEEKDAY = Object.freeze([7, 7, 8, 8, 9, 9, 10]);
+export const SIZE_BY_WEEKDAY = Object.freeze([7, 8, 8, 9, 10, 10, 10]);
 export const WEEKDAY_NAMES = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
 /** How many words a board of each size aims for, [fewest, most]; the date picks within. */

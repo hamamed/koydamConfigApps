@@ -23,7 +23,7 @@ import { parseDay } from './daily.js';
 import { random, shuffled } from './wordsearch.js';
 
 /** The boards a phone holds comfortably, biggest first: `[rows, cols]`. */
-export const CONNECT_SHAPES = Object.freeze([[4, 5], [4, 4], [3, 5], [3, 4]]);
+export const CONNECT_SHAPES = Object.freeze([[5, 5], [4, 5], [4, 4], [3, 5], [3, 4]]);
 /** How many answers a board holds, fewest and most. */
 export const CONNECT_WORDS = Object.freeze([3, 6]);
 /** An answer short enough to share a board, long enough to be worth finding. */

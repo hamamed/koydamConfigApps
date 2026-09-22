@@ -208,7 +208,7 @@ test('the word search board has the contract shape, matches its rows and is the 
   const body = await res.json();
 
   assert.deepEqual(Object.keys(body).sort(), ['coins', 'date', 'rows', 'size', 'theme', 'words']);
-  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 9, 30]);
+  assert.deepEqual([body.date, body.theme, body.size, body.coins], ['2026-09-19', 'حيوانات', 10, 30]);
   assert.equal(body.rows.length, body.size);
   for (const row of body.rows) assert.equal([...row].length, body.size);
   assert.ok(body.words.length >= 6 && body.words.length <= 12);
@@ -314,8 +314,8 @@ test('daily games: one set per date with the reward numbers; wheel and guess fro
   // The rewards are the ones in the config, not numbers copied into the test.
   assert.deepEqual([body.date, body.coins, body.allBonus],
     ['2026-09-18', DEFAULT_CONFIG.dailyGameCoins, DEFAULT_CONFIG.dailyAllGamesBonus]);
-  assert.equal(body.guess.tries, 8);
-  assert.equal(body.guess.words.length, 2);
+  assert.equal(body.guess.tries, 6);
+  assert.equal(body.guess.words.length, 1);
   assert.equal([...body.guess.word].length, 5);
   assert.ok(body.wheel.words.length >= 3);
   // The week gives each date one game; 2026-09-18 is a Friday, so the marathon.

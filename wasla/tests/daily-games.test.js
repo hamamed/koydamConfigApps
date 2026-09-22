@@ -70,12 +70,11 @@ test('the wheel sends shuffled letters and its words shortest first', () => {
   assert.deepEqual(lengths, [...lengths].sort((a, b) => a - b));
 });
 
-test('the guess hides two different words, and the pair rotates by day', () => {
+test('the guess hides one word, and it moves on with the day', () => {
   const { words } = parseGuessWords(DEFAULT_GUESS_WORDS);
   const first = buildGuess(words, 100);
-  assert.equal(first.tries, GUESS_TRIES);
+  assert.equal(first.tries, GUESS_TRIES, 'six tries for it');
   assert.equal(first.words.length, GUESS_WORDS);
-  assert.notEqual(first.words[0].word, first.words[1].word);
   assert.equal(first.word, first.words[0].word, 'older app builds read one word');
   for (const w of first.words) assert.equal(letters(w.word).length, GUESS_LETTERS);
   const week = new Set(Array.from({ length: 7 }, (_, i) => buildGuess(words, 100 + i).word));

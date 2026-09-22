@@ -31,7 +31,7 @@ export const KIND_NAMES = Object.freeze({
   bubbles: 'فقاعات الكلمات',
   connect: 'وصّل الحروف',
   wheel: 'عجلة الحروف',
-  guess: 'خمّن الكلمتين',
+  guess: 'خمّن الكلمة',
   wordsearch: 'البحث عن الكلمات',
   marathon: 'ماراثون الجمعة',
 });

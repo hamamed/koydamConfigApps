@@ -13,7 +13,7 @@ const CALENDAR_DAYS = 30;
 export const GAME_LABELS = Object.freeze({
   bubbles: { en: 'Bubbles', ar: 'فقاعات الكلمات', icon: 'circle-dot', hint: 'السطر الأول الموضوع، ثم كلمة في كل سطر (حتى 8 كلمات، كل واحدة من 4 إلى 10 حروف).' },
   wheel: { en: 'Wheel', ar: 'عجلة الحروف', icon: 'circle-dashed', hint: 'سطر واحد: حروف: كلمة كلمة كلمة (كل كلمة تُكتب من تلك الحروف).' },
-  guess: { en: 'Guess', ar: 'خمّن الكلمتين', icon: 'square-asterisk', hint: 'كلمة أو كلمتان، كل واحدة في سطر ومن خمسة حروف بالضبط.' },
+  guess: { en: 'Guess', ar: 'خمّن الكلمة', icon: 'square-asterisk', hint: 'كلمة واحدة من خمسة حروف بالضبط، وست محاولات لها.' },
   connect: { en: 'Connect', ar: 'وصّل الحروف', icon: 'spline', hint: 'لوح من حروف الأجوبة، كل مربّع لجواب واحد: أسئلة عنوان من البنك، أو كلمات صورة، أو مثل بالإيموجي من قائمة قوافي.' },
 });
 

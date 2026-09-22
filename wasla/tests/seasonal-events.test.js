@@ -8,7 +8,9 @@ import { createRepository } from '../src/repository.js';
 import {
   EVENT_KINDS, EVENT_THEMES, EVENT_WORD_ID_BASE, eventFor, eventLabel, eventQuestions, hijriOf,
 } from '../src/seasonal-events.js';
-import { boardForTheme, createWordSearch, eventTheme, MIN_THEME_WORDS, sizeForDay } from '../src/wordsearch-daily.js';
+import {
+  boardForTheme, createWordSearch, eventTheme, MAX_BOARD_WORDS, MIN_THEME_WORDS, sizeForDay,
+} from '../src/wordsearch-daily.js';
 import { cellsOf, MAX_SIZE, MIN_SIZE } from '../src/wordsearch.js';
 
 const plus = (date, n) => dayToDate(parseDay(date).day + n);
@@ -113,7 +115,7 @@ function assertEventBoard(board, date, title) {
   assert.equal(board.theme, title);
   assert.equal(board.size, sizeForDay(parseDay(date).day));
   const grid = board.rows.map((r) => [...r]);
-  assert.ok(board.words.length >= MIN_THEME_WORDS && board.words.length <= 10);
+  assert.ok(board.words.length >= MIN_THEME_WORDS && board.words.length <= MAX_BOARD_WORDS);
   for (const w of board.words) {
     assert.ok(w.id > EVENT_WORD_ID_BASE);
     assert.equal(cellsOf(w).map(([r, c]) => grid[r][c]).join(''), w.word);

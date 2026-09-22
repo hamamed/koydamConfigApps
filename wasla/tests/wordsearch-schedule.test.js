@@ -9,7 +9,7 @@ import { dayToDate, parseDay } from '../src/daily.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
 import { eventFor } from '../src/seasonal-events.js';
-import { createWordSearch, sizeForDay } from '../src/wordsearch-daily.js';
+import { createWordSearch, MAX_BOARD_WORDS, MIN_THEME_WORDS, sizeForDay } from '../src/wordsearch-daily.js';
 import { composeDay } from '../src/wordsearch-editor.js';
 import { boardProblem, createWordSearchSchedule } from '../src/wordsearch-schedule.js';
 import { cellsOf } from '../src/wordsearch.js';
@@ -37,7 +37,7 @@ function customDay(date, seed = 7) {
 function assertValidBoard(board) {
   const grid = board.rows.map((r) => [...r]);
   assert.equal(grid.length, board.size);
-  assert.ok(board.words.length >= 6 && board.words.length <= 10);
+  assert.ok(board.words.length >= MIN_THEME_WORDS && board.words.length <= MAX_BOARD_WORDS);
   for (const w of board.words) assert.equal(cellsOf(w).map(([r, c]) => grid[r][c]).join(''), w.word);
 }
 

@@ -4,7 +4,7 @@
  *
  *   bubbles — a picture and its words, cut into pieces and mixed
  *   wheel   — a handful of letters and the words they spell
- *   guess   — two hidden five-letter words at once, eight tries for both
+ *   guess   — one hidden five-letter word, six tries
  *   connect — a board of letters, and the answers spelled out of it: a
  *             title's questions, a picture's words, or a proverb in emoji
  *   picture — one picture and the five words of ten that belong to it
@@ -32,15 +32,16 @@ import { random, shuffled } from './wordsearch.js';
 export const GAME_KINDS = Object.freeze(['bubbles', 'wheel', 'guess', 'connect']);
 
 /* How big each game aims to be, and the least it may be built at. */
-export const BUBBLE_WORDS = 8;
+export const BUBBLE_WORDS = 10;
 export const BUBBLE_MIN_WORDS = 5;
 export const BUBBLE_LETTERS = Object.freeze([4, 10]);
 export const GUESS_LETTERS = 5;
-export const GUESS_WORDS = 2;
-export const GUESS_TRIES = 8;
+/** One word, six tries: the guessing is the game, not the bookkeeping. */
+export const GUESS_WORDS = 1;
+export const GUESS_TRIES = 6;
 export const WHEEL_LETTERS = Object.freeze([3, 7]);
 export const WHEEL_MIN_WORDS = 3;
-export const WHEEL_MAX_WORDS = 14;
+export const WHEEL_MAX_WORDS = 18;
 /** A wheel set worth a whole day: the picker takes one of these when the list has any. */
 export const WHEEL_RICH_WORDS = 6;
 export const LIST_NAMES = Object.freeze(['guess', 'wheel']);

@@ -9,7 +9,7 @@
  *   bubbles   first line the theme, then one word per line
  *   groups    one group per line: `title: word، word، word، word`
  *   wheel     one line: `letters: word word word`
- *   guess     one word
+ *   guess     one word of five letters
  *
  * Every parser answers `{ game }` in the exact shape the API sends, or
  * `{ errors: [...] }` with every problem found, never both.
@@ -84,10 +84,12 @@ export function readWheel(text, seed = newSeed()) {
 
 export const guessText = (game) => (game?.words ?? (game?.display ? [{ display: game.display }] : [])).map((w) => w.display).join('\n');
 
-/** One word per line, up to the two the day hides at once. */
+/** The one word the day hides, on its own line. */
 export function readGuess(text) {
   const rows = lines(text);
-  if (!rows.length || rows.length > GUESS_WORDS) return { errors: [`اكتب كلمة أو ${GUESS_WORDS}، واحدة في كل سطر.`] };
+  if (!rows.length || rows.length > GUESS_WORDS) {
+    return { errors: [GUESS_WORDS === 1 ? 'اكتب كلمة واحدة من خمسة حروف.' : `اكتب حتى ${GUESS_WORDS} كلمات، واحدة في كل سطر.`] };
+  }
   const words = [];
   for (const [i, row] of rows.entries()) {
     const read = readWord(row, [GUESS_LETTERS, GUESS_LETTERS], i + 1);
