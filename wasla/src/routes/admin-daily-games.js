@@ -1,13 +1,26 @@
+import { connectPool } from '../connect.js';
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { LIST_NAMES } from '../daily-games.js';
 
 const LIST_LABELS = Object.freeze({ guess: 'كلمات خمّن الكلمة', wheel: 'مجموعات عجلة الحروف' });
 
 /**
- * The five daily games (contract §6): a preview of any date's set, and the two
- * word lists that the wheel and the guess game take their words from.
+ * The day's games (contract §6): a preview of any date's set, the two word
+ * lists the wheel and the guess take their words from, and where the other two
+ * find theirs — فقاعات الكلمات on the pictures, وصّل الحروف in the bank and in
+ * the proverbs of قوافي.
  */
-export function registerDailyGames(router, { dailyGames }) {
+export function registerDailyGames(router, { dailyGames, pictures = null, repo = null, lab = null, wordSearchDays = null }) {
+  /** Titles of the bank with enough short answers to fill a وصّل الحروف board. */
+  function connectTitles() {
+    if (!repo) return 0;
+    const byTitle = new Map();
+    for (const entry of connectPool(repo.listQuestions())) {
+      if (entry.title) byTitle.set(entry.title, (byTitle.get(entry.title) ?? 0) + 1);
+    }
+    return [...byTitle.values()].filter((n) => n >= 3).length;
+  }
+
   const render = (res, { date, listErrors = {}, drafts = {} }) => {
     const { day } = parseDay(date);
     const lists = dailyGames.lists();
@@ -21,8 +34,16 @@ export function registerDailyGames(router, { dailyGames }) {
       next: dayToDate(day + 1),
       today: todayUtc(),
       set: dailyGames.forDate(date),
+      // The board of the day is a rung like the rest, so it is previewed here too.
+      wordSearch: wordSearchDays?.boardFor?.(date) ?? null,
       lists,
       labels: LIST_LABELS,
+      // The two games whose content is a bank rather than a list.
+      banks: {
+        pictures: pictures?.counts() ?? { total: 0, published: 0 },
+        titles: connectTitles(),
+        proverbs: (lab?.riddles() ?? []).filter((riddle) => String(riddle?.emoji ?? '').trim()).length,
+      },
     });
   };
 

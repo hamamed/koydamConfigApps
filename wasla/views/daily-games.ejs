@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'ألعاب اليوم · ' + date,
-          subheading: 'لعبة واحدة كل يوم بحجمها الكامل، والباقي في الأرشيف بلا جوائز',
+          subheading: 'درجات سُلّم اليوم ومصادر كلماتها — القوائم تُحرَّر هنا، والبنكان لهما صفحاتهما',
           actions: '<a class="btn btn-sm btn-kd-ghost" href="/api/v1/daily-games?date=' + date + '" target="_blank" rel="noopener">عرض JSON</a>'
         }) %>
     <div class="ad-content">
@@ -14,7 +14,7 @@
         <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games?date=<%= previous %>">← <%= previous %></a>
         <% if (date !== today) { %><a class="btn btn-sm btn-kd-outline" href="/admin/daily-games">اليوم</a><% } %>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games?date=<%= next %>"><%= next %> →</a>
-        <span class="small kd-muted ms-auto">رتّب الحروف وفقاعات الكلمات وصِل المجموعات تأتي من الأسئلة وفئاتها؛ وعجلة الحروف وخمّن الكلمة من القوائم أدناه.</span>
+        <span class="small kd-muted ms-auto">الألعاب الأربع ومصادرها أدناه: صورتان بنكان (الصور وبنك الأسئلة) وقائمتان تُحرَّران هنا.</span>
       </div>
 
       <% if (!set) { %>
@@ -62,6 +62,35 @@
           </div>
           <div class="col-xl-4 col-md-6">
             <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('spline', 16) %><span class="fw-semibold"><span class="wz-ar">وصّل الحروف</span></span></div>
+              <div class="ad-card-body">
+                <% if (!set.connect) { %><p class="small kd-muted mb-0">لا فئة ولا صورة ولا مثل يملأ لوحاً اليوم.</p><% } else { %>
+                  <div class="mb-2 d-flex flex-wrap align-items-center gap-2">
+                    <% if (set.connect.emoji) { %><span class="wz-emoji"><%= set.connect.emoji %></span><% } %>
+                    <% if (set.connect.theme) { %><span class="kd-tag kd-tag-accent wz-ar"><%= set.connect.theme %></span><% } %>
+                    <span class="kd-faint small"><%= set.connect.rows.length %> × <%= set.connect.cols %></span>
+                  </div>
+                  <div class="wz-ar"><%= set.connect.words.map((w) => w.display).join('، ') %></div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('search', 16) %><span class="fw-semibold"><span class="wz-ar">البحث عن الكلمات</span></span></div>
+              <div class="ad-card-body">
+                <% if (!wordSearch) { %><p class="small kd-muted mb-0">لا موضوع يملأ لوح اليوم.</p><% } else { %>
+                  <div class="mb-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="kd-tag kd-tag-accent wz-ar"><%= wordSearch.theme %></span>
+                    <span class="kd-faint small"><%= wordSearch.size %> × <%= wordSearch.size %> · <%= wordSearch.words.length %> كلمات</span>
+                  </div>
+                  <div class="wz-ar"><%= wordSearch.words.map((w) => w.display).join('، ') %></div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-4 col-md-6">
+            <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2"><%- icon('coins', 16) %><span class="fw-semibold">المكافآت</span></div>
               <div class="ad-card-body small">
                 <p class="mb-1"><strong><%= set.coins %></strong> عملة لكل لعبة، مرة في اليوم.</p>
@@ -72,6 +101,45 @@
           </div>
         </div>
       <% } %>
+
+      <div class="row g-3 mb-3">
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('image', 16) %>
+              <span class="fw-semibold me-auto"><span class="wz-ar">فقاعات الكلمات</span></span>
+              <span class="kd-faint small"><%= banks.pictures.published %> صورة منشورة</span>
+            </div>
+            <div class="ad-card-body">
+              <p class="small kd-muted">
+                كلماتها ليست قائمة هنا: كل صورة تحمل كلماتها، وتُكتب في صفحة الصور.
+                اللعبة تأخذ منها ما طوله أربعة حروف فأكثر (ثمانية لكل صورة)، والأقصر يبقى لوصّل الحروف.
+              </p>
+              <a class="btn btn-sm btn-kd-outline" href="/admin/pictures">صور الفقاعات</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('spline', 16) %>
+              <span class="fw-semibold me-auto"><span class="wz-ar">وصّل الحروف</span></span>
+              <span class="kd-faint small"><%= banks.titles %> فئة صالحة</span>
+            </div>
+            <div class="ad-card-body">
+              <p class="small kd-muted">
+                ثلاثة مصادر بالتناوب: فئة من بنك الأسئلة (أجوبتها من 3 إلى 7 حروف)، أو صورة بكلماتها،
+                أو مثل من قائمة قوافي يُسأل بالإيموجي — <%= banks.proverbs %> مثلاً له إيموجي الآن.
+              </p>
+              <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-kd-outline" href="/admin/questions">الأسئلة</a>
+                <a class="btn btn-sm btn-kd-ghost" href="/admin/pictures">الصور</a>
+                <a class="btn btn-sm btn-kd-ghost" href="/admin/lab">قوافي</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="row g-3">
         <% ['guess', 'wheel'].forEach((name) => { const list = lists[name]; %>
