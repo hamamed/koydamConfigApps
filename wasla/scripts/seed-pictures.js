@@ -6,11 +6,15 @@
  *   npm run seed-pictures -- --draw      # draws the pictures into the picture folder
  *   npm run seed-pictures                # saves the rounds that have a picture
  *
- * Each line is `source | العنوان | كلمة، كلمة، …`. The source is the English
- * name of an emoji, whose Twemoji drawing is used (CC BY 4.0,
- * https://github.com/jdecked/twemoji), or `openclipart:<id>` for the things
- * emoji has no drawing of — الرمان، البامية، الجوافة — from Openclipart, which
- * is public domain (CC0, https://openclipart.org).
+ * Each line is `source | العنوان | كلمة، كلمة، …`. The source is one of three:
+ *
+ *   an emoji's English name   the Twemoji drawing of it — flat and bold
+ *                             (CC BY 4.0, https://github.com/jdecked/twemoji)
+ *   fluent:<Asset name>       Microsoft's Fluent Emoji, soft and rounded
+ *                             (MIT, https://github.com/microsoft/fluentui-emoji)
+ *   openclipart:<id>          a drawing of something emoji has none of —
+ *                             الرمان، البامية، الجوافة — from Openclipart,
+ *                             which is public domain (CC0, https://openclipart.org)
  *
  * Either way the drawing is fetched as SVG and drawn at 512 px on nothing: it
  * keeps its own shape, the card it is shown on provides the background, and it
@@ -41,8 +45,12 @@ const NAMES = 'https://unicode.org/Public/emoji/15.1/emoji-test.txt';
 const TWEMOJI = (code) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
 const OPENCLIPART = (id) => `https://openclipart.org/download/${id}/`;
 const OPENCLIPART_PAGE = (id) => `https://openclipart.org/detail/${id}/`;
-/** A source that names a drawing rather than an emoji. */
+const FLUENT = (name) => 'https://raw.githubusercontent.com/microsoft/fluentui-emoji/main/assets/'
+  // The file keeps the name's hyphens (t-shirt_color.svg) and turns the rest into _.
+  + `${encodeURIComponent(name)}/Color/${name.toLowerCase().replace(/[^a-z0-9-]+/g, '_')}_color.svg`;
+/** Sources that name a drawing rather than an emoji. */
 const CLIPART = /^openclipart:(\d+)$/;
+const FLUENT_SOURCE = /^fluent:(.+)$/;
 const SIDE = 512;
 /** The margin the drawing keeps on every side, so no edge of it is clipped. */
 const MARGIN = 52;
@@ -83,7 +91,7 @@ export function readSeed(text) {
     if (errors) return problems.push(`${at} «${title}»: ${errors.join(' ')}`);
     if (seen.has(title)) return problems.push(`${at}: «${title}» مكتوب مرتين`);
     seen.add(title);
-    rounds.push({ name: name.toLowerCase(), ...round });
+    rounds.push({ name, ...round });
   });
   return { rounds, problems };
 }
@@ -102,6 +110,9 @@ const fileFor = (code) => `${crypto.createHash('md5').update(code).digest('hex')
  * rather than redirecting, so its page is read for the file's own address.
  */
 async function fetchDrawing(source) {
+  const fluent = source.match(FLUENT_SOURCE);
+  if (fluent) return fetch(FLUENT(fluent[1]), { headers: { 'User-Agent': 'wasla-seed' } });
+
   const clipart = source.match(CLIPART);
   if (!clipart) return fetch(TWEMOJI(source), { headers: { 'User-Agent': 'wasla-seed' } });
 
@@ -140,7 +151,9 @@ if (thin.length) {
 
 const names = await emojiNames();
 /** What a round's picture is fetched by: a drawing's id, or an emoji's codepoints. */
-const sourceOf = (round) => (CLIPART.test(round.name) ? round.name : names.get(round.name));
+const sourceOf = (round) => (CLIPART.test(round.name) || FLUENT_SOURCE.test(round.name)
+  ? round.name
+  : names.get(round.name.toLowerCase()));
 const unknown = rounds.filter((round) => !sourceOf(round));
 unknown.forEach((round) => console.error(`✗ «${round.title}»: no emoji named «${round.name}»`));
 
