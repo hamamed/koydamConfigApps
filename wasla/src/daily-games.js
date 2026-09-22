@@ -258,7 +258,8 @@ export function trimForMarathon(kind, game, rand) {
 export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null, lab = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
-  const questions = () => db.prepare('SELECT id, answer, trim(IFNULL(title, \'\')) AS title FROM questions ORDER BY id').all();
+  const questions = () => db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue,
+    trim(IFNULL(title, '')) AS title FROM questions ORDER BY id`).all();
   const listText = (name) => db.prepare('SELECT body FROM daily_game_lists WHERE name = ?').pluck().get(name) ?? DEFAULTS[name];
   const isEdited = (name) => Boolean(db.prepare('SELECT 1 FROM daily_game_lists WHERE name = ?').get(name));
 

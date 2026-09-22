@@ -13,7 +13,9 @@ import { createRepository } from '../src/repository.js';
 
 const SCHOOL = ['مدرسة', 'قلم', 'كتاب', 'معلم', 'دفتر', 'حصة', 'طالب', 'مقعد', 'سبورة', 'درس', 'جرس', 'ملعب'];
 
-const pool = (words, title = 'مدرسة') => words.map((word, index) => ({ id: index + 1, word, display: word, title }));
+const pool = (words, title = 'مدرسة') => words.map((word, index) => ({
+  id: index + 1, word, display: word, clue: `دليل ${word}`, title,
+}));
 
 /** True when the path never jumps: every step touches the one before it. */
 const touching = (path) => path.every(([r, c], index) => {
@@ -75,9 +77,18 @@ test('too few words to plant is no board at all', () => {
   assert.ok(buildConnect(pool(SCHOOL.slice(0, CONNECT_MIN_WORDS)), 3), 'four is enough');
 });
 
+test('a board from the bank carries each word\'s question, and a proverb board none', () => {
+  const board = buildConnect(pool(SCHOOL), 21);
+  assert.ok(board.words.every((word) => word.clue), 'the question comes with the word');
+
+  const proverb = buildProverbConnect(PROVERB, 21);
+  assert.ok(proverb.words.every((word) => word.clue === ''), 'a proverb\'s words have no question');
+});
+
 test('the pool is every answer once, in its played form', () => {
-  const rows = db.prepare('SELECT id, answer, title FROM questions ORDER BY id').all();
+  const rows = db.prepare("SELECT id, answer, IFNULL(clue, '') AS clue, title FROM questions ORDER BY id").all();
   const list = connectPool([...rows, ...rows]);
+  assert.ok(list.every((entry) => entry.clue), 'the clue travels with it');
   assert.equal(list.length, SCHOOL.length, 'the same answer is not offered twice');
   assert.ok(list.every((entry) => entry.word && entry.display));
 });

@@ -7,7 +7,9 @@
  *
  *   مثل    the words of a proverb from the قوافي list, with its emoji as the
  *          only clue; the proverb itself is the prize, shown once they are found
- *   بنك    the long answers of one of the question bank's titles
+ *   بنك    the long answers of one of the question bank's titles, each with the
+ *          question that asks for it — so the board reads like the main game:
+ *          a clue, and its word hidden on the board
  *
  * Which of the two a date gets alternates, so the week that has a proverb has a
  * board of plain words the week after. Every word is planted along a path of
@@ -115,7 +117,9 @@ export function buildConnect(pool, seed, {
       const length = letters(entry.word).length;
       return length >= range[0] && length <= Math.min(range[1], size * size);
     })
-    .sort((a, b) => letters(b.word).length - letters(a.word).length);
+    // A word with its question first: the board reads like the main game.
+    .sort((a, b) => Number(Boolean(b.clue)) - Number(Boolean(a.clue))
+      || letters(b.word).length - letters(a.word).length);
 
   const words = [];
   const seen = new Set();
@@ -125,7 +129,7 @@ export function buildConnect(pool, seed, {
     const path = plant(grid, entry.word, rand);
     if (!path) continue;
     seen.add(entry.word);
-    words.push({ id: entry.id, word: entry.word, display: entry.display, path });
+    words.push({ id: entry.id, word: entry.word, display: entry.display, clue: entry.clue ?? '', path });
   }
   if (words.length < minimum) return null;
 
@@ -172,7 +176,13 @@ export function connectPool(questions) {
     const word = foldForPlay(normalizeAnswer(row.answer ?? ''));
     if (!word || seen.has(word)) continue;
     seen.add(word);
-    pool.push({ id: row.id, word, display: normalizeAnswer(row.answer), title: String(row.title ?? '').trim() });
+    pool.push({
+      id: row.id,
+      word,
+      display: normalizeAnswer(row.answer),
+      clue: String(row.clue ?? '').trim(),
+      title: String(row.title ?? '').trim(),
+    });
   }
   return pool;
 }
