@@ -40,6 +40,7 @@ const SEED = path.join(HERE, 'picture-seed.txt');
 const NAMES = 'https://unicode.org/Public/emoji/15.1/emoji-test.txt';
 const TWEMOJI = (code) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
 const OPENCLIPART = (id) => `https://openclipart.org/download/${id}/`;
+const OPENCLIPART_PAGE = (id) => `https://openclipart.org/detail/${id}/`;
 /** A source that names a drawing rather than an emoji. */
 const CLIPART = /^openclipart:(\d+)$/;
 const SIDE = 512;
@@ -96,11 +97,24 @@ const fitsConnect = (round) => Boolean(buildConnect(
 /** The name a round's picture is stored under: its source, and nothing else. */
 const fileFor = (code) => `${crypto.createHash('md5').update(code).digest('hex').slice(0, 24)}.png`;
 
-async function draw(source) {
+/**
+ * The drawing's file. Openclipart's `/download/<id>/` sometimes answers 500
+ * rather than redirecting, so its page is read for the file's own address.
+ */
+async function fetchDrawing(source) {
   const clipart = source.match(CLIPART);
-  const svg = await fetch(clipart ? OPENCLIPART(clipart[1]) : TWEMOJI(source), {
-    headers: { 'User-Agent': 'wasla-seed' },
-  });
+  if (!clipart) return fetch(TWEMOJI(source), { headers: { 'User-Agent': 'wasla-seed' } });
+
+  const direct = await fetch(OPENCLIPART(clipart[1]), { headers: { 'User-Agent': 'wasla-seed' } });
+  if (direct.ok) return direct;
+  const page = await fetch(OPENCLIPART_PAGE(clipart[1]), { headers: { 'User-Agent': 'wasla-seed' } });
+  if (!page.ok) return direct;
+  const file = (await page.text()).match(new RegExp(`/download/${clipart[1]}/[^"']+\\.svg`))?.[0];
+  return file ? fetch(`https://openclipart.org${file}`, { headers: { 'User-Agent': 'wasla-seed' } }) : direct;
+}
+
+async function draw(source) {
+  const svg = await fetchDrawing(source);
   if (!svg.ok) return null;
   const { default: sharp } = await import('sharp');
   return sharp(Buffer.from(await svg.arrayBuffer()), { density: 600 })
