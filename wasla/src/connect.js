@@ -1,185 +1,134 @@
 /**
- * وصّل الحروف: a square of letters, and words found by dragging a finger from
- * one letter to the next — up, down, sideways or diagonally, and the path may
- * bend as often as it likes.
+ * وصّل الحروف: one question, and its answer spread over every box of the board.
  *
- * A round comes one of two ways:
+ * The board is exactly as big as the answer is long — «الدار البيضاء» is twelve
+ * letters, so the board is 3×4 — and the answer is written along a path that
+ * visits every box once. Nothing is filler: every letter on the board is a
+ * letter of the answer, in an order only the answer knows.
  *
- *   مثل    the words of a proverb from the قوافي list, with its emoji as the
- *          only clue; the proverb itself is the prize, shown once they are found
- *   بنك    the long answers of one of the question bank's titles, each with the
- *          question that asks for it — so the board reads like the main game:
- *          a clue, and its word hidden on the board
- *
- * Which of the two a date gets alternates, so the week that has a proverb has a
- * board of plain words the week after. Every word is planted along a path of
- * touching cells, which is what makes it findable, and the cells left over are
- * filled with letters weighted the way the word search fills its board.
- *
- * The board carries each word's path, so the app can light it up when it is
- * found and a paid help can show one.
+ * The player reads the question, works out the answer, then drags a finger
+ * through it from its first letter to its last.
  */
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import { parseDay } from './daily.js';
-import { FILLER_WEIGHTS, random, shuffled } from './wordsearch.js';
+import { random, shuffled } from './wordsearch.js';
 
-export const CONNECT_SIZE = 5;
-export const CONNECT_WORDS = 6;
-export const CONNECT_MIN_WORDS = 4;
-/** A proverb is three or four words, so a proverb board may be shorter. */
-export const CONNECT_MIN_PROVERB_WORDS = 3;
-/** A word must be long enough to be worth dragging, short enough to fit a path. */
-export const CONNECT_LETTERS = Object.freeze([3, 7]);
-/** A board from the bank takes the long answers: a three-letter word is no drag. */
-export const CONNECT_BANK_LETTERS = Object.freeze([4, 7]);
+/** A board is at least this many boxes, and at most this many. */
+export const CONNECT_LETTERS = Object.freeze([6, 20]);
+/** Neither side of the board may be thinner than this, or longer than this. */
+export const CONNECT_SIDES = Object.freeze([2, 5]);
 
-const FILLER = Object.entries(FILLER_WEIGHTS);
-const FILLER_TOTAL = FILLER.reduce((sum, [, weight]) => sum + weight, 0);
+const ARABIC_WORD = /^[ء-غف-ي]+$/u;
 
-/** A letter for an empty cell, by how often it turns up in Arabic. */
-function filler(rand) {
-  let ticket = rand() * FILLER_TOTAL;
-  for (const [letter, weight] of FILLER) {
-    ticket -= weight;
-    if (ticket <= 0) return letter;
+/**
+ * The board an answer of `count` letters makes: the pair of sides closest to a
+ * square, inside `CONNECT_SIDES`. Null when the count cannot make one — 11 and
+ * 13 are prime, and 14 would need a side of seven.
+ */
+export function boardShape(count) {
+  let best = null;
+  for (let rows = CONNECT_SIDES[0]; rows <= CONNECT_SIDES[1]; rows++) {
+    if (count % rows) continue;
+    const cols = count / rows;
+    if (cols < CONNECT_SIDES[0] || cols > CONNECT_SIDES[1]) continue;
+    const shape = { rows, cols };
+    if (!best || Math.abs(shape.rows - shape.cols) < Math.abs(best.rows - best.cols)) best = shape;
   }
-  return 'ا';
+  return best;
 }
 
-/** The eight cells around one, inside the board. */
-function neighbours(row, col, size) {
-  const cells = [];
+/** The cells touching one, inside the board, in a shuffled order. */
+function neighbours(cell, rows, cols, rand) {
+  const [row, col] = cell;
+  const around = [];
   for (let dr = -1; dr <= 1; dr++) {
     for (let dc = -1; dc <= 1; dc++) {
       if (!dr && !dc) continue;
       const r = row + dr;
       const c = col + dc;
-      if (r >= 0 && r < size && c >= 0 && c < size) cells.push([r, c]);
+      if (r >= 0 && r < rows && c >= 0 && c < cols) around.push([r, c]);
     }
   }
-  return cells;
+  return shuffled(around, rand);
 }
 
 /**
- * Plants one word along a path of touching cells, reusing a cell that already
- * holds the letter it needs. Returns the path, or null when it does not fit.
- * `grid` is left as it was when it fails.
+ * A path that visits every box exactly once, each step touching the one before
+ * it. Null when none was found, which a board this small does not do.
  */
-export function plant(grid, word, rand) {
-  const size = grid.length;
-  const wanted = letters(word);
-  const written = [];
-
-  const step = (index, path) => {
-    if (index === wanted.length) return true;
-    const options = index === 0
-      ? shuffled(grid.flatMap((row, r) => row.map((_, c) => [r, c])), rand)
-      : shuffled(neighbours(path[index - 1][0], path[index - 1][1], size), rand);
-    for (const [r, c] of options) {
-      if (path.some(([pr, pc]) => pr === r && pc === c)) continue;
-      const cell = grid[r][c];
-      if (cell !== null && cell !== wanted[index]) continue;
-      const wasEmpty = cell === null;
-      if (wasEmpty) {
-        grid[r][c] = wanted[index];
-        written.push([r, c]);
+export function snake(rows, cols, rand) {
+  const total = rows * cols;
+  const starts = shuffled(Array.from({ length: total }, (_, i) => [Math.floor(i / cols), i % cols]), rand);
+  for (const start of starts) {
+    const path = [start];
+    const seen = new Set([String(start)]);
+    const walk = () => {
+      if (path.length === total) return true;
+      for (const next of neighbours(path.at(-1), rows, cols, rand)) {
+        const key = String(next);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        path.push(next);
+        if (walk()) return true;
+        path.pop();
+        seen.delete(key);
       }
-      path.push([r, c]);
-      if (step(index + 1, path)) return true;
-      path.pop();
-      if (wasEmpty) {
-        grid[r][c] = null;
-        written.pop();
-      }
-    }
-    return false;
-  };
-
-  const path = [];
-  if (step(0, path)) return path;
-  for (const [r, c] of written) grid[r][c] = null;
+      return false;
+    };
+    if (walk()) return path;
+  }
   return null;
 }
 
 /**
- * A board from a list of words: `{ size, rows, words }`, or null when fewer
- * than `CONNECT_MIN_WORDS` could be planted. Longest first, so the short ones
- * fill the gaps the long ones leave.
+ * The board for one question, or null when its answer cannot fill one.
+ * `path` is the order the letters are read in: the answer, box by box.
  */
-export function buildConnect(pool, seed, {
-  size = CONNECT_SIZE, count = CONNECT_WORDS, range = CONNECT_LETTERS, minimum = CONNECT_MIN_WORDS,
-} = {}) {
+export function buildConnect(entry, seed) {
+  if (!entry) return null;
+  const display = normalizeAnswer(entry.answer ?? entry.word ?? '');
+  const answer = foldForPlay(display);
+  const list = letters(answer);
+  if (!ARABIC_WORD.test(answer)) return null;
+  if (list.length < CONNECT_LETTERS[0] || list.length > CONNECT_LETTERS[1]) return null;
+
+  const shape = boardShape(list.length);
+  if (!shape) return null;
+
   const rand = random(seed);
-  const grid = Array.from({ length: size }, () => Array(size).fill(null));
-  const chosen = shuffled(pool, rand)
-    .filter((entry) => {
-      const length = letters(entry.word).length;
-      return length >= range[0] && length <= Math.min(range[1], size * size);
-    })
-    // A word with its question first: the board reads like the main game.
-    .sort((a, b) => Number(Boolean(b.clue)) - Number(Boolean(a.clue))
-      || letters(b.word).length - letters(a.word).length);
+  const path = snake(shape.rows, shape.cols, rand);
+  if (!path) return null;
 
-  const words = [];
-  const seen = new Set();
-  for (const entry of chosen) {
-    if (words.length === count) break;
-    if (seen.has(entry.word)) continue;
-    const path = plant(grid, entry.word, rand);
-    if (!path) continue;
-    seen.add(entry.word);
-    words.push({ id: entry.id, word: entry.word, display: entry.display, clue: entry.clue ?? '', path });
-  }
-  if (words.length < minimum) return null;
-
-  const rows = grid.map((row) => row.map((cell) => cell ?? filler(rand)).join(''));
-  return {
-    size,
-    rows,
-    words: words.sort((a, b) => letters(a.word).length - letters(b.word).length || a.id - b.id),
-  };
-}
-
-/**
- * A board made of one proverb's words: «أطلب العلم ولو في الصين» plants العلم،
- * أطلب، الصين and leaves the particles out — they are too short to drag, and the
- * proverb is shown whole once the board is cleared.
- */
-export function buildProverbConnect(riddle, seed) {
-  if (!riddle) return null;
-  const phrase = [riddle.before, riddle.answer, riddle.after].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-  const pool = [];
-  const seen = new Set();
-  phrase.split(/\s+/).forEach((raw, index) => {
-    const display = normalizeAnswer(raw);
-    const word = foldForPlay(display);
-    if (letters(word).length < CONNECT_LETTERS[0] || seen.has(word)) return;
-    seen.add(word);
-    pool.push({ id: index + 1, word, display });
+  const grid = Array.from({ length: shape.rows }, () => Array(shape.cols).fill(''));
+  path.forEach(([row, col], index) => {
+    grid[row][col] = list[index];
   });
-  const board = buildConnect(pool, seed, { count: pool.length, minimum: CONNECT_MIN_PROVERB_WORDS });
-  if (!board) return null;
+
   return {
-    ...board,
-    theme: String(riddle.source ?? '').trim() || 'مثل',
-    emoji: String(riddle.emoji ?? '').trim(),
-    phrase,
+    rows: grid.map((row) => row.join('')),
+    cols: shape.cols,
+    path,
+    answer,
+    display,
+    clue: String(entry.clue ?? '').trim(),
+    title: String(entry.title ?? '').trim(),
   };
 }
 
-/** Every answer the bank can offer this game: played form, once each. */
+/** Every question whose answer can fill a board, in id order. */
 export function connectPool(questions) {
   const seen = new Set();
   const pool = [];
   for (const row of questions) {
-    const word = foldForPlay(normalizeAnswer(row.answer ?? ''));
-    if (!word || seen.has(word)) continue;
-    seen.add(word);
+    const answer = foldForPlay(normalizeAnswer(row.answer ?? ''));
+    const count = letters(answer).length;
+    if (seen.has(answer) || !ARABIC_WORD.test(answer)) continue;
+    if (count < CONNECT_LETTERS[0] || count > CONNECT_LETTERS[1] || !boardShape(count)) continue;
+    seen.add(answer);
     pool.push({
       id: row.id,
-      word,
-      display: normalizeAnswer(row.answer),
+      answer: normalizeAnswer(row.answer),
       clue: String(row.clue ?? '').trim(),
       title: String(row.title ?? '').trim(),
     });
@@ -188,44 +137,26 @@ export function connectPool(questions) {
 }
 
 /**
- * The board a date plays. The words come from one title when that title has
- * enough of them — a board about one thing is nicer to read — and from the
- * whole bank when it does not.
+ * The board a date plays: one question, taken by rotation so the same date
+ * always asks the same one. A question with a clue to read comes first, and a
+ * question whose answer will not lay out passes the day to the next.
  */
-export function connectForDate(questions, date, { nonce = 0, riddles = [] } = {}) {
+export function connectForDate(questions, date, { nonce = 0 } = {}) {
   const parsed = parseDay(date);
   if (!parsed) return null;
-  const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
-  const day = parsed.day + step;
-  const seed = (Math.imul(day + 1, 2654435761) ^ Math.imul(step + 5, 40503)) >>> 0;
-
-  // One week a proverb, the next a board of plain words.
-  const wantsProverb = riddles.length > 0 && Math.floor(day / 7) % 2 === 0;
-  if (wantsProverb) {
-    const riddle = shuffled(riddles, random(0x9a0b))[((day % riddles.length) + riddles.length) % riddles.length];
-    const board = buildProverbConnect(riddle, seed);
-    if (board) return board;
-  }
-
   const pool = connectPool(questions);
   if (!pool.length) return null;
 
-  // One title's words first: the titles that have enough, in a fixed order.
-  const byTitle = new Map();
-  for (const entry of pool) {
-    if (!entry.title) continue;
-    byTitle.set(entry.title, [...byTitle.get(entry.title) ?? [], entry]);
-  }
-  const titles = [...byTitle.entries()]
-    .filter(([, words]) => words.length >= CONNECT_WORDS * 2)
-    .sort(([a], [b]) => (a < b ? -1 : 1));
+  const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
+  const day = parsed.day + step;
+  const asked = [...pool].sort((a, b) => Number(Boolean(b.clue)) - Number(Boolean(a.clue)) || a.id - b.id);
+  const list = shuffled(asked, random(0x517e));
 
-  if (titles.length) {
-    const [title, words] = titles[((day % titles.length) + titles.length) % titles.length];
-    const board = buildConnect(words, seed, { range: CONNECT_BANK_LETTERS })
-      ?? buildConnect(words, seed);
-    if (board) return { ...board, theme: title, emoji: '', phrase: '' };
+  for (let attempt = 0; attempt < Math.min(list.length, 40); attempt++) {
+    const entry = list[(((day + attempt) % list.length) + list.length) % list.length];
+    const seed = (Math.imul(day + 1, 2654435761) ^ Math.imul(step + attempt + 5, 40503)) >>> 0;
+    const board = buildConnect(entry, seed);
+    if (board) return board;
   }
-  const board = buildConnect(pool, seed, { range: CONNECT_BANK_LETTERS }) ?? buildConnect(pool, seed);
-  return board ? { ...board, theme: '', emoji: '', phrase: '' } : null;
+  return null;
 }
