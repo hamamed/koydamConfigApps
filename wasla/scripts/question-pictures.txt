@@ -159,61 +159,61 @@
 # ── أسئلة جديدة: كل رسم عندنا لا سؤال له في البنك (+ تعني أضِف إن لم يوجد) ──
 
 @ فواكه وخضار
-+ أفوكادو | avocado
-+ ذرة | ear of corn
-+ خيار | cucumber
-+ فطر | mushroom
-+ فول سوداني | peanuts
-+ توت | blueberries
-+ كستناء | chestnut
-+ بطاطا حلوة | roasted sweet potato
-+ ببايا | openclipart:352628
-+ فلفل حلو | bell pepper
++ أفوكادو | avocado | متوسط
++ ذرة | ear of corn | سهل
++ خيار | cucumber | سهل
++ فطر | mushroom | سهل
++ فول سوداني | peanuts | متوسط
++ توت | blueberries | سهل
++ كستناء | chestnut | صعب
++ بطاطا حلوة | roasted sweet potato | متوسط
++ ببايا | openclipart:352628 | صعب
++ فلفل حلو | bell pepper | متوسط
 
 @ ملابس وأزياء
-+ كاب | fluent:Billed cap
-+ شورت | fluent:Shorts
-+ بلوزة | fluent:Womans clothes
-+ مايوه | fluent:One-piece swimsuit
-+ كعب عالي | fluent:High-heeled shoe
-+ صندل | fluent:Womans sandal
-+ شبشب | fluent:Thong sandal
-+ جزمة | fluent:Hiking boot
-+ حقيبة | fluent:Handbag
-+ ربطة عنق | fluent:Necktie
-+ قفاز | fluent:Gloves
-+ وشاح | fluent:Scarf
-+ تاج | fluent:Crown
-+ ساعة | fluent:Watch
++ كاب | fluent:Billed cap | سهل
++ شورت | fluent:Shorts | سهل
++ بلوزة | fluent:Womans clothes | متوسط
++ مايوه | fluent:One-piece swimsuit | متوسط
++ كعب عالي | fluent:High-heeled shoe | متوسط
++ صندل | fluent:Womans sandal | سهل
++ شبشب | fluent:Thong sandal | سهل
++ جزمة | fluent:Hiking boot | سهل
++ حقيبة | fluent:Handbag | سهل
++ ربطة عنق | fluent:Necktie | متوسط
++ قفاز | fluent:Gloves | سهل
++ وشاح | fluent:Scarf | متوسط
++ تاج | fluent:Crown | سهل
++ ساعة | fluent:Watch | سهل
 
 @ حيوانات
-+ ذئب | wolf
-+ خنزير | pig face
-+ سمكة | fish
-+ غزال | deer
-+ لاما | llama
-+ فهد | leopard
-+ روبيان | shrimp
-+ نحام | flamingo
-+ قضاعة | otter
-+ ديناصور | T-Rex
++ ذئب | wolf | سهل
++ خنزير | pig face | سهل
++ سمكة | fish | سهل
++ غزال | deer | سهل
++ لاما | llama | صعب
++ فهد | leopard | متوسط
++ روبيان | shrimp | متوسط
++ نحام | flamingo | صعب
++ قضاعة | otter | صعب
++ ديناصور | T-Rex | سهل
 
 @ آلات موسيقية
-+ ناي | flute
++ ناي | flute | متوسط
 
 @ أدوات ومهن
-+ مفتاح | key
-+ قفل | locked
-+ سلم | ladder
-+ فأس | axe
-+ معول | pick
-+ ملعقة | spoon
-+ بطارية | battery
-+ مغناطيس | magnet
-+ أدوات صيانة | hammer and wrench
-+ صندوق أدوات | toolbox
-+ ترس | gear
-+ سلسلة | chains
-+ منظار | telescope
-+ أنبوب اختبار | test tube
-+ كشاف | flashlight
++ مفتاح | key | سهل
++ قفل | locked | سهل
++ سلم | ladder | سهل
++ فأس | axe | سهل
++ معول | pick | متوسط
++ ملعقة | spoon | سهل
++ بطارية | battery | سهل
++ مغناطيس | magnet | متوسط
++ أدوات صيانة | hammer and wrench | صعب
++ صندوق أدوات | toolbox | متوسط
++ ترس | gear | متوسط
++ سلسلة | chains | متوسط
++ منظار | telescope | متوسط
++ أنبوب اختبار | test tube | صعب
++ كشاف | flashlight | متوسط

@@ -28,10 +28,15 @@ import { drawOrPlain, emojiNames, fileFor, sourceOf } from '../src/drawings.js';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LIST = path.join(HERE, 'question-pictures.txt');
 
+/** What a line may say a question's difficulty is. */
+const DIFFICULTY = Object.freeze({
+  سهل: 'easy', متوسط: 'medium', صعب: 'hard', easy: 'easy', medium: 'medium', hard: 'hard',
+});
+
 /**
- * `{ title, answer, source, adding }` per line; `@ العنوان` sets the title
- * under it, and a line that starts with `+` adds the question when the bank
- * has no such answer yet.
+ * `{ title, answer, source, difficulty, adding }` per line; `@ العنوان` sets
+ * the title under it, and a line that starts with `+` adds the question when
+ * the bank has no such answer yet. A third part is its difficulty.
  */
 export function readList(text) {
   const wanted = [];
@@ -45,10 +50,13 @@ export function readList(text) {
       return;
     }
     const adding = line.startsWith('+');
-    const [answer, source] = (adding ? line.slice(1) : line).split('|').map((part) => part.trim());
+    const [answer, source, level] = (adding ? line.slice(1) : line).split('|').map((part) => part.trim());
     if (!answer || !source) return problems.push(`سطر ${index + 1}: السطر جزآن مفصولان بـ |`);
     if (!title) return problems.push(`سطر ${index + 1}: «${answer}» قبل أي عنوان`);
-    wanted.push({ title, answer, source, adding });
+    if (level && !DIFFICULTY[level]) {
+      return problems.push(`سطر ${index + 1}: «${level}» ليست صعوبة — سهل أو متوسط أو صعب`);
+    }
+    wanted.push({ title, answer, source, difficulty: DIFFICULTY[level] ?? '', adding });
   });
   return { wanted, problems };
 }
@@ -61,7 +69,7 @@ problems.forEach((problem) => console.error(`✗ ${problem}`));
 console.log(`${wanted.length} questions listed, ${problems.length} problems`);
 
 const names = await emojiNames();
-const rows = db.prepare(`SELECT id, title, answer, image_file, image_author, image_licence, image_source
+const rows = db.prepare(`SELECT id, title, answer, image_file, image_author, image_licence, image_source, difficulty
   FROM questions WHERE title = ? AND answer = ?`);
 
 const drawings = wanted.map((item) => ({ ...item, source: sourceOf(item.source, names) }));
@@ -102,11 +110,15 @@ for (const item of drawings.filter((one) => one.source)) {
 }
 
 const changing = jobs.filter((job) => job.question.image_file !== job.file);
+// A question with no difficulty takes the one the file gives it; one that has
+// a difficulty keeps it, since it may have been judged in the panel.
+const grading = jobs.filter((job) => job.difficulty && !job.question.difficulty);
 console.log(`${changing.length} questions would change, ${jobs.length - changing.length} already drawn,`
-  + ` ${adding.length} would be added`);
+  + ` ${adding.length} would be added, ${grading.length} would be given a difficulty`);
 if (check) {
   changing.forEach((job) => console.log(`  ${job.title} · ${job.answer}: ${job.question.image_file} → ${job.file}`));
-  adding.forEach((job) => console.log(`  + ${job.title} · ${job.answer}`));
+  adding.forEach((job) => console.log(`  + ${job.title} · ${job.answer} (${job.difficulty || 'بلا صعوبة'})`));
+  grading.forEach((job) => console.log(`  ~ ${job.title} · ${job.answer}: ${job.difficulty}`));
   process.exit(problems.length ? 1 : 0);
 }
 
@@ -137,13 +149,19 @@ const update = db.prepare(`UPDATE questions
 const swap = db.transaction((list) => list.forEach((job) => update.run(job.file, job.question.id)));
 swap(changing);
 
+const grade = db.prepare('UPDATE questions SET difficulty = ? WHERE id = ?');
+db.transaction((list) => list.forEach((job) => grade.run(job.difficulty, job.question.id)))(grading);
+
 // New questions: the drawing is the whole question, as picture questions are.
 const repo = createRepository(db);
 let added = 0;
 for (const job of adding) {
-  const { error } = repo.createQuestion({ title: job.title, answer: job.answer, type: 'image', imageFile: job.file });
+  const { error } = repo.createQuestion({
+    title: job.title, answer: job.answer, type: 'image', imageFile: job.file, difficulty: job.difficulty,
+  });
   if (error) console.error(`✗ «${job.answer}»: ${error}`);
   else added++;
 }
 
-console.log(`changed ${changing.length} questions and added ${added}; what the changed ones had is in ${backup}`);
+console.log(`changed ${changing.length} questions, added ${added}, graded ${grading.length};`
+  + ` what the changed ones had is in ${backup}`);
