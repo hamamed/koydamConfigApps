@@ -8,7 +8,7 @@ import {
   CONNECT_WORDS, connectForDate, connectPool, FLAVOURS, PICTURE_ASK, PROVERB_ASK, walk,
 } from '../src/connect.js';
 import { random } from '../src/wordsearch.js';
-import { createDailyGames } from '../src/daily-games.js';
+import { createDailyGames, trimForMarathon } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
 
@@ -231,4 +231,11 @@ test('the day the week gives it sends a board', () => {
   assert.ok(set.connect.words.length >= CONNECT_WORDS[0]);
   assert.equal(set.connect.words.reduce((sum, word) => sum + letters(word.word).length, 0),
     set.connect.rows.length * set.connect.cols);
+});
+
+test('the marathon plays a connect board whole, so no box is left belonging to nothing', () => {
+  const games = createDailyGames(db, { appConfig: createAppConfig(db) });
+  const board = games.automatic('2026-09-23').connect;
+  const round = trimForMarathon('connect', board, random(3));
+  assert.deepEqual(round, board, 'a board cut down would leave letters no answer wants');
 });

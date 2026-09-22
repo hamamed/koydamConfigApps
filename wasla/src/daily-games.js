@@ -230,7 +230,7 @@ export function buildGuess(words, day) {
  */
 
 export const MARATHON_ROUNDS = Object.freeze(['bubbles', 'connect', 'wheel', 'guess', 'wordsearch']);
-export const MARATHON_SIZES = Object.freeze({ bubbles: 4, connect: 3, wheel: 6, guess: 1, board: 7 });
+export const MARATHON_SIZES = Object.freeze({ bubbles: 4, wheel: 6, guess: 1, board: 7 });
 export const MARATHON_GUESS_TRIES = 5;
 
 /** The same game, cut to marathon length; null stays null. */
@@ -243,10 +243,9 @@ export function trimForMarathon(kind, game, rand) {
     }
     case 'wheel':
       return { letters: game.letters, words: game.words.slice(0, MARATHON_SIZES.wheel) };
-    // The board keeps all its letters; the ones the dropped words wanted just
-    // become filler, which is the sprint's favour to the player.
-    case 'connect':
-      return { ...game, words: game.words.slice(0, MARATHON_SIZES.connect) };
+    // connect is not cut: its board is its answers letter for letter, so
+    // dropping one would leave boxes belonging to nothing. Its boards are
+    // short enough for a sprint as they are.
     case 'guess': {
       const words = game.words.slice(0, MARATHON_SIZES.guess);
       return { words, word: words[0].word, display: words[0].display, tries: MARATHON_GUESS_TRIES };
