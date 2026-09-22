@@ -55,3 +55,165 @@
 قبعة | fluent:Top hat
 ساري | fluent:Sari
 كيمونو | fluent:Kimono
+
+# ── أُضيفت بعد الفئتين الأوليين ─────────────────────────────────────────
+
+@ حيوانات
+أسد | lion
+نمر | tiger
+فيل | elephant
+زرافة | giraffe
+قرد | monkey
+دب | bear
+ثعلب | fox
+أرنب | rabbit face
+حصان | horse
+جمل | camel
+بقرة | cow face
+خروف | ewe
+ماعز | goat
+كلب | dog face
+قط | cat face
+ديك | rooster
+بطة | duck
+نسر | eagle
+بومة | owl
+ببغاء | parrot
+قرش | shark
+حوت | whale
+دلفين | dolphin
+سلحفاة | turtle
+تمساح | crocodile
+ضفدع | frog
+عقرب | scorpion
+نحلة | honeybee
+نملة | ant
+فراشة | butterfly
+عنكبوت | spider
+فأر | mouse face
+سنجاب | chipmunk
+قنفذ | hedgehog
+خفاش | bat
+كنغر | kangaroo
+باندا | panda
+كوالا | koala
+وحيد القرن | rhinoceros
+فرس النهر | hippopotamus
+طاووس | peacock
+بجعة | swan
+بطريق | penguin
+فقمة | seal
+أخطبوط | octopus
+سرطان | crab
+قنديل البحر | jellyfish
+صرصور | cockroach
+خنفساء | beetle
+كسلان | sloth
+حلزون | snail
+أفعى | snake
+مرجان | coral
+
+@ أدوات ومهن
+مطرقة | hammer
+منشار | carpentry saw
+مفك | screwdriver
+مسطرة | straight ruler
+فرشاة | paintbrush
+مقص | scissors
+إبرة | sewing needle
+مكنسة | broom
+ميزان | balance scale
+بوصلة | compass
+مجهر | microscope
+حقنة | syringe
+كاميرا | camera
+برغي | nut and bolt
+دلو | bucket
+خوذة | rescue worker’s helmet
+مصباح | light bulb
+
+@ رياضات
+كرة القدم | soccer ball
+كرة السلة | basketball
+الكرة الطائرة | volleyball
+التنس | tennis
+السباحة | person swimming
+الجري | person running
+الملاكمة | boxing glove
+البولينغ | bowling
+الهوكي | field hockey
+البيسبول | baseball
+الشطرنج | chess pawn
+ركوب الأمواج | person surfing
+
+@ آلات موسيقية
+طبلة | drum
+كمان | violin
+بيانو | musical keyboard
+ساكسفون | saxophone
+بوق | trumpet
+
+@ أطباق عربية
+فلافل | falafel
+
+# ── أسئلة جديدة: كل رسم عندنا لا سؤال له في البنك (+ تعني أضِف إن لم يوجد) ──
+
+@ فواكه وخضار
++ أفوكادو | avocado
++ ذرة | ear of corn
++ خيار | cucumber
++ فطر | mushroom
++ فول سوداني | peanuts
++ توت | blueberries
++ كستناء | chestnut
++ بطاطا حلوة | roasted sweet potato
++ ببايا | openclipart:352628
++ فلفل حلو | bell pepper
+
+@ ملابس وأزياء
++ كاب | fluent:Billed cap
++ شورت | fluent:Shorts
++ بلوزة | fluent:Womans clothes
++ مايوه | fluent:One-piece swimsuit
++ كعب عالي | fluent:High-heeled shoe
++ صندل | fluent:Womans sandal
++ شبشب | fluent:Thong sandal
++ جزمة | fluent:Hiking boot
++ حقيبة | fluent:Handbag
++ ربطة عنق | fluent:Necktie
++ قفاز | fluent:Gloves
++ وشاح | fluent:Scarf
++ تاج | fluent:Crown
++ ساعة | fluent:Watch
+
+@ حيوانات
++ ذئب | wolf
++ خنزير | pig face
++ سمكة | fish
++ غزال | deer
++ لاما | llama
++ فهد | leopard
++ روبيان | shrimp
++ نحام | flamingo
++ قضاعة | otter
++ ديناصور | T-Rex
+
+@ آلات موسيقية
++ ناي | flute
+
+@ أدوات ومهن
++ مفتاح | key
++ قفل | locked
++ سلم | ladder
++ فأس | axe
++ معول | pick
++ ملعقة | spoon
++ بطارية | battery
++ مغناطيس | magnet
++ أدوات صيانة | hammer and wrench
++ صندوق أدوات | toolbox
++ ترس | gear
++ سلسلة | chains
++ منظار | telescope
++ أنبوب اختبار | test tube
++ كشاف | flashlight

@@ -22,12 +22,17 @@ import { fileURLToPath } from 'node:url';
 
 import { config } from '../src/config.js';
 import { db } from '../src/db/index.js';
+import { createRepository } from '../src/repository.js';
 import { drawOrPlain, emojiNames, fileFor, sourceOf } from '../src/drawings.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const LIST = path.join(HERE, 'question-pictures.txt');
 
-/** `{ title, answer, source }` per line; `@ العنوان` sets the title under it. */
+/**
+ * `{ title, answer, source, adding }` per line; `@ العنوان` sets the title
+ * under it, and a line that starts with `+` adds the question when the bank
+ * has no such answer yet.
+ */
 export function readList(text) {
   const wanted = [];
   const problems = [];
@@ -39,10 +44,11 @@ export function readList(text) {
       title = line.slice(1).trim();
       return;
     }
-    const [answer, source] = line.split('|').map((part) => part.trim());
+    const adding = line.startsWith('+');
+    const [answer, source] = (adding ? line.slice(1) : line).split('|').map((part) => part.trim());
     if (!answer || !source) return problems.push(`سطر ${index + 1}: السطر جزآن مفصولان بـ |`);
     if (!title) return problems.push(`سطر ${index + 1}: «${answer}» قبل أي عنوان`);
-    wanted.push({ title, answer, source });
+    wanted.push({ title, answer, source, adding });
   });
   return { wanted, problems };
 }
@@ -83,24 +89,29 @@ if (drawing) {
 }
 
 const jobs = [];
+const adding = [];
 for (const item of drawings.filter((one) => one.source)) {
   const question = rows.get(item.title, item.answer);
-  if (!question) {
+  if (question) {
+    jobs.push({ ...item, question, file: fileFor(item.source) });
+  } else if (item.adding) {
+    adding.push({ ...item, file: fileFor(item.source) });
+  } else {
     console.error(`✗ «${item.answer}»: no question with that answer under «${item.title}»`);
-    continue;
   }
-  jobs.push({ ...item, question, file: fileFor(item.source) });
 }
 
 const changing = jobs.filter((job) => job.question.image_file !== job.file);
-console.log(`${changing.length} questions would change, ${jobs.length - changing.length} already drawn`);
+console.log(`${changing.length} questions would change, ${jobs.length - changing.length} already drawn,`
+  + ` ${adding.length} would be added`);
 if (check) {
   changing.forEach((job) => console.log(`  ${job.title} · ${job.answer}: ${job.question.image_file} → ${job.file}`));
+  adding.forEach((job) => console.log(`  + ${job.title} · ${job.answer}`));
   process.exit(problems.length ? 1 : 0);
 }
 
 const missing = [];
-for (const job of changing) {
+for (const job of [...changing, ...adding]) {
   if (!await fs.access(path.join(config.imagesDir, job.file)).then(() => true, () => false)) missing.push(job);
 }
 if (missing.length) {
@@ -126,4 +137,13 @@ const update = db.prepare(`UPDATE questions
 const swap = db.transaction((list) => list.forEach((job) => update.run(job.file, job.question.id)));
 swap(changing);
 
-console.log(`changed ${changing.length} questions; what they had is in ${backup}`);
+// New questions: the drawing is the whole question, as picture questions are.
+const repo = createRepository(db);
+let added = 0;
+for (const job of adding) {
+  const { error } = repo.createQuestion({ title: job.title, answer: job.answer, type: 'image', imageFile: job.file });
+  if (error) console.error(`✗ «${job.answer}»: ${error}`);
+  else added++;
+}
+
+console.log(`changed ${changing.length} questions and added ${added}; what the changed ones had is in ${backup}`);
