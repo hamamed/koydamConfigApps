@@ -34,18 +34,18 @@ export const MAX_BOARD_WORDS = 12;
 export const CLOSE_THEME_WORDS = 4;
 
 /**
- * Board size by weekday, Monday first: 7, 8, 8, 9, 10, 10, 10 — smallest on
- * Monday, largest from Friday on. Indexed by `SIZE_BY_WEEKDAY[(day + 3) % 7]`,
+ * Board size by weekday, Monday first: 9, 9, 10, 10, 10, 10, 10 — the rung of
+ * the ladder it stands on is a whole game, so even the smallest is big. Indexed by `SIZE_BY_WEEKDAY[(day + 3) % 7]`,
  * since 1970-01-01 (day 0) was a Thursday.
  *
  * The day the week hands the word search (contract §9) ignores the ramp and
  * takes the largest board there is: on its own day it is the whole puzzle.
  */
-export const SIZE_BY_WEEKDAY = Object.freeze([7, 8, 8, 9, 10, 10, 10]);
+export const SIZE_BY_WEEKDAY = Object.freeze([9, 9, 10, 10, 10, 10, 10]);
 export const WEEKDAY_NAMES = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
 /** How many words a board of each size aims for, [fewest, most]; the date picks within. */
-export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 8], 8: [8, 10], 9: [10, 12], 10: [11, 12] });
+export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 8], 8: [9, 10], 9: [11, 12], 10: [12, 12] });
 /** Rounds of swapping a word that did not fit for one that was left over. */
 const REFILL_ROUNDS = 5;
 
@@ -168,14 +168,19 @@ export function createWordSearch(db, { appConfig }) {
     if (!parsed || !list.length) return null;
     const scheduled = sizeForDay(parsed.day);
     const passes = avoid && list.some((t) => t.title !== avoid) ? [avoid, null] : [null];
-    for (const skip of passes) {
-      for (let size = scheduled; size <= MAX_SIZE; size++) {
-        for (let step = 0; step < list.length; step++) {
-          const theme = list[(parsed.day + step) % list.length];
-          if (skip && theme.title === skip) continue;
-          const seed = seedOf(parsed.day, size, step);
-          const board = boardForTheme(theme, size, seed);
-          if (board) return { theme: theme.title, size: board.size, seed, board };
+    // A full board first: a theme deep enough to hide what the size asks for.
+    // Only when no such theme has a board does a thinner one take the day.
+    const deep = list.filter((theme) => theme.words.length >= WORDS_BY_SIZE[scheduled][0]);
+    for (const pool of deep.length ? [deep, list] : [list]) {
+      for (const skip of passes) {
+        for (let size = scheduled; size <= MAX_SIZE; size++) {
+          for (let step = 0; step < pool.length; step++) {
+            const theme = pool[(parsed.day + step) % pool.length];
+            if (skip && theme.title === skip) continue;
+            const seed = seedOf(parsed.day, size, step);
+            const board = boardForTheme(theme, size, seed);
+            if (board) return { theme: theme.title, size: board.size, seed, board };
+          }
         }
       }
     }

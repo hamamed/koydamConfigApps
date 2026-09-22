@@ -66,7 +66,7 @@ test('an excluded theme is kept out, and can be let back in', () => {
 test('the size rises through the week, and its own days take the whole board', () => {
   // 2026-09-14 is a Monday; the week gives the word search Thursday and Sunday.
   const sizes = Array.from({ length: 7 }, (_, i) => sizeForDay(parseDay('2026-09-14').day + i));
-  assert.deepEqual(sizes, [7, 8, 8, 10, 10, 10, 10]);
+  assert.deepEqual(sizes, [9, 9, 10, 10, 10, 10, 10]);
 });
 
 test('a date gets a deterministic board from its theme, matching the contract', () => {
@@ -91,17 +91,13 @@ test('a date gets a deterministic board from its theme, matching the contract', 
   assert.notEqual(wordSearch.forDate('2026-09-20').theme, board.theme);
 });
 
-test('a theme whose words are too long for the day passes the day to one that fits', () => {
-  add('طويلة', ['برتقالية', 'فراولتان', 'مانجوتان', 'اناناسات', 'جوافتين', 'مشمشتين']);
-  add('قصيرة', ANIMALS);
-  // A Monday: size 7, where the long theme has too few words that fit.
-  const monday = parseDay('2026-09-14');
-  assert.equal(monday.day % 2, 0, 'the date would pick طويلة, the first theme by title');
-  const board = wordSearch.forDate(monday.date);
-  assert.equal(board.size, 7);
-  assert.equal(board.theme, 'قصيرة');
-  // On a Sunday (size 10) the long theme can have its day.
-  assert.equal(wordSearch.forDate('2026-09-20').theme, 'طويلة');
+test('a theme with too few words that fit the day passes the day to one that has them', () => {
+  // A board of nine wants eleven words; a theme with six cannot fill one.
+  add('قليلة', ['برتقالية', 'فراولتان', 'مانجوتان', 'اناناسات', 'جوافتين', 'مشمشتين']);
+  add('كثيرة', [...ANIMALS, 'دلفين', 'حوت', 'قرش', 'سلحفاة', 'فقمة', 'بطريق']);
+  const board = wordSearch.forDate('2026-09-14');
+  assert.equal(board.theme, 'كثيرة');
+  assert.ok(board.words.length >= 11, `${board.words.length} words on a ${board.size} board`);
 });
 
 test('no board without a theme, or for a date that is not a date', () => {
