@@ -45,7 +45,7 @@ export const SIZE_BY_WEEKDAY = Object.freeze([7, 8, 8, 9, 10, 10, 10]);
 export const WEEKDAY_NAMES = Object.freeze(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 
 /** How many words a board of each size aims for, [fewest, most]; the date picks within. */
-export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 7], 8: [6, 8], 9: [7, 9], 10: [9, 12] });
+export const WORDS_BY_SIZE = Object.freeze({ 7: [6, 8], 8: [8, 10], 9: [10, 12], 10: [11, 12] });
 /** Rounds of swapping a word that did not fit for one that was left over. */
 const REFILL_ROUNDS = 5;
 
