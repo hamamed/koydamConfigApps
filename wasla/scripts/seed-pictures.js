@@ -169,13 +169,18 @@ let missing = 0;
 for (const round of rounds) {
   const already = have.get(round.title);
   if (already) {
-    // A round already in the bank only has its category brought up to date.
-    if ((already.category ?? '') !== round.category) {
+    // A round already in the bank keeps its words — they may have been edited
+    // in the panel — but follows the file for its category and its picture, so
+    // changing a source here swaps the drawing on the next run.
+    const wanted = fileFor(sourceOf(round));
+    const drawn = await fs.access(path.join(config.imagesDir, wanted)).then(() => true, () => false);
+    const file = drawn ? wanted : already.imageFile;
+    if ((already.category ?? '') !== round.category || already.imageFile !== file) {
       pictures.save({
         title: already.title,
         category: round.category,
         words: already.words.join('\n'),
-        imageFile: already.imageFile,
+        imageFile: file,
         zoom: already.zoom,
         focusX: already.focusX,
         focusY: already.focusY,
@@ -211,7 +216,7 @@ for (const round of rounds) {
 }
 
 const counts = pictures.counts();
-console.log(`added ${added}, put ${sorted} in their category, skipped ${missing};`
+console.log(`added ${added}, brought ${sorted} up to date, skipped ${missing};`
   + ` the bank now holds ${counts.total} rounds, ${counts.published} published`);
 for (const group of pictures.categories()) {
   console.log(`  ${group.name || '(بلا تصنيف)'}: ${group.total}`);
