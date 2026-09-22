@@ -18,7 +18,7 @@ import { random, shuffled } from './wordsearch.js';
 
 /** How many words a round holds: enough for a full board, few enough to write. */
 export const MIN_ROUND_WORDS = 4;
-export const MAX_ROUND_WORDS = 12;
+export const MAX_ROUND_WORDS = 14;
 /**
  * A word of the picture. فقاعات الكلمات cuts a word into pieces of two, so it
  * plays only the words of four letters or more (BUBBLE_LETTERS in
