@@ -5,6 +5,7 @@
  *   npm run seed-pictures -- --check     # reads the file and says what is wrong
  *   npm run seed-pictures -- --draw      # draws the pictures into the picture folder
  *   npm run seed-pictures                # saves the rounds that have a picture
+ *   npm run seed-pictures -- --words     # and takes their words back from the file
  *
  * Each line is `source | العنوان | كلمة، كلمة، …`, and a line `@ تصنيف` files
  * everything under it in that category. The sources a line may name, and how a
@@ -66,6 +67,8 @@ const fitsConnect = (round) => Boolean(buildConnect(
 ));
 
 const check = process.argv.includes('--check');
+/** `--words` rewrites the words of rounds already in the bank from the file. */
+const rewording = process.argv.includes('--words');
 const { rounds, problems } = readSeed(await fs.readFile(SEED, 'utf8'));
 problems.forEach((problem) => console.error(`✗ ${problem}`));
 console.log(`${rounds.length} rounds read, ${problems.length} problems`);
@@ -122,15 +125,18 @@ for (const round of rounds) {
   if (already) {
     // A round already in the bank keeps its words — they may have been edited
     // in the panel — but follows the file for its category and its picture, so
-    // changing a source here swaps the drawing on the next run.
+    // changing a source here swaps the drawing on the next run. `--words` also
+    // takes the words back from the file, for when they are rewritten here.
     const wanted = fileFor(drawingOf(round));
     const drawn = await fs.access(path.join(config.imagesDir, wanted)).then(() => true, () => false);
     const file = drawn ? wanted : already.imageFile;
-    if ((already.category ?? '') !== round.category || already.imageFile !== file) {
+    const words = rewording ? round.words : already.words;
+    if ((already.category ?? '') !== round.category || already.imageFile !== file
+        || words.join('\n') !== already.words.join('\n')) {
       pictures.save({
         title: already.title,
         category: round.category,
-        words: already.words.join('\n'),
+        words: words.join('\n'),
         imageFile: file,
         zoom: already.zoom,
         focusX: already.focusX,

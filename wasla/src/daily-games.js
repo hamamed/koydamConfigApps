@@ -21,6 +21,7 @@
  */
 
 import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
+import { MIN_ROUND_WORDS } from './bubble-pictures.js';
 import { parseDay } from './daily.js';
 import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedule.js';
 import { connectForDate } from './connect.js';
@@ -114,10 +115,15 @@ export function spelledFrom(word, pool) {
 export function buildPictureBubbles(round, seed) {
   if (!round?.words?.length) return null;
   const rand = random(seed);
-  const words = round.words.map((raw, index) => {
-    const word = played(raw);
-    return { id: (round.id ?? 0) * 100 + index, word, display: normalizeAnswer(raw), parts: splitParts(word) };
-  });
+  // A word is cut into pieces of two, so the short ones — which وصّل الحروف
+  // spells letter by letter — would come back whole and give themselves away.
+  const words = round.words
+    .map((raw, index) => {
+      const word = played(raw);
+      return { id: (round.id ?? 0) * 100 + index, word, display: normalizeAnswer(raw), parts: splitParts(word) };
+    })
+    .filter((word) => letters(word.word).length >= BUBBLE_LETTERS[0]);
+  if (words.length < MIN_ROUND_WORDS) return null;
   return {
     theme: round.title,
     image: round.image ?? null,
@@ -296,7 +302,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
     if (!parsed) return null;
     const { day } = parsed;
     return {
-      bubbles: buildPictureBubbles(pictures?.forDate(parsed.date), seedFor(day, 'bubbles'))
+      bubbles: buildPictureBubbles(pictures?.forDate(parsed.date, 0, { cutAt: BUBBLE_LETTERS[0] }), seedFor(day, 'bubbles'))
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
@@ -320,7 +326,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
     const day = parsed.day + step;
     const seed = (seedFor(parsed.day, kind) ^ Math.imul(step + 1, 2654435761)) >>> 0;
     switch (kind) {
-      case 'bubbles': return buildPictureBubbles(pictures?.forDate(parsed.date, step), seed)
+      case 'bubbles': return buildPictureBubbles(pictures?.forDate(parsed.date, step, { cutAt: BUBBLE_LETTERS[0] }), seed)
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);

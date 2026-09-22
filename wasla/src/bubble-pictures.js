@@ -19,8 +19,13 @@ import { random, shuffled } from './wordsearch.js';
 /** How many words a round holds: enough for a full board, few enough to write. */
 export const MIN_ROUND_WORDS = 4;
 export const MAX_ROUND_WORDS = 8;
-/** Each word is cut into pieces, so it needs letters to cut. */
-export const WORD_LETTERS = Object.freeze([4, 10]);
+/**
+ * A word of the picture. فقاعات الكلمات cuts a word into pieces of two, so it
+ * plays only the words of four letters or more (BUBBLE_LETTERS in
+ * daily-games.js); the shorter ones are there for وصّل الحروف, which spells
+ * them letter by letter.
+ */
+export const WORD_LETTERS = Object.freeze([3, 10]);
 export const MAX_TITLE = 40;
 /** What the picture is of, for finding it again among hundreds. */
 export const MAX_CATEGORY = 30;
@@ -37,8 +42,9 @@ export const readWordLines = (text) => String(text ?? '').split(/\r?\n/)
 
 /**
  * Checks a round as the panel would save it: `{ round }` or `{ errors }`.
- * Every word is cut into pieces of two letters, so a word shorter than four
- * letters makes a board nobody can read.
+ * A round needs enough words of four letters or more for فقاعات الكلمات to
+ * have a board; the check for that is where the game is built, since a round
+ * is worth keeping for وصّل الحروف either way.
  */
 export function readRound({ title, category, words, imageFile, zoom, focusX, focusY }) {
   const errors = [];
@@ -78,6 +84,10 @@ export function readRound({ title, category, words, imageFile, zoom, focusX, foc
     },
   };
 }
+
+/** Whether enough of a round's words are long enough to be cut into pieces. */
+export const cuttable = (round, cutAt) =>
+  (round?.words ?? []).filter((word) => letters(foldForPlay(word)).length >= cutAt).length >= MIN_ROUND_WORDS;
 
 /** A fixed shuffle, so neighbouring rounds in the list are not neighbouring days. */
 const rotation = (list, day, salt) => (list.length ? shuffled(list, random(salt))[day % list.length] : null);
@@ -135,12 +145,19 @@ export function createBubblePictures(db, { publicUrl = '' } = {}) {
     return {};
   }
 
-  /** The round a date plays, or null when nothing is published yet. */
-  function forDate(date, nonce = 0) {
+  /**
+   * The round a date plays, or null when nothing is published yet.
+   *
+   * `cutAt` is for فقاعات الكلمات: it plays only the words long enough to cut
+   * into pieces, so a round without enough of them is passed over rather than
+   * losing the day its picture.
+   */
+  function forDate(date, nonce = 0, { cutAt = 0 } = {}) {
     const parsed = parseDay(date);
     if (!parsed) return null;
     const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
-    const round = rotation(published(), parsed.day + step, 0xb1c7);
+    const rounds = cutAt ? published().filter((round) => cuttable(round, cutAt)) : published();
+    const round = rotation(rounds, parsed.day + step, 0xb1c7);
     return round ? { ...round, image: pictureOf(round, { publicUrl }) } : null;
   }
 

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
-import { createBubblePictures, MAX_CATEGORY, MAX_ROUND_WORDS, MIN_ROUND_WORDS, readRound } from '../src/bubble-pictures.js';
+import {
+  createBubblePictures, cuttable, MAX_CATEGORY, MAX_ROUND_WORDS, MIN_ROUND_WORDS, readRound,
+} from '../src/bubble-pictures.js';
 import { buildPictureBubbles } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
 
@@ -20,7 +22,9 @@ test('a round is a name, a picture and four to eight words that belong to it', (
   assert.equal(readRound(SONY).errors, undefined);
   assert.match(readRound({ ...SONY, title: ' ' }).errors.join(), /اسم الصورة/);
   assert.match(readRound({ ...SONY, words: 'ألعاب\nذراع' }).errors.join(), new RegExp(`${MIN_ROUND_WORDS} إلى ${MAX_ROUND_WORDS}`));
-  assert.match(readRound({ ...SONY, words: 'ألعاب\nذراع\nسوني\nيد' }).errors.join(), /«يد» من 4 إلى 10 حروف/);
+  assert.match(readRound({ ...SONY, words: 'ألعاب\nذراع\nسوني\nيد' }).errors.join(), /«يد» من 3 إلى 10 حروف/);
+  assert.ok(!readRound({ ...SONY, words: 'ألعاب\nذراع\nسوني\nسلك' }).errors,
+    'a three-letter word is kept for وصّل الحروف, which spells it letter by letter');
   assert.match(readRound({ ...SONY, words: 'ألعاب\nذراع\nسوني\ngames' }).errors.join(), /حروفاً عربية/);
   assert.match(readRound({ ...SONY, words: 'ألعاب\nذراع\nسوني\nألعاب' }).errors.join(), /مرتين/);
 });
@@ -90,4 +94,34 @@ test('the categories say what is in each one', () => {
     { name: 'فواكه وخضار', total: 2, published: 0 },
   ]);
   assert.equal(pictures.all().find((round) => round.title === 'التين').category, 'فواكه وخضار');
+});
+
+test('فقاعات الكلمات plays only the words its pieces can hide', () => {
+  const round = {
+    id: 3,
+    title: 'الشمس',
+    words: ['ضوء', 'صيف', 'حرارة', 'أشعة', 'شروق', 'نهار'],
+    image: { url: 'https://example.test/sun.png', zoom: 1, focusX: 0.5, focusY: 0.5 },
+  };
+  const game = buildPictureBubbles(round, 5);
+  assert.deepEqual(game.words.map((w) => w.display).sort(), ['أشعة', 'حرارة', 'شروق', 'نهار'].sort(),
+    'the three-letter words are left to وصّل الحروف');
+  assert.ok(game.words.every((word) => word.parts.length >= 2), 'no word comes back whole');
+
+  assert.equal(buildPictureBubbles({ ...round, words: ['ضوء', 'صيف', 'نار', 'شمس', 'حر'] }, 5), null,
+    'too few words long enough to cut: the day takes another picture');
+});
+
+test('a date takes a picture فقاعات can cut, and وصّل الحروف takes any of them', () => {
+  const short = pictures.save({ title: 'الشمس', words: 'ضوء\nصيف\nحر\nنار\nشمس', imageFile: FILE });
+  pictures.setPublished(short.id, true);
+  assert.ok(!cuttable({ words: ['ضوء', 'صيف', 'حر', 'نار', 'شمس'] }, 4), 'nothing long enough to cut');
+  assert.ok(cuttable({ words: ['حرارة', 'أشعة', 'شروق', 'نهار'] }, 4));
+
+  const long = pictures.save({ title: 'المطر', words: 'شتاء\nغيوم\nمظلة\nبرودة', imageFile: FILE });
+  pictures.setPublished(long.id, true);
+  for (const date of ['2026-09-20', '2026-09-21', '2026-09-22', '2026-09-23']) {
+    assert.equal(pictures.forDate(date, 0, { cutAt: 4 }).title, 'المطر', 'every day takes the one it can play');
+    assert.ok(['الشمس', 'المطر'].includes(pictures.forDate(date).title), 'وصّل الحروف takes either');
+  }
 });
