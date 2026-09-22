@@ -19,6 +19,7 @@ const BANK = [
   ['أداة للكتابة', 'قلم'],                // 3  → too short
   ['مدينة مغربية', 'مراكش'],              // 5  → too short
   ['أكبر قارة', 'قارة آسيا'],             // 8  → 2×4
+  ['', 'مدينة نيويورك'],                  // 12, but nothing to read
 ];
 
 /** True when every step of the path touches the one before it. */
@@ -84,14 +85,14 @@ test('the pool keeps only the questions that can make a board', () => {
   const pool = connectPool(rows);
   assert.deepEqual(pool.map((entry) => entry.answer).sort(),
     ['الدار البيضاء', 'جمهورية مصر', 'قارة آسيا'].sort());
-  assert.ok(pool.every((entry) => entry.clue), 'the question comes with it');
+  assert.ok(pool.every((entry) => entry.clue), 'a question with nothing to read is left out');
   assert.deepEqual(connectPool([...rows, ...rows]).length, pool.length, 'the same answer is not offered twice');
 });
 
 test('a date always asks the same question, and another pick asks a different one', () => {
   const first = connectForDate(rows, '2026-09-23');
   assert.deepEqual(connectForDate(rows, '2026-09-23'), first);
-  assert.ok(first.clue, 'a question with a clue comes first');
+  assert.ok(first.clue, 'every board has something to read');
 
   const answers = new Set(Array.from({ length: 4 }, (_, i) => connectForDate(rows, '2026-09-23', { nonce: i }).display));
   assert.ok(answers.size > 1, 'another pick moves to another question');

@@ -15,7 +15,7 @@ import { parseDay } from './daily.js';
 import { random, shuffled } from './wordsearch.js';
 
 /** A board is at least this many boxes, and at most this many. */
-export const CONNECT_LETTERS = Object.freeze([6, 20]);
+export const CONNECT_LETTERS = Object.freeze([8, 20]);
 /** Neither side of the board may be thinner than this, or longer than this. */
 export const CONNECT_SIDES = Object.freeze([2, 5]);
 
@@ -116,30 +116,30 @@ export function buildConnect(entry, seed) {
   };
 }
 
-/** Every question whose answer can fill a board, in id order. */
+/**
+ * Every question that can make a board: its answer fills one, and it has a clue
+ * to read. A picture question's clue is its picture — «علم أي دولة» on its own
+ * asks nothing — so those are left out.
+ */
 export function connectPool(questions) {
   const seen = new Set();
   const pool = [];
   for (const row of questions) {
     const answer = foldForPlay(normalizeAnswer(row.answer ?? ''));
     const count = letters(answer).length;
-    if (seen.has(answer) || !ARABIC_WORD.test(answer)) continue;
+    const clue = String(row.clue ?? '').trim();
+    if (!clue || seen.has(answer) || !ARABIC_WORD.test(answer)) continue;
     if (count < CONNECT_LETTERS[0] || count > CONNECT_LETTERS[1] || !boardShape(count)) continue;
     seen.add(answer);
-    pool.push({
-      id: row.id,
-      answer: normalizeAnswer(row.answer),
-      clue: String(row.clue ?? '').trim(),
-      title: String(row.title ?? '').trim(),
-    });
+    pool.push({ id: row.id, answer: normalizeAnswer(row.answer), clue, title: String(row.title ?? '').trim() });
   }
   return pool;
 }
 
 /**
  * The board a date plays: one question, taken by rotation so the same date
- * always asks the same one. A question with a clue to read comes first, and a
- * question whose answer will not lay out passes the day to the next.
+ * always asks the same one. A question whose answer will not lay out passes the
+ * day to the next.
  */
 export function connectForDate(questions, date, { nonce = 0 } = {}) {
   const parsed = parseDay(date);
@@ -149,8 +149,7 @@ export function connectForDate(questions, date, { nonce = 0 } = {}) {
 
   const step = Number.isFinite(Number(nonce)) ? Math.trunc(Number(nonce)) : 0;
   const day = parsed.day + step;
-  const asked = [...pool].sort((a, b) => Number(Boolean(b.clue)) - Number(Boolean(a.clue)) || a.id - b.id);
-  const list = shuffled(asked, random(0x517e));
+  const list = shuffled([...pool].sort((a, b) => a.id - b.id), random(0x517e));
 
   for (let attempt = 0; attempt < Math.min(list.length, 40); attempt++) {
     const entry = list[(((day + attempt) % list.length) + list.length) % list.length];
