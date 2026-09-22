@@ -710,7 +710,7 @@ export function adminRouter({
     registerDaily(router, { wordSearch, wordSearchDays });
     registerWordSearch(router, { wordSearch });
   }
-  if (dailyGames) registerDailyGames(router, { dailyGames, pictures, repo, lab, wordSearchDays });
+  if (dailyGames) registerDailyGames(router, { dailyGames, pictures, wordSearchDays });
   if (dailyGames && wordSearch && wordSearchDays) registerDays(router, { dailyGames, wordSearch, wordSearchDays });
   registerNotifications(router, { repo, devices, notifications, apnsCredentials });
 

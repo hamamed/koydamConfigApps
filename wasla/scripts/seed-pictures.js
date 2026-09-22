@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { letters, foldForPlay } from '../src/arabic.js';
-import { buildConnect, connectPool } from '../src/connect.js';
+import { buildPictureConnect } from '../src/connect.js';
 import { config } from '../src/config.js';
 import { db } from '../src/db/index.js';
 import { drawOrPlain, emojiNames, fileFor, sourceOf } from '../src/drawings.js';
@@ -60,11 +60,8 @@ export function readSeed(text) {
   return { rounds, problems };
 }
 
-/** Whether a round's words can also fill a وصّل الحروف board. */
-const fitsConnect = (round) => Boolean(buildConnect(
-  connectPool(round.words.map((word, id) => ({ id, answer: word, clue: round.title }))),
-  round.title.length + round.words.length,
-));
+/** Whether a round's words can also make a وصّل الحروف board. */
+const fitsConnect = (round) => Boolean(buildPictureConnect(round, round.title.length + round.words.length));
 
 const check = process.argv.includes('--check');
 /** `--words` rewrites the words of rounds already in the bank from the file. */
