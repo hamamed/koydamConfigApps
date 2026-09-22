@@ -3,7 +3,8 @@ import { beforeEach, test } from 'node:test';
 
 import { letters } from '../src/arabic.js';
 import {
-  buildConnect, CONNECT_MIN_WORDS, CONNECT_SIZE, CONNECT_WORDS, connectForDate, connectPool, plant,
+  buildConnect, buildProverbConnect, CONNECT_MIN_WORDS, CONNECT_SIZE, CONNECT_WORDS, connectForDate,
+  connectPool, plant,
 } from '../src/connect.js';
 import { createAppConfig } from '../src/app-config.js';
 import { createDailyGames } from '../src/daily-games.js';
@@ -100,4 +101,51 @@ test('the day the week gives it sends a board, and the marathon a shorter one', 
   const round = run.rounds.find((r) => r.kind === 'connect');
   assert.ok(round, 'the run includes it');
   assert.ok(round.game.words.length < CONNECT_WORDS, 'a sprint asks for fewer');
+});
+
+
+const PROVERB = {
+  before: 'أطلب العلم ولو في',
+  after: '',
+  answer: 'الصين',
+  source: 'مثل سائر',
+  emoji: '😑📚🤲',
+};
+
+test('a proverb board plants the proverb\'s own words, and keeps its clue', () => {
+  const board = buildProverbConnect(PROVERB, 11);
+  assert.equal(board.phrase, 'أطلب العلم ولو في الصين');
+  assert.equal(board.emoji, '😑📚🤲');
+  assert.equal(board.theme, 'مثل سائر');
+  const found = board.words.map((w) => w.display).sort();
+  assert.deepEqual(found, ['أطلب', 'العلم', 'ولو', 'الصين'].sort(), '«في» alone is too short to drag');
+
+  const grid = board.rows.map((row) => letters(row));
+  for (const word of board.words) {
+    assert.ok(touching(word.path));
+    assert.equal(word.path.map(([r, c]) => grid[r][c]).join(''), word.word);
+  }
+});
+
+test('a board of plain words carries no clue, and a proverb one needs a proverb', () => {
+  const plain = buildConnect(pool(SCHOOL), 5);
+  assert.equal(plain.emoji, undefined, 'only the picker adds the empty fields');
+  assert.equal(buildProverbConnect(null, 1), null);
+  assert.equal(buildProverbConnect({ before: 'في', after: '', answer: 'و' }, 1), null, 'nothing long enough to plant');
+});
+
+test('the week alternates between a proverb and the bank', () => {
+  const rows = db.prepare('SELECT id, answer, trim(IFNULL(title, \'\')) AS title FROM questions ORDER BY id').all();
+  const riddles = [PROVERB];
+  const flavours = new Set();
+  for (let i = 0; i < 28; i += 7) {
+    const board = connectForDate(rows, `2026-09-${String(1 + i).padStart(2, '0')}`, { riddles });
+    flavours.add(board.phrase ? 'مثل' : 'بنك');
+  }
+  assert.deepEqual([...flavours].sort(), ['بنك', 'مثل'], 'both turn up over four weeks');
+
+  // With no proverbs at all it is always the bank, and never empty.
+  const board = connectForDate(rows, '2026-09-23', { riddles: [] });
+  assert.equal(board.phrase, '');
+  assert.ok(board.words.length >= CONNECT_MIN_WORDS);
 });
