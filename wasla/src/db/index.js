@@ -29,6 +29,11 @@ const ADDITIVE_COLUMNS = [
   // What a picture is of — فواكه وخضار، حيوانات — so hundreds of them can be
   // found in the panel. Rounds from before it read as uncategorised.
   ['picture_rounds', 'category', 'TEXT'],
+  // The day's ladder: the stars it was climbed with, how long it took, and when
+  // it was finished — the three the board «today-ladder» ranks by.
+  ['profile_daily', 'ladder_stars', 'INTEGER'],
+  ['profile_daily', 'ladder_seconds', 'INTEGER'],
+  ['profile_daily', 'ladder_at', 'TEXT'],
   // Unused legacy from removed level packs; kept so existing databases match. Nothing reads or writes it.
   ['levels', 'pack_id', 'INTEGER REFERENCES packs(id) ON DELETE SET NULL'],
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],

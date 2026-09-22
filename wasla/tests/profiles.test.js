@@ -160,7 +160,7 @@ test('HTTP: create, check, update, post a time, read the board, delete', async (
 
   const today = new Date().toISOString().slice(0, 10);
   const time = await call('/profile/me/daily', { method: 'POST', token, body: { kind: 'allgames', date: today, seconds: 240 } });
-  assert.deepEqual(await time.json(), { seconds: 240, rank: 1 });
+  assert.deepEqual(await time.json(), { seconds: 240, rank: 1, total: 1 });
   const stats = await call('/profile/me/stats', { method: 'PUT', token, body: { points: 70, levelsCompleted: 2, wordsSolved: 9, streak: 1, bestStreak: 1, streakDate: today, badges: [] } });
   assert.equal(stats.status, 200);
 

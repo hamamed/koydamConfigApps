@@ -107,7 +107,7 @@ export function registerProfileApi(router, { profiles, notifications = null }) {
     const time = readDailyTime(req.body, profiles.today());
     if (time.error) return res.status(400).json({ error: time.error });
     const saved = profiles.saveDailyTime(req.profile, time);
-    const board = time.kind === 'allgames' ? 'today-allgames' : 'today-wordsearch';
+    const board = { allgames: 'today-allgames', wordsearch: 'today-wordsearch', ladder: 'today-ladder' }[time.kind];
     // Tell the player just passed, once a day; never slows or fails the answer.
     if (time.kind === 'allgames' && saved.isNew && notifications) {
       const passed = profiles.claimPassedPlayer(req.profile, time.date);
@@ -117,7 +117,8 @@ export function registerProfileApi(router, { profiles, notifications = null }) {
           .catch((err) => console.error('Rank push failed:', err));
       }
     }
-    res.json({ seconds: saved.seconds, rank: profiles.leaderboard(board, { date: time.date, viewer: req.profile, limit: 0 }).me?.rank ?? null });
+    const mine = profiles.leaderboard(board, { date: time.date, viewer: req.profile, limit: 0 }).me;
+    res.json({ seconds: saved.seconds, rank: mine?.rank ?? null, total: profiles.leaderboard(board, { date: time.date, limit: 0 }).total });
   });
 
   router.post('/profile/me/device', noStore, writes, json, requireProfile, (req, res) => {

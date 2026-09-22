@@ -19,10 +19,12 @@ import { addDays } from './players.js';
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 16;
 export const LEADERBOARD_SIZE = 50;
-export const BOARDS = Object.freeze(['today-allgames', 'today-wordsearch', 'stars', 'points', 'streak']);
-export const DAILY_KINDS = Object.freeze({ wordsearch: 'wordsearch', allgames: 'allgames' });
+export const BOARDS = Object.freeze(['today-ladder', 'today-allgames', 'today-wordsearch', 'stars', 'points', 'streak']);
+export const DAILY_KINDS = Object.freeze({ wordsearch: 'wordsearch', allgames: 'allgames', ladder: 'ladder' });
 /** Faster than this is not a real solve. */
-export const MIN_SECONDS = Object.freeze({ wordsearch: 10, allgames: 30 });
+export const MIN_SECONDS = Object.freeze({ wordsearch: 10, allgames: 30, ladder: 30 });
+/** A ladder is five rungs of three stars. */
+export const MAX_LADDER_STARS = 15;
 const MAX_SECONDS = 86_400;
 const MAX_TOTAL = 1_000_000_000;
 const MAX_BADGES = 100;
@@ -139,7 +141,7 @@ export function readStats(body) {
 /** A daily time, checked against today on the server (a day either side, for time zones). */
 export function readDailyTime(body, today) {
   const kind = DAILY_KINDS[body?.kind];
-  if (!kind) return { error: '"kind" must be "wordsearch" or "allgames".' };
+  if (!kind) return { error: `"kind" must be one of: ${Object.keys(DAILY_KINDS).join(', ')}.` };
   const date = body?.date;
   if (typeof date !== 'string' || !isRealDate(date)) return { error: '"date" must be YYYY-MM-DD.' };
   if (date < addDays(today, -1) || date > addDays(today, 1)) return { error: 'That date is not today.' };
@@ -147,7 +149,12 @@ export function readDailyTime(body, today) {
   if (!Number.isInteger(seconds) || seconds < MIN_SECONDS[kind] || seconds > MAX_SECONDS) {
     return { error: `"seconds" must be a whole number from ${MIN_SECONDS[kind]} to ${MAX_SECONDS}.` };
   }
-  return { kind, date, seconds };
+  // A climb is ranked by its stars first, so it sends them with its time.
+  const stars = body?.stars ?? null;
+  if (kind === 'ladder' && !(Number.isInteger(stars) && stars >= 0 && stars <= MAX_LADDER_STARS)) {
+    return { error: `"stars" must be a whole number from 0 to ${MAX_LADDER_STARS}.` };
+  }
+  return { kind, date, seconds, stars: kind === 'ladder' ? stars : null };
 }
 
 export function createProfiles(db, { now = () => new Date() } = {}) {
@@ -240,12 +247,18 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   }
 
   /** Keeps the first time sent for that date and kind. `{ seconds, isNew }`. */
-  function saveDailyTime(profile, { kind, date, seconds }) {
+  function saveDailyTime(profile, { kind, date, seconds, stars = null }) {
     const column = `${kind}_seconds`;
     const stamp = `${kind}_at`;
     db.prepare(`INSERT INTO profile_daily (profile_id, date, ${column}, ${stamp}) VALUES (?, ?, ?, datetime('now'))
       ON CONFLICT(profile_id, date) DO UPDATE SET ${column} = excluded.${column}, ${stamp} = excluded.${stamp}
       WHERE profile_daily.${column} IS NULL`).run(profile.id, date, seconds);
+    // The stars belong to the climb that was kept, not to a later one.
+    if (kind === 'ladder') {
+      db.prepare(`UPDATE profile_daily SET ladder_stars = ?
+        WHERE profile_id = ? AND date = ? AND ladder_seconds = ? AND ladder_stars IS NULL`)
+        .run(stars ?? 0, profile.id, date, seconds);
+    }
     const kept = db.prepare(`SELECT ${column} AS seconds FROM profile_daily WHERE profile_id = ? AND date = ?`).get(profile.id, date);
     if (kind === 'allgames') {
       db.prepare('UPDATE profiles SET best_allgames_seconds = MIN(IFNULL(best_allgames_seconds, ?), ?) WHERE id = ?').run(kept.seconds, kept.seconds, profile.id);
@@ -328,6 +341,20 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
           params: { date },
         };
       }
+      // The day's climb: most stars first, and the fastest of those on top.
+      case 'today-ladder':
+        return {
+          from: `FROM profile_daily d JOIN profiles p ON p.id = d.profile_id
+            WHERE d.date = @date AND d.ladder_seconds IS NOT NULL AND p.banned = 0`,
+          value: 'd.ladder_stars',
+          order: 'd.ladder_stars DESC, d.ladder_seconds ASC, d.ladder_at ASC, p.id ASC',
+          better: `(d.ladder_stars > @value
+            OR (d.ladder_stars = @value AND (d.ladder_seconds < @seconds
+              OR (d.ladder_seconds = @seconds AND d.ladder_at < @at))))`,
+          at: 'd.ladder_at',
+          seconds: 'd.ladder_seconds',
+          params: { date },
+        };
       case 'stars':
         return {
           from: 'FROM profiles p WHERE p.banned = 0 AND p.stars > 0',
@@ -361,19 +388,23 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   function leaderboard(board, { date = today(), viewer = null, limit = LEADERBOARD_SIZE } = {}) {
     const q = boardQuery(board, date);
     if (!q) return null;
-    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, p.frame, p.stars, ${q.value} AS value ${q.from} ORDER BY ${q.order} LIMIT @limit`)
+    const rows = db.prepare(`SELECT p.id, p.username, p.avatar, p.frame, p.stars, ${q.value} AS value`
+      + `${q.seconds ? `, ${q.seconds} AS seconds` : ''} ${q.from} ORDER BY ${q.order} LIMIT @limit`)
       .all({ ...q.params, limit });
     const entries = rows.map((r, i) => ({
-      rank: i + 1, username: r.username, avatar: r.avatar, frame: r.frame ?? null, stars: r.stars, value: r.value, isMe: r.id === viewer?.id,
+      rank: i + 1, username: r.username, avatar: r.avatar, frame: r.frame ?? null, stars: r.stars, value: r.value,
+      ...(r.seconds == null ? {} : { seconds: r.seconds }),
+      isMe: r.id === viewer?.id,
     }));
     let me = null;
     if (viewer && !viewer.banned) {
-      const mine = db.prepare(`SELECT p.id, ${q.value} AS value${q.at ? `, ${q.at} AS at` : ''} ${q.from} AND p.id = @id`)
+      const mine = db.prepare(`SELECT p.id, ${q.value} AS value${q.at ? `, ${q.at} AS at` : ''}`
+        + `${q.seconds ? `, ${q.seconds} AS seconds` : ''} ${q.from} AND p.id = @id`)
         .get({ ...q.params, id: viewer.id });
       if (mine) {
         const ahead = db.prepare(`SELECT COUNT(*) AS n ${q.from} AND ${q.better}`)
-          .get({ ...q.params, value: mine.value, at: mine.at ?? '', id: viewer.id }).n;
-        me = { rank: ahead + 1, value: mine.value };
+          .get({ ...q.params, value: mine.value, at: mine.at ?? '', seconds: mine.seconds ?? 0, id: viewer.id }).n;
+        me = { rank: ahead + 1, value: mine.value, ...(mine.seconds == null ? {} : { seconds: mine.seconds }) };
       }
     }
     // How many players the board holds, so a rank can be read as "7th of 213".

@@ -25,6 +25,7 @@ import { MIN_ROUND_WORDS } from './bubble-pictures.js';
 import { parseDay } from './daily.js';
 import { kindForDay, schedule as weekSchedule, weekdayOf } from './daily-schedule.js';
 import { connectForDate } from './connect.js';
+import { ladderFor } from './daily-ladder.js';
 import { DEFAULT_GUESS_WORDS, DEFAULT_WHEEL_SETS } from './daily-games-words.js';
 import { random, shuffled } from './wordsearch.js';
 
@@ -261,7 +262,7 @@ export function trimForMarathon(kind, game, rand) {
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null, lab = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, wordSearchDays = null, pictures = null, lab = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const questions = () => db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue, IFNULL(emoji, '') AS emoji,
@@ -459,6 +460,8 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
     const kind = kindForDay(parsed.day);
     const marathon = kind === 'marathon' ? marathonFor(parsed.date) : null;
     if (Object.values(games).every((g) => g === null) && !marathon) return null;
+    // The board of the day is a game like any other rung of the ladder.
+    const board = wordSearch ? { wordsearch: wordSearchDays?.boardFor?.(parsed.date) ?? wordSearch.forDate(parsed.date) } : {};
     return {
       date: parsed.date,
       kind,
@@ -466,6 +469,11 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
       schedule: weekSchedule(),
       coins: config.dailyGameCoins,
       allBonus: config.dailyAllGamesBonus,
+      ladder: ladderFor(parsed.date, {
+        games: { ...games, ...board },
+        coins: config.dailyGameCoins,
+        bonus: config.dailyAllGamesBonus,
+      }),
       ...games,
       ...(marathon ? { marathon } : {}),
     };

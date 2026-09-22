@@ -279,6 +279,9 @@ CREATE TABLE IF NOT EXISTS profile_daily (
   wordsearch_at       TEXT,
   allgames_seconds    INTEGER,
   allgames_at         TEXT,
+  ladder_stars        INTEGER,
+  ladder_seconds      INTEGER,
+  ladder_at           TEXT,
   PRIMARY KEY (profile_id, date)
 );
 

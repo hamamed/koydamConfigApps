@@ -3,6 +3,7 @@ import { todayUtc } from '../daily.js';
 
 /** What each board is, in the app's words and in the panel's. */
 export const BOARD_LABELS = Object.freeze({
+  'today-ladder': { en: "Today's ladder", ar: 'سُلّم اليوم', note: 'الأكثر نجوماً في سُلّم اليوم، والأسرع عند التساوي', unit: 'stars' },
   'today-allgames': { en: "Today's games", ar: 'ألعاب اليوم', note: 'الأسرع في إنهاء لعبة اليوم', unit: 'time' },
   'today-wordsearch': { en: "Today's word search", ar: 'كلمات اليوم', note: 'الأسرع في البحث عن الكلمات اليوم', unit: 'time' },
   stars: { en: 'Main game', ar: 'اللعبة الرئيسية', note: 'الأكثر نجوماً في الألغاز', unit: 'stars' },

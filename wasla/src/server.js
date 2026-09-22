@@ -57,7 +57,7 @@ const wordSearchDays = createWordSearchSchedule(db, { wordSearch, appConfig });
 const pictures = createBubblePictures(db, { publicUrl: config.publicUrl });
 // The lab holds the قوافي list وصّل الحروف draws its proverbs from.
 const lab = createLab(db);
-const dailyGames = createDailyGames(db, { appConfig, wordSearch, pictures, lab });
+const dailyGames = createDailyGames(db, { appConfig, wordSearch, wordSearchDays, pictures, lab });
 const profiles = createProfiles(db);
 const titles = createTitles(db);
 
