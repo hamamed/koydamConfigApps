@@ -1,12 +1,16 @@
 /**
  * وصّل الحروف: a board of letters, and several questions whose answers are
- * spelled out of it by drawing a line from letter to letter.
+ * spelled out of it letter by letter.
  *
- * The board is the answers' own letters, pooled: every box holds a letter some
- * answer needs, and a letter serves as many answers as need it. The line may go
- * anywhere — a letter does not have to touch the one before it — so the player
- * picks whichever letters they want, in whichever order, and each answer found
- * keeps its own line on the board.
+ * The board is the answers' letters and nothing else — every box belongs to
+ * exactly one answer, so the boxes add up to the board and none is filler. A
+ * letter may be taken from anywhere, in any order, and an answer found keeps
+ * its boxes: they take its colour and stay on the board while the rest are
+ * looked for.
+ *
+ * Because the board is exactly the answers' letters, taking whichever copy of a
+ * letter comes to hand never strands the answers left — what remains is always
+ * precisely what they need.
  *
  * The questions come from one title of the bank, so a board is about one thing.
  */
@@ -15,79 +19,74 @@ import { foldForPlay, letters, normalizeAnswer } from './arabic.js';
 import { parseDay } from './daily.js';
 import { random, shuffled } from './wordsearch.js';
 
-/** The board: four rows of five, which a phone holds comfortably. */
-export const CONNECT_ROWS = 4;
-export const CONNECT_COLS = 5;
-export const CONNECT_BOXES = CONNECT_ROWS * CONNECT_COLS;
-/** How many answers a board asks for, and the fewest it is worth building at. */
-export const CONNECT_WORDS = 5;
-export const CONNECT_MIN_WORDS = 3;
-/** An answer short enough to pool with others, long enough to be worth drawing. */
+/** The boards a phone holds comfortably, biggest first: `[rows, cols]`. */
+export const CONNECT_SHAPES = Object.freeze([[4, 5], [4, 4], [3, 5], [3, 4]]);
+/** How many answers a board holds, fewest and most. */
+export const CONNECT_WORDS = Object.freeze([3, 6]);
+/** An answer short enough to share a board, long enough to be worth finding. */
 export const CONNECT_LETTERS = Object.freeze([3, 7]);
+/** How many answers the search looks at; a title with more is sampled. */
+const SEARCH_WIDTH = 40;
 
 const ARABIC_WORD = /^[ء-غف-ي]+$/u;
 
-/** How many of each letter a word needs. */
-function counts(word) {
-  const need = new Map();
-  for (const letter of letters(word)) need.set(letter, (need.get(letter) ?? 0) + 1);
-  return need;
-}
-
 /**
- * The letters a set of words needs between them: the most any one of them wants
- * of each letter, so every word can be spelled from the pool on its own.
+ * Answers whose letters add up to exactly `total`, between three and six of
+ * them — the board is their letters and nothing besides, so the sum has to be
+ * exact. The entries are taken in the order given, so shuffling them first is
+ * what makes one day's board differ from another's.
  */
-export function poolFor(words) {
-  const most = new Map();
-  for (const word of words) {
-    for (const [letter, count] of counts(word)) {
-      most.set(letter, Math.max(most.get(letter) ?? 0, count));
+export function chooseWords(entries, total, [fewest, most] = CONNECT_WORDS) {
+  const search = entries.slice(0, SEARCH_WIDTH);
+
+  const pick = (from, left, chosen) => {
+    if (left === 0) return chosen.length >= fewest ? chosen : null;
+    if (chosen.length === most) return null;
+    for (let index = from; index < search.length; index++) {
+      const entry = search[index];
+      if (entry.size > left) continue;
+      if (chosen.some((other) => other.word === entry.word)) continue;
+      const found = pick(index + 1, left - entry.size, [...chosen, entry]);
+      if (found) return found;
     }
-  }
-  return [...most].flatMap(([letter, count]) => Array(count).fill(letter));
+    return null;
+  };
+
+  return pick(0, total, []);
 }
 
 /**
- * A board from a title's answers: `{ rows, cols, words }`, or null when the
- * title cannot fill one. Answers are added while their letters still fit the
- * board, and the boxes left over take a second copy of letters already there —
- * so no box is filler, and none is wasted either.
+ * A board from a title's answers: `{ rows, cols, words }`, or null when no
+ * board size can be filled exactly by three to six of them.
  */
-export function buildConnect(pool, seed, { rows = CONNECT_ROWS, cols = CONNECT_COLS, count = CONNECT_WORDS } = {}) {
+export function buildConnect(pool, seed, { shapes = CONNECT_SHAPES } = {}) {
   const rand = random(seed);
-  const boxes = rows * cols;
-  const chosen = [];
-  let need = [];
+  const entries = shuffled(
+    pool
+      .map((entry) => ({ ...entry, size: letters(entry.word).length }))
+      .filter((entry) => entry.size >= CONNECT_LETTERS[0] && entry.size <= CONNECT_LETTERS[1]),
+    rand,
+  );
+  if (!entries.length) return null;
 
-  for (const entry of shuffled(pool, rand)) {
-    if (chosen.length === count) break;
-    const size = letters(entry.word).length;
-    if (size < CONNECT_LETTERS[0] || size > CONNECT_LETTERS[1]) continue;
-    if (chosen.some((other) => other.word === entry.word)) continue;
-    const grown = poolFor([...chosen.map((other) => other.word), entry.word]);
-    if (grown.length > boxes) continue;
-    chosen.push(entry);
-    need = grown;
+  for (const [rows, cols] of shapes) {
+    const chosen = chooseWords(entries, rows * cols);
+    if (!chosen) continue;
+
+    const mixed = shuffled(chosen.flatMap((entry) => letters(entry.word)), rand);
+    const grid = Array.from({ length: rows }, (_, row) => mixed.slice(row * cols, row * cols + cols).join(''));
+
+    return {
+      rows: grid,
+      cols,
+      words: chosen
+        .map((entry) => ({
+          id: entry.id, word: entry.word, display: entry.display, clue: entry.clue, emoji: entry.emoji ?? '',
+        }))
+        .sort((a, b) => letters(a.word).length - letters(b.word).length || a.id - b.id),
+    };
   }
-  if (chosen.length < CONNECT_MIN_WORDS) return null;
-
-  // The boxes the answers do not need take another copy of a letter they do.
-  const filled = [...need];
-  while (filled.length < boxes) filled.push(need[Math.floor(rand() * need.length)]);
-
-  const mixed = shuffled(filled, rand);
-  const grid = Array.from({ length: rows }, (_, row) => mixed.slice(row * cols, row * cols + cols).join(''));
-
-  return {
-    rows: grid,
-    cols,
-    words: chosen
-      .map((entry) => ({
-        id: entry.id, word: entry.word, display: entry.display, clue: entry.clue, emoji: entry.emoji ?? '',
-      }))
-      .sort((a, b) => letters(a.word).length - letters(b.word).length || a.id - b.id),
-  };
+  return null;
 }
 
 /** Every question that can go on a board: an answer to spell, and a clue to read. */
@@ -115,8 +114,8 @@ export function connectPool(questions) {
 
 /**
  * The board a date plays: one title's questions, taken by rotation so the same
- * date always asks the same ones. A title whose letters will not pool into a
- * board passes the day to the next.
+ * date always asks the same ones. A title whose answers will not fill a board
+ * passes the day to the next.
  */
 export function connectForDate(questions, date, { nonce = 0 } = {}) {
   const parsed = parseDay(date);
@@ -133,11 +132,10 @@ export function connectForDate(questions, date, { nonce = 0 } = {}) {
     byTitle.set(entry.title, [...byTitle.get(entry.title) ?? [], entry]);
   }
   const titles = [...byTitle.entries()]
-    .filter(([, words]) => words.length >= CONNECT_WORDS)
+    .filter(([, words]) => words.length >= CONNECT_WORDS[0])
     .sort(([a], [b]) => (a < b ? -1 : 1));
 
-  const tries = titles.length ? titles.length : 1;
-  for (let attempt = 0; attempt < Math.min(tries, 30); attempt++) {
+  for (let attempt = 0; attempt < Math.min(Math.max(titles.length, 1), 30); attempt++) {
     const seed = (Math.imul(day + 1, 2654435761) ^ Math.imul(step + attempt + 5, 40503)) >>> 0;
     if (!titles.length) {
       const board = buildConnect(pool, seed);
