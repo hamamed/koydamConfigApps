@@ -57,6 +57,15 @@
                          value="<%= draft.title %>" placeholder="بلايستيشن" dir="rtl" required>
                 </div>
                 <div>
+                  <label class="small fw-semibold d-block" for="category">التصنيف</label>
+                  <input class="form-control wz-ar" type="text" id="category" name="category" list="picture-categories"
+                         maxlength="<%= limits.category %>" value="<%= draft.category %>" placeholder="فواكه وخضار" dir="rtl">
+                  <datalist id="picture-categories">
+                    <% categories.forEach((name) => { %><option value="<%= name %>"></option><% }) %>
+                  </datalist>
+                  <div class="small kd-muted">لتجميع الصور المتشابهة، مثل «فواكه وخضار» أو «حيوانات». اتركه فارغاً إن لم تحتجه.</div>
+                </div>
+                <div>
                   <label class="small fw-semibold d-block" for="words">الكلمات التي تخصّ الصورة</label>
                   <textarea class="form-control wz-ar" id="words" name="words" rows="<%= limits.max %>" dir="rtl"
                             placeholder="ألعاب&#10;ذراع&#10;سوني&#10;أسلاك&#10;أقراص"><%= draft.words %></textarea>

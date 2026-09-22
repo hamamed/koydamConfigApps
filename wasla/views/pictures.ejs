@@ -10,6 +10,18 @@
     <div class="ad-content">
       <%- include('partials/flash') %>
 
+      <% if (groups.length > 1) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-body d-flex flex-wrap gap-2">
+            <a class="kd-tag <%= chosen ? '' : 'kd-tag-accent' %>" href="/admin/pictures">الكل (<%= counts.total %>)</a>
+            <% groups.forEach((g) => { %>
+              <a class="kd-tag <%= chosen === g.name ? 'kd-tag-accent' : '' %> wz-ar"
+                 href="/admin/pictures?category=<%= encodeURIComponent(g.name) %>"><%= g.name || 'بلا تصنيف' %> (<%= g.total %>)</a>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
       <% if (!rounds.length) { %>
         <div class="ad-card ad-empty">
           <%- icon('image', 28) %>
@@ -20,12 +32,13 @@
         <div class="ad-card">
           <div class="ad-table-wrap">
             <table class="ad-table">
-              <thead><tr><th>الصورة</th><th>الاسم</th><th>كلماتها</th><th>الحالة</th><th></th></tr></thead>
+              <thead><tr><th>الصورة</th><th>الاسم</th><th>التصنيف</th><th>كلماتها</th><th>الحالة</th><th></th></tr></thead>
               <tbody>
                 <% rounds.forEach((r) => { %>
                   <tr>
                     <td><%- include('partials/qimage', { q: r, size: 'sm' }) %></td>
                     <td><span class="wz-answer"><%= r.title %></span></td>
+                    <td class="wz-ar text-nowrap"><% if (r.category) { %><span class="kd-tag"><%= r.category %></span><% } else { %><span class="kd-muted small">—</span><% } %></td>
                     <td class="wz-ar"><%= r.words.join('، ') %></td>
                     <td class="text-nowrap">
                       <span class="ad-status <%= r.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= r.published ? 'منشورة' : 'مسودة' %></span>

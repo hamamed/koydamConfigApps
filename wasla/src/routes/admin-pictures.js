@@ -1,4 +1,4 @@
-import { MAX_ROUND_WORDS, MAX_TITLE, MIN_ROUND_WORDS, WORD_LETTERS } from '../bubble-pictures.js';
+import { MAX_CATEGORY, MAX_ROUND_WORDS, MAX_TITLE, MIN_ROUND_WORDS, WORD_LETTERS } from '../bubble-pictures.js';
 
 /**
  * The pictures فقاعات الكلمات is played on, written here one at a time.
@@ -14,20 +14,29 @@ export function registerBubblePictures(router, { pictures, images, withUpload })
     round,
     draft: {
       title: draft.title ?? round?.title ?? '',
+      category: draft.category ?? round?.category ?? '',
       words: draft.words ?? (round ? round.words.join('\n') : ''),
       zoom: draft.zoom ?? round?.zoom ?? 1,
       focusX: draft.focusX ?? round?.focusX ?? 0.5,
       focusY: draft.focusY ?? round?.focusY ?? 0.5,
     },
     errors,
-    limits: { min: MIN_ROUND_WORDS, max: MAX_ROUND_WORDS, letters: WORD_LETTERS, title: MAX_TITLE },
+    limits: { min: MIN_ROUND_WORDS, max: MAX_ROUND_WORDS, letters: WORD_LETTERS, title: MAX_TITLE,
+      category: MAX_CATEGORY },
+    categories: pictures.categories().map((group) => group.name).filter(Boolean),
   });
 
-  router.get('/pictures', (_req, res) => {
-    const rounds = pictures.all();
+  router.get('/pictures', (req, res) => {
+    // `?category=` shows the pictures of one category; the chips above the
+    // table are the only way to find one among hundreds.
+    const groups = pictures.categories();
+    const chosen = typeof req.query.category === 'string' ? req.query.category.trim() : '';
+    const rounds = pictures.all().filter((round) => !chosen || (round.category || '') === chosen);
     res.render('pictures', {
       title: 'صور فقاعات الكلمات',
       rounds,
+      groups,
+      chosen,
       counts: pictures.counts(),
       min: MIN_ROUND_WORDS,
       max: MAX_ROUND_WORDS,

@@ -22,6 +22,8 @@ export const MAX_ROUND_WORDS = 8;
 /** Each word is cut into pieces, so it needs letters to cut. */
 export const WORD_LETTERS = Object.freeze([4, 10]);
 export const MAX_TITLE = 40;
+/** What the picture is of, for finding it again among hundreds. */
+export const MAX_CATEGORY = 30;
 
 /** A word as it is typed: Arabic letters only — the pieces are cut from them. */
 const ARABIC_WORD = /^[ء-غف-ي]+$/u;
@@ -38,9 +40,11 @@ export const readWordLines = (text) => String(text ?? '').split(/\r?\n/)
  * Every word is cut into pieces of two letters, so a word shorter than four
  * letters makes a board nobody can read.
  */
-export function readRound({ title, words, imageFile, zoom, focusX, focusY }) {
+export function readRound({ title, category, words, imageFile, zoom, focusX, focusY }) {
   const errors = [];
   const name = clean(title);
+  const group = clean(category);
+  if ([...group].length > MAX_CATEGORY) errors.push(`التصنيف حتى ${MAX_CATEGORY} حرفاً.`);
   if (!name) errors.push('اكتب اسم الصورة.');
   else if ([...name].length > MAX_TITLE) errors.push(`اسم الصورة حتى ${MAX_TITLE} حرفاً.`);
 
@@ -65,6 +69,7 @@ export function readRound({ title, words, imageFile, zoom, focusX, focusY }) {
   return {
     round: {
       title: name,
+      category: group,
       words: belongs,
       imageFile: imageFile ?? null,
       zoom: Number.isFinite(Number(zoom)) ? Math.min(Math.max(Number(zoom), 1), 4) : 1,
@@ -87,6 +92,7 @@ export function createBubblePictures(db, { publicUrl = '' } = {}) {
   const row = (r) => (r ? {
     id: r.id,
     title: r.title,
+    category: r.category ?? '',
     imageFile: r.image_file,
     zoom: r.zoom,
     focusX: r.focus_x,
@@ -104,15 +110,17 @@ export function createBubblePictures(db, { publicUrl = '' } = {}) {
   function save(input, id = null) {
     const { round, errors } = readRound(input);
     if (errors) return { errors };
-    const values = [round.title, round.imageFile, round.zoom, round.focusX, round.focusY, JSON.stringify(round.words)];
+    const values = [round.title, round.category, round.imageFile, round.zoom, round.focusX, round.focusY,
+      JSON.stringify(round.words)];
     if (id) {
       const changes = db.prepare(`UPDATE picture_rounds
-        SET title = ?, image_file = ?, zoom = ?, focus_x = ?, focus_y = ?, words = ?, updated_at = datetime('now')
+        SET title = ?, category = ?, image_file = ?, zoom = ?, focus_x = ?, focus_y = ?, words = ?,
+            updated_at = datetime('now')
         WHERE id = ?`).run(...values, Number(id)).changes;
       return changes ? { id: Number(id) } : { errors: ['لا توجد صورة بهذا الرقم.'] };
     }
-    const result = db.prepare(`INSERT INTO picture_rounds (title, image_file, zoom, focus_x, focus_y, words)
-      VALUES (?, ?, ?, ?, ?, ?)`).run(...values);
+    const result = db.prepare(`INSERT INTO picture_rounds (title, category, image_file, zoom, focus_x, focus_y, words)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`).run(...values);
     return { id: Number(result.lastInsertRowid) };
   }
 
@@ -141,5 +149,11 @@ export function createBubblePictures(db, { publicUrl = '' } = {}) {
     return { total: row.total ?? 0, published: row.live ?? 0 };
   };
 
-  return { all, get, published, save, remove, setPublished, forDate, counts };
+  /** The categories in use, and how many pictures each one holds. */
+  const categories = () => db.prepare(`SELECT IFNULL(NULLIF(trim(category), ''), '') AS name,
+      COUNT(*) AS total, SUM(published) AS live
+    FROM picture_rounds GROUP BY name ORDER BY name = '' , name`).all()
+    .map((row) => ({ name: row.name, total: row.total, published: row.live ?? 0 }));
+
+  return { all, get, published, save, remove, setPublished, forDate, counts, categories };
 }

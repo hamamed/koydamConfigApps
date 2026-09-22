@@ -64,15 +64,21 @@ export function readSeed(text) {
   const rounds = [];
   const problems = [];
   const seen = new Set();
+  // `@ فواكه وخضار` puts every round under it in that category, until the next one.
+  let category = '';
   text.split('\n').forEach((raw, index) => {
     const line = raw.trim();
     if (!line || line.startsWith('#')) return;
+    if (line.startsWith('@')) {
+      category = line.slice(1).trim();
+      return;
+    }
     const at = `سطر ${index + 1}`;
     const [name, title, words] = line.split('|').map((part) => part.trim());
     if (!name || !title || !words) return problems.push(`${at}: السطر ثلاثة أجزاء مفصولة بـ |`);
 
     const list = words.split(/[،,]+/).map((word) => word.trim()).filter(Boolean);
-    const { round, errors } = readRound({ title, words: list.join('\n'), imageFile: 'seed.png' });
+    const { round, errors } = readRound({ title, category, words: list.join('\n'), imageFile: 'seed.png' });
     if (errors) return problems.push(`${at} «${title}»: ${errors.join(' ')}`);
     if (seen.has(title)) return problems.push(`${at}: «${title}» مكتوب مرتين`);
     seen.add(title);
@@ -155,12 +161,29 @@ if (process.argv.includes('--draw')) {
 }
 
 const pictures = createBubblePictures(db, { publicUrl: config.publicUrl });
-const have = new Set(pictures.all().map((round) => round.title));
+const have = new Map(pictures.all().map((round) => [round.title, round]));
 let added = 0;
+let sorted = 0;
 let missing = 0;
 
 for (const round of rounds) {
-  if (have.has(round.title)) continue;
+  const already = have.get(round.title);
+  if (already) {
+    // A round already in the bank only has its category brought up to date.
+    if ((already.category ?? '') !== round.category) {
+      pictures.save({
+        title: already.title,
+        category: round.category,
+        words: already.words.join('\n'),
+        imageFile: already.imageFile,
+        zoom: already.zoom,
+        focusX: already.focusX,
+        focusY: already.focusY,
+      }, already.id);
+      sorted++;
+    }
+    continue;
+  }
   const file = fileFor(sourceOf(round));
   if (!await fs.access(path.join(config.imagesDir, file)).then(() => true, () => false)) {
     console.error(`✗ «${round.title}»: no picture drawn yet (run --draw)`);
@@ -170,6 +193,7 @@ for (const round of rounds) {
 
   const saved = pictures.save({
     title: round.title,
+    category: round.category,
     words: round.words.join('\n'),
     imageFile: file,
     zoom: 1,
@@ -187,4 +211,8 @@ for (const round of rounds) {
 }
 
 const counts = pictures.counts();
-console.log(`added ${added}, skipped ${missing}; the bank now holds ${counts.total} rounds, ${counts.published} published`);
+console.log(`added ${added}, put ${sorted} in their category, skipped ${missing};`
+  + ` the bank now holds ${counts.total} rounds, ${counts.published} published`);
+for (const group of pictures.categories()) {
+  console.log(`  ${group.name || '(بلا تصنيف)'}: ${group.total}`);
+}

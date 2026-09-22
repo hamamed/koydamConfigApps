@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS daily_game_days (
 CREATE TABLE IF NOT EXISTS picture_rounds (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   title       TEXT NOT NULL,
+  category    TEXT,
   image_file  TEXT,
   zoom        REAL NOT NULL DEFAULT 1,
   focus_x     REAL NOT NULL DEFAULT 0.5,

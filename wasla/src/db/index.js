@@ -26,6 +26,9 @@ const ADDITIVE_COLUMNS = [
   ['questions', 'audio_file', 'TEXT'],
   // Shown above the question in the app. Replaces category, which older rows are backfilled from.
   ['questions', 'title', 'TEXT'],
+  // What a picture is of — فواكه وخضار، حيوانات — so hundreds of them can be
+  // found in the panel. Rounds from before it read as uncategorised.
+  ['picture_rounds', 'category', 'TEXT'],
   // Unused legacy from removed level packs; kept so existing databases match. Nothing reads or writes it.
   ['levels', 'pack_id', 'INTEGER REFERENCES packs(id) ON DELETE SET NULL'],
   ['levels', 'difficulty', "TEXT NOT NULL DEFAULT 'medium'"],

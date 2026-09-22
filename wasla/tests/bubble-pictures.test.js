@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
-import { createBubblePictures, MAX_ROUND_WORDS, MIN_ROUND_WORDS, readRound } from '../src/bubble-pictures.js';
+import { createBubblePictures, MAX_CATEGORY, MAX_ROUND_WORDS, MIN_ROUND_WORDS, readRound } from '../src/bubble-pictures.js';
 import { buildPictureBubbles } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
 
@@ -64,4 +64,30 @@ test('dates move through the published pictures, and another pick differs', () =
   const week = new Set(Array.from({ length: 8 }, (_, i) => pictures.forDate(`2026-09-${20 + i}`).title));
   assert.ok(week.size >= 3, 'neighbouring days are not the same picture');
   assert.notEqual(pictures.forDate('2026-09-26', 1).title, pictures.forDate('2026-09-26').title);
+});
+
+test('a round carries the category it is filed under', () => {
+  const { round } = readRound({ title: 'الرمان', category: ' فواكه وخضار ', words: 'الفاكهة\nالحبات\nالعصير\nالقشرة' });
+  assert.equal(round.category, 'فواكه وخضار', 'trimmed, and kept with the round');
+
+  const { errors } = readRound({ title: 'الرمان', category: 'ط'.repeat(MAX_CATEGORY + 1), words: 'الفاكهة\nالحبات\nالعصير\nالقشرة' });
+  assert.ok(errors.some((problem) => problem.includes('التصنيف')));
+
+  assert.equal(readRound({ title: 'الرمان', words: 'الفاكهة\nالحبات\nالعصير\nالقشرة' }).round.category, '',
+    'a round with no category is filed under none');
+});
+
+test('the categories say what is in each one', () => {
+  const db = openDatabase(':memory:');
+  const pictures = createBubblePictures(db);
+  pictures.save({ title: 'الرمان', category: 'فواكه وخضار', words: 'الفاكهة\nالحبات\nالعصير\nالقشرة', imageFile: 'a.png' });
+  pictures.save({ title: 'التين', category: 'فواكه وخضار', words: 'الفاكهة\nالشجرة\nالحلاوة\nالمربى', imageFile: 'b.png' });
+  const { id } = pictures.save({ title: 'الأسد', category: 'حيوانات', words: 'الزئير\nالغابة\nالفريسة\nالشجاعة', imageFile: 'c.png' });
+  pictures.setPublished(id, true);
+
+  assert.deepEqual(pictures.categories(), [
+    { name: 'حيوانات', total: 1, published: 1 },
+    { name: 'فواكه وخضار', total: 2, published: 0 },
+  ]);
+  assert.equal(pictures.all().find((round) => round.title === 'التين').category, 'فواكه وخضار');
 });
