@@ -24,7 +24,7 @@
       <%- icon('tag', 17) %>
       <span>الفئات</span>
     </a>
-    <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath.startsWith('/pictures') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
+    <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath.startsWith('/pictures') || currentPath.startsWith('/wordsearch') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
       <%- icon('calendar-days', 17) %>
       <span>لغز اليوم</span>
     </a>
@@ -35,10 +35,6 @@
     <a class="ad-nav-link <%= currentPath.startsWith('/lab') ? 'is-active' : '' %>" href="/admin/lab">
       <%- icon('flask-conical', 17) %>
       <span>ألعاب المختبر</span>
-    </a>
-    <a class="ad-nav-link <%= currentPath.startsWith('/wordsearch') ? 'is-active' : '' %>" href="/admin/wordsearch">
-      <%- icon('tags', 17) %>
-      <span>مواضيع البحث</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/events') ? 'is-active' : '' %>" href="/admin/events">
       <%- icon('moon', 17) %>

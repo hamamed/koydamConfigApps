@@ -1036,20 +1036,6 @@ html { scrollbar-gutter: stable; }
 .wz-auth-foot { font-size: .82rem; color: var(--kd-muted); margin: 0; }
 .wz-auth-foot a { color: var(--wz-teal-deep); font-weight: 700; }
 
-/* The week of one game a day, on the daily puzzle's calendar. */
-.wz-week { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .5rem; }
-.wz-week-day {
-  display: grid;
-  gap: .15rem;
-  padding: .55rem .6rem;
-  border: var(--wz-line) solid var(--kd-line);
-  border-radius: var(--kd-radius-sm);
-  background: var(--kd-surface);
-  text-align: center;
-}
-.wz-week-day.is-marathon { background: var(--kd-accent-soft); border-color: var(--wz-indigo); }
-.wz-week-name { font-size: .72rem; color: var(--kd-faint); }
-.wz-week-game { font-weight: 700; font-size: .85rem; color: var(--kd-ink); }
 .wz-marathon { margin: 0; padding-inline-start: 1.2rem; display: grid; gap: .3rem; }
 .wz-marathon li { line-height: 1.5; }
 

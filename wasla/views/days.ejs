@@ -5,7 +5,8 @@
     <%- include('partials/topbar', {
           heading: 'لغز اليوم',
           subheading: 'سُلّم من خمس درجات كل يوم: خمس ألعاب تُلعب بالترتيب، وكل درجة تفتح التي بعدها. افتح يوماً لتغيير أيٍّ منها.',
-          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/pictures">صور الفقاعات</a>'
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/wordsearch">فئات البحث</a>'
+            + ' <a class="btn btn-sm btn-kd-outline" href="/admin/pictures">صور الفقاعات</a>'
             + ' <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games">قوائم الكلمات</a>'
         }) %>
     <div class="ad-content">
@@ -34,20 +35,43 @@
           <span class="kd-tag kd-tag-ok">مخطَّط</span> <span class="kd-tag kd-tag-accent">مكتوب</span> <span class="kd-tag">تلقائي</span></span>
       </div>
 
-      <div class="ad-card mb-3">
-        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
-          <%- icon('calendar-days', 16) %>
-          <span class="fw-semibold me-auto">أسبوع السُّلّم</span>
-          <span class="kd-tag">لعبة اليوم هي الدرجة الأخيرة من سُلّمه</span>
-        </div>
-        <div class="ad-card-body">
-          <div class="wz-week">
-            <% week.forEach((d) => { %>
-              <div class="wz-week-day<%= d.kind === 'marathon' ? ' is-marathon' : '' %>">
-                <span class="wz-week-name wz-ar"><%= d.name %></span>
-                <span class="wz-week-game wz-ar"><%= d.title %></span>
+      <div class="row g-3 mb-3">
+        <div class="col-xl-7">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+              <%- icon('list-ordered', 16) %>
+              <span class="fw-semibold me-auto">سُلّم اليوم</span>
+              <span class="kd-tag"><%= todayLadder.length %> درجات</span>
+            </div>
+            <div class="ad-card-body">
+              <div class="wz-ladder">
+                <% todayLadder.forEach((rung, i) => { %>
+                  <span class="kd-tag <%= i === todayLadder.length - 1 ? 'kd-tag-accent' : '' %> wz-ar"><%= i + 1 %>. <%= rung.title %></span>
+                <% }) %>
               </div>
-            <% }) %>
+              <p class="small kd-muted mb-0 mt-2">تُلعب بالترتيب، وكل درجة تفتح التي بعدها. يأخذ كل يوم ترتيبه الخاص، وتراه في عمود «درجات السُّلّم» أدناه.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-5">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+              <%- icon('search', 16) %>
+              <span class="fw-semibold me-auto">فئات البحث عن الكلمات</span>
+              <span class="kd-tag <%= searchThemes.length ? 'kd-tag-ok' : 'kd-tag-warn' %>"><%= searchThemes.length %> من <%= searchThemeCount %></span>
+            </div>
+            <div class="ad-card-body d-flex flex-column gap-2">
+              <% if (!searchThemes.length) { %>
+                <p class="small kd-muted mb-0">لا فئة مختارة — لن يجد البحث ما يبني منه شبكة.</p>
+              <% } else { %>
+                <div class="d-flex flex-wrap gap-1">
+                  <% searchThemes.slice(0, 8).forEach((t) => { %><span class="kd-tag wz-ar"><%= t %></span><% }) %>
+                  <% if (searchThemes.length > 8) { %><span class="kd-tag kd-faint">+<%= searchThemes.length - 8 %></span><% } %>
+                </div>
+              <% } %>
+              <a class="btn btn-sm btn-kd-outline align-self-start mt-auto" href="/admin/wordsearch">اختر الفئات</a>
+            </div>
           </div>
         </div>
       </div>

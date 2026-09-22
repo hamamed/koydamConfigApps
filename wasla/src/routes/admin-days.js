@@ -2,7 +2,7 @@ import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { EDITORS } from '../daily-game-editor.js';
 import { GAME_KINDS } from '../daily-games.js';
 import { rungsFor } from '../daily-ladder.js';
-import { KIND_NAMES, kindForDay, schedule } from '../daily-schedule.js';
+import { KIND_NAMES, kindForDay } from '../daily-schedule.js';
 import { eventFor, eventLabel } from '../seasonal-events.js';
 import { ARABIC_WEEKDAYS, previewOf } from '../wordsearch-editor.js';
 import { WEEKDAY_NAMES, weekdayOf } from '../wordsearch-daily.js';
@@ -69,6 +69,9 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       };
     });
     const planned = days.filter((d) => d.wordSearch && GAME_KINDS.every((k) => d.games[k])).length;
+    // The themes the word search may draw on, said here because the daily
+    // board is built from them; the chooser itself is a page of its own.
+    const themes = wordSearch.themes().filter((t) => t.eligible);
     res.render('days', {
       title: 'لغز اليوم',
       days,
@@ -76,7 +79,10 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       kinds: GAME_KINDS,
       labels: GAME_LABELS,
       planChoices: PLAN_CHOICES,
-      week: schedule(),
+      // Today's five rungs, whichever days the calendar is showing.
+      todayLadder: rungsFor(parseDay(todayUtc()).day).map((kind) => ({ kind, title: KIND_NAMES[kind] })),
+      searchThemes: themes.filter((t) => !t.excluded).map((t) => t.title),
+      searchThemeCount: themes.length,
       previous: dayToDate(start - CALENDAR_DAYS),
       next: dayToDate(start + CALENDAR_DAYS),
       isCurrent: from === todayUtc(),

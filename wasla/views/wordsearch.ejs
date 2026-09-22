@@ -5,7 +5,8 @@
     <%- include('partials/topbar', {
           heading: 'مواضيع البحث',
           subheading: 'اختر الفئات التي يُبنى منها البحث اليومي عن الكلمات',
-          actions: '<a class="btn btn-sm btn-kd" href="/admin/daily">جدول لغز اليوم</a>'
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/days">→ لغز اليوم</a>'
+            + ' <a class="btn btn-sm btn-kd-ghost" href="/admin/daily">جدول البحث</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>

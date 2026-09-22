@@ -15,7 +15,7 @@
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= previous %>">← <%= previous %></a>
         <a class="btn btn-sm btn-kd-ghost" href="/admin/days/<%= next %>"><%= next %> →</a>
         <span class="kd-tag kd-tag-accent wz-ar"><%= weekdayAr %></span>
-        <span class="kd-tag kd-tag-ok wz-ar" title="لعبة هذا اليوم — وهي وحدها التي تُكافئ؛ الباقي للأرشيف"><%- icon('star', 12) %> <%= dayKindTitle %></span>
+        <span class="kd-tag kd-tag-ok wz-ar" title="الدرجة الأخيرة من سُلّم هذا اليوم — وهي وحدها التي تُكافئ؛ الباقي للتمرين"><%- icon('star', 12) %> الدرجة الأخيرة: <%= dayKindTitle %></span>
         <% if (event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية: يستعمل البحث موضوعها ما لم يُخطَّط اليوم"><%- icon('moon', 12) %> <%= event %></span><% } %>
         <div class="ms-auto">
           <% if (past) { %>
@@ -133,7 +133,7 @@
               <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
                 <%- icon(g.label.icon, 16) %>
                 <span class="fw-semibold me-auto"><span class="wz-ar"><%= g.label.ar %></span>
-                  <% if (g.isDayGame) { %><span class="kd-tag kd-tag-ok">لعبة اليوم</span><% } %></span>
+                  <% if (g.isDayGame) { %><span class="kd-tag kd-tag-ok" title="الدرجة الأخيرة من سُلّم هذا اليوم">الدرجة الأخيرة</span><% } %></span>
                 <span class="kd-tag <%= g.source === 'typed' ? 'kd-tag-accent' : g.source ? 'kd-tag-ok' : '' %>"><%= g.source === 'typed' ? 'مكتوب' : g.source ? 'مخطَّط' : 'تلقائي' %></span>
                 <% if (!past) { %>
                   <form method="post" action="/admin/days/<%= date %>/games/<%= g.kind %>/again" class="m-0">
