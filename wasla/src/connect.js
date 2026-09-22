@@ -56,8 +56,43 @@ export function chooseWords(entries, total, [fewest, most] = CONNECT_WORDS) {
 }
 
 /**
+ * A walk that visits every box once, each step to the box beside it (no
+ * diagonals), or null when this shuffle of starts and turns does not find one.
+ * Cutting the walk into runs is what puts each answer's letters side by side.
+ */
+export function walk(rows, cols, rand) {
+  const boxes = rows * cols;
+  const seen = Array.from({ length: rows }, () => new Array(cols).fill(false));
+  const path = [];
+  // Enough room to find a walk on a board this size, and to give up on the
+  // shuffles that cannot: a fresh seed tries again.
+  let steps = 0;
+
+  const from = ([row, col]) => {
+    seen[row][col] = true;
+    path.push([row, col]);
+    if (path.length === boxes) return true;
+    const next = shuffled([[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]], rand)
+      .filter(([r, c]) => r >= 0 && r < rows && c >= 0 && c < cols && !seen[r][c]);
+    for (const box of next) {
+      if (++steps > 20_000) return false;
+      if (from(box)) return true;
+    }
+    seen[row][col] = false;
+    path.pop();
+    return false;
+  };
+
+  return from([Math.floor(rand() * rows), Math.floor(rand() * cols)]) ? path : null;
+}
+
+/**
  * A board from a title's answers: `{ rows, cols, words }`, or null when no
  * board size can be filled exactly by three to six of them.
+ *
+ * Each answer's letters are written along one run of a walk over the board, so
+ * they sit beside one another rather than scattered: the run is where its
+ * colour appears once it is found.
  */
 export function buildConnect(pool, seed, { shapes = CONNECT_SHAPES } = {}) {
   const rand = random(seed);
@@ -73,15 +108,36 @@ export function buildConnect(pool, seed, { shapes = CONNECT_SHAPES } = {}) {
     const chosen = chooseWords(entries, rows * cols);
     if (!chosen) continue;
 
-    const mixed = shuffled(chosen.flatMap((entry) => letters(entry.word)), rand);
-    const grid = Array.from({ length: rows }, (_, row) => mixed.slice(row * cols, row * cols + cols).join(''));
+    const path = walk(rows, cols, rand);
+    if (!path) continue;
+
+    // One run of the walk per answer, in a mixed order so a run's place on the
+    // board says nothing about which question it answers.
+    const grid = Array.from({ length: rows }, () => new Array(cols).fill(''));
+    const runs = new Map();
+    let step = 0;
+    for (const entry of shuffled(chosen, rand)) {
+      const run = [];
+      for (const letter of letters(entry.word)) {
+        const [row, col] = path[step++];
+        grid[row][col] = letter;
+        run.push([row, col]);
+      }
+      runs.set(entry.id, run);
+    }
 
     return {
-      rows: grid,
+      rows: grid.map((row) => row.join('')),
       cols,
       words: chosen
         .map((entry) => ({
-          id: entry.id, word: entry.word, display: entry.display, clue: entry.clue, emoji: entry.emoji ?? '',
+          id: entry.id,
+          word: entry.word,
+          display: entry.display,
+          clue: entry.clue,
+          emoji: entry.emoji ?? '',
+          // Where its letters sit, in the order they are written.
+          cells: runs.get(entry.id),
         }))
         .sort((a, b) => letters(a.word).length - letters(b.word).length || a.id - b.id),
     };

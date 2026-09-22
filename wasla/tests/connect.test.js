@@ -4,8 +4,9 @@ import { beforeEach, test } from 'node:test';
 import { createAppConfig } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import {
-  buildConnect, chooseWords, CONNECT_LETTERS, CONNECT_SHAPES, CONNECT_WORDS, connectForDate, connectPool,
+  buildConnect, chooseWords, CONNECT_LETTERS, CONNECT_SHAPES, CONNECT_WORDS, connectForDate, connectPool, walk,
 } from '../src/connect.js';
+import { random } from '../src/wordsearch.js';
 import { createDailyGames } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
@@ -73,6 +74,38 @@ test('every box of the board belongs to one answer', () => {
   }
   assert.deepEqual([...board.words].sort((a, b) => letters(a.word).length - letters(b.word).length), board.words,
     'the shortest answer is asked first');
+});
+
+test('the walk visits every box once, each step to the box beside it', () => {
+  for (const [rows, cols] of CONNECT_SHAPES) {
+    const path = walk(rows, cols, random(9));
+    assert.ok(path, `${rows}×${cols} has a walk`);
+    assert.equal(path.length, rows * cols, 'every box');
+    assert.equal(new Set(path.map(String)).size, path.length, 'each box once');
+    path.forEach(([row, col], index) => {
+      if (index === 0) return;
+      const [before, beside] = path[index - 1];
+      assert.equal(Math.abs(row - before) + Math.abs(col - beside), 1, 'one step, no diagonals');
+    });
+  }
+});
+
+test('an answer\'s letters sit beside one another, and spell it where they sit', () => {
+  const board = buildConnect(connectPool(rows.filter((row) => row.title === 'مدرسة')), 42);
+  const grid = board.rows.map((row) => letters(row));
+  const seen = new Set();
+  for (const word of board.words) {
+    assert.equal(word.cells.map(([r, c]) => grid[r][c]).join(''), word.word, `${word.display} reads from its boxes`);
+    word.cells.forEach(([row, col], index) => {
+      assert.ok(!seen.has(`${row},${col}`), 'no box belongs to two answers');
+      seen.add(`${row},${col}`);
+      if (index === 0) return;
+      const [before, beside] = word.cells[index - 1];
+      assert.equal(Math.abs(row - before) + Math.abs(col - beside), 1,
+        `${word.display} keeps its letters together`);
+    });
+  }
+  assert.equal(seen.size, board.rows.length * board.cols, 'and between them they cover the board');
 });
 
 test('a smaller board is used when the biggest cannot be filled', () => {
