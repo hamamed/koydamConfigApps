@@ -4,7 +4,8 @@ import { beforeEach, test } from 'node:test';
 import { createAppConfig } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import {
-  buildConnect, chooseWords, CONNECT_LETTERS, CONNECT_SHAPES, CONNECT_WORDS, connectForDate, connectPool, walk,
+  buildConnect, buildPictureConnect, buildProverbConnect, chooseWords, CONNECT_LETTERS, CONNECT_SHAPES,
+  CONNECT_WORDS, connectForDate, connectPool, FLAVOURS, PICTURE_ASK, PROVERB_ASK, walk,
 } from '../src/connect.js';
 import { random } from '../src/wordsearch.js';
 import { createDailyGames } from '../src/daily-games.js';
@@ -164,6 +165,63 @@ test('dates move through the titles', () => {
 test('a title too thin for a board passes the day on', () => {
   const thin = rows.filter((row) => row.title !== 'مدرسة');
   assert.equal(connectForDate(thin, '2026-09-23').theme, 'مطبخ', 'مدن cannot fill one, so the day lands on مطبخ');
+});
+
+test('a picture board asks with the picture, and its words are what is in it', () => {
+  const board = buildPictureConnect({
+    title: 'الشمس',
+    words: ['حار', 'صيف', 'ضوء', 'نجم', 'سماء', 'شروق'],
+    image: { url: 'https://example.test/sun.jpg', zoom: 1, focusX: 0.5, focusY: 0.5 },
+  }, 3);
+  assert.equal(board.theme, 'الشمس');
+  assert.equal(board.ask, PICTURE_ASK, 'the picture asks, so the words need no clue of their own');
+  assert.equal(board.image.url, 'https://example.test/sun.jpg');
+  assert.ok(board.words.every((word) => word.clue === ''));
+  assert.equal(board.words.reduce((sum, word) => sum + letters(word.word).length, 0),
+    board.rows.length * board.cols);
+
+  assert.equal(buildPictureConnect({ title: 'الشمس', words: ['حار', 'صيف'] }, 3), null, 'two words fill no board');
+  assert.equal(buildPictureConnect(null, 3), null);
+});
+
+test('a proverb board is the whole saying, asked in emoji', () => {
+  const board = buildProverbConnect(
+    { before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '⏳🔑😌' }, 7,
+  );
+  assert.deepEqual(board.words.map((word) => word.display).sort(), ['الصبر', 'الفرج', 'مفتاح'],
+    'every word of it is an answer, and nothing else is on the board');
+  assert.equal(board.emoji, '⏳🔑😌');
+  assert.equal(board.ask, PROVERB_ASK);
+  assert.equal(board.theme, 'مثل سائر');
+  assert.deepEqual([board.rows.length, board.cols], [3, 5], 'fifteen letters, so 3×5');
+
+  assert.equal(buildProverbConnect(
+    { before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '' }, 7,
+  ), null, 'with nothing to ask with, it is not a proverb board');
+  assert.equal(buildProverbConnect(
+    { before: 'الجار قبل', after: '', answer: 'الدار', source: 'مثل سائر', emoji: '🏠🤝' }, 7,
+  ), null, 'thirteen letters make no rectangle');
+});
+
+test('the days share themselves out between the three kinds of board', () => {
+  const riddles = [{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '⏳🔑😌' }];
+  const pictures = {
+    forDate: () => ({
+      title: 'الشمس',
+      words: ['حار', 'صيف', 'ضوء', 'نجم', 'سماء', 'شروق'],
+      image: { url: 'https://example.test/sun.jpg', zoom: 1, focusX: 0.5, focusY: 0.5 },
+    }),
+  };
+  const kinds = Array.from({ length: FLAVOURS.length }, (_, i) => {
+    const board = connectForDate(rows, `2026-10-0${i + 1}`, { pictures, riddles });
+    return board.image ? 'picture' : board.emoji ? 'proverb' : 'bank';
+  });
+  assert.deepEqual([...new Set(kinds)].sort(), ['bank', 'picture', 'proverb'], 'all three come round');
+
+  // With no picture written and no proverb that fits, every day is the bank's.
+  const plain = Array.from({ length: FLAVOURS.length }, (_, i) =>
+    connectForDate(rows, `2026-10-0${i + 1}`));
+  assert.ok(plain.every((board) => board && !board.image && !board.emoji));
 });
 
 test('the day the week gives it sends a board', () => {

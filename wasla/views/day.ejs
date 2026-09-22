@@ -135,13 +135,23 @@
                 <% } else if (g.kind === 'bubbles') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
                 <% } else if (g.kind === 'connect') { %>
-                  <p class="mb-2"><% if (g.game.theme) { %><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <% } %>
+                  <p class="mb-2 d-flex flex-wrap align-items-center gap-2">
+                    <% if (g.game.image) { %>
+                      <span class="wz-frame wz-sm"
+                            style="--wz-zoom: <%= g.game.image.zoom %>; --wz-x: <%= (g.game.image.focusX * 100).toFixed(1) %>%; --wz-y: <%= (g.game.image.focusY * 100).toFixed(1) %>%">
+                        <img src="<%= g.game.image.url %>" alt="" loading="lazy"></span>
+                    <% } %>
+                    <% if (g.game.emoji) { %><span class="wz-emoji"><%= g.game.emoji %></span><% } %>
+                    <% if (g.game.theme) { %><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span><% } %>
+                    <% if (g.game.ask) { %><span class="small kd-muted wz-ar"><%= g.game.ask %></span><% } %>
                     <span class="wz-ar"><%= g.game.words.map((w) => w.display).join('، ') %></span></p>
-                  <ul class="small kd-muted wz-ar mb-2">
-                    <% g.game.words.forEach((w) => { %>
-                      <li><% if (w.emoji) { %><span class="wz-emoji"><%= w.emoji %></span> <% } %><%= w.clue %> — <span class="fw-semibold"><%= w.display %></span></li>
-                    <% }) %>
-                  </ul>
+                  <% if (g.game.words.some((w) => w.clue)) { %>
+                    <ul class="small kd-muted wz-ar mb-2">
+                      <% g.game.words.forEach((w) => { %>
+                        <li><% if (w.emoji) { %><span class="wz-emoji"><%= w.emoji %></span> <% } %><%= w.clue %> — <span class="fw-semibold"><%= w.display %></span></li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
                   <div class="wz-board mb-2">
                     <div class="wz-grid" style="--wz-cols: <%= g.game.cols %>; --wz-rows: <%= g.game.rows.length %>">
                       <% g.game.rows.forEach((row) => { [...row].forEach((letter) => { %>
