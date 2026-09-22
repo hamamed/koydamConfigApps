@@ -4,30 +4,42 @@ import { beforeEach, test } from 'node:test';
 import { createAppConfig } from '../src/app-config.js';
 import { foldForPlay, letters } from '../src/arabic.js';
 import {
-  boardShape, buildConnect, CONNECT_LETTERS, CONNECT_SIDES, connectForDate, connectPool, proverbPool, snake,
+  buildConnect, CONNECT_BOXES, CONNECT_COLS, CONNECT_LETTERS, CONNECT_MIN_WORDS, CONNECT_ROWS,
+  CONNECT_WORDS, connectForDate, connectPool, poolFor,
 } from '../src/connect.js';
 import { createDailyGames } from '../src/daily-games.js';
 import { openDatabase } from '../src/db/index.js';
-import { random } from '../src/wordsearch.js';
 import { createRepository } from '../src/repository.js';
 
+/** Two titles with enough short answers to pool into a board. */
 const BANK = [
-  ['أكبر مدن المغرب', 'الدار البيضاء'],   // 12 → 3×4
-  ['عاصمة مصر', 'القاهرة'],               // 7  → no board
-  ['أطول نهر في العالم', 'النيل'],        // 4  → too short
-  ['بلد الأهرامات', 'جمهورية مصر'],       // 10 → 2×5
-  ['أداة للكتابة', 'قلم'],                // 3  → too short
-  ['مدينة مغربية', 'مراكش'],              // 5  → too short
-  ['أكبر قارة', 'قارة آسيا'],             // 8  → 2×4
-  ['', 'مدينة نيويورك'],                  // 12, but nothing to read
+  ['مدرسة', 'أداة للكتابة', 'قلم'],
+  ['مدرسة', 'مكان الدراسة', 'مدرسة'],
+  ['مدرسة', 'من يعلّم الطلاب', 'معلم'],
+  ['مدرسة', 'يُكتب فيه الدرس', 'دفتر'],
+  ['مدرسة', 'حصة دراسية', 'درس'],
+  ['مدرسة', 'يجلس عليه الطالب', 'مقعد'],
+  ['مطبخ', 'يُطبخ فيها', 'قدر'],
+  ['مطبخ', 'تُقطع به الخضر', 'سكين'],
+  ['مطبخ', 'يُشرب فيه الشاي', 'كأس'],
+  ['مطبخ', 'يحفظ الطعام باردًا', 'ثلاجة'],
+  ['مطبخ', 'يُخبز فيه', 'فرن'],
+  ['مطبخ', 'يُؤكل فيه', 'طبق'],
+  ['مدن', 'أكبر مدن المغرب', 'الدار البيضاء'],   // eight letters: too long to pool
+  ['مدن', '', 'مراكش'],                          // nothing to read
 ];
 
-/** True when every step of the path touches the one before it. */
-const touching = (path) => path.every(([r, c], index) => {
-  if (index === 0) return true;
-  const [pr, pc] = path[index - 1];
-  return Math.abs(r - pr) <= 1 && Math.abs(c - pc) <= 1 && !(r === pr && c === pc);
-});
+/** Every letter an answer needs is on the board, counting repeats. */
+const spellable = (word, board) => {
+  const box = new Map();
+  for (const letter of board.rows.flatMap((row) => letters(row))) box.set(letter, (box.get(letter) ?? 0) + 1);
+  for (const letter of letters(word)) {
+    const left = box.get(letter) ?? 0;
+    if (left === 0) return false;
+    box.set(letter, left - 1);
+  }
+  return true;
+};
 
 let db;
 let rows;
@@ -35,127 +47,91 @@ let rows;
 beforeEach(() => {
   db = openDatabase(':memory:');
   const repo = createRepository(db);
-  BANK.forEach(([clue, answer]) => repo.createQuestion({ title: 'عام', answer, clue }));
+  BANK.forEach(([title, clue, answer]) => repo.createQuestion({ title, answer, clue }));
   rows = db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue, IFNULL(emoji, '') AS emoji,
     trim(IFNULL(title, '')) AS title FROM questions ORDER BY id`).all();
 });
 
-test('the board is the pair of sides closest to a square, or no board at all', () => {
-  assert.deepEqual(boardShape(12), { rows: 3, cols: 4 });
-  assert.deepEqual(boardShape(16), { rows: 4, cols: 4 });
-  assert.deepEqual(boardShape(9), { rows: 3, cols: 3 });
-  assert.deepEqual(boardShape(10), { rows: 2, cols: 5 });
-  assert.equal(boardShape(11), null, '11 is prime');
-  assert.equal(boardShape(14), null, `14 would need a side over ${CONNECT_SIDES[1]}`);
-  assert.deepEqual(boardShape(4), { rows: 2, cols: 2 }, 'the shape exists, even where the game refuses the length');
+test('the pool holds the most any one word needs of each letter', () => {
+  assert.deepEqual(poolFor(['قلم']).sort(), ['ق', 'ل', 'م'].sort());
+  assert.deepEqual(poolFor(['قلم', 'ملق']).sort(), ['ق', 'ل', 'م'].sort(), 'the same letters serve both');
+  assert.deepEqual(poolFor(['درس', 'مدرسة']).sort(), ['د', 'ر', 'س', 'م', 'ة'].sort(), 'درس is spelled from مدرسة');
+  assert.equal(poolFor(['ددد', 'دد']).length, 3, 'three of a letter when one word wants three');
 });
 
-test('the snake visits every box once, each step touching the last', () => {
-  for (const [rowCount, colCount] of [[3, 4], [4, 4], [2, 5], [3, 3]]) {
-    const path = snake(rowCount, colCount, random(7));
-    assert.ok(path, `${rowCount}×${colCount} has a path`);
-    assert.equal(path.length, rowCount * colCount, 'every box');
-    assert.equal(new Set(path.map(String)).size, path.length, 'each box once');
-    assert.ok(touching(path));
+test('a board is the words\' own letters, every box filled', () => {
+  const board = buildConnect(connectPool(rows.filter((row) => row.title === 'مدرسة')), 42);
+  assert.equal(board.rows.length, CONNECT_ROWS);
+  assert.equal(board.cols, CONNECT_COLS);
+  assert.equal(board.rows.flatMap((row) => letters(row)).length, CONNECT_BOXES, 'no box is empty');
+  assert.equal(board.words.length, CONNECT_WORDS);
+
+  for (const word of board.words) {
+    assert.ok(spellable(word.word, board), `${word.display} is on the board`);
+    assert.equal(word.word, foldForPlay(word.display));
+    assert.ok(word.clue, 'every word has something to read');
+  }
+  assert.deepEqual([...board.words].sort((a, b) => letters(a.word).length - letters(b.word).length), board.words,
+    'the shortest word is asked first');
+});
+
+test('a board only holds letters its words need', () => {
+  const board = buildConnect(connectPool(rows.filter((row) => row.title === 'مطبخ')), 7);
+  const needed = new Set(board.words.flatMap((word) => letters(word.word)));
+  for (const letter of board.rows.flatMap((row) => letters(row))) {
+    assert.ok(needed.has(letter), `${letter} belongs to one of the words`);
   }
 });
 
-test('the answer fills every box, read along the path', () => {
-  const board = buildConnect({ id: 1, answer: 'الدار البيضاء', clue: 'أكبر مدن المغرب', title: 'مدن' }, 42);
-  assert.equal(board.display, 'الدار البيضاء');
-  assert.equal(board.answer, foldForPlay('الدار البيضاء'));
-  assert.equal(board.rows.length, 3);
-  assert.equal(board.cols, 4);
-  for (const row of board.rows) assert.equal(letters(row).length, 4);
-
-  const grid = board.rows.map((row) => letters(row));
-  assert.equal(board.path.map(([r, c]) => grid[r][c]).join(''), board.answer, 'the path spells the answer');
-  assert.ok(touching(board.path));
-  assert.equal(board.path.length, 12, 'no box is left over, and none is filler');
-  assert.equal(board.clue, 'أكبر مدن المغرب');
+test('too few words, or none short enough, makes no board', () => {
+  const pool = connectPool(rows.filter((row) => row.title === 'مدرسة'));
+  assert.equal(buildConnect(pool.slice(0, CONNECT_MIN_WORDS - 1), 1), null, 'two words are not a board');
+  assert.equal(buildConnect([], 1), null);
+  assert.equal(buildConnect([{ id: 1, word: 'الدارالبيضاء', display: 'الدار البيضاء', clue: 'مدينة' }], 1), null);
 });
 
-test('an answer that cannot fill a board is refused', () => {
-  assert.equal(buildConnect({ id: 1, answer: 'قلم' }, 1), null, 'too short');
-  assert.equal(buildConnect({ id: 1, answer: 'القاهرة' }, 1), null, 'seven letters make no rectangle');
-  assert.equal(buildConnect({ id: 1, answer: 'hello world' }, 1), null, 'not Arabic');
-  assert.equal(buildConnect(null, 1), null);
-});
-
-test('the pool keeps only the questions that can make a board', () => {
+test('the pool keeps the questions a board can ask', () => {
   const pool = connectPool(rows);
-  assert.deepEqual(pool.map((entry) => entry.answer).sort(),
-    ['الدار البيضاء', 'جمهورية مصر', 'قارة آسيا'].sort());
-  assert.ok(pool.every((entry) => entry.clue), 'a question with nothing to read is left out');
-  assert.deepEqual(connectPool([...rows, ...rows]).length, pool.length, 'the same answer is not offered twice');
+  const answers = pool.map((entry) => entry.display);
+  assert.ok(answers.includes('قلم') && answers.includes('ثلاجة'));
+  assert.ok(!answers.includes('الدار البيضاء'), `over ${CONNECT_LETTERS[1]} letters`);
+  assert.ok(!answers.includes('مراكش'), 'nothing to read');
+  assert.equal(connectPool([...rows, ...rows]).length, pool.length, 'the same answer is not offered twice');
 });
 
-test('a date always asks the same question, and another pick asks a different one', () => {
+test('a word carries its emoji to the app', () => {
+  const pool = connectPool([{ id: 1, answer: 'قلم', clue: 'أداة للكتابة', emoji: '✏️', title: 'مدرسة' }]);
+  assert.equal(pool[0].emoji, '✏️');
+});
+
+test('a date always plays the same board, and another pick changes it', () => {
   const first = connectForDate(rows, '2026-09-23');
   assert.deepEqual(connectForDate(rows, '2026-09-23'), first);
-  assert.ok(first.clue, 'every board has something to read');
+  assert.ok(first.theme, 'a board is about one thing');
+  assert.ok(first.words.every((word) => spellable(word.word, first)));
 
-  const answers = new Set(Array.from({ length: 4 }, (_, i) => connectForDate(rows, '2026-09-23', { nonce: i }).display));
-  assert.ok(answers.size > 1, 'another pick moves to another question');
+  const seen = new Set(Array.from({ length: 4 }, (_, i) =>
+    connectForDate(rows, '2026-09-23', { nonce: i }).words.map((w) => w.display).join()));
+  assert.ok(seen.size > 1, 'another pick asks something else');
   assert.equal(connectForDate(rows, 'nonsense'), null);
   assert.equal(connectForDate([], '2026-09-23'), null);
 });
 
-test('dates move through the questions', () => {
-  const week = new Set(Array.from({ length: 6 }, (_, i) => connectForDate(rows, `2026-09-2${i + 1}`).display));
-  assert.ok(week.size >= 2, 'neighbouring days do not ask the same thing');
+test('dates move through the titles', () => {
+  const themes = new Set(Array.from({ length: 4 }, (_, i) => connectForDate(rows, `2026-09-2${i + 1}`).theme));
+  assert.ok(themes.size >= 2, 'neighbouring days are not about the same thing');
+});
+
+test('a title too thin for a board passes the day on', () => {
+  const thin = rows.filter((row) => row.title !== 'مدرسة');
+  const board = connectForDate(thin, '2026-09-23');
+  assert.equal(board.theme, 'مطبخ', 'مدن has one usable question, so the day lands on مطبخ');
 });
 
 test('the day the week gives it sends a board', () => {
   const games = createDailyGames(db, { appConfig: createAppConfig(db) });
   const set = games.forDate('2026-09-23');
   assert.equal(set.kind, 'connect');
-  assert.ok(set.connect.rows.length >= CONNECT_SIDES[0]);
-  assert.ok(letters(set.connect.answer).length >= CONNECT_LETTERS[0]);
-});
-
-
-test('an emoji question asks with its emoji, and needs no clue', () => {
-  const asked = [
-    { id: 1, answer: 'جمهورية مصر', clue: '', emoji: '🇪🇬🐪' },
-    { id: 2, answer: 'مدينة نيويورك', clue: '', emoji: '' },
-  ];
-  const pool = connectPool(asked);
-  assert.deepEqual(pool.map((entry) => entry.answer), ['جمهورية مصر']);
-  assert.equal(pool[0].emoji, '🇪🇬🐪');
-  assert.equal(buildConnect(pool[0], 3).emoji, '🇪🇬🐪', 'the board carries it to the app');
-});
-
-test('a proverb is a board of its own, with its emoji as the question', () => {
-  const pool = proverbPool([
-    { before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '😑⏳🔑' },
-    { before: 'من جدّ', after: '', answer: 'وجد', source: 'مثل سائر', emoji: '💪🏆' },
-  ]);
-  assert.deepEqual(pool.map((entry) => entry.answer), ['الصبر مفتاح الفرج'], '«من جدّ وجد» is too short for a board');
-  assert.equal(pool[0].emoji, '😑⏳🔑');
-  assert.equal(pool[0].title, 'مثل سائر');
-
-  const board = buildConnect(pool[0], 4);
-  assert.equal(board.display, 'الصبر مفتاح الفرج');
-  assert.equal(board.rows.length * board.cols, 15, 'fifteen letters, so 3×5');
-  assert.equal(board.clue, '', 'the emoji asks it');
-});
-
-test('a proverb with no emoji is asked in words', () => {
-  const pool = proverbPool([{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '' }]);
-  assert.equal(pool[0].clue, 'أكمل المثل');
-});
-
-test('one board in four is a proverb, so a handful of them is not buried', () => {
-  const riddles = [{ before: 'الصبر مفتاح', after: '', answer: 'الفرج', source: 'مثل سائر', emoji: '😑⏳🔑' }];
-  const flavours = Array.from({ length: 12 }, (_, i) => {
-    const board = connectForDate(rows, `2026-09-${String(i + 10).padStart(2, '0')}`, { riddles });
-    return board.display === 'الصبر مفتاح الفرج' ? 'مثل' : 'بنك';
-  });
-  assert.equal(flavours.filter((f) => f === 'مثل').length, 3, 'three of twelve');
-  assert.ok(flavours.includes('بنك'));
-
-  // With no proverb that fits, every board comes from the bank.
-  const short = connectForDate(rows, '2026-09-10', { riddles: [{ before: 'من جدّ', after: '', answer: 'وجد' }] });
-  assert.notEqual(short.display, 'الصبر مفتاح الفرج');
+  assert.equal(set.connect.rows.length, CONNECT_ROWS);
+  assert.ok(set.connect.words.length >= CONNECT_MIN_WORDS);
 });

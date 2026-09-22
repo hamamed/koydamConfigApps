@@ -99,7 +99,7 @@
                 <% marathon.rounds.forEach((r) => { %>
                   <li><span class="wz-ar fw-semibold"><%= kindNames[r.kind] %></span>
                     <span class="small kd-muted wz-ar"><%= r.kind === 'bubbles' ? r.game.words.length + ' كلمات · ' + r.game.theme
-                      : r.kind === 'connect' ? r.game.display + ' · ' + r.game.rows.length + '×' + r.game.cols
+                      : r.kind === 'connect' ? r.game.words.length + ' كلمات · ' + r.game.rows.length + '×' + r.game.cols
                       : r.kind === 'wheel' ? r.game.words.length + ' كلمات · ' + [...r.game.letters].join(' ')
                       : r.kind === 'guess' ? r.game.words.map((w) => w.display).join('، ') + ' · ' + r.game.tries + ' محاولات'
                       : r.game.size + '×' + r.game.size + ' · ' + r.game.theme %></span></li>
@@ -135,10 +135,13 @@
                 <% } else if (g.kind === 'bubbles') { %>
                   <p class="mb-2"><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <span class="wz-ar"><%= g.game.words.map((w) => w.display + ' (' + w.parts.join('·') + ')').join('، ') %></span></p>
                 <% } else if (g.kind === 'connect') { %>
-                  <p class="mb-2 wz-ar">
-                    <% if (g.game.emoji) { %><span class="wz-emoji"><%= g.game.emoji %></span> <% } %>
-                    <span class="fw-semibold"><%= g.game.clue || g.game.title %></span>
-                    <span class="kd-tag kd-tag-accent wz-ar"><%= g.game.display %></span></p>
+                  <p class="mb-2"><% if (g.game.theme) { %><span class="kd-tag kd-tag-accent wz-ar"><%= g.game.theme %></span> <% } %>
+                    <span class="wz-ar"><%= g.game.words.map((w) => w.display).join('، ') %></span></p>
+                  <ul class="small kd-muted wz-ar mb-2">
+                    <% g.game.words.forEach((w) => { %>
+                      <li><% if (w.emoji) { %><span class="wz-emoji"><%= w.emoji %></span> <% } %><%= w.clue %> — <span class="fw-semibold"><%= w.display %></span></li>
+                    <% }) %>
+                  </ul>
                   <div class="wz-board mb-2">
                     <div class="wz-grid" style="--wz-cols: <%= g.game.cols %>; --wz-rows: <%= g.game.rows.length %>">
                       <% g.game.rows.forEach((row) => { [...row].forEach((letter) => { %>

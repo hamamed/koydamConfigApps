@@ -5,7 +5,7 @@
  *   bubbles — a picture and its words, cut into pieces and mixed
  *   wheel   — a handful of letters and the words they spell
  *   guess   — two hidden five-letter words at once, eight tries for both
- *   connect — one question, its answer filling the board, traced with a finger
+ *   connect — a pool of letters, and a title's questions spelled out of it
  *   picture — one picture and the five words of ten that belong to it
  *
  * فقاعات الكلمات is played on the pictures written in the panel
@@ -229,7 +229,7 @@ export function buildGuess(words, day) {
  */
 
 export const MARATHON_ROUNDS = Object.freeze(['bubbles', 'connect', 'wheel', 'guess', 'wordsearch']);
-export const MARATHON_SIZES = Object.freeze({ bubbles: 4, wheel: 6, guess: 1, board: 7 });
+export const MARATHON_SIZES = Object.freeze({ bubbles: 4, connect: 3, wheel: 6, guess: 1, board: 7 });
 export const MARATHON_GUESS_TRIES = 5;
 
 /** The same game, cut to marathon length; null stays null. */
@@ -242,6 +242,10 @@ export function trimForMarathon(kind, game, rand) {
     }
     case 'wheel':
       return { letters: game.letters, words: game.words.slice(0, MARATHON_SIZES.wheel) };
+    // The board keeps all its letters; the ones the dropped words wanted just
+    // become filler, which is the sprint's favour to the player.
+    case 'connect':
+      return { ...game, words: game.words.slice(0, MARATHON_SIZES.connect) };
     case 'guess': {
       const words = game.words.slice(0, MARATHON_SIZES.guess);
       return { words, word: words[0].word, display: words[0].display, tries: MARATHON_GUESS_TRIES };
@@ -251,7 +255,7 @@ export function trimForMarathon(kind, game, rand) {
   }
 }
 
-export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null, lab = null }) {
+export function createDailyGames(db, { appConfig, wordSearch = null, pictures = null }) {
   const DEFAULTS = { guess: DEFAULT_GUESS_WORDS.trim(), wheel: DEFAULT_WHEEL_SETS.trim() };
 
   const questions = () => db.prepare(`SELECT id, answer, IFNULL(clue, '') AS clue, IFNULL(emoji, '') AS emoji,
@@ -296,7 +300,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seedFor(day, 'bubbles')),
       wheel: buildWheel(parseWheelSets(listText('wheel')).sets, day, seedFor(day, 'wheel')),
       guess: buildGuess(parseGuessWords(listText('guess')).words, day),
-      connect: connectForDate(questions(), parsed.date, { riddles: lab?.riddles() ?? [] }),
+      connect: connectForDate(questions(), parsed.date),
     };
   }
 
@@ -320,7 +324,7 @@ export function createDailyGames(db, { appConfig, wordSearch = null, pictures = 
         ?? buildBubbles(titleGroups(questions(), BUBBLE_LETTERS), day, seed);
       case 'wheel': return buildWheel(parseWheelSets(listText('wheel')).sets, day, seed);
       case 'guess': return buildGuess(parseGuessWords(listText('guess')).words, day);
-      case 'connect': return connectForDate(questions(), parsed.date, { nonce: step, riddles: lab?.riddles() ?? [] });
+      case 'connect': return connectForDate(questions(), parsed.date, { nonce: step });
       default: return null;
     }
   }
