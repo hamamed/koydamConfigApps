@@ -14,6 +14,7 @@
     "seed": "node scripts/seed.js",
     "seed-pictures": "node scripts/seed-pictures.js",
     "seed-question-pictures": "node scripts/seed-question-pictures.js",
+    "seed-questions": "node scripts/seed-questions.js",
     "create-admin": "node src/db/create-admin.js",
     "test": "NODE_ENV=test node --test \"tests/*.test.js\""
   },
