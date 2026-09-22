@@ -6,12 +6,16 @@
  *   npm run seed-pictures -- --draw      # draws the pictures into the picture folder
  *   npm run seed-pictures                # saves the rounds that have a picture
  *
- * Each line is `emoji name | العنوان | كلمة، كلمة، …`. The picture is the
- * Twemoji drawing of that emoji (CC BY 4.0, https://github.com/jdecked/twemoji),
- * fetched as SVG and drawn at 512 px on nothing: the drawing keeps its own
- * shape, and the card it is shown on provides the background. It is drawn
- * inside a margin, so the rounded frame the app draws around a picture never
- * cuts a corner of it.
+ * Each line is `source | العنوان | كلمة، كلمة، …`. The source is the English
+ * name of an emoji, whose Twemoji drawing is used (CC BY 4.0,
+ * https://github.com/jdecked/twemoji), or `openclipart:<id>` for the things
+ * emoji has no drawing of — الرمان، البامية، الجوافة — from Openclipart, which
+ * is public domain (CC0, https://openclipart.org).
+ *
+ * Either way the drawing is fetched as SVG and drawn at 512 px on nothing: it
+ * keeps its own shape, the card it is shown on provides the background, and it
+ * is drawn inside a margin so the rounded frame the app draws around a picture
+ * never cuts a corner of it.
  *
  * Drawing needs `sharp`, which the service does not: draw on a machine that has
  * it, copy the files over, and save the rounds there. A round's file name comes
@@ -35,6 +39,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SEED = path.join(HERE, 'picture-seed.txt');
 const NAMES = 'https://unicode.org/Public/emoji/15.1/emoji-test.txt';
 const TWEMOJI = (code) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
+const OPENCLIPART = (id) => `https://openclipart.org/download/${id}/`;
+/** A source that names a drawing rather than an emoji. */
+const CLIPART = /^openclipart:(\d+)$/;
 const SIDE = 512;
 /** The margin the drawing keeps on every side, so no edge of it is clipped. */
 const MARGIN = 52;
@@ -80,11 +87,14 @@ const fitsConnect = (round) => Boolean(buildConnect(
   round.title.length + round.words.length,
 ));
 
-/** The name a round's picture is stored under: the emoji, and nothing else. */
+/** The name a round's picture is stored under: its source, and nothing else. */
 const fileFor = (code) => `${crypto.createHash('md5').update(code).digest('hex').slice(0, 24)}.png`;
 
-async function draw(code) {
-  const svg = await fetch(TWEMOJI(code));
+async function draw(source) {
+  const clipart = source.match(CLIPART);
+  const svg = await fetch(clipart ? OPENCLIPART(clipart[1]) : TWEMOJI(source), {
+    headers: { 'User-Agent': 'wasla-seed' },
+  });
   if (!svg.ok) return null;
   const { default: sharp } = await import('sharp');
   return sharp(Buffer.from(await svg.arrayBuffer()), { density: 600 })
@@ -109,7 +119,9 @@ if (thin.length) {
 }
 
 const names = await emojiNames();
-const unknown = rounds.filter((round) => !names.has(round.name));
+/** What a round's picture is fetched by: a drawing's id, or an emoji's codepoints. */
+const sourceOf = (round) => (CLIPART.test(round.name) ? round.name : names.get(round.name));
+const unknown = rounds.filter((round) => !sourceOf(round));
 unknown.forEach((round) => console.error(`✗ «${round.title}»: no emoji named «${round.name}»`));
 
 if (check) process.exit(problems.length || unknown.length ? 1 : 0);
@@ -124,13 +136,13 @@ if (process.argv.includes('--draw')) {
   let drawn = 0;
   let failed = 0;
   for (const round of rounds) {
-    const code = names.get(round.name);
+    const code = sourceOf(round);
     const file = path.join(config.imagesDir, fileFor(code));
     if (await fs.access(file).then(() => true, () => false)) continue;
     // Twemoji leaves the variation selector out of the files it ships.
     const png = await draw(code) ?? await draw(code.replace(/-fe0f/g, ''));
     if (!png) {
-      console.error(`✗ «${round.title}»: twemoji has no drawing for ${code}`);
+      console.error(`✗ «${round.title}»: no drawing for ${code}`);
       failed++;
       continue;
     }
@@ -149,7 +161,7 @@ let missing = 0;
 
 for (const round of rounds) {
   if (have.has(round.title)) continue;
-  const file = fileFor(names.get(round.name));
+  const file = fileFor(sourceOf(round));
   if (!await fs.access(path.join(config.imagesDir, file)).then(() => true, () => false)) {
     console.error(`✗ «${round.title}»: no picture drawn yet (run --draw)`);
     missing++;
