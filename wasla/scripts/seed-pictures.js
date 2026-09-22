@@ -9,7 +9,9 @@
  * Each line is `emoji name | العنوان | كلمة، كلمة، …`. The picture is the
  * Twemoji drawing of that emoji (CC BY 4.0, https://github.com/jdecked/twemoji),
  * fetched as SVG and drawn at 512 px on nothing: the drawing keeps its own
- * shape, and the card it is shown on provides the background.
+ * shape, and the card it is shown on provides the background. It is drawn
+ * inside a margin, so the rounded frame the app draws around a picture never
+ * cuts a corner of it.
  *
  * Drawing needs `sharp`, which the service does not: draw on a machine that has
  * it, copy the files over, and save the rounds there. A round's file name comes
@@ -34,6 +36,8 @@ const SEED = path.join(HERE, 'picture-seed.txt');
 const NAMES = 'https://unicode.org/Public/emoji/15.1/emoji-test.txt';
 const TWEMOJI = (code) => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
 const SIDE = 512;
+/** The margin the drawing keeps on every side, so no edge of it is clipped. */
+const MARGIN = 52;
 
 /** `{ name: codepoints }` for every emoji Unicode lists, by its English name. */
 async function emojiNames() {
@@ -84,7 +88,11 @@ async function draw(code) {
   if (!svg.ok) return null;
   const { default: sharp } = await import('sharp');
   return sharp(Buffer.from(await svg.arrayBuffer()), { density: 600 })
-    .resize(SIDE, SIDE, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+    .resize(SIDE - MARGIN * 2, SIDE - MARGIN * 2, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+    .extend({
+      top: MARGIN, bottom: MARGIN, left: MARGIN, right: MARGIN,
+      background: { r: 255, g: 255, b: 255, alpha: 0 },
+    })
     .png()
     .toBuffer();
 }
