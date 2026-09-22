@@ -53,6 +53,22 @@
         <strong>المخطَّطة</strong> و<strong>المكتوبة</strong> ثابتة: يحصل اللاعبون على ما تراه تماماً. عدّل أي لعبة أدناه — يبدأ الصندوق بما في اليوم الآن.
       </p>
 
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
+          <%- icon('list-ordered', 16) %>
+          <span class="fw-semibold me-auto">سُلّم هذا اليوم</span>
+          <span class="small kd-muted">تُلعب بالترتيب، وكل درجة تفتح التي بعدها — والأخيرة هي لعبة اليوم</span>
+        </div>
+        <div class="ad-card-body">
+          <div class="wz-ladder">
+            <% ladder.forEach((rung, i) => { %>
+              <a class="kd-tag <%= i === ladder.length - 1 ? 'kd-tag-accent' : '' %> wz-ar"
+                 href="#<%= rung.kind %>"><%= i + 1 %>. <%= rung.title %></a>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+
       <div class="ad-card mb-3" id="wordsearch">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
           <%- icon('search', 16) %>

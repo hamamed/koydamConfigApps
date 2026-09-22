@@ -329,6 +329,10 @@
 .wz-bulk-field { width: auto; min-width: 9rem; }
 .wz-bulk-group { display: inline-flex; gap: .35rem; align-items: center; }
 
+/* The day's ladder: its rungs in order, wrapping on a narrow screen. */
+.wz-ladder { display: flex; flex-wrap: wrap; gap: .35rem; }
+.wz-ladder .kd-tag { white-space: nowrap; }
+
 /* Category buttons above the questions list. */
 .wz-categories { display: flex; flex-wrap: wrap; gap: .4rem; }
 .wz-category-count { opacity: .7; font-weight: 600; margin-inline-start: .25rem; }

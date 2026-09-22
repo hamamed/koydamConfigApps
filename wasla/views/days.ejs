@@ -4,8 +4,9 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'لغز اليوم',
-          subheading: 'لعبة واحدة لكل يوم من أيام الأسبوع، والجمعة ماراثون. افتح يوماً لتغيير أيٍّ منها.',
-          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games">قوائم الكلمات</a>'
+          subheading: 'سُلّم من خمس درجات كل يوم: خمس ألعاب تُلعب بالترتيب، وكل درجة تفتح التي بعدها. افتح يوماً لتغيير أيٍّ منها.',
+          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/pictures">صور الفقاعات</a>'
+            + ' <a class="btn btn-sm btn-kd-ghost" href="/admin/daily-games">قوائم الكلمات</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
@@ -36,8 +37,8 @@
       <div class="ad-card mb-3">
         <div class="ad-card-head d-flex flex-wrap align-items-center gap-2">
           <%- icon('calendar-days', 16) %>
-          <span class="fw-semibold me-auto">أسبوع اللعبة</span>
-          <span class="kd-tag">لعبة واحدة كل يوم — وهي وحدها التي تُكافئ</span>
+          <span class="fw-semibold me-auto">أسبوع السُّلّم</span>
+          <span class="kd-tag">لعبة اليوم هي الدرجة الأخيرة من سُلّمه</span>
         </div>
         <div class="ad-card-body">
           <div class="wz-week">
@@ -58,7 +59,7 @@
               <thead>
                 <tr>
                   <th>اليوم</th>
-                  <th>لعبة اليوم</th>
+                  <th>درجات السُّلّم</th>
                   <th>البحث عن الكلمات</th>
                   <% kinds.forEach((k) => { %><th class="wz-ar"><%= labels[k].ar %></th><% }) %>
                   <th></th>
@@ -72,8 +73,13 @@
                       <div class="small kd-muted"><%= d.weekday %> · <span class="wz-ar"><%= d.weekdayAr %></span><% if (d.isToday) { %> · <strong>اليوم</strong><% } %></div>
                       <% if (d.event) { %><span class="kd-tag wz-ar" title="مناسبة موسمية"><%- icon('moon', 12) %> <%= d.event %></span><% } %>
                     </td>
-                    <td class="text-nowrap">
-                      <span class="kd-tag kd-tag-accent wz-ar" title="اللعبة التي تُكافئ في هذا اليوم"><%= d.kindTitle %></span>
+                    <td>
+                      <div class="wz-ladder">
+                        <% d.ladder.forEach((rung, i) => { %>
+                          <span class="kd-tag <%= i === d.ladder.length - 1 ? 'kd-tag-accent' : '' %> wz-ar"
+                                title="الدرجة <%= i + 1 %><%= i === d.ladder.length - 1 ? ' — لعبة اليوم' : '' %>"><%= i + 1 %>. <%= rung.title %></span>
+                        <% }) %>
+                      </div>
                     </td>
                     <td>
                       <% if (d.wordSearch) { %>

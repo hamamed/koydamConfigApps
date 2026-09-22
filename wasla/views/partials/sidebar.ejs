@@ -24,17 +24,13 @@
       <%- icon('tag', 17) %>
       <span>الفئات</span>
     </a>
-    <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
+    <a class="ad-nav-link <%= currentPath.startsWith('/days') || currentPath.startsWith('/pictures') || currentPath === '/daily' || currentPath.startsWith('/daily/') ? 'is-active' : '' %>" href="/admin/days">
       <%- icon('calendar-days', 17) %>
       <span>لغز اليوم</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/daily-games') ? 'is-active' : '' %>" href="/admin/daily-games">
       <%- icon('list', 17) %>
       <span>قوائم الكلمات</span>
-    </a>
-    <a class="ad-nav-link <%= currentPath.startsWith('/pictures') ? 'is-active' : '' %>" href="/admin/pictures">
-      <%- icon('image', 17) %>
-      <span>صور الفقاعات</span>
     </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/lab') ? 'is-active' : '' %>" href="/admin/lab">
       <%- icon('flask-conical', 17) %>

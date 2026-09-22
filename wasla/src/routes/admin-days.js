@@ -1,6 +1,7 @@
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
 import { EDITORS } from '../daily-game-editor.js';
 import { GAME_KINDS } from '../daily-games.js';
+import { rungsFor } from '../daily-ladder.js';
 import { KIND_NAMES, kindForDay, schedule } from '../daily-schedule.js';
 import { eventFor, eventLabel } from '../seasonal-events.js';
 import { ARABIC_WEEKDAYS, previewOf } from '../wordsearch-editor.js';
@@ -63,6 +64,8 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
         games: games[date] ?? {},
         kind: kindForDay(start + i),
         kindTitle: KIND_NAMES[kindForDay(start + i)],
+        // The five rungs the player climbs that day, bottom first.
+        ladder: rungsFor(start + i).map((kind) => ({ kind, title: KIND_NAMES[kind] })),
       };
     });
     const planned = days.filter((d) => d.wordSearch && GAME_KINDS.every((k) => d.games[k])).length;
@@ -148,6 +151,7 @@ export function registerDays(router, { dailyGames, wordSearch, wordSearchDays })
       games,
       dayKind: todayKind,
       dayKindTitle: KIND_NAMES[todayKind],
+      ladder: rungsFor(day).map((kind) => ({ kind, title: KIND_NAMES[kind] })),
       marathon: todayKind === 'marathon' ? dailyGames.marathonFor(date) : null,
       kindNames: KIND_NAMES,
       allPlanned: Boolean(wsDay) && games.every((g) => g.source || !g.game),
