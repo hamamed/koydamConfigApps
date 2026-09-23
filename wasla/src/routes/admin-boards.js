@@ -3,11 +3,9 @@ import { todayUtc } from '../daily.js';
 
 /** What each board is, in the app's words and in the panel's. */
 export const BOARD_LABELS = Object.freeze({
-  'today-ladder': { en: "Today's ladder", ar: 'سُلّم اليوم', note: 'الأكثر نجوماً في سُلّم اليوم، والأسرع عند التساوي', unit: 'stars' },
-  'today-allgames': { en: "Today's games", ar: 'ألعاب اليوم', note: 'الأسرع في إنهاء لعبة اليوم', unit: 'time' },
-  'today-wordsearch': { en: "Today's word search", ar: 'كلمات اليوم', note: 'الأسرع في البحث عن الكلمات اليوم', unit: 'time' },
-  stars: { en: 'Main game', ar: 'اللعبة الرئيسية', note: 'الأكثر نجوماً في الألغاز', unit: 'stars' },
   points: { en: 'Points', ar: 'النقاط', note: 'الأكثر نقاطاً في كل الألعاب', unit: 'points' },
+  stars: { en: 'Stars', ar: 'النجوم', note: 'الأكثر نجوماً في الألغاز', unit: 'stars' },
+  'today-allgames': { en: "Today's puzzle", ar: 'الأسرع في لغز اليوم', note: 'الأسرع في إنهاء لغز اليوم', unit: 'time' },
   streak: { en: 'Streaks', ar: 'السلاسل', note: 'أطول سلسلة أيام ما زالت حية', unit: 'days' },
 });
 
@@ -20,7 +18,7 @@ export function clockText(seconds) {
 }
 
 /**
- * The five leaderboards the app shows, as players see them.
+ * The four leaderboards the app shows, as players see them.
  *
  * The panel could only reach these as JSON before, which made "why is this
  * player top of the streaks board" a question you answered by reading a URL.

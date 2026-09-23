@@ -315,6 +315,16 @@ test('HTTP: frames are listed, set and cleared through PATCH, and a bad one is a
   assert.equal((await call('/profile/me', { method: 'DELETE', token })).status, 204);
 });
 
+test('the app can open four boards, and nothing else', async () => {
+  assert.deepEqual([...BOARDS], ['points', 'stars', 'today-allgames', 'streak']);
+  for (const board of BOARDS) {
+    assert.equal((await call(`/leaderboards/${board}`)).status, 200, board);
+  }
+  for (const gone of ['today-ladder', 'today-wordsearch', 'nonsense']) {
+    assert.equal((await call(`/leaderboards/${gone}`)).status, 404, gone);
+  }
+});
+
 test('every board the app can ask for has a panel label', async () => {
   const { BOARD_LABELS, clockText } = await import('../src/routes/admin-boards.js');
   for (const board of BOARDS) {

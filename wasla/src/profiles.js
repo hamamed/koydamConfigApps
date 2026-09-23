@@ -19,7 +19,15 @@ import { addDays } from './players.js';
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 16;
 export const LEADERBOARD_SIZE = 50;
-export const BOARDS = Object.freeze(['today-ladder', 'today-allgames', 'today-wordsearch', 'stars', 'points', 'streak']);
+/**
+ * The four boards the app shows, in its own order: points, stars, the fastest
+ * on today's puzzle, and the streaks.
+ *
+ * `boardQuery` still answers for «today-wordsearch» and «today-ladder»; those
+ * are ranks read from inside (the ladder's stars for the panel, a word search
+ * time for a push) rather than boards anyone can open.
+ */
+export const BOARDS = Object.freeze(['points', 'stars', 'today-allgames', 'streak']);
 export const DAILY_KINDS = Object.freeze({ wordsearch: 'wordsearch', allgames: 'allgames', ladder: 'ladder' });
 /** Faster than this is not a real solve. */
 export const MIN_SECONDS = Object.freeze({ wordsearch: 10, allgames: 30, ladder: 30 });
