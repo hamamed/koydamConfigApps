@@ -1,5 +1,5 @@
 import { withoutArticle } from '../arabic.js';
-import { isNounCategory, KEEP_ARTICLE } from '../article-policy.js';
+import { articleNote } from '../article-policy.js';
 
 /**
  * Every answer in the bank on one page, so the words themselves can be read
@@ -9,11 +9,12 @@ import { isNounCategory, KEEP_ARTICLE } from '../article-policy.js';
  * 373 answers, the question «which ones still carry it, and should they?» needs
  * somewhere to be asked.
  *
- * The button that takes the article off is offered only where it is sensible —
- * the categories of ordinary nouns (src/article-policy.js). A proper noun keeps
- * its article, so on شخصيات تاريخية or خرائط ومواقع the row says why instead of
- * offering a one-click way to ruin the answer. It strips through the
- * repository, so levels using the answer are laid out again as any edit would.
+ * Every answer that could lose its article is offered, with the reason it might
+ * want to keep one printed beside it — «اسم علم», «كلمة من مثل», «آية أو سورة».
+ * The sweep (scripts/strip-article.js) obeys those reasons; this page only
+ * shows them, because the person reading one answer and its clue knows more
+ * than a category does. It strips through the repository, so levels using the
+ * answer are laid out again as any edit would.
  */
 
 /** الكل · فيها «ال» · بلا «ال» */
@@ -52,13 +53,11 @@ export function registerAnswers(router, { repo, titleNames }) {
         title: q.title ?? '',
         difficulty: q.difficulty ?? '',
         levelCount: q.levelCount,
-        // Null when taking the article off would not leave an answer, and only
-        // offered where the category's answers are ordinary nouns.
-        bare: isNounCategory(q.title) && !KEEP_ARTICLE.has(q.answer.trim())
-          ? withoutArticle(q.answer) : null,
-        // Said on a row that carries «ال» but must keep it.
-        keeps: q.answer.trim().startsWith('ال')
-          && (!isNounCategory(q.title) || KEEP_ARTICLE.has(q.answer.trim())),
+        // Null when taking the article off would not leave an answer at all:
+        // a phrase, or a stump of two letters.
+        bare: withoutArticle(q.answer),
+        // Why this one probably wants to keep it, if anything does.
+        note: articleNote(q.title, q.answer),
       }));
 
     res.render('answers', {
@@ -103,8 +102,7 @@ export function registerAnswers(router, { repo, titleNames }) {
     let unpublished = 0;
     for (const id of ids) {
       const question = repo.getQuestion(id);
-      const bare = question && isNounCategory(question.title)
-        && !KEEP_ARTICLE.has(question.answer.trim()) && withoutArticle(question.answer);
+      const bare = question && withoutArticle(question.answer);
       if (!bare) {
         refused.push(question?.answer ?? `#${id}`);
         continue;

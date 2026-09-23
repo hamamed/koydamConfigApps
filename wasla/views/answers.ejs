@@ -57,7 +57,11 @@
             <button class="btn btn-kd-outline btn-sm" type="submit" data-bulk-button
                     data-confirm-click="حذف «ال» من الأجوبة المحدَّدة؟">
               <span class="me-1"><%- icon('type', 14) %></span>احذف «ال» من المحدَّد</button>
-            <span class="small kd-faint ms-auto">تُعرض خانة التحديد على الأجوبة التي يصحّ حذف «ال» منها فقط.</span>
+            <span class="small kd-faint ms-auto">
+              الأجوبة الموسومة <span class="kd-tag kd-tag-warn">اسم علم</span> أو
+              <span class="kd-tag kd-tag-warn">آية أو سورة</span> أو
+              <span class="kd-tag kd-tag-warn">كلمة من مثل</span> «ال» فيها غالباً جزء من الجواب — راجعها قبل حذفها.
+            </span>
           </div>
         <% } %>
         <div class="ad-card-body p-0">
@@ -93,15 +97,15 @@
                       <td><%- r.difficulty ? include('partials/difficulty', { difficulty: r.difficulty }) : '<span class="kd-faint">—</span>' %></td>
                       <td><% if (r.levelCount) { %><span class="kd-tag kd-tag-ok"><%= r.levelCount %></span><% } else { %><span class="kd-faint">—</span><% } %></td>
                       <td class="text-end">
+                        <%# A button of its own inside the table's form: it sends this
+                            row alone, whatever else is ticked. %>
                         <% if (r.bare) { %>
-                          <%# Offered only in the categories of ordinary nouns. A
-                              button of its own inside the table's form: it sends
-                              this row alone, whatever else is ticked. %>
-                          <button class="btn btn-sm btn-kd-outline wz-ar" type="submit"
+                          <% if (r.note) { %>
+                            <span class="kd-tag kd-tag-warn" title="«ال» غالباً جزء من الجواب هنا"><%= r.note %></span>
+                          <% } %>
+                          <button class="btn btn-sm <%= r.note ? 'btn-kd-ghost' : 'btn-kd-outline' %> wz-ar" type="submit"
                                   name="only" value="<%= r.id %>"
-                                  data-confirm-click="«<%= r.answer %>» ← «<%= r.bare %>»؟">← <%= r.bare %></button>
-                        <% } else if (r.keeps) { %>
-                          <span class="small kd-faint" title="«ال» جزء من الجواب في هذه الفئة">اسم علم</span>
+                                  data-confirm-click="«<%= r.answer %>» ← «<%= r.bare %>»؟<%= r.note ? ' (' + r.note + ')' : '' %>">← <%= r.bare %></button>
                         <% } %>
                       </td>
                     </tr>

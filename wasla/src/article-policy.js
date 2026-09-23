@@ -49,3 +49,23 @@ export const KEEP_ARTICLE = new Set([
   // «الحمراء» is the palace, «الزيتونة» the mosque, «الصديق» أبو بكر.
   'الحمراء', 'الزيتونة', 'الصديق', 'العين', 'الفيصل', 'الكعبة',
 ]);
+
+/**
+ * Why an answer is one the sweep leaves alone — a short label, or null when
+ * nothing argues for keeping «ال».
+ *
+ * This warns; it does not block. The sweep obeys it, and the Answers page only
+ * prints it beside the row, because a person looking at one answer knows things
+ * a category cannot: that «الحج» in an ordinary question is a common noun while
+ * «الحج» quoted from a verse is not.
+ */
+export function articleNote(title, answer) {
+  const name = String(answer ?? '').trim();
+  if (!name.startsWith('ال')) return null;
+  if (KEEP_ARTICLE.has(name)) return 'اسم علم';
+  const category = String(title ?? '').trim();
+  if (category === 'أمثال عربية') return 'كلمة من مثل';
+  if (category === 'إسلاميات') return 'آية أو سورة';
+  if (!isNounCategory(category)) return 'اسم علم';
+  return null;
+}
