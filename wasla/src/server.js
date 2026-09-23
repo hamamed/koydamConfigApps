@@ -13,6 +13,7 @@ import { createApnsCredentials } from './apns-credentials.js';
 import { createAppConfig } from './app-config.js';
 import { createAudioStore } from './audio.js';
 import { createAudioClips } from './audio-clips.js';
+import { createAudioImport } from './audio-import.js';
 import { config } from './config.js';
 import { createDaily } from './daily.js';
 import { createBubblePictures } from './bubble-pictures.js';
@@ -45,6 +46,7 @@ const repo = createRepository(db);
 const images = createImageStore(config.imagesDir, { maxBytes: config.maxImageBytes });
 const audio = createAudioStore(config.audioDir, { maxBytes: config.maxAudioBytes });
 const audioClips = createAudioClips(db, { audio });
+const audioImport = createAudioImport();
 const daily = createDaily(db, repo);
 const appConfig = createAppConfig(db);
 const events = createEvents(db, repo);
@@ -127,7 +129,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, audioClips, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles,
+  repo, images, audio, audioClips, audioImport, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles,
 }));
 // The landing page. It answers `/`, which used to bounce everyone to the panel.
 app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));

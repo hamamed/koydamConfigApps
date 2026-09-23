@@ -49,7 +49,7 @@ function share(total, parts) {
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, audioClips = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
+  repo, images, audio, audioClips = null, audioImport = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
 }) {
   const router = express.Router();
 
@@ -710,7 +710,7 @@ export function adminRouter({
 
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports, titleNames });
-  if (audioClips) registerAudio(router, { audioClips, repo, titleNames });
+  if (audioClips) registerAudio(router, { audioClips, repo, titleNames, audioImport });
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });

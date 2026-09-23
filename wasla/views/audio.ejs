@@ -84,7 +84,64 @@
           </form>
         </div>
 
-        <div class="col-xl-7">
+        <% if (canImport) { %>
+          <div class="col-xl-5">
+            <div class="ad-card">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('link', 16) %>
+                <span class="fw-semibold">من يوتيوب</span>
+                <span class="kd-tag kd-tag-warn ms-auto">CC BY فقط</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <p class="small kd-muted mb-0">
+                  يُقبل فقط الفيديو الذي رخّصه صاحبه «<%= ccBy %>» — وهي الرخصة الوحيدة التي تسمح
+                  بتشغيل الصوت داخل التطبيق ونشره معه. أي فيديو آخر يُرفض ويُذكر سبب الرفض.
+                  اضغط <strong>افحص</strong> أولاً لترى الرخصة قبل التحويل.
+                </p>
+                <form method="post" action="/admin/audio/youtube" class="d-grid gap-3" id="ytForm">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <div>
+                    <label class="form-label small mb-1" for="ytUrl">رابط الفيديو</label>
+                    <input class="form-control form-control-sm kd-mono" type="text" id="ytUrl" name="url"
+                           value="<%= youtube.url %>" required placeholder="https://www.youtube.com/watch?v=…">
+                  </div>
+                  <div class="d-flex gap-2">
+                    <div class="flex-fill">
+                      <label class="form-label small mb-1" for="ytStart">من</label>
+                      <input class="form-control form-control-sm kd-mono" type="text" id="ytStart" name="start"
+                             value="<%= youtube.start %>" pattern="(\d+:)?\d+(\.\d+)?" placeholder="1:20">
+                    </div>
+                    <div class="flex-fill">
+                      <label class="form-label small mb-1" for="ytSeconds">لمدة (ثانية)</label>
+                      <input class="form-control form-control-sm kd-mono" type="number" id="ytSeconds" name="seconds"
+                             value="<%= youtube.seconds %>" min="<%= minSeconds %>" max="<%= maxSeconds %>" required>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="form-label small mb-1" for="ytTitle">الاسم <span class="kd-faint">(اتركه فارغاً ليأخذ عنوان الفيديو)</span></label>
+                    <input class="form-control form-control-sm wz-ar" type="text" id="ytTitle" name="title" dir="rtl"
+                           maxlength="<%= maxTitle %>" value="<%= youtube.title %>">
+                  </div>
+                  <div>
+                    <label class="form-label small mb-1" for="ytCategory">الفئة</label>
+                    <input class="form-control form-control-sm wz-ar" type="text" id="ytCategory" name="category" dir="rtl"
+                           list="acCategories" maxlength="<%= maxCategory %>" value="<%= chosen || youtube.category %>">
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-kd-outline" type="submit" formaction="/admin/audio/youtube/check">افحص</button>
+                    <button class="btn btn-kd flex-fill" type="submit">حوّل واحفظ</button>
+                  </div>
+                </form>
+                <p class="small kd-faint mb-0">
+                  يُجلب فقط ما طلبته من ثوانٍ، لا الفيديو كاملاً. العنوان والقناة والرابط تُحفظ مع المقطع كإسناد،
+                  وهو شرط رخصة CC BY.
+                </p>
+              </div>
+            </div>
+          </div>
+        <% } %>
+
+        <div class="<%= canImport ? 'col-xl-12' : 'col-xl-7' %>">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2 flex-wrap">
               <%- icon('audio-lines', 16) %>
