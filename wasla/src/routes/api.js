@@ -5,6 +5,7 @@ import { parseDay, todayUtc } from '../daily.js';
 import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
 import { DAILY_TITLE } from '../level-label.js';
+import { registerAudioIngest } from './api-audio.js';
 import { registerProfileApi } from './api-profiles.js';
 
 /**
@@ -13,8 +14,11 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null }) {
   const router = express.Router();
+
+  // The one machine-to-machine door (api-audio.js); absent without SERVICE_TOKEN.
+  registerAudioIngest(router, { audioClips });
 
   const imageOf = (word) => (word.imageFile ? {
     url: `${publicUrl}/media/questions/${word.imageFile}`,
