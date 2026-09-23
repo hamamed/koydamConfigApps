@@ -15,6 +15,7 @@ import { createAudioStore } from './audio.js';
 import { createAudioClips } from './audio-clips.js';
 import { createAudioImport } from './audio-import.js';
 import { config } from './config.js';
+import { createPanelIcons } from './panel-icons.js';
 import { createDaily } from './daily.js';
 import { createBubblePictures } from './bubble-pictures.js';
 import { createDailyGames } from './daily-games.js';
@@ -93,10 +94,17 @@ app.use('/media/audio', express.static(config.audioDir, { maxAge: '30d', immutab
 // ── Panel ────────────────────────────────────────────────────────────────────
 
 app.set('view engine', 'ejs');
-// The error page shares the panel's head and foot, which version their assets.
-// Set app-wide: a 404 outside /admin never passes through the admin router,
-// and rendering it used to throw and turn every missing file into a 500.
+// The error page shares the panel's head and foot, which version their assets
+// and draw an icon. Set app-wide: a 404 outside /admin never passes through the
+// admin router that defines these, and rendering it used to throw and turn
+// every missing file into a 500.
+//
+// The Lucide outline, not the pack: the pack is served from /admin/icons, which
+// a signed-out visitor cannot fetch. The admin router replaces this on its own
+// pages with the pack's version.
 app.locals.assetVersion = config.assetVersion;
+const errorPageIcons = createPanelIcons();
+app.locals.icon = (name, size) => errorPageIcons.lucide(name, size);
 app.set('views', path.join(config.root, 'views'));
 app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '7d' }));
 
