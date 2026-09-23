@@ -20,6 +20,9 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   // The one machine-to-machine door (api-audio.js); absent without SERVICE_TOKEN.
   registerAudioIngest(router, { audioClips });
 
+  /** Older uploads belong to no clip and are sent as they always were. */
+  const publishableAudio = (file) => (audioClips ? audioClips.isPublishable(file) : true);
+
   const imageOf = (word) => (word.imageFile ? {
     url: `${publicUrl}/media/questions/${word.imageFile}`,
     zoom: word.zoom,
@@ -44,7 +47,10 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     // types existed shows it, and an audio question may use one as its cover.
     image: imageOf(w),
     emoji: w.type === 'emoji' ? w.emoji : null,
-    audio: w.type === 'audio' && w.audioFile ? { url: `${publicUrl}/media/audio/${w.audioFile}` } : null,
+    // A sound the library is still holding back is not sent at all: a clip kept
+    // to listen to reaches no player until its permission is recorded.
+    audio: w.type === 'audio' && w.audioFile && publishableAudio(w.audioFile)
+      ? { url: `${publicUrl}/media/audio/${w.audioFile}` } : null,
   });
 
   const levelBody = (level) => ({ ...level, words: level.words.map(wordOf) });

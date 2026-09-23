@@ -53,6 +53,9 @@ export function registerAudioIngest(router, { audioClips }) {
           source: req.body.source,
           licence: req.body.licence,
           author: req.body.author,
+          // Only ever "already allowed"; permission for anything else is
+          // recorded in the panel, by a person, against the clip.
+          cleared: req.body.cleared === undefined ? null : req.body.cleared === '1',
         });
         if (saved.error) return res.status(400).json({ error: saved.error });
         res.status(201).json({
@@ -63,6 +66,7 @@ export function registerAudioIngest(router, { audioClips }) {
             seconds: saved.clip.seconds,
             licence: saved.clip.licence,
             author: saved.clip.author,
+            cleared: Boolean(saved.clip.cleared),
           },
         });
       } catch (error) {

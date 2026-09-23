@@ -4,7 +4,9 @@ import fs from 'node:fs/promises';
 import { beforeEach, test } from 'node:test';
 import { promisify } from 'node:util';
 
-import { clockText, createAudioClips, MAX_CATEGORY, MAX_SECONDS, readTime } from '../src/audio-clips.js';
+import {
+  clockText, createAudioClips, licenceClears, MAX_CATEGORY, MAX_SECONDS, readTime,
+} from '../src/audio-clips.js';
 import { createAudioStore } from '../src/audio.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
@@ -118,6 +120,41 @@ test('a clip moves to another category without being uploaded again', async () =
   const { clip: moved } = clips.update(clip.id, { title: clip.title, category: 'آلات موسيقية' });
   assert.deepEqual([moved.category, moved.file], ['آلات موسيقية', clip.file], 'same file, new category');
   assert.equal(clips.update(clip.id, { title: clip.title, category: '' }).clip.category, null);
+});
+
+test('a licence that already permits publishing clears a clip on the way in', () => {
+  for (const yes of ['CC0', 'cc0 1.0', 'CC BY 4.0', 'CC BY-SA 4.0', 'Public Domain', 'مِلكنا']) {
+    assert.equal(licenceClears(yes), true, yes);
+  }
+  for (const no of ['', '   ', 'Standard YouTube License', 'رخصة يوتيوب القياسية', 'All rights reserved']) {
+    assert.equal(licenceClears(no), false, no);
+  }
+});
+
+test('a clip nobody permitted is held back, and no sound is served for it', async () => {
+  const held = (await clips.save(FAKE_MP3, { title: 'محجوز', start: '0', seconds: '5' })).clip;
+  const free = (await clips.save(FAKE_MP3, { title: 'حر', start: '0', seconds: '5', licence: 'CC0' })).clip;
+  assert.deepEqual([held.cleared, free.cleared], [0, 1], 'the licence decides it, not the upload');
+  assert.equal(clips.isPublishable(held.file), false);
+  assert.equal(clips.isPublishable(free.file), true);
+  // A file no clip owns is an older upload, and is served as it always was.
+  assert.equal(clips.isPublishable('deadbeefdeadbeefdeadbeef.mp3'), true);
+
+  const now = clips.setCleared(held.id, true, 'إذن بالبريد من القناة 2026-09-23').clip;
+  assert.deepEqual([now.cleared, now.cleared_note], [1, 'إذن بالبريد من القناة 2026-09-23']);
+  assert.equal(clips.isPublishable(held.file), true);
+
+  // And permission can be taken back.
+  assert.equal(clips.setCleared(held.id, false).clip.cleared, 0);
+  assert.equal(clips.isPublishable(held.file), false);
+  assert.match(clips.setCleared(999, true).error, /لا مقطع/);
+});
+
+test('a clip told outright that it is cleared overrides what its licence says', async () => {
+  const { clip } = await clips.save(FAKE_MP3, {
+    title: 'بإذن', start: '0', seconds: '5', licence: 'Standard YouTube License', cleared: true,
+  });
+  assert.equal(clip.cleared, 1);
 });
 
 test('a clip can be renamed and re-credited', async () => {

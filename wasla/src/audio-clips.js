@@ -22,7 +22,13 @@ const run = promisify(execFile);
  *
  * Nothing here fetches a sound from anywhere. A clip is made from a file the
  * panel is given, and `source`, `licence` and `author` say where it came from
- * and on what terms — a clip with no licence is one the app must not play.
+ * and on what terms.
+ *
+ * `cleared` is the gate between having a clip and publishing it. A clip whose
+ * terms already allow it — CC BY, CC0, your own recording — is cleared as it
+ * is stored; anything else stays at 0 until permission is recorded against it
+ * in `cleared_note`. The API serves no sound for a question whose clip is not
+ * cleared, so a clip kept to audition can never reach the app by accident.
  */
 
 export const MAX_SECONDS = 30;
@@ -31,6 +37,11 @@ export const MAX_TITLE = 120;
 export const MAX_CATEGORY = 30;
 /** What the panel offers; anything else may be typed. */
 export const LICENCES = Object.freeze(['CC0', 'CC BY 4.0', 'CC BY-SA 4.0', 'Public Domain', 'مِلكنا']);
+/** Licences that publish a clip the moment it is stored; everything else waits. */
+const CLEARS = [/^cc0/i, /^cc[ -]by/i, /^public domain/i, /^مِلكنا$/, /^ملكنا$/];
+
+/** Whether a licence, as typed, already permits publishing. */
+export const licenceClears = (licence) => CLEARS.some((r) => r.test(String(licence ?? '').trim()));
 
 /** "1:05" or "65" or "1:05.5" → seconds, or null. */
 export function readTime(raw) {
@@ -62,8 +73,8 @@ async function lengthOf(file) {
 }
 
 export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
-  const insert = db.prepare(`INSERT INTO audio_clips (file, title, category, source, licence, author, seconds)
-    VALUES (@file, @title, @category, @source, @licence, @author, @seconds)`);
+  const insert = db.prepare(`INSERT INTO audio_clips (file, title, category, source, licence, author, seconds, cleared, cleared_note)
+    VALUES (@file, @title, @category, @source, @licence, @author, @seconds, @cleared, @cleared_note)`);
 
   const readCategory = (raw) => {
     const clean = String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_CATEGORY);
@@ -92,7 +103,10 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
    * Cuts `buffer` from `start` for `seconds` and keeps the piece.
    * `{ clip }`, or `{ error }` — and nothing is stored when anything is wrong.
    */
-  async function save(buffer, { title, category = '', start = 0, seconds, source = '', licence = '', author = '' }) {
+  async function save(buffer, {
+    title, category = '', start = 0, seconds, source = '', licence = '', author = '',
+    cleared = null, clearedNote = '',
+  }) {
     const name = String(title ?? '').trim().slice(0, MAX_TITLE);
     if (!name) return { error: 'اكتب اسماً للمقطع.' };
     if (!sniffAudio(buffer)) return { error: 'الملف ليس MP3 أو M4A أو AAC أو WAV.' };
@@ -133,6 +147,9 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
         licence: String(licence ?? '').trim().slice(0, 80) || null,
         author: String(author ?? '').trim().slice(0, 120) || null,
         seconds: Math.round(cutSeconds),
+        // Told explicitly, or read from the licence that was typed.
+        cleared: (cleared === null ? licenceClears(licence) : Boolean(cleared)) ? 1 : 0,
+        cleared_note: String(clearedNote ?? '').trim().slice(0, 300) || null,
       }).lastInsertRowid;
       return { clip: get(id) };
     } finally {
@@ -165,5 +182,24 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
     return { removed: clip };
   }
 
-  return { list, categories, get, save, update, remove };
+  /**
+   * Records that a clip may be published — or takes that back. `note` is where
+   * the permission came from, so the answer to "who said we could?" is kept
+   * beside the clip rather than in somebody's inbox.
+   */
+  function setCleared(id, cleared, note = '') {
+    const clip = get(id);
+    if (!clip) return { error: 'لا مقطع بهذا الرقم.' };
+    db.prepare('UPDATE audio_clips SET cleared = ?, cleared_note = ? WHERE id = ?')
+      .run(cleared ? 1 : 0, String(note ?? '').trim().slice(0, 300) || null, clip.id);
+    return { clip: get(clip.id) };
+  }
+
+  /** Whether the file behind a question may be served: unknown files are older uploads, and pass. */
+  function isPublishable(file) {
+    const row = db.prepare('SELECT cleared FROM audio_clips WHERE file = ?').get(file);
+    return !row || row.cleared === 1;
+  }
+
+  return { list, categories, get, save, update, remove, setCleared, isPublishable };
 }

@@ -334,6 +334,10 @@ CREATE TABLE IF NOT EXISTS audio_clips (
   licence     TEXT,
   author      TEXT,
   seconds     INTEGER NOT NULL DEFAULT 0,
+  -- 0 until the clip may be published: the API serves no sound for a question
+  -- whose clip is not cleared, so nothing reaches the app unpermitted.
+  cleared      INTEGER NOT NULL DEFAULT 0,
+  cleared_note TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

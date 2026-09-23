@@ -12,8 +12,10 @@
  * library (POST /api/v1/audio-clips, the server's SERVICE_TOKEN); without them
  * it is written to a file and the credit is printed, to upload by hand.
  *
- * The licence rule is the panel's: only a video its uploader licensed Creative
- * Commons Attribution, checked before any audio is fetched.
+ * Any video can be fetched. What its licence says travels with the clip: one
+ * licensed Creative Commons Attribution arrives ready to publish, any other
+ * arrives held back, and a held-back clip is served to no player until its
+ * permission is recorded in the panel.
  *
  *   WASLA_URL=https://wassla.hamaprojects.com WASLA_TOKEN=… \
  *   node scripts/youtube-clip.js <url> --start 1:20 --seconds 8 \
@@ -23,7 +25,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { readTime } from '../src/audio-clips.js';
-import { CC_BY_NAME, createAudioImport } from '../src/audio-import.js';
+import { createAudioImport } from '../src/audio-import.js';
 
 const args = process.argv.slice(2);
 const flag = (name, fallback = '') => {
@@ -35,9 +37,9 @@ const url = args.find((a) => !a.startsWith('--') && args[args.indexOf(a) - 1]?.s
 if (!url || args.includes('--help')) {
   console.log(`  node scripts/youtube-clip.js <url> --start 1:20 --seconds 8 [--title …] [--category …] [--out .]
 
-  Only a video licensed «Creative Commons Attribution» is taken; every other
-  one is refused. Upload the MP3 it writes on the panel's «مكتبة الأصوات»
-  page, with the credit it prints.`);
+  Any video is taken. One licensed «Creative Commons Attribution» arrives
+  ready to publish; any other is held back until its permission is recorded
+  on the panel's «مكتبة الأصوات» page, and is sent to no player before that.`);
   process.exit(url ? 0 : 1);
 }
 
@@ -60,12 +62,13 @@ if (found.error) {
   console.error(`  ${found.error}`);
   process.exit(1);
 }
-const refusal = importer.usable(found.video);
-if (refusal.error) {
-  console.error(`  ${refusal.error}`);
+const rights = importer.terms(found.video);
+if (rights.error) {
+  console.error(`  ${rights.error}`);
   process.exit(1);
 }
-console.log(`  «${found.video.title}» — ${found.video.channel} · ${CC_BY_NAME}`);
+console.log(`  «${found.video.title}» — ${found.video.channel} · ${rights.licence}`
+  + `${rights.cleared ? ' · جاهز للنشر' : ' · محجوز عن النشر حتى تسجّل الإذن'}`);
 
 console.log(`  Fetching ${seconds}s from ${flag('start', '0')}…`);
 const got = await importer.clip(url, { start, seconds });
@@ -89,8 +92,9 @@ if (panel && token) {
   body.set('start', '0');
   body.set('seconds', String(seconds));
   body.set('source', found.video.url);
-  body.set('licence', CC_BY_NAME);
+  body.set('licence', got.terms.licence);
   body.set('author', found.video.channel);
+  body.set('cleared', got.terms.cleared ? '1' : '0');
 
   const answer = await fetch(`${panel}/api/v1/audio-clips`, {
     method: 'POST',
@@ -103,7 +107,8 @@ if (panel && token) {
     process.exit(1);
   }
   console.log(`\n  في المكتبة: «${said.clip.title}» · ${said.clip.seconds}s`
-    + `${said.clip.category ? ` · ${said.clip.category}` : ''} · ${said.clip.licence} · ${said.clip.author}`);
+    + `${said.clip.category ? ` · ${said.clip.category}` : ''} · ${said.clip.licence} · ${said.clip.author}`
+    + `${said.clip.cleared ? '' : '\n  محجوز عن النشر — سجّل الإذن في «مكتبة الأصوات» قبل أن يصل التطبيق.'}`);
   process.exit(0);
 }
 
@@ -117,6 +122,6 @@ console.log(`    الاسم    ${title}`);
 console.log(`    الفئة    ${category || '—'}`);
 console.log(`    من       0   ·   لمدة ${seconds}`);
 console.log(`    المصدر   ${found.video.url}`);
-console.log(`    الرخصة   ${CC_BY_NAME}`);
+console.log(`    الرخصة   ${rights.licence}`);
 console.log(`    صاحبه    ${found.video.channel}`);
 console.log('\n  (WASLA_URL و WASLA_TOKEN يرفعانه تلقائياً بدل هذا.)');

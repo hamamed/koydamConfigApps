@@ -9,11 +9,11 @@ const run = promisify(execFile);
 /**
  * Bringing a sound in from a YouTube video, for the sound library.
  *
- * **Only a video its uploader licensed Creative Commons Attribution is taken.**
- * That is the licence that lets the clip be played inside the app and shipped
- * with it, and it is the same bar the project's pictures are held to. Every
- * other video — which is most of them — is refused, and the refusal names the
- * licence that was found so it is clear why.
+ * Any video can be fetched. What the licence says is recorded rather than
+ * enforced here: a video its uploader licensed Creative Commons Attribution
+ * arrives cleared for publishing, and every other one arrives **not** cleared,
+ * so it can be auditioned in the panel but reaches no player until permission
+ * is recorded against it (src/audio-clips.js).
  *
  * The video is never named to the shell: the id is pulled out of whatever URL
  * was pasted, checked against YouTube's own id shape, and a canonical watch
@@ -108,17 +108,18 @@ export function createAudioImport({ tools = { run } } = {}) {
     };
   }
 
-  /** Whether a probed video may be used, with the reason when it may not. */
-  function usable(video) {
-    if (video.licence !== CC_BY) {
-      return {
-        error: video.licence
-          ? `رخصة هذا الفيديو «${video.licence}» لا تسمح باستعماله. يُقبل فقط ما رخّصه صاحبه «${CC_BY}».`
-          : `هذا الفيديو بالرخصة القياسية ليوتيوب، ولا تسمح باستعماله. يُقبل فقط ما رخّصه صاحبه «${CC_BY}».`,
-      };
-    }
+  /**
+   * What a probed video's licence means for publishing:
+   * `{ cleared, licence }`, or `{ error }` when the video cannot be used at all.
+   *
+   * Nothing is refused for its licence — the clip simply arrives uncleared, and
+   * stays that way until permission is recorded.
+   */
+  function terms(video) {
     if (video.seconds > MAX_VIDEO_SECONDS) return { error: 'الفيديو أطول من أربع ساعات.' };
-    return {};
+    return video.licence === CC_BY
+      ? { cleared: true, licence: CC_BY_NAME }
+      : { cleared: false, licence: video.licence || 'رخصة يوتيوب القياسية' };
   }
 
   /**
@@ -128,8 +129,8 @@ export function createAudioImport({ tools = { run } } = {}) {
   async function clip(rawUrl, { start = 0, seconds = 8 } = {}) {
     const found = await probe(rawUrl);
     if (found.error) return found;
-    const refusal = usable(found.video);
-    if (refusal.error) return refusal;
+    const rights = terms(found.video);
+    if (rights.error) return rights;
 
     const from = Math.max(0, Math.floor(Number(start) || 0));
     const length = Math.max(1, Math.floor(Number(seconds) || 0));
@@ -150,7 +151,7 @@ export function createAudioImport({ tools = { run } } = {}) {
       ], { maxBuffer: 64 * 1024 * 1024 });
       const made = (await fs.readdir(work)).find((f) => f.endsWith('.mp3'));
       if (!made) return { error: 'لم ينتج المقطع. جرّب بداية أخرى.' };
-      return { audio: await fs.readFile(path.join(work, made)), video: found.video };
+      return { audio: await fs.readFile(path.join(work, made)), video: found.video, terms: rights };
     } catch (err) {
       return { error: reasonFor(err) };
     } finally {
@@ -158,5 +159,5 @@ export function createAudioImport({ tools = { run } } = {}) {
     }
   }
 
-  return { probe, usable, clip };
+  return { probe, terms, clip };
 }

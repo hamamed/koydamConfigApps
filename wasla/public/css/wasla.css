@@ -1062,3 +1062,4 @@ html { scrollbar-gutter: stable; }
 .wz-audio { display: block; width: min(260px, 100%); height: 32px; margin-top: .35rem; }
 .wz-audio-src { max-width: 260px; }
 .wz-audio-cat { width: 9rem; }
+.wz-audio-note { width: 10rem; }

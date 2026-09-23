@@ -44,20 +44,27 @@ test('only the id reaches yt-dlp, never the pasted text', async () => {
   assert.deepEqual(calls[0].args.at(-1), watchUrl('aqz-KE-bpKQ'));
 });
 
-test('a video with any other licence is refused, and the refusal names it', async () => {
+test('the licence decides whether a clip may be published, not whether it may be had', () => {
   const importer = createAudioImport({ tools: { run: async () => ({ stdout: '{}' }) } });
-  assert.match(importer.usable({ licence: 'Standard YouTube License', seconds: 60 }).error, /Standard YouTube License/);
-  assert.match(importer.usable({ licence: '', seconds: 60 }).error, /الرخصة القياسية/);
-  assert.deepEqual(importer.usable({ licence: CC_BY, seconds: 60 }), {});
-  assert.match(importer.usable({ licence: CC_BY, seconds: 5 * 60 * 60 }).error, /أربع ساعات/);
+  assert.deepEqual(importer.terms({ licence: CC_BY, seconds: 60 }), { cleared: true, licence: 'CC BY 3.0' });
+  assert.deepEqual(importer.terms({ licence: 'Standard YouTube License', seconds: 60 }),
+    { cleared: false, licence: 'Standard YouTube License' });
+  assert.deepEqual(importer.terms({ licence: '', seconds: 60 }),
+    { cleared: false, licence: 'رخصة يوتيوب القياسية' }, 'an unstated licence is not a permission');
+  assert.match(importer.terms({ licence: CC_BY, seconds: 5 * 60 * 60 }).error, /أربع ساعات/);
 });
 
-test('no audio is fetched at all when the licence does not allow it', async () => {
-  const { calls, importer } = stub({ info: { license: 'Standard YouTube License' } });
-  const result = await importer.clip('https://youtu.be/aqz-KE-bpKQ', { start: 10, seconds: 8 });
-  assert.match(result.error, /Standard YouTube License/);
-  assert.equal(calls.length, 1, 'the metadata was read and nothing more');
-  assert.ok(calls.every((c) => !c.args.includes('--download-sections')));
+test('a video under any licence is fetched, and comes back held back', async () => {
+  const { importer } = stub({
+    info: { license: 'Standard YouTube License' },
+    onClip: async (args) => {
+      const { writeFile } = await import('node:fs/promises');
+      await writeFile(args[args.indexOf('-o') + 1].replace('%(ext)s', 'mp3'), Buffer.from('ID3 clip'));
+    },
+  });
+  const got = await importer.clip('https://youtu.be/aqz-KE-bpKQ', { start: 10, seconds: 8 });
+  assert.equal(got.error, undefined, 'nothing is refused for its licence');
+  assert.deepEqual(got.terms, { cleared: false, licence: 'Standard YouTube License' });
 });
 
 test('a CC-BY video hands back the seconds asked for, with its credit', async () => {
@@ -69,8 +76,9 @@ test('a CC-BY video hands back the seconds asked for, with its credit', async ()
       await writeFile(out.replace('%(ext)s', 'mp3'), Buffer.from('ID3 clip'));
     },
   });
-  const { audio, video, error } = await importer.clip(`https://youtu.be/aqz-KE-bpKQ`, { start: 80, seconds: 8 });
+  const { audio, video, terms, error } = await importer.clip(`https://youtu.be/aqz-KE-bpKQ`, { start: 80, seconds: 8 });
   assert.equal(error, undefined);
+  assert.deepEqual(terms, { cleared: true, licence: 'CC BY 3.0' }, 'CC BY arrives ready to publish');
   assert.deepEqual([video.title, video.channel, video.url], ['Big Buck Bunny', 'Blender', watchUrl('aqz-KE-bpKQ')]);
   assert.equal(audio.toString(), 'ID3 clip');
   // Only the asked-for window left YouTube, with a second of slack.

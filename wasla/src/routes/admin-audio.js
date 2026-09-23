@@ -3,7 +3,7 @@ import multer from 'multer';
 import {
   clockText, LICENCES, MAX_CATEGORY, MAX_SECONDS, MAX_TITLE, MIN_SECONDS, readTime,
 } from '../audio-clips.js';
-import { CC_BY, CC_BY_NAME } from '../audio-import.js';
+import { CC_BY } from '../audio-import.js';
 import { config } from '../config.js';
 
 /**
@@ -12,10 +12,10 @@ import { config } from '../config.js';
  * library can be turned into a question in one click, which opens the question
  * form with the sound already chosen and in the clip's own category.
  *
- * A clip can also be brought in from a YouTube video — but only one its
- * uploader licensed Creative Commons Attribution, which is the licence that
- * lets it be shipped inside the app. Every other video is refused, and the
- * refusal says which licence was found.
+ * A clip can also be brought in from a YouTube video. Any video will do, but
+ * what its licence says follows it: one licensed Creative Commons Attribution
+ * arrives ready to publish, and any other arrives held back — kept in the
+ * library to listen to, reaching no player until permission is recorded here.
  */
 export function registerAudio(router, { audioClips, repo, titleNames, audioImport = null }) {
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: config.maxAudioBytes } })
@@ -89,9 +89,15 @@ export function registerAudio(router, { audioClips, repo, titleNames, audioImpor
         req.flash('danger', found.error);
         return res.redirect('/admin/audio');
       }
-      const refusal = audioImport.usable(found.video);
-      req.flash(refusal.error ? 'danger' : 'success', refusal.error
-        ?? `«${found.video.title}» — ${found.video.channel} · ${clockText(found.video.seconds)} · صالح للاستعمال (${CC_BY_NAME}).`);
+      const rights = audioImport.terms(found.video);
+      if (rights.error) {
+        req.flash('danger', rights.error);
+        return res.redirect('/admin/audio');
+      }
+      const head = `«${found.video.title}» — ${found.video.channel} · ${clockText(found.video.seconds)}`;
+      req.flash(rights.cleared ? 'success' : 'warning', rights.cleared
+        ? `${head} · ${rights.licence} — جاهز للنشر.`
+        : `${head} · ${rights.licence} — يُجلب ويبقى محجوزاً حتى تسجّل الإذن.`);
       res.redirect('/admin/audio');
     } catch (error) {
       next(error);
@@ -125,14 +131,17 @@ export function registerAudio(router, { audioClips, repo, titleNames, audioImpor
         start: 0,
         seconds,
         source: got.video.url,
-        licence: CC_BY_NAME,
+        licence: got.terms.licence,
         author: got.video.channel,
+        cleared: got.terms.cleared,
       });
       if (saved.error) {
         req.flash('danger', saved.error);
         return res.redirect('/admin/audio');
       }
-      req.flash('success', `حُفظ «${saved.clip.title}» من يوتيوب — ${clockText(saved.clip.seconds)} · ${CC_BY_NAME} · ${saved.clip.author}.`);
+      req.flash(saved.clip.cleared ? 'success' : 'warning',
+        `حُفظ «${saved.clip.title}» من يوتيوب — ${clockText(saved.clip.seconds)} · ${saved.clip.licence} · ${saved.clip.author}`
+        + `${saved.clip.cleared ? '.' : ' — محجوز عن النشر حتى تسجّل الإذن.'}`);
       res.redirect('/admin/audio');
     } catch (error) {
       next(error);
@@ -142,6 +151,14 @@ export function registerAudio(router, { audioClips, repo, titleNames, audioImpor
   router.post('/audio/:id', (req, res) => {
     const result = audioClips.update(req.params.id, req.body);
     req.flash(result.error ? 'danger' : 'success', result.error ?? 'حُفظت بيانات المقطع.');
+    res.redirect('/admin/audio');
+  });
+
+  /** Records permission for a clip — or takes it back. */
+  router.post('/audio/:id/cleared', (req, res) => {
+    const result = audioClips.setCleared(req.params.id, req.body.cleared === '1', req.body.note);
+    req.flash(result.error ? 'danger' : 'success', result.error
+      ?? (result.clip.cleared ? `«${result.clip.title}» صار جاهزاً للنشر.` : `«${result.clip.title}» صار محجوزاً عن النشر.`));
     res.redirect('/admin/audio');
   });
 

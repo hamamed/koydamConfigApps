@@ -90,13 +90,13 @@
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <%- icon('link', 16) %>
                 <span class="fw-semibold">من يوتيوب</span>
-                <span class="kd-tag kd-tag-warn ms-auto">CC BY فقط</span>
+                <span class="kd-tag ms-auto">أي فيديو</span>
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <p class="small kd-muted mb-0">
-                  يُقبل فقط الفيديو الذي رخّصه صاحبه «<%= ccBy %>» — وهي الرخصة الوحيدة التي تسمح
-                  بتشغيل الصوت داخل التطبيق ونشره معه. أي فيديو آخر يُرفض ويُذكر سبب الرفض.
-                  اضغط <strong>افحص</strong> أولاً لترى الرخصة قبل التحويل.
+                  أي فيديو يُجلب. ما رخّصه صاحبه «<%= ccBy %>» يصل <strong>جاهزاً للنشر</strong>؛
+                  وأي فيديو آخر يصل <strong>محجوزاً</strong> — تسمعه هنا، ولا يصل التطبيق حتى تسجّل
+                  الإذن عليه من عمود «النشر». اضغط <strong>افحص</strong> لترى الرخصة قبل التحويل.
                 </p>
                 <form method="post" action="/admin/audio/youtube" class="d-grid gap-3" id="ytForm">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -133,8 +133,8 @@
                   </div>
                 </form>
                 <p class="small kd-faint mb-0">
-                  يُجلب فقط ما طلبته من ثوانٍ، لا الفيديو كاملاً. العنوان والقناة والرابط تُحفظ مع المقطع كإسناد،
-                  وهو شرط رخصة CC BY.
+                  يُجلب فقط ما طلبته من ثوانٍ، لا الفيديو كاملاً. العنوان والقناة والرابط تُحفظ مع المقطع،
+                  فيبقى معروفاً من أين جاء حين تطلب الإذن.
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@
               <% } else { %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
-                    <thead><tr><th>المقطع</th><th>الفئة</th><th>المدة</th><th>الرخصة</th><th>يُستعمل</th><th></th></tr></thead>
+                    <thead><tr><th>المقطع</th><th>الفئة</th><th>المدة</th><th>الرخصة</th><th>النشر</th><th>يُستعمل</th><th></th></tr></thead>
                     <tbody>
                       <% clips.forEach((c) => { %>
                         <tr>
@@ -193,9 +193,28 @@
                           </td>
                           <td class="kd-mono"><%= c.length %></td>
                           <td>
-                            <% if (c.licence) { %><span class="kd-tag kd-tag-ok"><%= c.licence %></span>
-                            <% } else { %><span class="kd-tag kd-tag-warn" title="بلا رخصة لا يجوز تشغيله في التطبيق">بلا رخصة</span><% } %>
+                            <% if (c.licence) { %><span class="kd-tag"><%= c.licence %></span>
+                            <% } else { %><span class="kd-tag kd-tag-warn">بلا رخصة</span><% } %>
                             <% if (c.author) { %><div class="small kd-faint"><%= c.author %></div><% } %>
+                          </td>
+                          <td>
+                            <%# Nothing reaches the app until this says yes. %>
+                            <form class="d-grid gap-1 m-0" method="post" action="/admin/audio/<%= c.id %>/cleared">
+                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                              <input type="hidden" name="cleared" value="<%= c.cleared ? '0' : '1' %>">
+                              <% if (c.cleared) { %>
+                                <span class="ad-status ad-status-published">جاهز للنشر</span>
+                                <input type="hidden" name="note" value="<%= c.cleared_note || '' %>">
+                                <button class="btn btn-sm btn-kd-ghost" type="submit">احجزه</button>
+                              <% } else { %>
+                                <span class="ad-status ad-status-draft" title="لا يصل التطبيق">محجوز</span>
+                                <input class="form-control form-control-sm wz-audio-note" type="text" name="note"
+                                       value="<%= c.cleared_note || '' %>" placeholder="من أذن؟"
+                                       aria-label="إذن <%= c.title %>">
+                                <button class="btn btn-sm btn-kd-outline" type="submit">سجّل الإذن</button>
+                              <% } %>
+                            </form>
+                            <% if (c.cleared && c.cleared_note) { %><div class="small kd-faint"><%= c.cleared_note %></div><% } %>
                           </td>
                           <td><% if (c.used) { %><a href="/admin/questions?q=<%= encodeURIComponent(c.title) %>"><%= c.used %></a><% } else { %><span class="kd-faint">—</span><% } %></td>
                           <td class="text-end text-nowrap">

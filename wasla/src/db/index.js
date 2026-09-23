@@ -56,6 +56,11 @@ const ADDITIVE_COLUMNS = [
   // What a clip is of — أصوات الحيوانات، آلات موسيقية — so a library of hundreds
   // can be found, and so a question made from it starts with that category.
   ['audio_clips', 'category', 'TEXT'],
+  // Whether the clip may leave the server. A clip whose licence already allows
+  // it (CC BY, CC0, your own) is cleared on the way in; anything else waits
+  // here until permission is recorded, and the API serves no sound for it.
+  ['audio_clips', 'cleared', 'INTEGER NOT NULL DEFAULT 0'],
+  ['audio_clips', 'cleared_note', 'TEXT'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */
@@ -79,6 +84,14 @@ export function openDatabase(file) {
     // question, and must not read as plain text the moment the column appears.
     if (added && table === 'questions' && column === 'type') {
       database.exec("UPDATE questions SET type = 'image' WHERE image_file IS NOT NULL");
+    }
+    // Clips from before the publishing gate: one whose licence already permits
+    // it keeps playing, so sounds the app is already serving do not fall silent
+    // the moment the column appears. Anything else starts held back.
+    if (added && table === 'audio_clips' && column === 'cleared') {
+      database.exec(`UPDATE audio_clips SET cleared = 1 WHERE trim(IFNULL(licence, '')) <> '' AND (
+        licence LIKE 'CC0%' OR licence LIKE 'CC BY%' OR licence LIKE 'CC-BY%'
+        OR licence LIKE 'Public Domain%' OR licence IN ('مِلكنا', 'ملكنا'))`);
     }
   }
   // Questions from before titles: the old category becomes the title, once.
