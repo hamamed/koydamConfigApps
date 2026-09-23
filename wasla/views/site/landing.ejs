@@ -12,7 +12,7 @@
   <meta property="og:title" content="<%= title %>">
   <meta property="og:description" content="ألغاز كلمات متقاطعة عربية، ولعبة جديدة كل يوم.">
   <meta property="og:locale" content="ar_AR">
-  <meta property="og:image" content="/assets/site/screen-home.png">
+  <meta property="og:image" content="/assets/site/shot-1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Lalezar&display=swap" rel="stylesheet">
@@ -85,10 +85,21 @@
   </div>
 </section>
 
+<%# The store screenshots, at the size the page draws them; width and height are
+    set so nothing jumps while they load. %>
 <section class="wz-shots">
-  <img src="/assets/site/screen-home.png?v=<%= assetVersion %>" alt="شاشة الألغاز في شبّك" width="260" loading="lazy">
-  <img src="/assets/site/screen-daily.png?v=<%= assetVersion %>" alt="لغز اليوم وألعابه الست" width="260" loading="lazy">
-  <img src="/assets/site/screen-level.png?v=<%= assetVersion %>" alt="شبكة لغز داخل اللعبة" width="260" loading="lazy">
+  <% [
+    ['shot-1', 'شبّك — عالم من الذكاء: رحلة تفاعلية تجمع بين الألغاز والمعرفة'],
+    ['shot-2', 'لغز اليوم: خمس ألعاب تُلعب بالترتيب، وجوائز على إكمالها'],
+    ['shot-3', 'شبكة الكلمات المتقاطعة وأنت تملؤها بإصبعك'],
+    ['shot-4', 'أسئلة إسلاميات: أكمل الآية'],
+    ['shot-5', 'أسئلة الصور: ما الذي في الصورة؟'],
+    ['shot-6', 'أسئلة الخرائط والدول'],
+    ['shot-7', 'البحث عن الكلمات في شبكة الحروف'],
+  ].forEach(([file, alt]) => { %>
+    <img src="/assets/site/<%= file %>.jpg?v=<%= assetVersion %>" alt="<%= alt %>"
+         width="260" height="565" loading="lazy" decoding="async">
+  <% }) %>
 </section>
 
 <section class="wz-cta">
