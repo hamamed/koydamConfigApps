@@ -505,23 +505,27 @@ export function adminRouter({
    * draws at random with معلومات عامة taking two of the ten, only from questions no
    * level uses, and only sets whose words cross.
    *
-   * With no difficulty picked the run is a spread — easy levels first, then medium,
-   * then hard — and each level is tagged with the difficulty its questions came from,
-   * which is the order players meet them in.
+   * Any number of difficulties may be picked, and the run is shared between
+   * exactly those, always in the order easy → medium → hard. Picking none is
+   * picking all three. Each level is tagged with the difficulty its questions
+   * came from, which is the order players meet them in.
    */
   router.post('/levels/generate', (req, res) => {
     const chosen = [].concat(req.body.categories ?? []).map((name) => String(name).trim()).filter(Boolean);
-    const difficulty = String(req.body.difficulty ?? '').trim();
+    const grades = [].concat(req.body.difficulty ?? []).map((d) => String(d).trim()).filter(Boolean);
     const count = Math.min(MAX_GENERATED, Math.max(1, Math.round(Number(req.body.count)) || 1));
     const size = Math.min(MAX_LEVEL_SIZE, Math.max(MIN_CATEGORIES, Math.round(Number(req.body.size)) || LEVEL_SIZE));
     const publish = truthy(req.body.publish);
-    if (difficulty && !DIFFICULTIES.includes(difficulty)) {
+    if (grades.some((d) => !DIFFICULTIES.includes(d))) {
       req.flash('danger', `الصعوبة واحدة من: ${DIFFICULTIES.join('، ')}.`);
       return res.redirect('/admin/levels');
     }
 
     const free = freeQuestions();
-    const wanted = difficulty ? [difficulty] : DIFFICULTIES;
+    // Kept in DIFFICULTIES order however they were ticked, and de-duplicated;
+    // ticking none is ticking them all.
+    const picked = DIFFICULTIES.filter((d) => grades.includes(d));
+    const wanted = picked.length ? picked : DIFFICULTIES;
     const taken = usedAnswers();
     const planned = [];
     let ranOutOf = null;

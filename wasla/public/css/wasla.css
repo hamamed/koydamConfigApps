@@ -1072,3 +1072,20 @@ html { scrollbar-gutter: stable; }
   border: var(--wz-line) solid var(--kd-line);
   border-radius: var(--kd-radius-sm);
 }
+
+/* Picking which difficulties a generated run is drawn from. */
+.wz-grades { display: flex; gap: .35rem; }
+.wz-grade {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  padding: .3rem .6rem;
+  border: var(--wz-line) solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+  background: var(--kd-surface);
+  cursor: pointer;
+  font-size: .85rem;
+}
+.wz-grade:has(input:checked) { background: var(--kd-accent-soft); border-color: var(--wz-indigo); }
+.wz-grade input { margin: 0; }

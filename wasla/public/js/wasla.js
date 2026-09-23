@@ -141,7 +141,8 @@
   // The count beside a category is how many free questions it has at the chosen
   // difficulty, so it is clear before generating which category will run out first.
   document.querySelectorAll('[data-generator]').forEach((form) => {
-    const difficulty = form.querySelector('[data-generator-difficulty]');
+    const grades = [...form.querySelectorAll('[data-generator-difficulty]')];
+    const gradeNote = form.querySelector('[data-generator-grades]');
     const categories = [...form.querySelectorAll('[data-generator-category]')];
     // Nothing ticked means every category, so clearing is how you go back to that.
     form.querySelector('[data-generator-clear]')?.addEventListener('click', () => {
@@ -156,23 +157,39 @@
       countable().forEach((box) => { box.checked = true; });
     });
     const showCount = () => { if (allCount) allCount.textContent = countable().length; };
-    if (!difficulty) return;
+    if (!grades.length) { showCount(); return; }
 
-    difficulty.addEventListener('change', () => {
-      const level = difficulty.value || 'any';
+    const NAMES = { easy: 'سهل', medium: 'متوسط', hard: 'صعب' };
+    const field = (name) => `free${name[0].toUpperCase()}${name.slice(1)}`;
+
+    // How many free questions a category has across the ticked difficulties —
+    // all of them when none is ticked, which is what an empty pick means.
+    const freeIn = (box, picked) => (picked.length
+      ? picked.reduce((sum, name) => sum + Number(box.dataset[field(name)] ?? 0), 0)
+      : Number(box.dataset.freeAny ?? 0));
+
+    const refresh = () => {
+      const picked = grades.filter((g) => g.checked).map((g) => g.value);
+      if (gradeNote) {
+        gradeNote.textContent = picked.length
+          ? `${picked.map((name) => NAMES[name] ?? name).join(' ثم ')} — يُقسَّم العدد بينها`
+          : 'الكل — سهل ثم متوسط ثم صعب';
+      }
       categories.forEach((box) => {
-        const free = Number(box.dataset[`free${level[0].toUpperCase()}${level.slice(1)}`] ?? 0);
+        const free = freeIn(box, picked);
         const label = box.closest('label');
         const tag = label?.querySelector('[data-generator-free]');
         if (tag) tag.textContent = free;
-        // Nothing free at this difficulty: the category cannot be part of a level.
+        // Nothing free at any ticked difficulty: the category cannot be part of a level.
         box.disabled = free === 0;
         if (free === 0) box.checked = false;
         label?.classList.toggle('is-disabled', free === 0);
       });
       showCount();
-    });
-    showCount();
+    };
+
+    grades.forEach((g) => g.addEventListener('change', refresh));
+    refresh();
   });
 
   // ── Question picker ───────────────────────────────────────────────────────
