@@ -28,6 +28,10 @@
       <%- icon('calendar-days', 17) %>
       <span>لغز اليوم</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/audio') ? 'is-active' : '' %>" href="/admin/audio">
+      <%- icon('audio-lines', 17) %>
+      <span>مكتبة الأصوات</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/daily-games') ? 'is-active' : '' %>" href="/admin/daily-games">
       <%- icon('list', 17) %>
       <span>قوائم الكلمات</span>

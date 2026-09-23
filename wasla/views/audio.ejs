@@ -1,0 +1,130 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'مكتبة الأصوات',
+          subheading: clips.length + ' مقطعاً · ارفع صوتاً، اقتطع منه ما تريد، ثم اصنع منه سؤالاً',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/questions?type=audio">أسئلة الصوت</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3">
+        <div class="col-xl-5">
+          <form class="ad-card" method="post" action="/admin/audio" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('plus', 16) %>
+              <span class="fw-semibold">مقطع جديد</span>
+            </div>
+            <div class="ad-card-body d-grid gap-3">
+              <div>
+                <label class="form-label small mb-1" for="acSound">ملف الصوت</label>
+                <input class="form-control form-control-sm" type="file" id="acSound" name="sound"
+                       accept=".mp3,.m4a,.aac,.wav,audio/*" required>
+                <div class="form-text">MP3 أو M4A أو AAC أو WAV، حتى <%= maxMb %> ميغابايت. يُقصّ ويُحفظ MP3.</div>
+              </div>
+              <div>
+                <label class="form-label small mb-1" for="acTitle">الاسم</label>
+                <input class="form-control form-control-sm wz-ar" type="text" id="acTitle" name="title" dir="rtl"
+                       maxlength="<%= maxTitle %>" value="<%= draft.title %>" required placeholder="صوت الرعد">
+              </div>
+              <div class="d-flex gap-2">
+                <div class="flex-fill">
+                  <label class="form-label small mb-1" for="acStart">من</label>
+                  <input class="form-control form-control-sm kd-mono" type="text" id="acStart" name="start"
+                         value="<%= draft.start %>" pattern="(\d+:)?\d+(\.\d+)?" placeholder="0:35">
+                  <div class="form-text">ثوانٍ أو د:ث</div>
+                </div>
+                <div class="flex-fill">
+                  <label class="form-label small mb-1" for="acSeconds">لمدة (ثانية)</label>
+                  <input class="form-control form-control-sm kd-mono" type="number" id="acSeconds" name="seconds"
+                         value="<%= draft.seconds %>" min="<%= minSeconds %>" max="<%= maxSeconds %>" required>
+                  <div class="form-text"><%= minSeconds %>–<%= maxSeconds %> ثانية</div>
+                </div>
+              </div>
+              <div>
+                <label class="form-label small mb-1" for="acSource">المصدر (رابط)</label>
+                <input class="form-control form-control-sm kd-mono" type="url" id="acSource" name="source"
+                       value="<%= draft.source %>" placeholder="https://freesound.org/s/…">
+              </div>
+              <div class="d-flex gap-2">
+                <div class="flex-fill">
+                  <label class="form-label small mb-1" for="acLicence">الرخصة</label>
+                  <input class="form-control form-control-sm" type="text" id="acLicence" name="licence"
+                         list="acLicences" value="<%= draft.licence %>" placeholder="CC0">
+                  <datalist id="acLicences">
+                    <% licences.forEach((l) => { %><option value="<%= l %>"></option><% }) %>
+                  </datalist>
+                </div>
+                <div class="flex-fill">
+                  <label class="form-label small mb-1" for="acAuthor">صاحبه</label>
+                  <input class="form-control form-control-sm" type="text" id="acAuthor" name="author"
+                         value="<%= draft.author %>">
+                </div>
+              </div>
+              <p class="small kd-muted mb-0">
+                لا تُرفع إلا أصوات تملكها أو رخصتها تسمح بذلك (CC0، CC BY، CC BY-SA، ملك عام).
+                الرخصة تُحفظ مع المقطع وتظهر في صفحة <a href="/credits" target="_blank" rel="noopener">الاعتمادات</a>.
+              </p>
+              <button class="btn btn-kd" type="submit">اقتطع واحفظ</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-xl-7">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('audio-lines', 16) %>
+              <span class="fw-semibold me-auto">المكتبة</span>
+              <span class="kd-faint small"><%= clips.length %> مقطعاً</span>
+            </div>
+            <div class="ad-card-body p-0">
+              <% if (!clips.length) { %>
+                <div class="ad-empty"><%- icon('audio-lines', 28) %><p class="mb-0">لا مقاطع بعد.</p></div>
+              <% } else { %>
+                <div class="ad-table-wrap">
+                  <table class="ad-table">
+                    <thead><tr><th>المقطع</th><th>المدة</th><th>الرخصة</th><th>يُستعمل</th><th></th></tr></thead>
+                    <tbody>
+                      <% clips.forEach((c) => { %>
+                        <tr>
+                          <td>
+                            <div class="wz-ar fw-semibold"><%= c.title %></div>
+                            <audio class="wz-audio" controls preload="none" src="<%= audioUrl(c.file) %>"></audio>
+                            <% if (c.source) { %>
+                              <div class="small kd-faint text-truncate wz-audio-src">
+                                <a href="<%= c.source %>" target="_blank" rel="noopener noreferrer"><%= c.source %></a>
+                              </div>
+                            <% } %>
+                          </td>
+                          <td class="kd-mono"><%= c.length %></td>
+                          <td>
+                            <% if (c.licence) { %><span class="kd-tag kd-tag-ok"><%= c.licence %></span>
+                            <% } else { %><span class="kd-tag kd-tag-warn" title="بلا رخصة لا يجوز تشغيله في التطبيق">بلا رخصة</span><% } %>
+                            <% if (c.author) { %><div class="small kd-faint"><%= c.author %></div><% } %>
+                          </td>
+                          <td><% if (c.used) { %><a href="/admin/questions?q=<%= encodeURIComponent(c.title) %>"><%= c.used %></a><% } else { %><span class="kd-faint">—</span><% } %></td>
+                          <td class="text-end text-nowrap">
+                            <a class="btn btn-sm btn-kd-outline" href="/admin/questions/new?audio=<%= c.id %>">اصنع سؤالاً</a>
+                            <form class="d-inline m-0" method="post" action="/admin/audio/<%= c.id %>/delete"
+                                  data-confirm="حذف «<%= c.title %>» من المكتبة؟">
+                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                              <button class="btn btn-sm btn-kd-ghost" type="submit" aria-label="حذف <%= c.title %>"><%- icon('trash-2', 14) %></button>
+                            </form>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -1057,3 +1057,7 @@ html { scrollbar-gutter: stable; }
 .wz-ws-pick input { flex: none; margin: 0; }
 .wz-ws-name { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; min-width: 0; }
 .wz-ws-open { flex: none; margin-inline-start: auto; display: inline-flex; }
+
+/* The sound library's players and their source lines. */
+.wz-audio { display: block; width: min(260px, 100%); height: 32px; margin-top: .35rem; }
+.wz-audio-src { max-width: 260px; }

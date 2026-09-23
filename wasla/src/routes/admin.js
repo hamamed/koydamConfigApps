@@ -17,6 +17,7 @@ import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM, truthy } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerDailyGames } from './admin-daily-games.js';
 import { registerDays } from './admin-days.js';
+import { registerAudio } from './admin-audio.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { registerPlayers } from './admin-players.js';
@@ -48,7 +49,7 @@ function share(total, parts) {
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
+  repo, images, audio, audioClips = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
 }) {
   const router = express.Router();
 
@@ -273,9 +274,17 @@ export function adminRouter({
     titles: titleNames(),
   });
 
-  // `?title=حيوانات` (from the Titles page) starts the new question with that title.
-  router.get('/questions/new', (req, res) => renderForm(res, { ...blankQuestion, title: String(req.query.title ?? '').trim().slice(0, 40) },
-    { levelId: req.query.level }));
+  // `?title=حيوانات` (from the Titles page) starts the new question with that
+  // title; `?audio=3` (from the sound library) starts it as a sound question
+  // already playing that clip.
+  router.get('/questions/new', (req, res) => {
+    const clip = audioClips?.get(req.query.audio) ?? null;
+    renderForm(res, {
+      ...blankQuestion,
+      title: String(req.query.title ?? '').trim().slice(0, 40),
+      ...(clip ? { type: 'audio', audioFile: clip.file, clue: clip.title } : {}),
+    }, { levelId: req.query.level });
+  });
 
   router.get('/questions/:id', (req, res, next) => {
     const question = repo.getQuestion(Number(req.params.id));
@@ -325,6 +334,10 @@ export function adminRouter({
       input.audioFile = saved.file;
     } else if (req.body.removeAudio === '1') {
       input.audioFile = null;
+    } else if (typeof req.body.audioFile === 'string' && audio.owns(req.body.audioFile)) {
+      // A clip picked from the sound library: the form carries its stored name,
+      // and only a name this store could have generated is taken.
+      input.audioFile = req.body.audioFile;
     }
     return { input };
   }
@@ -697,6 +710,7 @@ export function adminRouter({
 
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports, titleNames });
+  if (audioClips) registerAudio(router, { audioClips, repo });
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });

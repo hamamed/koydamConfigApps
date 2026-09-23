@@ -314,3 +314,25 @@ CREATE TABLE IF NOT EXISTS lab_lists (
   body        TEXT NOT NULL,
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ── v9 ──────────────────────────────────────────────────────────────────────
+
+-- The sound library: every clip the panel holds, whether or not a question
+-- uses it yet. `file` is a generated name under the audio directory, the same
+-- store questions.audio_file reads from, so making a question from a clip
+-- points at the file already there rather than copying it.
+--
+-- `source`, `licence` and `author` are what lets the clip be shipped: a sound
+-- with no licence is a sound nobody may hear in the app.
+CREATE TABLE IF NOT EXISTS audio_clips (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  file        TEXT NOT NULL UNIQUE,
+  title       TEXT NOT NULL,
+  source      TEXT,
+  licence     TEXT,
+  author      TEXT,
+  seconds     INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_audio_clips_created ON audio_clips(created_at DESC);
