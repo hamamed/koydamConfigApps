@@ -94,9 +94,10 @@
               </div>
               <div class="ad-card-body d-grid gap-3">
                 <p class="small kd-muted mb-0">
-                  أي فيديو يُجلب. ما رخّصه صاحبه «<%= ccBy %>» يصل <strong>جاهزاً للنشر</strong>؛
-                  وأي فيديو آخر يصل <strong>محجوزاً</strong> — تسمعه هنا، ولا يصل التطبيق حتى تسجّل
-                  الإذن عليه من عمود «النشر». اضغط <strong>افحص</strong> لترى الرخصة قبل التحويل.
+                  <strong>استمع</strong> يشغّل المقطع من مشغّل يوتيوب نفسه — لا يُجلب ولا يُحفظ عندنا شيء،
+                  فجرّب به المرشّحين قبل أن تقرّر. <strong>افحص</strong> يريك الرخصة.
+                  و<strong>حوّل واحفظ</strong> يجلبه: ما رخّصه صاحبه «<%= ccBy %>» يصل <strong>جاهزاً للنشر</strong>،
+                  وأي فيديو آخر يصل <strong>محجوزاً</strong> فلا يبلغ التطبيق حتى تسجّل الإذن في عمود «النشر».
                 </p>
                 <form method="post" action="/admin/audio/youtube" class="d-grid gap-3" id="ytForm">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -128,10 +129,14 @@
                            list="acCategories" maxlength="<%= maxCategory %>" value="<%= chosen || youtube.category %>">
                   </div>
                   <div class="d-flex gap-2">
+                    <button class="btn btn-kd-outline" type="button" id="ytListen">استمع</button>
                     <button class="btn btn-kd-outline" type="submit" formaction="/admin/audio/youtube/check">افحص</button>
                     <button class="btn btn-kd flex-fill" type="submit">حوّل واحفظ</button>
                   </div>
                 </form>
+                <%# Plays the piece from YouTube's own player, so a candidate can
+                    be judged before anything is fetched or stored here. %>
+                <div id="ytStage" class="wz-yt-stage d-none"></div>
                 <p class="small kd-faint mb-0">
                   يُجلب فقط ما طلبته من ثوانٍ، لا الفيديو كاملاً. العنوان والقناة والرابط تُحفظ مع المقطع،
                   فيبقى معروفاً من أين جاء حين تطلب الإذن.
@@ -238,4 +243,55 @@
     </div>
   </main>
 </div>
+<script>
+  // «استمع»: the piece played from YouTube itself, in YouTube's own player.
+  // Nothing is fetched or stored by pressing it — it is for judging a candidate
+  // before deciding whether it is worth having at all.
+  (() => {
+    const button = document.getElementById('ytListen');
+    if (!button) return;
+    const stage = document.getElementById('ytStage');
+
+    const videoId = (raw) => {
+      const text = String(raw || '').trim();
+      if (/^[A-Za-z0-9_-]{11}$/.test(text)) return text;
+      let url;
+      try { url = new URL(text.startsWith('http') ? text : 'https://' + text); } catch { return null; }
+      const host = url.hostname.replace(/^www\.|^m\./, '').toLowerCase();
+      const found = host === 'youtu.be'
+        ? url.pathname.slice(1)
+        : (host === 'youtube.com' || host === 'youtube-nocookie.com')
+          ? (url.searchParams.get('v') || url.pathname.replace(/^\/(shorts|embed|v|live)\//, ''))
+          : '';
+      const id = String(found).split('/')[0];
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+    };
+
+    const seconds = (raw) => {
+      const text = String(raw || '0').trim();
+      if (!/^(\d+:)?\d+(\.\d+)?$/.test(text)) return null;
+      const parts = text.split(':');
+      return parts.length === 1 ? Number(parts[0]) : Number(parts[0]) * 60 + Number(parts[1]);
+    };
+
+    button.addEventListener('click', () => {
+      const id = videoId(document.getElementById('ytUrl').value);
+      stage.textContent = '';
+      stage.classList.remove('d-none');
+      if (!id) {
+        stage.textContent = 'هذا ليس رابط فيديو يوتيوب.';
+        return;
+      }
+      const from = seconds(document.getElementById('ytStart').value) ?? 0;
+      const length = Number(document.getElementById('ytSeconds').value) || 8;
+      const frame = document.createElement('iframe');
+      frame.src = 'https://www.youtube-nocookie.com/embed/' + id
+        + '?start=' + Math.floor(from) + '&end=' + Math.ceil(from + length) + '&autoplay=1&rel=0';
+      frame.title = 'معاينة المقطع';
+      frame.allow = 'autoplay; encrypted-media';
+      frame.setAttribute('allowfullscreen', '');
+      stage.append(frame);
+    });
+  })();
+</script>
 <%- include('partials/foot') %>

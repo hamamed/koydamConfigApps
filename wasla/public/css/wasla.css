@@ -1063,3 +1063,12 @@ html { scrollbar-gutter: stable; }
 .wz-audio-src { max-width: 260px; }
 .wz-audio-cat { width: 9rem; }
 .wz-audio-note { width: 10rem; }
+
+/* Auditioning a YouTube candidate in the panel, in YouTube's own player. */
+.wz-yt-stage { margin-top: .75rem; font-size: .85rem; color: var(--kd-muted); }
+.wz-yt-stage iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: var(--wz-line) solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+}
