@@ -4,7 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'مكتبة الأصوات',
-          subheading: clips.length + ' مقطعاً · ارفع صوتاً، اقتطع منه ما تريد، ثم اصنع منه سؤالاً',
+          subheading: total + ' مقطعاً · ارفع صوتاً، اقتطع منه ما تريد، ضعه في فئة، ثم اصنع منه سؤالاً',
           actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/questions?type=audio">أسئلة الصوت</a>'
         }) %>
     <div class="ad-content">
@@ -29,6 +29,17 @@
                 <label class="form-label small mb-1" for="acTitle">الاسم</label>
                 <input class="form-control form-control-sm wz-ar" type="text" id="acTitle" name="title" dir="rtl"
                        maxlength="<%= maxTitle %>" value="<%= draft.title %>" required placeholder="صوت الرعد">
+              </div>
+              <div>
+                <label class="form-label small mb-1" for="acCategory">الفئة</label>
+                <input class="form-control form-control-sm wz-ar" type="text" id="acCategory" name="category" dir="rtl"
+                       list="acCategories" maxlength="<%= maxCategory %>"
+                       value="<%= chosen || draft.category %>" placeholder="أصوات الحيوانات">
+                <datalist id="acCategories">
+                  <% titles.forEach((t) => { %><option value="<%= t %>"></option><% }) %>
+                  <% groups.forEach((g) => { if (g.name && !titles.includes(g.name)) { %><option value="<%= g.name %>"></option><% } }) %>
+                </datalist>
+                <div class="form-text">نفس فئات الأسئلة. السؤال المصنوع من المقطع يبدأ بها.</div>
               </div>
               <div class="d-flex gap-2">
                 <div class="flex-fill">
@@ -75,18 +86,28 @@
 
         <div class="col-xl-7">
           <div class="ad-card h-100">
-            <div class="ad-card-head d-flex align-items-center gap-2">
+            <div class="ad-card-head d-flex align-items-center gap-2 flex-wrap">
               <%- icon('audio-lines', 16) %>
-              <span class="fw-semibold me-auto">المكتبة</span>
-              <span class="kd-faint small"><%= clips.length %> مقطعاً</span>
+              <span class="fw-semibold">المكتبة</span>
+              <span class="kd-faint small me-auto"><%= clips.length %> مقطعاً</span>
             </div>
+            <% if (groups.length) { %>
+              <div class="ad-card-body d-flex flex-wrap gap-1 border-bottom">
+                <a class="btn btn-sm <%= chosen === null ? 'btn-kd' : 'btn-kd-ghost' %>" href="/admin/audio">الكل (<%= total %>)</a>
+                <% groups.forEach((g) => { %>
+                  <a class="btn btn-sm <%= chosen === g.name ? 'btn-kd' : 'btn-kd-ghost' %> wz-ar"
+                     href="/admin/audio?category=<%= encodeURIComponent(g.name) %>"><%= g.name || 'بلا فئة' %> (<%= g.total %>)</a>
+                <% }) %>
+              </div>
+            <% } %>
             <div class="ad-card-body p-0">
               <% if (!clips.length) { %>
-                <div class="ad-empty"><%- icon('audio-lines', 28) %><p class="mb-0">لا مقاطع بعد.</p></div>
+                <div class="ad-empty"><%- icon('audio-lines', 28) %>
+                  <p class="mb-0"><%= chosen === null ? 'لا مقاطع بعد.' : 'لا مقاطع في هذه الفئة.' %></p></div>
               <% } else { %>
                 <div class="ad-table-wrap">
                   <table class="ad-table">
-                    <thead><tr><th>المقطع</th><th>المدة</th><th>الرخصة</th><th>يُستعمل</th><th></th></tr></thead>
+                    <thead><tr><th>المقطع</th><th>الفئة</th><th>المدة</th><th>الرخصة</th><th>يُستعمل</th><th></th></tr></thead>
                     <tbody>
                       <% clips.forEach((c) => { %>
                         <tr>
@@ -98,6 +119,20 @@
                                 <a href="<%= c.source %>" target="_blank" rel="noopener noreferrer"><%= c.source %></a>
                               </div>
                             <% } %>
+                          </td>
+                          <td>
+                            <%# Moving a clip to another category is a save of its own — no re-upload. %>
+                            <form class="d-flex gap-1 m-0" method="post" action="/admin/audio/<%= c.id %>">
+                              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                              <input type="hidden" name="title" value="<%= c.title %>">
+                              <input type="hidden" name="source" value="<%= c.source || '' %>">
+                              <input type="hidden" name="licence" value="<%= c.licence || '' %>">
+                              <input type="hidden" name="author" value="<%= c.author || '' %>">
+                              <input class="form-control form-control-sm wz-ar wz-audio-cat" type="text" name="category" dir="rtl"
+                                     list="acCategories" maxlength="<%= maxCategory %>" value="<%= c.category || '' %>"
+                                     aria-label="فئة <%= c.title %>" placeholder="بلا فئة">
+                              <button class="btn btn-sm btn-kd-outline" type="submit">حفظ</button>
+                            </form>
                           </td>
                           <td class="kd-mono"><%= c.length %></td>
                           <td>

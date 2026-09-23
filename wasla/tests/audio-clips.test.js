@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { beforeEach, test } from 'node:test';
 import { promisify } from 'node:util';
 
-import { clockText, createAudioClips, MAX_SECONDS, readTime } from '../src/audio-clips.js';
+import { clockText, createAudioClips, MAX_CATEGORY, MAX_SECONDS, readTime } from '../src/audio-clips.js';
 import { createAudioStore } from '../src/audio.js';
 import { openDatabase } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
@@ -46,10 +46,12 @@ test('a time is read as seconds or as m:ss, and printed back as m:ss', () => {
 
 test('a clip is cut from the file at the asked place, and kept with its licence', async () => {
   const { clip, error } = await clips.save(FAKE_MP3, {
-    title: 'صوت الرعد', start: '1:05', seconds: '8', source: 'https://freesound.org/s/1', licence: 'CC0', author: 'someone',
+    title: 'صوت الرعد', category: 'أصوات الطبيعة', start: '1:05', seconds: '8',
+    source: 'https://freesound.org/s/1', licence: 'CC0', author: 'someone',
   });
   assert.equal(error, undefined);
-  assert.deepEqual([clip.title, clip.licence, clip.author, clip.source], ['صوت الرعد', 'CC0', 'someone', 'https://freesound.org/s/1']);
+  assert.deepEqual([clip.title, clip.category, clip.licence, clip.author, clip.source],
+    ['صوت الرعد', 'أصوات الطبيعة', 'CC0', 'someone', 'https://freesound.org/s/1']);
   // ffmpeg was asked for exactly that piece.
   assert.equal(cuts[0][cuts[0].indexOf('-ss') + 1], '65');
   assert.equal(cuts[0][cuts[0].indexOf('-t') + 1], '8');
@@ -92,6 +94,30 @@ test('a clip a question plays keeps its file when it leaves the library', async 
   assert.ok(await fs.stat(`${root}/${kept.file}`), 'the question still has its sound');
   await assert.rejects(fs.stat(`${root}/${loose.file}`), 'the unused one is gone from disk');
   assert.match((await clips.remove(kept.id, { inUse: () => false })).error, /لا مقطع/);
+});
+
+test('clips are kept in categories, counted and filtered by them', async () => {
+  const put = (title, category) => clips.save(FAKE_MP3, { title, category, start: '0', seconds: '5' });
+  await put('رعد', 'أصوات الطبيعة');
+  await put('مطر', ' أصوات   الطبيعة ');     // spaces squeezed, so it lands in the same one
+  await put('عود', 'آلات موسيقية');
+  await put('مجهول', '   ');                  // nothing but spaces is no category at all
+
+  assert.deepEqual(clips.categories().map((g) => [g.name, g.total]),
+    [['آلات موسيقية', 1], ['أصوات الطبيعة', 2], ['', 1]], 'the uncategorised come last');
+  assert.deepEqual(clips.list({ category: 'أصوات الطبيعة' }).map((c) => c.title), ['مطر', 'رعد']);
+  assert.deepEqual(clips.list({ category: '' }).map((c) => c.title), ['مجهول'], 'the empty name is those with none');
+  assert.equal(clips.list().length, 4, 'and no filter is the whole library');
+
+  const long = (await put('طويل', 'ف'.repeat(MAX_CATEGORY + 20))).clip;
+  assert.equal([...long.category].length, MAX_CATEGORY);
+});
+
+test('a clip moves to another category without being uploaded again', async () => {
+  const { clip } = await clips.save(FAKE_MP3, { title: 'عود', category: 'أصوات الطبيعة', start: '0', seconds: '5' });
+  const { clip: moved } = clips.update(clip.id, { title: clip.title, category: 'آلات موسيقية' });
+  assert.deepEqual([moved.category, moved.file], ['آلات موسيقية', clip.file], 'same file, new category');
+  assert.equal(clips.update(clip.id, { title: clip.title, category: '' }).clip.category, null);
 });
 
 test('a clip can be renamed and re-credited', async () => {

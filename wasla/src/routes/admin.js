@@ -282,7 +282,7 @@ export function adminRouter({
     renderForm(res, {
       ...blankQuestion,
       title: String(req.query.title ?? '').trim().slice(0, 40),
-      ...(clip ? { type: 'audio', audioFile: clip.file, clue: clip.title } : {}),
+      ...(clip ? { type: 'audio', audioFile: clip.file, clue: clip.title, title: clip.category ?? '' } : {}),
     }, { levelId: req.query.level });
   });
 
@@ -710,7 +710,7 @@ export function adminRouter({
 
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports, titleNames });
-  if (audioClips) registerAudio(router, { audioClips, repo });
+  if (audioClips) registerAudio(router, { audioClips, repo, titleNames });
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });

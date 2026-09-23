@@ -328,6 +328,8 @@ CREATE TABLE IF NOT EXISTS audio_clips (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   file        TEXT NOT NULL UNIQUE,
   title       TEXT NOT NULL,
+  -- What the clip is of, from the same list questions take their فئة from.
+  category    TEXT,
   source      TEXT,
   licence     TEXT,
   author      TEXT,

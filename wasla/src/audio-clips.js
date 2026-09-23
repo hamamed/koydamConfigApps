@@ -16,6 +16,10 @@ const run = promisify(execFile);
  * ffmpeg; without ffmpeg the upload is refused rather than stored whole, so a
  * library of full tracks never builds up by accident.
  *
+ * A clip also carries a `category`, from the same list questions take their
+ * فئة from: it is what lets a library of hundreds be found, and a question
+ * made from a clip starts in that category.
+ *
  * Nothing here fetches a sound from anywhere. A clip is made from a file the
  * panel is given, and `source`, `licence` and `author` say where it came from
  * and on what terms — a clip with no licence is one the app must not play.
@@ -24,6 +28,7 @@ const run = promisify(execFile);
 export const MAX_SECONDS = 30;
 export const MIN_SECONDS = 1;
 export const MAX_TITLE = 120;
+export const MAX_CATEGORY = 30;
 /** What the panel offers; anything else may be typed. */
 export const LICENCES = Object.freeze(['CC0', 'CC BY 4.0', 'CC BY-SA 4.0', 'Public Domain', 'مِلكنا']);
 
@@ -57,14 +62,29 @@ async function lengthOf(file) {
 }
 
 export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
-  const insert = db.prepare(`INSERT INTO audio_clips (file, title, source, licence, author, seconds)
-    VALUES (@file, @title, @source, @licence, @author, @seconds)`);
+  const insert = db.prepare(`INSERT INTO audio_clips (file, title, category, source, licence, author, seconds)
+    VALUES (@file, @title, @category, @source, @licence, @author, @seconds)`);
 
-  /** Every clip, newest first, with how many questions use it. */
-  function list() {
+  const readCategory = (raw) => {
+    const clean = String(raw ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_CATEGORY);
+    return clean || null;
+  };
+
+  /**
+   * Clips, newest first, with how many questions use each.
+   * `category` narrows it; the empty string is the clips with none.
+   */
+  function list({ category = null } = {}) {
+    const where = category === null ? ''
+      : category === '' ? "WHERE IFNULL(trim(c.category), '') = ''"
+        : 'WHERE trim(c.category) = @category';
     return db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM questions q WHERE q.audio_file = c.file) AS used
-      FROM audio_clips c ORDER BY c.created_at DESC, c.id DESC`).all();
+      FROM audio_clips c ${where} ORDER BY c.created_at DESC, c.id DESC`).all({ category: String(category ?? '') });
   }
+
+  /** The categories in use, and how many clips each holds — the uncategorised last. */
+  const categories = () => db.prepare(`SELECT IFNULL(NULLIF(trim(category), ''), '') AS name, COUNT(*) AS total
+    FROM audio_clips GROUP BY name ORDER BY (name = '') ASC, name ASC`).all();
 
   const get = (id) => db.prepare('SELECT * FROM audio_clips WHERE id = ?').get(Number(id)) ?? null;
 
@@ -72,7 +92,7 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
    * Cuts `buffer` from `start` for `seconds` and keeps the piece.
    * `{ clip }`, or `{ error }` — and nothing is stored when anything is wrong.
    */
-  async function save(buffer, { title, start = 0, seconds, source = '', licence = '', author = '' }) {
+  async function save(buffer, { title, category = '', start = 0, seconds, source = '', licence = '', author = '' }) {
     const name = String(title ?? '').trim().slice(0, MAX_TITLE);
     if (!name) return { error: 'اكتب اسماً للمقطع.' };
     if (!sniffAudio(buffer)) return { error: 'الملف ليس MP3 أو M4A أو AAC أو WAV.' };
@@ -108,6 +128,7 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
       const id = insert.run({
         file: stored.file,
         title: name,
+        category: readCategory(category),
         source: String(source ?? '').trim().slice(0, 500) || null,
         licence: String(licence ?? '').trim().slice(0, 80) || null,
         author: String(author ?? '').trim().slice(0, 120) || null,
@@ -119,14 +140,14 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
     }
   }
 
-  /** Renames a clip, or re-credits it. */
-  function update(id, { title, source, licence, author }) {
+  /** Renames a clip, moves it to another category, or re-credits it. */
+  function update(id, { title, category, source, licence, author }) {
     const clip = get(id);
     if (!clip) return { error: 'لا مقطع بهذا الرقم.' };
     const name = String(title ?? '').trim().slice(0, MAX_TITLE);
     if (!name) return { error: 'اكتب اسماً للمقطع.' };
-    db.prepare(`UPDATE audio_clips SET title = ?, source = ?, licence = ?, author = ? WHERE id = ?`)
-      .run(name, String(source ?? '').trim().slice(0, 500) || null,
+    db.prepare('UPDATE audio_clips SET title = ?, category = ?, source = ?, licence = ?, author = ? WHERE id = ?')
+      .run(name, readCategory(category), String(source ?? '').trim().slice(0, 500) || null,
         String(licence ?? '').trim().slice(0, 80) || null,
         String(author ?? '').trim().slice(0, 120) || null, clip.id);
     return { clip: get(clip.id) };
@@ -144,5 +165,5 @@ export function createAudioClips(db, { audio, tools = { run, lengthOf } }) {
     return { removed: clip };
   }
 
-  return { list, get, save, update, remove };
+  return { list, categories, get, save, update, remove };
 }

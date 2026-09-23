@@ -53,6 +53,9 @@ const ADDITIVE_COLUMNS = [
   ['questions', 'image_source', 'TEXT'],
   // easy | medium | hard, or null when not set: lets levels be built from easy questions first.
   ['questions', 'difficulty', 'TEXT'],
+  // What a clip is of — أصوات الحيوانات، آلات موسيقية — so a library of hundreds
+  // can be found, and so a question made from it starts with that category.
+  ['audio_clips', 'category', 'TEXT'],
 ];
 
 /** Adds a column when it is missing. Safe to run on every boot. True when it added one. */
