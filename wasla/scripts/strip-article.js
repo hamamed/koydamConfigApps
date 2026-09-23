@@ -12,10 +12,10 @@
  * إسلاميات, historical figures, places, landmarks, flags, logos and players are
  * left alone entirely — «ال» is part of the answer there, not decoration.
  *
- * **The KEEP list.** Inside those five there are still proper nouns — الأزهر,
- * المتنبي, الأمازون, المريخ — and a rule cannot tell them from القلم. They are
- * named here one by one, because the alternative is a rule that quietly
- * mangles a hundred answers.
+ * **The keep list** (src/article-policy.js). Inside those five there are still
+ * proper nouns — الأزهر, المتنبي, الأمازون, المريخ — and a rule cannot tell them
+ * from القلم, so they are named one by one. The Answers page reads the same
+ * list, so what it offers and what this sweeps are the same set.
  *
  * The change goes through the repository, not the database, so the levels that
  * use a changed answer are laid out again the way any edit would do it.
@@ -23,36 +23,10 @@
 import fs from 'node:fs';
 
 import { withoutArticle } from '../src/arabic.js';
-import { NOUN_CATEGORIES } from '../src/article-policy.js';
+import { KEEP_ARTICLE, NOUN_CATEGORIES } from '../src/article-policy.js';
 import { db } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
 
-/** Proper nouns inside those categories: names of people, places, works and bodies. */
-const KEEP = new Set([
-  // Places, countries, cities, rivers, mountains, seas
-  'الأرجنتين', 'الأطلس', 'الأقصر', 'الألب', 'الأمازون', 'الأندلس', 'الأنديز', 'الإسكندرية',
-  'الإمارات', 'البتراء', 'البحرين', 'البرازيل', 'البندقية', 'الجزائر', 'الحديبية', 'الخرطوم',
-  'الدانوب', 'الدوحة', 'الرباط', 'الرياض', 'الزوراء', 'السعودية', 'السودان', 'السويد',
-  'السيبيري', 'الشهباء', 'الصين', 'العراق', 'الغانج', 'الفاتيكان', 'الفرات', 'الفولغا',
-  'الفيحاء', 'القادسية', 'القاهرة', 'القدس', 'القسطنطينية', 'القيروان', 'القرويين', 'الكرملين',
-  'الكويت', 'الكولوسيوم', 'اللوفر', 'المحروسة', 'المغرب', 'المكسيك', 'المملكة', 'المنامة',
-  'المتوسط', 'النيل', 'الهند', 'الهيمالايا', 'اليابان', 'اليرموك', 'اليمن', 'اليونان',
-  'الخندق', 'الروضة', 'التايمز', 'البنتاغون',
-  // Planets
-  'المريخ', 'المشتري', 'الزهرة',
-  // People, dynasties, peoples
-  'الأصفهاني', 'الإدريسي', 'الإسكندر', 'البخاري', 'الخنساء', 'الخوارزمي', 'الرازي', 'الطبري',
-  'السومريون', 'الفاطميون', 'الفراعنة', 'الفينيقيون', 'الليديون', 'المتنبي', 'المعري', 'المماليك',
-  'المنصور', 'الأيوبية', 'الفاروق', 'القادر', 'الفاتح', 'العاص', 'الرشيد', 'المعتصم',
-  // Works, awards, bodies, institutions
-  'الأغاني', 'البخلاء', 'الإنجيل', 'المعلقات', 'المعلقة', 'المقامات', 'المقدمة', 'الموناليزا',
-  'الأوسكار', 'اليونسكو', 'اليونيسف', 'الأزهر', 'النظامية', 'المستنصرية', 'البديع',
-  // Quran chapters and Islamic proper nouns that slipped into general knowledge
-  'الكوثر', 'التوبة', 'البقرة', 'النبوي', 'الهجرة', 'الطور',
-  // Monuments and epithets that read as ordinary nouns once the article is off:
-  // «الحمراء» is the palace, «الزيتونة» the mosque, «الصديق» أبو بكر.
-  'الحمراء', 'الزيتونة', 'الصديق', 'العين', 'الفيصل', 'الكعبة',
-]);
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
@@ -78,7 +52,7 @@ if (revertAt >= 0) {
 }
 
 const rows = repo.listQuestions()
-  .filter((q) => NOUN_CATEGORIES.includes(q.title) && !KEEP.has(q.answer.trim()))
+  .filter((q) => NOUN_CATEGORIES.includes(q.title) && !KEEP_ARTICLE.has(q.answer.trim()))
   .map((q) => ({ q, bare: withoutArticle(q.answer) }))
   .filter(({ bare }) => bare);
 
@@ -88,7 +62,7 @@ const spoken = new Map();
 for (const q of repo.listQuestions()) spoken.set(q.playAnswer, (spoken.get(q.playAnswer) ?? 0) + 1);
 
 console.log(`  ${rows.length} جواباً مرشَّحاً في: ${NOUN_CATEGORIES.join('، ')}`);
-console.log(`  ${KEEP.size} اسماً علماً مستثنى، وبقية الفئات لم تُمسّ.\n`);
+console.log(`  ${KEEP_ARTICLE.size} اسماً علماً مستثنى، وبقية الفئات لم تُمسّ.\n`);
 
 if (!apply) {
   rows.slice(0, 40).forEach(({ q, bare }) => console.log(`    ${q.answer}  ←  ${bare}`));

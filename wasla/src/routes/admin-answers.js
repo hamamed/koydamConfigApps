@@ -1,5 +1,5 @@
 import { withoutArticle } from '../arabic.js';
-import { isNounCategory } from '../article-policy.js';
+import { isNounCategory, KEEP_ARTICLE } from '../article-policy.js';
 
 /**
  * Every answer in the bank on one page, so the words themselves can be read
@@ -54,9 +54,11 @@ export function registerAnswers(router, { repo, titleNames }) {
         levelCount: q.levelCount,
         // Null when taking the article off would not leave an answer, and only
         // offered where the category's answers are ordinary nouns.
-        bare: isNounCategory(q.title) ? withoutArticle(q.answer) : null,
+        bare: isNounCategory(q.title) && !KEEP_ARTICLE.has(q.answer.trim())
+          ? withoutArticle(q.answer) : null,
         // Said on a row that carries «ال» but must keep it.
-        keeps: !isNounCategory(q.title) && q.answer.trim().startsWith('ال'),
+        keeps: q.answer.trim().startsWith('ال')
+          && (!isNounCategory(q.title) || KEEP_ARTICLE.has(q.answer.trim())),
       }));
 
     res.render('answers', {
@@ -64,6 +66,8 @@ export function registerAnswers(router, { repo, titleNames }) {
       // So the strip button returns to the listing it was pressed on.
       currentUrl: req.originalUrl,
       rows,
+      // How many of the drawn rows may be ticked, for the bulk bar.
+      strippable: rows.filter((r) => r.bare).length,
       matched: matching.length,
       shown: rows.length,
       pageRows: PAGE_ROWS,
@@ -80,23 +84,52 @@ export function registerAnswers(router, { repo, titleNames }) {
 
   router.get('/answers', page);
 
-  /** Takes «ال» off one answer, and keeps where you were looking. */
-  router.post('/answers/:id/strip', (req, res) => {
-    const question = repo.getQuestion(Number(req.params.id));
-    const bare = question && isNounCategory(question.title) && withoutArticle(question.answer);
-    if (!bare) {
-      req.flash('danger', question && !isNounCategory(question.title)
-        ? `«${question.answer}» في فئة أسماء علم — «ال» جزء من الجواب. عدّله من صفحة السؤال إن أردت.`
-        : 'لا يمكن حذف «ال» من هذا الجواب.');
+  /**
+   * Takes «ال» off the answers ticked — or off the one whose own button was
+   * pressed (`only`). Every id is put through the same two checks the page
+   * used to decide whether to offer it at all, because a form can be sent with
+   * anything in it.
+   */
+  router.post('/answers/strip', (req, res) => {
+    const ids = (req.body.only ? [req.body.only] : [].concat(req.body.ids ?? []))
+      .map((id) => Number(id)).filter(Number.isInteger);
+    if (!ids.length) {
+      req.flash('warning', 'لم تحدّد شيئاً.');
       return res.redirect(back(req));
     }
-    const result = repo.updateQuestion(question.id, { answer: bare });
-    if (result.error) req.flash('danger', result.error);
-    else {
-      const lost = result.unpublished?.length ?? 0;
-      req.flash('success', `«${question.answer}» صار «${bare}».`
-        + (lost ? ` وأُلغي نشر ${lost} لغزاً لم تعد كلماته تتقاطع.` : ''));
+
+    const done = [];
+    const refused = [];
+    let unpublished = 0;
+    for (const id of ids) {
+      const question = repo.getQuestion(id);
+      const bare = question && isNounCategory(question.title)
+        && !KEEP_ARTICLE.has(question.answer.trim()) && withoutArticle(question.answer);
+      if (!bare) {
+        refused.push(question?.answer ?? `#${id}`);
+        continue;
+      }
+      const result = repo.updateQuestion(id, { answer: bare });
+      if (result.error) refused.push(`${question.answer} (${result.error})`);
+      else {
+        done.push(`${question.answer} ← ${bare}`);
+        unpublished += result.unpublished?.length ?? 0;
+      }
     }
+
+    // The flash holds one message, so what was done and what was refused are
+    // said together — otherwise the second call silently replaces the first.
+    const parts = [];
+    if (done.length) {
+      // One answer says which; many say how many, and name the first few.
+      parts.push(done.length === 1 ? `«${done[0]}».`
+        : `حُذفت «ال» من ${done.length} جواباً: ${done.slice(0, 3).join('، ')}${done.length > 3 ? '…' : ''}`);
+      if (unpublished) parts.push(`وأُلغي نشر ${unpublished} لغزاً لم تعد كلماته تتقاطع.`);
+    }
+    if (refused.length) {
+      parts.push(`تُرك ${refused.length} كما هو: ${refused.slice(0, 5).join('، ')}${refused.length > 5 ? '…' : ''}`);
+    }
+    req.flash(refused.length ? (done.length ? 'warning' : 'danger') : 'success', parts.join(' '));
     res.redirect(back(req));
   });
 

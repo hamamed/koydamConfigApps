@@ -285,8 +285,8 @@
   // Without JavaScript the bar still works: each action is its own submit button and the
   // server checks the choice. Here it counts the selection, keeps the buttons off until
   // something is ticked, and asks before deleting.
-  // The questions list and the levels list each have one; they behave the same.
-  document.querySelectorAll('form[data-question-bulk], form[data-level-bulk]').forEach((bulk) => {
+  // The questions, levels and answers lists each have one; they behave the same.
+  document.querySelectorAll('form[data-question-bulk], form[data-level-bulk], form[data-answer-bulk]').forEach((bulk) => {
     const rows = Array.from(document.querySelectorAll('[data-bulk-row]'));
     const all = document.querySelector('[data-bulk-all]');
     const count = bulk.querySelector('[data-bulk-count]');

@@ -44,17 +44,45 @@
         </div>
       </form>
 
-      <div class="ad-card">
+      <%# One form for the whole table: tick rows and strip them together, or use
+          a row's own button, which sends that row alone through `only`. %>
+      <form class="ad-card wz-bulk" method="post" action="/admin/answers/strip" data-answer-bulk>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="back" value="<%= currentUrl %>">
+        <% if (strippable) { %>
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <strong class="small me-1"><span data-bulk-count>0</span> محدَّد</strong>
+            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-select-all>حدّد الكل (<%= strippable %>)</button>
+            <button class="btn btn-kd-ghost btn-sm" type="button" data-bulk-clear>إلغاء</button>
+            <button class="btn btn-kd-outline btn-sm" type="submit" data-bulk-button
+                    data-confirm-click="حذف «ال» من الأجوبة المحدَّدة؟">
+              <span class="me-1"><%- icon('type', 14) %></span>احذف «ال» من المحدَّد</button>
+            <span class="small kd-faint ms-auto">تُعرض خانة التحديد على الأجوبة التي يصحّ حذف «ال» منها فقط.</span>
+          </div>
+        <% } %>
         <div class="ad-card-body p-0">
           <% if (!rows.length) { %>
             <div class="ad-empty"><%- icon('message-circle-question', 28) %><p class="mb-0">لا أجوبة بهذا التصفية.</p></div>
           <% } else { %>
             <div class="ad-table-wrap">
               <table class="ad-table">
-                <thead><tr><th>الجواب</th><th>الفئة</th><th>الصعوبة</th><th>في ألغاز</th><th></th></tr></thead>
+                <thead><tr>
+                  <th class="wz-check">
+                    <% if (strippable) { %>
+                      <input class="form-check-input" type="checkbox" data-bulk-all aria-label="حدّد الكل">
+                    <% } %>
+                  </th>
+                  <th>الجواب</th><th>الفئة</th><th>الصعوبة</th><th>في ألغاز</th><th></th>
+                </tr></thead>
                 <tbody>
                   <% rows.forEach((r) => { %>
                     <tr>
+                      <td class="wz-check">
+                        <% if (r.bare) { %>
+                          <input class="form-check-input" type="checkbox" name="ids" value="<%= r.id %>"
+                                 data-bulk-row aria-label="<%= r.answer %>">
+                        <% } %>
+                      </td>
                       <td>
                         <a class="wz-ar fw-semibold" href="/admin/questions/<%= r.id %>"><%= r.answer %></a>
                         <% if (r.playAnswer !== r.answer) { %>
@@ -66,13 +94,12 @@
                       <td><% if (r.levelCount) { %><span class="kd-tag kd-tag-ok"><%= r.levelCount %></span><% } else { %><span class="kd-faint">—</span><% } %></td>
                       <td class="text-end">
                         <% if (r.bare) { %>
-                          <%# Offered only in the categories of ordinary nouns. %>
-                          <form class="m-0" method="post" action="/admin/answers/<%= r.id %>/strip"
-                                data-confirm="«<%= r.answer %>» ← «<%= r.bare %>»؟">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <input type="hidden" name="back" value="<%= currentUrl %>">
-                            <button class="btn btn-sm btn-kd-outline wz-ar" type="submit">← <%= r.bare %></button>
-                          </form>
+                          <%# Offered only in the categories of ordinary nouns. A
+                              button of its own inside the table's form: it sends
+                              this row alone, whatever else is ticked. %>
+                          <button class="btn btn-sm btn-kd-outline wz-ar" type="submit"
+                                  name="only" value="<%= r.id %>"
+                                  data-confirm-click="«<%= r.answer %>» ← «<%= r.bare %>»؟">← <%= r.bare %></button>
                         <% } else if (r.keeps) { %>
                           <span class="small kd-faint" title="«ال» جزء من الجواب في هذه الفئة">اسم علم</span>
                         <% } %>
@@ -84,7 +111,7 @@
             </div>
           <% } %>
         </div>
-      </div>
+      </form>
     </div>
   </main>
 </div>
