@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { parseDay, todayUtc } from '../daily.js';
 import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
+import { readReport, REASONS } from '../reports.js';
 import { DAILY_TITLE } from '../level-label.js';
 import { registerAudioIngest } from './api-audio.js';
 import { registerProfileApi } from './api-profiles.js';
@@ -14,7 +15,7 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null }) {
   const router = express.Router();
 
   // The one machine-to-machine door (api-audio.js); absent without SERVICE_TOKEN.
@@ -156,6 +157,36 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     const batch = readEventBatch(req.body);
     if (batch.error) return res.status(400).json({ error: batch.error });
     res.status(202).json({ accepted: events.record(batch) });
+  });
+
+  // ── Reporting a question ──────────────────────────────────────────────────
+
+  // The reasons the app draws its list from, so the two never drift apart.
+  router.get('/report-reasons', cacheable, (_req, res) => {
+    res.json({ reasons: Object.entries(REASONS).map(([key, label]) => ({ key, label })) });
+  });
+
+  // A player reports a handful of questions in a session at most; the module
+  // holds a per-device ceiling of its own on top of this per-address one.
+  const reportLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 10,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: 'Too many reports. Try again in a minute.' }),
+  });
+
+  router.post('/questions/:id/report', reportLimiter, express.json({ limit: '4kb' }), (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (!reports) return res.status(503).json({ error: 'Reporting is not available.' });
+    const read = readReport(req.body);
+    if (read.error) return res.status(400).json({ error: read.error });
+    const filed = reports.add(Number(req.params.id), read.report);
+    if (filed.error) {
+      // A gone question is the app's mistake to know about; a ceiling is not.
+      return res.status(filed.error.startsWith('No such') ? 404 : 429).json({ error: filed.error });
+    }
+    res.status(201).json({ reported: true });
   });
 
   // ── Push registration ─────────────────────────────────────────────────────

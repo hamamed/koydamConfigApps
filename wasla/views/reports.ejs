@@ -1,0 +1,129 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'البلاغات',
+          subheading: counts.open + ' مفتوحة من ' + counts.total + ' · ' + counts.week + ' هذا الأسبوع',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/stats">الإحصاءات</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <% [
+             ['مفتوحة', counts.open, 'inbox'],
+             ['معالَجة', counts.resolved, 'check'],
+             ['هذا الأسبوع', counts.week, 'calendar-days'],
+             ['الكل', counts.total, 'message-circle-question'],
+           ].forEach(([label, value, glyph]) => { %>
+          <div class="col-6 col-xl-3">
+            <div class="ad-card ad-kpi">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <%- icon(glyph, 17) %>
+                <span class="ad-kpi-label"><%= label %></span>
+              </div>
+              <div class="ad-kpi-value"><%= value %></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (counts.worst.length) { %>
+        <div class="ad-card mb-3">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <%- icon('triangle-alert', 16) %>
+            <span class="fw-semibold me-auto">الأكثر بلاغاً</span>
+            <span class="small kd-faint">ابدأ من هنا</span>
+          </div>
+          <div class="ad-card-body d-flex flex-wrap gap-2">
+            <% counts.worst.forEach((w) => { %>
+              <a class="kd-tag kd-tag-warn wz-ar" href="/admin/questions/<%= w.questionId %>"><%= w.answer %> · <%= w.n %></a>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <form class="ad-card mb-3" method="get" action="/admin/reports">
+        <div class="ad-card-body d-flex flex-wrap align-items-end gap-3">
+          <label class="wz-generate-field">
+            <span class="ad-section-label">الحالة</span>
+            <select class="form-select form-select-sm" name="status">
+              <% Object.entries(statuses).forEach(([key, label]) => { %>
+                <option value="<%= key %>" <%= status === key ? 'selected' : '' %>><%= label %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label class="wz-generate-field">
+            <span class="ad-section-label">السبب</span>
+            <select class="form-select form-select-sm" name="reason">
+              <option value="">كل الأسباب</option>
+              <% Object.entries(reasons).forEach(([key, label]) => { %>
+                <option value="<%= key %>" <%= reason === key ? 'selected' : '' %>><%= label %> (<%= counts.byReason[key] %>)</option>
+              <% }) %>
+            </select>
+          </label>
+          <button class="btn btn-kd-outline btn-sm" type="submit">صفِّ</button>
+          <% if (status !== 'open' || reason) { %>
+            <a class="btn btn-kd-ghost btn-sm" href="/admin/reports">المفتوحة</a>
+          <% } %>
+          <span class="small kd-faint ms-auto"><%= rows.length %> بلاغاً</span>
+        </div>
+      </form>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <% if (!rows.length) { %>
+            <div class="ad-empty"><%- icon('check', 28) %><p class="mb-0">لا بلاغات هنا.</p></div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>السؤال</th><th>السبب</th><th>ملاحظة اللاعب</th><th>متى</th><th></th></tr></thead>
+                <tbody>
+                  <% rows.forEach((r) => { %>
+                    <tr>
+                      <td>
+                        <a class="wz-ar fw-semibold" href="/admin/questions/<%= r.question_id %>"><%= r.answer %></a>
+                        <% if (r.timesReported > 1) { %>
+                          <span class="kd-tag kd-tag-warn" title="كم مرة بُلِّغ عن هذا السؤال">×<%= r.timesReported %></span>
+                        <% } %>
+                        <div class="small kd-faint wz-ar"><%= r.title || '—' %><% if (r.clue) { %> · <%= r.clue.slice(0, 60) %><% } %></div>
+                      </td>
+                      <td class="text-nowrap"><span class="kd-tag"><%= reasons[r.reason] || r.reason %></span></td>
+                      <td class="wz-ar"><% if (r.note) { %><%= r.note %><% } else { %><span class="kd-faint">—</span><% } %></td>
+                      <td class="small kd-faint text-nowrap"><%= String(r.created_at).slice(0, 16) %></td>
+                      <td class="text-end text-nowrap">
+                        <form class="d-inline m-0" method="post" action="/admin/reports/<%= r.id %>/resolve">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="back" value="<%= currentUrl %>">
+                          <input type="hidden" name="resolved" value="<%= r.resolved_at ? '0' : '1' %>">
+                          <button class="btn btn-sm <%= r.resolved_at ? 'btn-kd-ghost' : 'btn-kd-outline' %>" type="submit">
+                            <%= r.resolved_at ? 'أعده مفتوحاً' : 'عولج' %>
+                          </button>
+                        </form>
+                        <% if (!r.resolved_at && r.timesReported > 1) { %>
+                          <form class="d-inline m-0" method="post" action="/admin/reports/question/<%= r.question_id %>/resolve">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="back" value="<%= currentUrl %>">
+                            <button class="btn btn-sm btn-kd-ghost" type="submit" title="عالِج كل بلاغات هذا السؤال">الكل</button>
+                          </form>
+                        <% } %>
+                        <form class="d-inline m-0" method="post" action="/admin/reports/<%= r.id %>/delete"
+                              data-confirm="حذف هذا البلاغ نهائياً؟">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="back" value="<%= currentUrl %>">
+                          <button class="btn btn-sm btn-kd-ghost" type="submit" aria-label="حذف البلاغ"><%- icon('trash-2', 14) %></button>
+                        </form>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

@@ -2,7 +2,7 @@ import { readAppStoreUrl, readPlayUrl } from '../site-settings.js';
 import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST, MAX_WORD_SEARCH_HELP_COST, REWARD_DAYS } from '../app-config.js';
 
 /** The numbers GET /api/v1/config serves. */
-export function registerSettings(router, { appConfig, siteSettings }) {
+export function registerSettings(router, { appConfig, siteSettings, events = null, reports = null }) {
   const render = (res, values, error = null, appStoreUrl = siteSettings.storedAppStoreUrl(), playUrl = siteSettings.playUrl()) => res.render('settings', {
     title: 'الإعدادات',
     values,
@@ -18,6 +18,28 @@ export function registerSettings(router, { appConfig, siteSettings }) {
   });
 
   router.get('/settings', (_req, res) => render(res, appConfig.get()));
+
+  /**
+   * Zeroes the play statistics: every recorded event goes, and the Stats page
+   * starts from nothing. Questions, levels and profiles are untouched — this
+   * is the history of play, not the game.
+   */
+  router.post('/settings/stats/reset', (req, res) => {
+    if (!events) return res.redirect('/admin/settings');
+    const gone = events.clear();
+    req.flash('success', gone
+      ? `صُفّرت الإحصاءات: حُذف ${gone.toLocaleString('en')} حدثاً. الأسئلة والألغاز والحسابات لم تُمسّ.`
+      : 'لا أحداث مسجَّلة أصلاً.');
+    res.redirect('/admin/settings');
+  });
+
+  /** Throws away the reports already dealt with; the open ones stay. */
+  router.post('/settings/reports/clear', (req, res) => {
+    if (!reports) return res.redirect('/admin/settings');
+    const gone = reports.clearResolved();
+    req.flash('success', gone ? `حُذف ${gone} بلاغاً معالَجاً.` : 'لا بلاغات معالَجة.');
+    res.redirect('/admin/settings');
+  });
 
   router.post('/settings', (req, res) => {
     const body = req.body;

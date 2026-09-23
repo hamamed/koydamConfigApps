@@ -342,3 +342,24 @@ CREATE TABLE IF NOT EXISTS audio_clips (
 );
 
 CREATE INDEX IF NOT EXISTS idx_audio_clips_created ON audio_clips(created_at DESC);
+
+-- ── v10 ─────────────────────────────────────────────────────────────────────
+
+-- What players say is wrong with a question. One row per report, kept after it
+-- is dealt with so a question reported again and again is visible as a pattern
+-- rather than as one open complaint.
+--
+-- `device` is the random id the app already sends with its events — enough to
+-- see one device reporting everything, and not a person.
+CREATE TABLE IF NOT EXISTS question_reports (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  question_id  INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  reason       TEXT NOT NULL,
+  note         TEXT,
+  device       TEXT,
+  resolved_at  TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_question_reports_open ON question_reports(resolved_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_question_reports_question ON question_reports(question_id);

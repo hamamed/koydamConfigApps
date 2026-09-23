@@ -25,6 +25,64 @@
         <% }) %>
       </div>
 
+      <%# What players are doing, and what they say is wrong with it. %>
+      <div class="row g-3 mb-3">
+        <div class="col-xl-7">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('chart-column', 16) %>
+              <span class="fw-semibold me-auto">اللعب</span>
+              <a class="small" href="/admin/stats">كل الإحصاءات</a>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-3">
+                <% [
+                     ['أجهزة لعبت', play.devices || 0],
+                     ['أجهزة هذا الأسبوع', play.devicesWeek || 0],
+                     ['أحداث مسجَّلة', play.events || 0],
+                   ].forEach(([label, value]) => { %>
+                  <div class="col-4">
+                    <div class="ad-kpi-label"><%= label %></div>
+                    <div class="ad-kpi-value"><%= value.toLocaleString('en') %></div>
+                  </div>
+                <% }) %>
+              </div>
+              <p class="small kd-faint mb-0 mt-3">
+                <% if (play.since) { %>منذ <%= String(play.since).slice(0, 10) %><% } else { %>لا أحداث بعد.<% } %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <% if (reportCounts) { %>
+          <div class="col-xl-5">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('triangle-alert', 16) %>
+                <span class="fw-semibold me-auto">البلاغات</span>
+                <a class="small" href="/admin/reports">افتحها</a>
+              </div>
+              <div class="ad-card-body">
+                <div class="row g-3 mb-2">
+                  <div class="col-4"><div class="ad-kpi-label">مفتوحة</div><div class="ad-kpi-value"><%= reportCounts.open %></div></div>
+                  <div class="col-4"><div class="ad-kpi-label">هذا الأسبوع</div><div class="ad-kpi-value"><%= reportCounts.week %></div></div>
+                  <div class="col-4"><div class="ad-kpi-label">الكل</div><div class="ad-kpi-value"><%= reportCounts.total %></div></div>
+                </div>
+                <% if (reportCounts.total) { %>
+                  <div class="d-flex flex-wrap gap-1">
+                    <% Object.entries(reasons).forEach(([key, label]) => { if (reportCounts.byReason[key]) { %>
+                      <a class="kd-tag" href="/admin/reports?status=all&reason=<%= key %>"><%= label %> <%= reportCounts.byReason[key] %></a>
+                    <% } }) %>
+                  </div>
+                <% } else { %>
+                  <p class="small kd-muted mb-0">لا بلاغات بعد.</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
       <div class="ad-card">
         <div class="ad-card-head d-flex align-items-center gap-2">
           <%- icon('grid-3x3', 16) %>

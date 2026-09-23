@@ -28,6 +28,8 @@ import { registerEvents } from './admin-events.js';
 import { registerLab } from './admin-lab.js';
 import { registerBubblePictures } from './admin-pictures.js';
 import { registerProfiles } from './admin-profiles.js';
+import { registerReports } from './admin-reports.js';
+import { REASONS } from '../reports.js';
 import { registerSettings } from './admin-settings.js';
 import { registerStats } from './admin-stats.js';
 import { registerTitles } from './admin-titles.js';
@@ -50,7 +52,7 @@ function share(total, parts) {
  * them, and the sections registered from the admin-*.js files beside this one.
  */
 export function adminRouter({
-  repo, images, audio, audioClips = null, audioImport = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
+  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
 }) {
   const router = express.Router();
 
@@ -99,6 +101,8 @@ export function adminRouter({
   router.use((req, res, next) => (req.is('multipart/*') ? next() : csrfProtect(req, res, next)));
   router.use((req, res, next) => {
     res.locals.currentPath = req.path;
+    // The sidebar shows how many reports are waiting, on every page.
+    res.locals.openReports = reports ? reports.openCount() : 0;
     res.locals.assetVersion = config.assetVersion;
     res.locals.imageUrl = (file) => `/media/questions/${file}`;
     res.locals.audioUrl = (file) => `/media/audio/${file}`;
@@ -157,7 +161,15 @@ export function adminRouter({
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   router.get('/', (_req, res) => {
-    res.render('dashboard', { title: 'الرئيسية', counts: repo.counts(), levels: repo.listLevels().slice(0, 8) });
+    res.render('dashboard', {
+      title: 'الرئيسية',
+      counts: repo.counts(),
+      levels: repo.listLevels().slice(0, 8),
+      // What players are doing, and what they say is wrong with it.
+      play: events.overview(),
+      reportCounts: reports ? reports.counts() : null,
+      reasons: REASONS,
+    });
   });
 
   // ── Questions ─────────────────────────────────────────────────────────────
@@ -717,8 +729,9 @@ export function adminRouter({
   registerImport(router, { repo, images, audio, pendingImports, titleNames });
   if (audioClips) registerAudio(router, { audioClips, repo, titleNames, audioImport });
   registerAnswers(router, { repo, titleNames });
+  if (reports) registerReports(router, { reports, repo });
   if (titles) registerTitles(router, { titles });
-  registerSettings(router, { appConfig, siteSettings });
+  registerSettings(router, { appConfig, siteSettings, events, reports });
   registerPlayers(router, { players });
   if (profiles) registerProfiles(router, { profiles });
   if (profiles) registerBoards(router, { profiles });

@@ -139,6 +139,43 @@
           <a class="btn btn-kd-ghost" href="/api/v1/config" target="_blank" rel="noopener">عرض JSON</a>
         </div>
       </form>
+
+      <%# Outside the settings form: each of these is a form of its own, and a
+          form inside a form is not markup any browser will honour. %>
+      <div class="ad-card mt-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <%- icon('triangle-alert', 16) %>
+          <span class="fw-semibold">الصيانة</span>
+          <span class="small kd-faint ms-auto">لا رجوع عن هذه</span>
+        </div>
+        <div class="ad-card-body d-grid gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form method="post" action="/admin/settings/stats/reset" class="m-0"
+                  data-confirm="تصفير كل الإحصاءات؟ يُحذف كل حدث مسجَّل ولا يمكن استرجاعه. الأسئلة والألغاز والحسابات لا تتأثر.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-kd-danger btn-sm" type="submit">
+                <span class="me-1"><%- icon('rotate-ccw', 14) %></span>صفّر الإحصاءات
+              </button>
+            </form>
+            <span class="small kd-muted">
+              يمسح كل حدث لعب مسجَّل، فتبدأ صفحة <a href="/admin/stats">الإحصاءات</a> من الصفر.
+              الأسئلة والألغاز والحسابات لا تتأثر.
+            </span>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form method="post" action="/admin/settings/reports/clear" class="m-0"
+                  data-confirm="حذف البلاغات المعالَجة؟ المفتوحة تبقى.">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button class="btn btn-kd-outline btn-sm" type="submit">
+                <span class="me-1"><%- icon('trash-2', 14) %></span>احذف البلاغات المعالَجة
+              </button>
+            </form>
+            <span class="small kd-muted">
+              يُبقي <a href="/admin/reports">البلاغات</a> المفتوحة ويحذف ما عولج منها.
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </div>

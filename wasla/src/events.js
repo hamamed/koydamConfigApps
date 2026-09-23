@@ -202,5 +202,13 @@ export function createEvents(db, repo) {
       FROM events`).get();
   }
 
-  return { record, prune, questionStats, levelStats, overview };
+  /**
+   * Throws away every recorded event: the Stats page starts from nothing.
+   *
+   * Questions and levels are untouched — this is the play history, not the
+   * content. Returns how many rows went.
+   */
+  const clear = () => db.prepare('DELETE FROM events').run().changes;
+
+  return { record, prune, questionStats, levelStats, overview, clear };
 }

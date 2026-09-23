@@ -48,6 +48,13 @@
       <%- icon('moon', 17) %>
       <span>المناسبات</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/reports') ? 'is-active' : '' %>" href="/admin/reports">
+      <%- icon('triangle-alert', 17) %>
+      <span>البلاغات</span>
+      <% if (typeof openReports !== 'undefined' && openReports) { %>
+        <span class="ad-badge"><%= openReports %></span>
+      <% } %>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/import') ? 'is-active' : '' %>" href="/admin/import">
       <%- icon('file-up', 17) %>
       <span>استيراد</span>
