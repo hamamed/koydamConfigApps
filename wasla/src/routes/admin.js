@@ -17,6 +17,7 @@ import { DIFFICULTIES, MAX_TITLE, MAX_ZOOM, truthy } from '../repository.js';
 import { registerDaily } from './admin-daily.js';
 import { registerDailyGames } from './admin-daily-games.js';
 import { registerDays } from './admin-days.js';
+import { registerAnswers } from './admin-answers.js';
 import { registerAudio } from './admin-audio.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
@@ -715,6 +716,7 @@ export function adminRouter({
   registerStats(router, { events });
   registerImport(router, { repo, images, audio, pendingImports, titleNames });
   if (audioClips) registerAudio(router, { audioClips, repo, titleNames, audioImport });
+  registerAnswers(router, { repo, titleNames });
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings });
   registerPlayers(router, { players });

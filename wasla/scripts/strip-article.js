@@ -22,11 +22,10 @@
  */
 import fs from 'node:fs';
 
+import { withoutArticle } from '../src/arabic.js';
+import { NOUN_CATEGORIES } from '../src/article-policy.js';
 import { db } from '../src/db/index.js';
 import { createRepository } from '../src/repository.js';
-
-/** Answers here are ordinary nouns; everywhere else «ال» belongs to the answer. */
-const CATEGORIES = ['معلومات عامة', 'رياضات', 'مرادف', 'النحو والإعراب', 'شخصيات كرتونية'];
 
 /** Proper nouns inside those categories: names of people, places, works and bodies. */
 const KEEP = new Set([
@@ -78,18 +77,9 @@ if (revertAt >= 0) {
   process.exit(0);
 }
 
-/** «الشمس» → «شمس»; null when it is not a plain one-word answer with the article. */
-function stripped(answer) {
-  const text = String(answer ?? '').trim();
-  if (!text.startsWith('ال') || text.includes(' ')) return null;
-  const bare = text.slice(2);
-  // Two letters left is not a word anyone would answer with.
-  return [...bare].length >= 3 ? bare : null;
-}
-
 const rows = repo.listQuestions()
-  .filter((q) => CATEGORIES.includes(q.title) && !KEEP.has(q.answer.trim()))
-  .map((q) => ({ q, bare: stripped(q.answer) }))
+  .filter((q) => NOUN_CATEGORIES.includes(q.title) && !KEEP.has(q.answer.trim()))
+  .map((q) => ({ q, bare: withoutArticle(q.answer) }))
   .filter(({ bare }) => bare);
 
 // An answer that would collide with one already in the bank is left alone: two
@@ -97,7 +87,7 @@ const rows = repo.listQuestions()
 const spoken = new Map();
 for (const q of repo.listQuestions()) spoken.set(q.playAnswer, (spoken.get(q.playAnswer) ?? 0) + 1);
 
-console.log(`  ${rows.length} جواباً مرشَّحاً في: ${CATEGORIES.join('، ')}`);
+console.log(`  ${rows.length} جواباً مرشَّحاً في: ${NOUN_CATEGORIES.join('، ')}`);
 console.log(`  ${KEEP.size} اسماً علماً مستثنى، وبقية الفئات لم تُمسّ.\n`);
 
 if (!apply) {

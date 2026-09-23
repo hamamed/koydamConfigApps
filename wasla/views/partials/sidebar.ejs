@@ -20,6 +20,10 @@
       <%- icon('message-circle-question', 17) %>
       <span>الأسئلة</span>
     </a>
+    <a class="ad-nav-link <%= currentPath.startsWith('/answers') ? 'is-active' : '' %>" href="/admin/answers">
+      <%- icon('list-checks', 17) %>
+      <span>الأجوبة</span>
+    </a>
     <a class="ad-nav-link <%= currentPath.startsWith('/titles') ? 'is-active' : '' %>" href="/admin/titles">
       <%- icon('tag', 17) %>
       <span>الفئات</span>

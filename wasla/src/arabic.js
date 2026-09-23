@@ -53,6 +53,21 @@ export function letters(answer) {
 }
 
 /** Why an answer cannot be used, or null when it can. Expects a normalised answer. */
+/**
+ * An answer without its definite article — «الشمس» → «شمس» — or null when
+ * taking it off would not leave an answer: a phrase (where «ال» belongs to the
+ * sentence), a word that does not carry one, or a stump of two letters.
+ *
+ * Whether a particular answer *should* lose it is a judgement about the word,
+ * not about its letters; this only says what the shorter form would be.
+ */
+export function withoutArticle(answer) {
+  const text = String(answer ?? '').trim();
+  if (!text.startsWith('ال') || text.includes(' ')) return null;
+  const bare = text.slice(2);
+  return letters(bare).length >= 3 ? bare : null;
+}
+
 export function answerProblem(answer) {
   const list = letters(String(answer ?? '').replace(/ /g, ''));
   if (list.length === 0) return 'An answer is required.';

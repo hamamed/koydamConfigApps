@@ -1,0 +1,91 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'الأجوبة',
+          subheading: total + ' جواباً · ' + withArticle + ' منها تبدأ بـ«ال»',
+          actions: '<a class="btn btn-sm btn-kd-ghost" href="/admin/questions">الأسئلة</a>'
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <form class="ad-card mb-3" method="get" action="/admin/answers">
+        <div class="ad-card-body d-flex flex-wrap align-items-end gap-3">
+          <label class="wz-generate-field">
+            <span class="ad-section-label">«ال»</span>
+            <select class="form-select form-select-sm" name="article">
+              <% Object.entries(filters).forEach(([key, label]) => { %>
+                <option value="<%= key %>" <%= article === key ? 'selected' : '' %>><%= label %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label class="wz-generate-field">
+            <span class="ad-section-label">الفئة</span>
+            <select class="form-select form-select-sm" name="title">
+              <option value="">كل الفئات</option>
+              <% titles.forEach((t) => { %>
+                <option value="<%= t %>" <%= chosenTitle === t ? 'selected' : '' %>><%= t %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label class="wz-generate-field">
+            <span class="ad-section-label">بحث</span>
+            <input class="form-control form-control-sm wz-ar" type="search" name="q" value="<%= search %>"
+                   dir="rtl" placeholder="جواب أو دليل">
+          </label>
+          <button class="btn btn-kd-outline btn-sm" type="submit">صفِّ</button>
+          <% if (article !== 'all' || chosenTitle || search) { %>
+            <a class="btn btn-kd-ghost btn-sm" href="/admin/answers">إلغاء</a>
+          <% } %>
+          <span class="small kd-faint ms-auto">
+            <%= matched %> نتيجة<% if (matched > shown) { %> · تُعرض أول <%= shown %>، ضيّق التصفية لترى الباقي<% } %>
+          </span>
+        </div>
+      </form>
+
+      <div class="ad-card">
+        <div class="ad-card-body p-0">
+          <% if (!rows.length) { %>
+            <div class="ad-empty"><%- icon('message-circle-question', 28) %><p class="mb-0">لا أجوبة بهذا التصفية.</p></div>
+          <% } else { %>
+            <div class="ad-table-wrap">
+              <table class="ad-table">
+                <thead><tr><th>الجواب</th><th>الفئة</th><th>الصعوبة</th><th>في ألغاز</th><th></th></tr></thead>
+                <tbody>
+                  <% rows.forEach((r) => { %>
+                    <tr>
+                      <td>
+                        <a class="wz-ar fw-semibold" href="/admin/questions/<%= r.id %>"><%= r.answer %></a>
+                        <% if (r.playAnswer !== r.answer) { %>
+                          <span class="small kd-faint wz-ar" title="الشكل الذي يُلعب في الشبكة"><%= r.playAnswer %></span>
+                        <% } %>
+                      </td>
+                      <td><% if (r.title) { %><span class="kd-tag wz-ar"><%= r.title %></span><% } else { %><span class="kd-faint">—</span><% } %></td>
+                      <td><%- r.difficulty ? include('partials/difficulty', { difficulty: r.difficulty }) : '<span class="kd-faint">—</span>' %></td>
+                      <td><% if (r.levelCount) { %><span class="kd-tag kd-tag-ok"><%= r.levelCount %></span><% } else { %><span class="kd-faint">—</span><% } %></td>
+                      <td class="text-end">
+                        <% if (r.bare) { %>
+                          <%# Offered only in the categories of ordinary nouns. %>
+                          <form class="m-0" method="post" action="/admin/answers/<%= r.id %>/strip"
+                                data-confirm="«<%= r.answer %>» ← «<%= r.bare %>»؟">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="back" value="<%= currentUrl %>">
+                            <button class="btn btn-sm btn-kd-outline wz-ar" type="submit">← <%= r.bare %></button>
+                          </form>
+                        <% } else if (r.keeps) { %>
+                          <span class="small kd-faint" title="«ال» جزء من الجواب في هذه الفئة">اسم علم</span>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>
