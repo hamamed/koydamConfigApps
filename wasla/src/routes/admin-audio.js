@@ -43,9 +43,14 @@ export function registerAudio(router, { audioClips, repo, titleNames, audioImpor
   });
 
   // `?category=حيوانات` shows one category; `?category=` those with none.
-  router.get('/audio', (req, res) => page(res, {
-    category: req.query.category === undefined ? null : String(req.query.category),
-  }));
+  router.get('/audio', (req, res) => {
+    // The panel sends Referrer-Policy: no-referrer everywhere. YouTube will not
+    // play an embed that tells it nothing about who is asking — it answers with
+    // error 153 — so this one page sends the origin instead. The origin only:
+    // the domain, never the path or the query.
+    res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    page(res, { category: req.query.category === undefined ? null : String(req.query.category) });
+  });
 
   router.post('/audio', (req, res, next) => {
     upload(req, res, async (err) => {

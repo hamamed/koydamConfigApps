@@ -103,8 +103,11 @@
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <div>
                     <label class="form-label small mb-1" for="ytUrl">رابط الفيديو</label>
-                    <input class="form-control form-control-sm kd-mono" type="text" id="ytUrl" name="url"
-                           value="<%= youtube.url %>" required placeholder="https://www.youtube.com/watch?v=…">
+                    <div class="d-flex gap-1">
+                      <input class="form-control form-control-sm kd-mono" type="text" id="ytUrl" name="url"
+                             value="<%= youtube.url %>" required placeholder="https://www.youtube.com/watch?v=…">
+                      <button class="btn btn-sm btn-kd-outline text-nowrap" type="button" id="ytPaste">الصق</button>
+                    </div>
                   </div>
                   <div class="d-flex gap-2">
                     <div class="flex-fill">
@@ -274,6 +277,22 @@
       return parts.length === 1 ? Number(parts[0]) : Number(parts[0]) * 60 + Number(parts[1]);
     };
 
+    const paste = document.getElementById('ytPaste');
+    const box = document.getElementById('ytUrl');
+    paste?.addEventListener('click', async () => {
+      try {
+        const text = (await navigator.clipboard.readText()).trim();
+        if (!text) return;
+        box.value = text;
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      } catch {
+        // No clipboard permission, or an older browser: select the box so
+        // ⌘V lands somewhere useful rather than nowhere.
+        box.focus();
+        box.select();
+      }
+    });
+
     button.addEventListener('click', () => {
       const id = videoId(document.getElementById('ytUrl').value);
       stage.textContent = '';
@@ -289,6 +308,10 @@
         + '?start=' + Math.floor(from) + '&end=' + Math.ceil(from + length) + '&autoplay=1&rel=0';
       frame.title = 'معاينة المقطع';
       frame.allow = 'autoplay; encrypted-media';
+      // The panel sends Referrer-Policy: no-referrer, and an embed that tells
+      // YouTube nothing about who is asking is refused with error 153. This
+      // sends the origin — the domain, never the path — for this one request.
+      frame.referrerPolicy = 'strict-origin-when-cross-origin';
       frame.setAttribute('allowfullscreen', '');
       stage.append(frame);
     });
