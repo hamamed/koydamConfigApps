@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
+import { configForApp } from '../app-config.js';
 import { parseDay, todayUtc } from '../daily.js';
 import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
@@ -77,7 +78,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   });
 
   router.get('/config', cacheable, (_req, res) => {
-    res.json(appConfig.get());
+    res.json(configForApp(appConfig.get()));
   });
 
   router.get('/levels', cacheable, (_req, res) => {

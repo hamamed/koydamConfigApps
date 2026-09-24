@@ -162,7 +162,21 @@ test('config returns the contract defaults', async () => {
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
     dailyGameCoins: 30,
     dailyAllGamesBonus: 120,
+    ads: {
+      enabled: false,
+      testMode: false,
+      appId: '',
+      banner: { enabled: true, unitId: '' },
+      interstitial: { enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20 },
+      rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
+    },
   });
+});
+
+test('config carries the ads block, so a fresh app knows ads are off', async () => {
+  const body = await (await fetch(`${base}/config`)).json();
+  assert.equal(body.ads.enabled, false, 'off until the panel turns it on');
+  assert.equal(body.ads.banner.unitId, '', 'no unit id means that format stays quiet');
 });
 
 test('the daily puzzle is a level with number 0, its date and its coins', async () => {

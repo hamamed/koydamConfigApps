@@ -1,13 +1,15 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
 
-import { createAppConfig, DEFAULT_CONFIG } from '../src/app-config.js';
+import { configForApp, createAppConfig, DEFAULT_CONFIG, IOS_TEST_ADS } from '../src/app-config.js';
 import { openDatabase } from '../src/db/index.js';
 
 let settings;
+let db;
 
 beforeEach(() => {
-  settings = createAppConfig(openDatabase(':memory:'));
+  db = openDatabase(':memory:');
+  settings = createAppConfig(db);
 });
 
 test('starts from the contract defaults', () => {
@@ -23,6 +25,14 @@ test('starts from the contract defaults', () => {
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
     dailyGameCoins: 30,
     dailyAllGamesBonus: 120,
+    ads: {
+      enabled: false,
+      testMode: false,
+      appId: '',
+      banner: { enabled: true, unitId: '' },
+      interstitial: { enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20 },
+      rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
+    },
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
 });
@@ -103,4 +113,109 @@ test('a database saved before word search help costs existed reads them as the d
   const config = createAppConfig(db).get();
   assert.equal(config.dailyPuzzleCoins, 45);
   assert.deepEqual(config.wordSearchHelpCosts, { revealLetter: 15, revealWord: 40 });
+});
+
+// --- Ads (contract §11) -------------------------------------------------
+
+const UNIT = 'ca-app-pub-1234567890123456/1234567890';
+const APP_ID = 'ca-app-pub-1234567890123456~1234567890';
+
+/** The ads block with `over` applied on top, inside a whole valid config. */
+const withAds = (over) => ({ ...DEFAULT_CONFIG, ads: { ...DEFAULT_CONFIG.ads, ...over } });
+
+test('saves the ad unit ids and the numbers that go with them', () => {
+  const result = settings.save(withAds({
+    enabled: true,
+    appId: APP_ID,
+    banner: { enabled: true, unitId: UNIT },
+    interstitial: { enabled: true, unitId: UNIT, everyQuestions: 7, minSecondsBetween: 90, maxPerDay: 0 },
+    rewarded: { enabled: true, unitId: UNIT, coins: 75, maxPerDay: 3 },
+  }));
+  assert.equal(result.error, undefined);
+  const ads = settings.get().ads;
+  assert.equal(ads.enabled, true);
+  assert.equal(ads.appId, APP_ID);
+  assert.equal(ads.banner.unitId, UNIT);
+  assert.equal(ads.interstitial.everyQuestions, 7);
+  assert.equal(ads.interstitial.maxPerDay, 0);
+  assert.equal(ads.rewarded.coins, 75);
+});
+
+test('a form sends switches as "on" and numbers as strings', () => {
+  const result = settings.save(withAds({
+    enabled: 'on',
+    testMode: undefined,
+    banner: { enabled: 'on', unitId: `  ${UNIT}  ` },
+    interstitial: { enabled: undefined, unitId: '', everyQuestions: '12', minSecondsBetween: '0', maxPerDay: '5' },
+    rewarded: { enabled: 'on', unitId: '', coins: '20', maxPerDay: '2' },
+  }));
+  assert.equal(result.error, undefined);
+  const ads = result.config.ads;
+  assert.equal(ads.enabled, true);
+  assert.equal(ads.testMode, false, 'an unticked box is simply absent');
+  assert.equal(ads.banner.unitId, UNIT, 'trimmed');
+  assert.equal(ads.interstitial.enabled, false);
+  assert.equal(ads.interstitial.everyQuestions, 12);
+  assert.equal(ads.rewarded.coins, 20);
+});
+
+test('an empty unit id is allowed — it is how a format is left unset', () => {
+  assert.equal(settings.save(withAds({ banner: { enabled: true, unitId: '' } })).error, undefined);
+  assert.equal(settings.get().ads.banner.unitId, '');
+});
+
+test('refuses malformed ids and out-of-range numbers, and changes nothing', () => {
+  const bad = [
+    { appId: UNIT },                                        // a slash where the app id wants a tilde
+    { appId: 'ca-app-pub-123~456' },
+    { banner: { enabled: true, unitId: 'ca-app-pub-123/456' } },
+    { banner: { enabled: true, unitId: `${UNIT}x` } },
+    { interstitial: { ...DEFAULT_CONFIG.ads.interstitial, everyQuestions: 0 } },
+    { interstitial: { ...DEFAULT_CONFIG.ads.interstitial, everyQuestions: 101 } },
+    { interstitial: { ...DEFAULT_CONFIG.ads.interstitial, minSecondsBetween: -1 } },
+    { interstitial: { ...DEFAULT_CONFIG.ads.interstitial, maxPerDay: 201 } },
+    { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, coins: 1001 } },
+    { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, coins: 2.5 } },
+    { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, maxPerDay: 51 } },
+    { enabled: 'perhaps' },
+  ];
+  for (const over of bad) {
+    assert.ok(settings.save(withAds(over)).error, JSON.stringify(over));
+  }
+  assert.deepEqual(settings.get(), DEFAULT_CONFIG);
+});
+
+test('an ads row that no longer validates reads as the default', () => {
+  settings.save(withAds({ enabled: true }));
+  assert.equal(settings.get().ads.enabled, true);
+  // As if an older shape were left behind by a downgrade.
+  db.prepare(`UPDATE settings SET value = '"nonsense"' WHERE key = 'ads'`).run();
+  assert.deepEqual(settings.get().ads, DEFAULT_CONFIG.ads);
+});
+
+test('test mode serves Google\'s iOS units to the app and leaves the panel\'s values alone', () => {
+  settings.save(withAds({
+    enabled: true,
+    testMode: true,
+    appId: APP_ID,
+    banner: { enabled: true, unitId: UNIT },
+    interstitial: { ...DEFAULT_CONFIG.ads.interstitial, unitId: UNIT },
+    rewarded: { ...DEFAULT_CONFIG.ads.rewarded, unitId: UNIT },
+  }));
+  const stored = settings.get();
+  assert.equal(stored.ads.banner.unitId, UNIT, 'the panel keeps showing what was typed');
+
+  const served = configForApp(stored);
+  assert.equal(served.ads.appId, IOS_TEST_ADS.appId);
+  assert.equal(served.ads.banner.unitId, IOS_TEST_ADS.banner);
+  assert.equal(served.ads.interstitial.unitId, IOS_TEST_ADS.interstitial);
+  assert.equal(served.ads.rewarded.unitId, IOS_TEST_ADS.rewarded);
+  // Everything else is untouched, the switches and the counts included.
+  assert.equal(served.ads.interstitial.everyQuestions, stored.ads.interstitial.everyQuestions);
+  assert.equal(served.dailyPuzzleCoins, stored.dailyPuzzleCoins);
+});
+
+test('with test mode off the app is served the real ids', () => {
+  settings.save(withAds({ enabled: true, banner: { enabled: true, unitId: UNIT } }));
+  assert.equal(configForApp(settings.get()).ads.banner.unitId, UNIT);
 });

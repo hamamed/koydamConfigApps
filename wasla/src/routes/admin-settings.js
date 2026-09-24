@@ -1,5 +1,9 @@
 import { readAppStoreUrl, readPlayUrl } from '../site-settings.js';
-import { DEFAULT_CONFIG, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST, MAX_WORD_SEARCH_HELP_COST, REWARD_DAYS } from '../app-config.js';
+import {
+  DEFAULT_CONFIG, IOS_TEST_ADS, MAX_ADS_EVERY_QUESTIONS, MAX_ADS_PER_DAY, MAX_ADS_SECONDS_BETWEEN,
+  MAX_REWARDED_COINS, MAX_REWARDED_PER_DAY, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST,
+  MAX_WORD_SEARCH_HELP_COST, REWARD_DAYS,
+} from '../app-config.js';
 
 /** The numbers GET /api/v1/config serves. */
 export function registerSettings(router, { appConfig, siteSettings, events = null, reports = null }) {
@@ -14,6 +18,12 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
     maxStarsPerLevel: MAX_STARS_PER_LEVEL,
     maxStreakFreezeCost: MAX_STREAK_FREEZE_COST,
     maxWordSearchHelpCost: MAX_WORD_SEARCH_HELP_COST,
+    maxAdsEveryQuestions: MAX_ADS_EVERY_QUESTIONS,
+    maxAdsSecondsBetween: MAX_ADS_SECONDS_BETWEEN,
+    maxAdsPerDay: MAX_ADS_PER_DAY,
+    maxRewardedPerDay: MAX_REWARDED_PER_DAY,
+    maxRewardedCoins: MAX_REWARDED_COINS,
+    testAds: IOS_TEST_ADS,
     ...(error ? { flash: { type: 'danger', message: error } } : {}),
   });
 
@@ -56,6 +66,26 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
       wordSearchHelpCosts: { revealLetter: body.wordSearchRevealLetter, revealWord: body.wordSearchRevealWord },
       dailyGameCoins: body.dailyGameCoins,
       dailyAllGamesBonus: body.dailyAllGamesBonus,
+      // Ads (contract §11). Unchecked boxes are simply absent, which reads as false.
+      ads: {
+        enabled: body.adsEnabled,
+        testMode: body.adsTestMode,
+        appId: body.adsAppId,
+        banner: { enabled: body.adsBannerEnabled, unitId: body.adsBannerUnitId },
+        interstitial: {
+          enabled: body.adsInterstitialEnabled,
+          unitId: body.adsInterstitialUnitId,
+          everyQuestions: body.adsInterstitialEvery,
+          minSecondsBetween: body.adsInterstitialMinSeconds,
+          maxPerDay: body.adsInterstitialMaxPerDay,
+        },
+        rewarded: {
+          enabled: body.adsRewardedEnabled,
+          unitId: body.adsRewardedUnitId,
+          coins: body.adsRewardedCoins,
+          maxPerDay: body.adsRewardedMaxPerDay,
+        },
+      },
     };
     const appStoreUrl = String(body.appStoreUrl ?? '');
     const playUrl = String(body.playUrl ?? '');

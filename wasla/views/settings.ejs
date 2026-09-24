@@ -132,6 +132,110 @@
               </div>
             </div>
           </div>
+
+          <div class="col-12">
+            <div class="ad-card">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('megaphone', 16) %>
+                <span class="fw-semibold">الإعلانات</span>
+                <span class="small kd-faint ms-auto">يقرأها التطبيق من ‎/api/v1/config</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <div class="row g-3">
+                  <div class="col-12 d-flex flex-wrap gap-4">
+                    <div class="form-check form-switch m-0">
+                      <input class="form-check-input" type="checkbox" role="switch" id="adsEnabled" name="adsEnabled" value="on" <% if (values.ads?.enabled) { %>checked<% } %>>
+                      <label class="form-check-label small fw-semibold" for="adsEnabled">تشغيل الإعلانات</label>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                      <input class="form-check-input" type="checkbox" role="switch" id="adsTestMode" name="adsTestMode" value="on" <% if (values.ads?.testMode) { %>checked<% } %>>
+                      <label class="form-check-label small fw-semibold" for="adsTestMode">وضع الاختبار</label>
+                    </div>
+                    <span class="small kd-muted">
+                      المفتاح الأول يوقف كل الإعلانات دفعةً واحدة. وضع الاختبار يرسل للتطبيق وحدات Google التجريبية
+                      بدل وحداتك — تظهر الإعلانات ويُجرَّب الشكل والعدّ دون عرض إعلان حقيقي ودون تعريض حساب AdMob للخطر.
+                      ما تكتبه هنا يبقى كما هو، ويعود العمل به فور إطفاء وضع الاختبار.
+                    </span>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="small fw-semibold" for="adsAppId">معرّف التطبيق في AdMob</label>
+                    <input class="form-control kd-mono" type="text" id="adsAppId" name="adsAppId" dir="ltr"
+                           value="<%= values.ads?.appId ?? '' %>" placeholder="ca-app-pub-0000000000000000~0000000000">
+                    <div class="form-text">
+                      بعلامة ‎~‎ لا ‎/‎. للمرجع فقط: حزمة Google تقرأ هذا المعرّف من ملف التطبيق نفسه وقت البناء
+                      (‎<span class="kd-mono">GADApplicationIdentifier</span>‎ في Xcode)، فلا يكفي كتابته هنا.
+                      أمّا معرّفات الوحدات فيقرأها التطبيق من هذه الصفحة عند كل تشغيل.
+                    </div>
+                  </div>
+
+                  <div class="col-lg-4">
+                    <div class="d-grid gap-2">
+                      <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="adsBannerEnabled" name="adsBannerEnabled" value="on" <% if (values.ads?.banner?.enabled) { %>checked<% } %>>
+                        <label class="form-check-label small fw-semibold" for="adsBannerEnabled">شريط أسفل صفحة السؤال</label>
+                      </div>
+                      <label class="small fw-semibold" for="adsBannerUnitId">معرّف وحدة الشريط</label>
+                      <input class="form-control kd-mono" type="text" id="adsBannerUnitId" name="adsBannerUnitId" dir="ltr"
+                             value="<%= values.ads?.banner?.unitId ?? '' %>" placeholder="ca-app-pub-…/…">
+                      <div class="form-text">يظهر أسفل صفحة السؤال وحدها، وينزلق خارجها عند الخروج ويعود عند الرجوع. الفراغ يُطفئه.</div>
+                    </div>
+                  </div>
+
+                  <div class="col-lg-4">
+                    <div class="d-grid gap-2">
+                      <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="adsInterstitialEnabled" name="adsInterstitialEnabled" value="on" <% if (values.ads?.interstitial?.enabled) { %>checked<% } %>>
+                        <label class="form-check-label small fw-semibold" for="adsInterstitialEnabled">إعلان بيني عند الخروج من السؤال</label>
+                      </div>
+                      <label class="small fw-semibold" for="adsInterstitialUnitId">معرّف الوحدة البينية</label>
+                      <input class="form-control kd-mono" type="text" id="adsInterstitialUnitId" name="adsInterstitialUnitId" dir="ltr"
+                             value="<%= values.ads?.interstitial?.unitId ?? '' %>" placeholder="ca-app-pub-…/…">
+                      <% [
+                           ['adsInterstitialEvery', 'يظهر بعد كل كم خروج من السؤال', values.ads?.interstitial?.everyQuestions, defaults.ads.interstitial.everyQuestions, 1, maxAdsEveryQuestions],
+                           ['adsInterstitialMinSeconds', 'أقل مهلة بين إعلانين (ثانية)', values.ads?.interstitial?.minSecondsBetween, defaults.ads.interstitial.minSecondsBetween, 0, maxAdsSecondsBetween],
+                           ['adsInterstitialMaxPerDay', 'حد أقصى في اليوم (٠ = بلا حد)', values.ads?.interstitial?.maxPerDay, defaults.ads.interstitial.maxPerDay, 0, maxAdsPerDay],
+                         ].forEach(([name, label, value, fallback, min, max]) => { %>
+                        <div class="row g-2 align-items-center">
+                          <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                          <div class="col-sm-5">
+                            <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" max="<%= max %>" step="1" required value="<%= value %>">
+                            <div class="form-text">الافتراضي <%= fallback %></div>
+                          </div>
+                        </div>
+                      <% }) %>
+                      <div class="form-text">يُعدّ كل خروج من صفحة السؤال، سواء حُلّت الكلمة أو رجع اللاعب دون حل.</div>
+                    </div>
+                  </div>
+
+                  <div class="col-lg-4">
+                    <div class="d-grid gap-2">
+                      <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="adsRewardedEnabled" name="adsRewardedEnabled" value="on" <% if (values.ads?.rewarded?.enabled) { %>checked<% } %>>
+                        <label class="form-check-label small fw-semibold" for="adsRewardedEnabled">فيديو بمكافأة (عملات للمساعدات)</label>
+                      </div>
+                      <label class="small fw-semibold" for="adsRewardedUnitId">معرّف وحدة الفيديو</label>
+                      <input class="form-control kd-mono" type="text" id="adsRewardedUnitId" name="adsRewardedUnitId" dir="ltr"
+                             value="<%= values.ads?.rewarded?.unitId ?? '' %>" placeholder="ca-app-pub-…/…">
+                      <% [
+                           ['adsRewardedCoins', 'عملات لكل فيديو يُشاهد كاملاً', values.ads?.rewarded?.coins, defaults.ads.rewarded.coins, 0, maxRewardedCoins],
+                           ['adsRewardedMaxPerDay', 'حد أقصى في اليوم (٠ = بلا حد)', values.ads?.rewarded?.maxPerDay, defaults.ads.rewarded.maxPerDay, 0, maxRewardedPerDay],
+                         ].forEach(([name, label, value, fallback, min, max]) => { %>
+                        <div class="row g-2 align-items-center">
+                          <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                          <div class="col-sm-5">
+                            <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" max="<%= max %>" step="1" required value="<%= value %>">
+                            <div class="form-text">الافتراضي <%= fallback %></div>
+                          </div>
+                        </div>
+                      <% }) %>
+                      <div class="form-text">زر «شاهد فيديو» تحت المساعدات في صفحة السؤال. لا تُدفع العملات إلا بعد مشاهدة الفيديو كاملاً.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="d-flex gap-2 mt-3">
