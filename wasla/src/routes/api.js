@@ -69,10 +69,18 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
   router.get('/health', cacheable, (_req, res) => res.json({ ok: true }));
 
   // Picture credits (contract §8): what the app shows under "مصادر الصور".
+  /**
+   * Who took each picture, and under which licence (contract §8).
+   *
+   * The answer is deliberately not here. Attribution needs the author, the
+   * licence and a link to the picture — naming the word it hides adds nothing
+   * to that and turns a public endpoint into an answer key for every picture
+   * question in the game. The category is context enough.
+   */
   router.get('/credits', cacheable, (_req, res) => {
     res.json({
       credits: repo.credited().map((q) => ({
-        answer: q.answer, title: q.title, author: q.imageAuthor, licence: q.imageLicence, source: q.imageSource,
+        title: q.title, author: q.imageAuthor, licence: q.imageLicence, source: q.imageSource,
       })),
     });
   });

@@ -61,6 +61,28 @@ const post = (path, body, headers = {}) => fetch(`${base}${path}`, {
   body: typeof body === 'string' ? body : JSON.stringify(body),
 });
 
+test('the picture credits name the photographer, never the answer', async () => {
+  // A picture question whose answer the credits must not give away.
+  repo.createQuestion({
+    answer: 'أسد',
+    clue: 'ملك الغابة',
+    title: 'حيوانات',
+    type: 'image',
+    imageFile: 'aaaaaaaaaaaaaaaaaaaaaaaa.jpg',
+    imageAuthor: 'Somebody',
+    imageLicence: 'CC BY 4.0',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Lion.jpg',
+  });
+
+  const body = await (await fetch(`${base}/credits`)).json();
+  const mine = body.credits.find((c) => c.source.endsWith('Lion.jpg'));
+  assert.ok(mine, 'the credit is served');
+  assert.deepEqual(Object.keys(mine).sort(), ['author', 'licence', 'source', 'title']);
+  // The whole point: this endpoint is public, so an answer here is an answer key.
+  assert.equal(mine.answer, undefined);
+  assert.equal(JSON.stringify(body).includes('أسد'), false, 'no answer anywhere in the payload');
+});
+
 test('lists published levels only', async () => {
   const res = await fetch(`${base}/levels`);
   const body = await res.json();
