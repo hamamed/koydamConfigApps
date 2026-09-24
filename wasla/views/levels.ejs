@@ -64,6 +64,25 @@
                 </div>
                 <span class="small kd-faint" data-generator-grades>الكل — سهل ثم متوسط ثم صعب</span>
               </div>
+
+              <%# Or: every level holds all three grades at once. %>
+              <div class="wz-generate-field" data-mix>
+                <label class="ad-section-label d-flex align-items-center gap-2 mb-0" for="mixMode">
+                  <input class="form-check-input m-0" type="checkbox" id="mixMode" name="mixMode" value="1" data-mix-toggle>
+                  <span>اخلط داخل كل لغز</span>
+                </label>
+                <div class="wz-grades mt-1" data-mix-fields>
+                  <% [['easy', 'سهل', 4], ['medium', 'متوسط', 3], ['hard', 'صعب', 3]].forEach(([key, label, value]) => { %>
+                    <label class="wz-grade">
+                      <span><%= label %></span>
+                      <input class="form-control form-control-sm wz-mix-count" type="number" name="mix_<%= key %>"
+                             value="<%= value %>" min="0" max="<%= maxLevelSize %>" data-mix-count
+                             aria-label="عدد أسئلة <%= label %> في اللغز">
+                    </label>
+                  <% }) %>
+                </div>
+                <span class="small kd-faint" data-mix-total>المجموع يجب أن يساوي عدد أسئلة اللغز</span>
+              </div>
               <label class="wz-generate-field">
                 <span class="ad-section-label">كم لغزاً</span>
                 <input class="form-control form-control-sm" type="number" name="count" value="10" min="1" max="<%= maxGenerated %>">

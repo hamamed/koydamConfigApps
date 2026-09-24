@@ -518,11 +518,43 @@ export function adminRouter({
    * draws at random with معلومات عامة taking two of the ten, only from questions no
    * level uses, and only sets whose words cross.
    *
-   * Any number of difficulties may be picked, and the run is shared between
-   * exactly those, always in the order easy → medium → hard. Picking none is
-   * picking all three. Each level is tagged with the difficulty its questions
-   * came from, which is the order players meet them in.
+   * Two ways to use the difficulties.
+   *
+   * **Ticked** — any number of them, and the run is shared between exactly
+   * those in the order easy → medium → hard, each level all of one grade.
+   * Ticking none is ticking all three.
+   *
+   * **Mixed** — every level holds the amounts asked for at once, say four easy,
+   * three medium and three hard. They must add up to the level's size, and the
+   * level is tagged with the grade its questions average out to.
    */
+  /**
+   * The per-level mix, or null when the form did not ask for one.
+   * `{ amounts }`, or `{ error }` when the numbers do not make a level.
+   */
+  function readMix(body, size) {
+    if (!truthy(body.mixMode)) return null;
+    const amounts = {};
+    for (const grade of DIFFICULTIES) {
+      const n = Math.round(Number(body[`mix_${grade}`])) || 0;
+      if (n < 0) return { error: 'أعداد الخلط لا تكون سالبة.' };
+      amounts[grade] = n;
+    }
+    const total = DIFFICULTIES.reduce((sum, g) => sum + amounts[g], 0);
+    if (total !== size) {
+      return { error: `مجموع الخلط ${total} ويجب أن يساوي عدد أسئلة اللغز (${size}).` };
+    }
+    return { amounts };
+  }
+
+  /** What grade a mixed level counts as: where its questions sit on average. */
+  function gradeOfMix(amounts) {
+    const weight = { easy: 1, medium: 2, hard: 3 };
+    const total = DIFFICULTIES.reduce((sum, g) => sum + amounts[g], 0) || 1;
+    const mean = DIFFICULTIES.reduce((sum, g) => sum + weight[g] * amounts[g], 0) / total;
+    return mean <= 1.5 ? 'easy' : mean <= 2.5 ? 'medium' : 'hard';
+  }
+
   router.post('/levels/generate', (req, res) => {
     const chosen = [].concat(req.body.categories ?? []).map((name) => String(name).trim()).filter(Boolean);
     const grades = [].concat(req.body.difficulty ?? []).map((d) => String(d).trim()).filter(Boolean);
@@ -535,10 +567,6 @@ export function adminRouter({
     }
 
     const free = freeQuestions();
-    // Kept in DIFFICULTIES order however they were ticked, and de-duplicated;
-    // ticking none is ticking them all.
-    const picked = DIFFICULTIES.filter((d) => grades.includes(d));
-    const wanted = picked.length ? picked : DIFFICULTIES;
     const taken = usedAnswers();
     const planned = [];
     let ranOutOf = null;
@@ -546,28 +574,61 @@ export function adminRouter({
     let noCrossing = false;
     let error = null;
 
-    // Each difficulty is planned on its own so a level's words are all of one grade;
-    // the words already spent carry from one round to the next, so none is used twice.
-    share(count, wanted.length).forEach((want, at) => {
-      if (!want || error) return;
-      const grade = wanted[at];
+    // A mix: every level holds all three grades in the amounts asked for.
+    const mix = readMix(req.body, size);
+    if (mix?.error) {
+      req.flash('danger', mix.error);
+      return res.redirect('/admin/levels');
+    }
+
+    if (mix) {
       const plan = planLevels({
-        questions: free.filter((q) => q.difficulty === grade),
+        questions: free,
         categories: chosen,
-        count: want,
+        count,
         size,
-        seed: (Date.now() + at) % 1000000,
+        seed: Date.now() % 1000000,
         usedAnswers: taken,
+        mix: mix.amounts,
       });
-      if (plan.error) { error = plan.error; return; }
-      plan.levels.forEach((words) => {
-        words.forEach((word) => taken.push(word.playAnswer));
-        planned.push({ words, difficulty: grade });
+      if (plan.error) error = plan.error;
+      else {
+        plan.levels.forEach((words) => {
+          words.forEach((word) => taken.push(word.playAnswer));
+          planned.push({ words, difficulty: gradeOfMix(mix.amounts) });
+        });
+        ranOutOf = plan.ranOutOf;
+        ranOut = plan.ranOut;
+        noCrossing = plan.noCrossing;
+      }
+    } else {
+      // Kept in DIFFICULTIES order however they were ticked, and de-duplicated;
+      // ticking none is ticking them all.
+      const picked = DIFFICULTIES.filter((d) => grades.includes(d));
+      const wanted = picked.length ? picked : DIFFICULTIES;
+      // Each difficulty is planned on its own so a level's words are all of one grade;
+      // the words already spent carry from one round to the next, so none is used twice.
+      share(count, wanted.length).forEach((want, at) => {
+        if (!want || error) return;
+        const grade = wanted[at];
+        const plan = planLevels({
+          questions: free.filter((q) => q.difficulty === grade),
+          categories: chosen,
+          count: want,
+          size,
+          seed: (Date.now() + at) % 1000000,
+          usedAnswers: taken,
+        });
+        if (plan.error) { error = plan.error; return; }
+        plan.levels.forEach((words) => {
+          words.forEach((word) => taken.push(word.playAnswer));
+          planned.push({ words, difficulty: grade });
+        });
+        ranOutOf = ranOutOf ?? plan.ranOutOf;
+        ranOut = ranOut || plan.ranOut;
+        noCrossing = noCrossing || plan.noCrossing;
       });
-      ranOutOf = ranOutOf ?? plan.ranOutOf;
-      ranOut = ranOut || plan.ranOut;
-      noCrossing = noCrossing || plan.noCrossing;
-    });
+    }
     if (error) {
       req.flash('danger', error);
       return res.redirect('/admin/levels');

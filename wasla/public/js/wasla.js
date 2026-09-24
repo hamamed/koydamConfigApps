@@ -189,6 +189,41 @@
     };
 
     grades.forEach((g) => g.addEventListener('change', refresh));
+
+    // ── Mixing grades inside one level ──────────────────────────────────────
+    // With the mix on, the run is not split between grades any more — every
+    // level holds all three — so the tick boxes above stop meaning anything and
+    // are turned off to say so.
+    const mixToggle = form.querySelector('[data-mix-toggle]');
+    const mixFields = form.querySelector('[data-mix-fields]');
+    const mixCounts = [...form.querySelectorAll('[data-mix-count]')];
+    const mixTotal = form.querySelector('[data-mix-total]');
+    const sizeBox = form.querySelector('input[name="size"]');
+
+    const refreshMix = () => {
+      if (!mixToggle) return;
+      const on = mixToggle.checked;
+      mixFields?.classList.toggle('is-off', !on);
+      mixCounts.forEach((box) => { box.disabled = !on; });
+      grades.forEach((g) => { g.disabled = on; });
+      form.querySelector('[data-generator-grades]')?.classList.toggle('is-off', on);
+
+      const total = mixCounts.reduce((sum, box) => sum + (Number(box.value) || 0), 0);
+      const size = Number(sizeBox?.value) || 0;
+      if (mixTotal) {
+        mixTotal.textContent = on
+          ? (total === size ? `المجموع ${total} — يطابق عدد أسئلة اللغز` : `المجموع ${total} ويجب أن يكون ${size}`)
+          : 'المجموع يجب أن يساوي عدد أسئلة اللغز';
+        mixTotal.classList.toggle('text-danger', on && total !== size);
+      }
+      refresh();
+    };
+
+    mixToggle?.addEventListener('change', refreshMix);
+    mixCounts.forEach((box) => box.addEventListener('input', refreshMix));
+    sizeBox?.addEventListener('input', refreshMix);
+
+    refreshMix();
     refresh();
   });
 

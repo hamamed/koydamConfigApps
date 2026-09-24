@@ -8,7 +8,7 @@ import {
 } from '../src/level-builder.js';
 import { createRepository } from '../src/repository.js';
 
-const question = (id, title, answer) => ({ id, title, answer, playAnswer: answer });
+const question = (id, title, answer, difficulty = '') => ({ id, title, answer, playAnswer: answer, difficulty });
 
 /** Enough short, well-crossing answers per category to plan a few levels from. */
 function bank(categories, per = 12) {
@@ -19,8 +19,9 @@ function bank(categories, per = 12) {
   // One letter apiece keeps every category's words its own and every answer short.
   const mark = ['', 'ا', 'ه', 'ي', 'ن', 'ت', 'م', 'ل', 'س', 'د'];
   let id = 0;
-  return categories.flatMap((title, at) => answers.slice(0, per).map((answer) => (
-    question((id += 1), title, `${answer}${mark[at % mark.length]}`)
+  return categories.flatMap((title, at) => answers.slice(0, per).map((answer, n) => (
+    // Every category carries all three grades, so a mix can always be met.
+    question((id += 1), title, `${answer}${mark[at % mark.length]}`, ['easy', 'medium', 'hard'][n % 3])
   )));
 }
 
@@ -172,4 +173,42 @@ test('a planned level can be built from the bank, and its words all cross', () =
 test('a set that cannot be laid out is graded as no level at all', () => {
   assert.equal(gradeSet([question(1, 'ضد', 'كبير'), question(2, 'مرادف', 'طظغ')]), null);
   assert.ok(gradeSet([question(1, 'ضد', 'كبير'), question(2, 'مرادف', 'سمير')]).crossings >= 1);
+});
+
+test('a level can be built from a mix of grades, in the amounts asked for', () => {
+  const questions = bank([MAIN_CATEGORY, 'ضد', 'مرادف', 'علم', 'حيوانات', 'شعارات', 'سيارات', 'معالم', 'لاعب'], 18);
+  const mix = { easy: 4, medium: 3, hard: 3 };
+  const { levels } = planLevels({ questions, count: 3, seed: 11, mix });
+
+  assert.ok(levels.length >= 1, 'at least one level was built');
+  for (const level of levels) {
+    assert.equal(level.length, LEVEL_SIZE);
+    const got = { easy: 0, medium: 0, hard: 0 };
+    for (const q of level) got[q.difficulty] += 1;
+    assert.deepEqual(got, mix, 'every level holds exactly the grades asked for');
+  }
+});
+
+test('a mix that does not add up to the level size builds nothing', () => {
+  const questions = bank([MAIN_CATEGORY, 'ضد', 'مرادف', 'علم', 'حيوانات', 'شعارات'], 18);
+  // Nine for a level of ten.
+  const { levels } = planLevels({ questions, count: 2, seed: 3, mix: { easy: 3, medium: 3, hard: 3 } });
+  assert.deepEqual(levels, []);
+});
+
+test('a mix asking for a grade the bank does not hold builds nothing', () => {
+  // Every question here is easy, so three hard ones cannot be found.
+  const questions = bank([MAIN_CATEGORY, 'ضد', 'مرادف', 'علم', 'حيوانات', 'شعارات'], 18)
+    .map((q) => ({ ...q, difficulty: 'easy' }));
+  const { levels } = planLevels({ questions, count: 2, seed: 3, mix: { easy: 4, medium: 3, hard: 3 } });
+  assert.deepEqual(levels, []);
+});
+
+test('without a mix a level is still whatever the caller filtered to', () => {
+  const questions = bank([MAIN_CATEGORY, 'ضد', 'مرادف', 'علم', 'حيوانات', 'شعارات', 'سيارات'], 18)
+    .filter((q) => q.difficulty === 'medium');
+  const { levels } = planLevels({ questions, count: 1, seed: 7 });
+  for (const level of levels) {
+    assert.ok(level.every((q) => q.difficulty === 'medium'), 'one grade throughout, as before');
+  }
 });

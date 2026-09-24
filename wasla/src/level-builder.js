@@ -100,6 +100,10 @@ export function gradeSet(questions) {
  * synonym and an opposite), and a word the player has already solved — or one
  * twice in the same level — is not worth a second slot.
  *
+ * `mix` asks for a level made of several grades at once — `{ easy: 4, medium: 3,
+ * hard: 3 }` — and must add up to `size`. Without it every question in a level
+ * is whatever grade `questions` was filtered to, which is the old behaviour.
+ *
  * Returns `{ levels, ranOutOf, ranOut, noCrossing }`: `ranOutOf` names a category
  * that must be in every level and has nothing left, `ranOut` says the bank no
  * longer holds a level's worth, and `noCrossing` says the questions left were
@@ -108,6 +112,7 @@ export function gradeSet(questions) {
 export function planLevels({
   questions, categories = [], count = 1, seed = 1, size = LEVEL_SIZE,
   mainCategory = MAIN_CATEGORY, mainSlots = MAIN_SLOTS, maxLetters = MAX_LETTERS, usedAnswers = [],
+  mix = null,
 }) {
   const wanted = [...new Set(categories.map((name) => String(name ?? '').trim()).filter(Boolean))];
   const short = questions.filter((q) => !maxLetters || answerLength(q) <= maxLetters);
@@ -141,7 +146,7 @@ export function planLevels({
     const free = [...pools.values()].reduce((sum, list) => sum + list.length, 0);
     if (free < size) { ranOut = true; break; }
 
-    const picked = pickCrossingSet({ pools, size, main, mainSlots, random });
+    const picked = pickCrossingSet({ pools, size, main, mainSlots, random, mix });
     if (!picked) { noCrossing = true; break; }
 
     picked.forEach((question) => taken.add(question.playAnswer));
@@ -160,9 +165,9 @@ export function planLevels({
  * Each try draws its own categories and its own answers, so a word that crosses
  * nothing is left behind rather than blocking the whole plan.
  */
-function pickCrossingSet({ pools, size, main, mainSlots, random }) {
+function pickCrossingSet({ pools, size, main, mainSlots, random, mix = null }) {
   for (let attempt = 0; attempt < TRIES_PER_LEVEL; attempt++) {
-    const slots = slotPlan({ pools, size, main, mainSlots, random });
+    const slots = slotPlan({ pools, size, main, mainSlots, random, mix });
     if (!slots) return null;
     const picked = fillSlots({ slots, pools, random });
     // The grid the app draws is laid out from scratch, so it has the last word
@@ -179,19 +184,61 @@ function pickCrossingSet({ pools, size, main, mainSlots, random }) {
  * different categories drawn at random, so no two levels are the same mix. A bank
  * with fewer categories than slots gives some of them a second word.
  */
-function slotPlan({ pools, size, main, mainSlots, random }) {
+function slotPlan({ pools, size, main, mainSlots, random, mix = null }) {
   const stocked = [...pools.keys()].filter((name) => pools.get(name).length);
   if (stocked.length < MIN_CATEGORIES) return null;
 
+  if (mix) return mixedSlotPlan({ pools, stocked, size, main, mainSlots, random, mix });
+
   const slots = [];
   if (main && mainSlots > 0) {
-    for (let i = 0; i < Math.min(mainSlots, size); i++) slots.push(main);
+    for (let i = 0; i < Math.min(mainSlots, size); i++) slots.push({ name: main, difficulty: null });
   }
   const others = shuffled(stocked.filter((name) => name !== main), random);
-  while (slots.length < size && others.length) slots.push(others.shift());
+  while (slots.length < size && others.length) slots.push({ name: others.shift(), difficulty: null });
   const spare = shuffled(stocked, random);
-  for (let i = 0; slots.length < size; i++) slots.push(spare[i % spare.length]);
+  for (let i = 0; slots.length < size; i++) slots.push({ name: spare[i % spare.length], difficulty: null });
   return shuffled(slots, random);
+}
+
+/**
+ * The same plan, but each slot also carries the grade it must be filled from.
+ *
+ * The grades are fixed by the mix, so the choice left is which category answers
+ * each one — and it is made from the categories that actually hold a free
+ * question of that grade. Picking a category blind and hoping it has an easy
+ * one left fails far more often than it succeeds.
+ */
+function mixedSlotPlan({ pools, stocked, size, main, mainSlots, random, mix }) {
+  const grades = shuffled(
+    Object.entries(mix).flatMap(([grade, n]) => Array.from({ length: n }, () => grade)),
+    random,
+  );
+  if (grades.length !== size) return null;
+
+  const has = (name, grade) => pools.get(name)?.some((q) => q.difficulty === grade);
+  const used = new Set();
+  let owedToMain = main ? Math.min(mainSlots, size) : 0;
+  const slots = [];
+
+  for (const grade of grades) {
+    // The category every level must hold takes its slots first, but only where
+    // it can actually answer the grade in hand.
+    if (owedToMain > 0 && main && has(main, grade)) {
+      slots.push({ name: main, difficulty: grade });
+      owedToMain -= 1;
+      used.add(main);
+      continue;
+    }
+    const able = stocked.filter((name) => name !== main && has(name, grade));
+    if (!able.length) return null;
+    // A category not yet in this level first, so a level is still a mix of them.
+    const fresh = able.filter((name) => !used.has(name));
+    const from = shuffled(fresh.length ? fresh : able, random);
+    slots.push({ name: from[0], difficulty: grade });
+    used.add(from[0]);
+  }
+  return used.size < MIN_CATEGORIES ? null : slots;
 }
 
 /**
@@ -207,8 +254,9 @@ function fillSlots({ slots, pools, random }) {
   const picked = [];
   const words = new Set();
 
-  for (const name of slots) {
-    const free = (pools.get(name) ?? []).filter((q) => !words.has(q.playAnswer) && !picked.includes(q));
+  for (const slot of slots) {
+    const free = (pools.get(slot.name) ?? []).filter((q) => !words.has(q.playAnswer) && !picked.includes(q)
+      && (!slot.difficulty || q.difficulty === slot.difficulty));
     if (!free.length) return null;
     const tries = sample(free, CANDIDATES, random);
 

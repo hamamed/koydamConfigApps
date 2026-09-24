@@ -1089,3 +1089,7 @@ html { scrollbar-gutter: stable; }
 }
 .wz-grade:has(input:checked) { background: var(--kd-accent-soft); border-color: var(--wz-indigo); }
 .wz-grade input { margin: 0; }
+
+/* Mixing grades inside one generated level. */
+.wz-mix-count { width: 3.6rem; }
+[data-mix-fields].is-off { opacity: .45; }
