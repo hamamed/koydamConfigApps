@@ -98,3 +98,34 @@ test('reports how many letters the words share, and prefers a layout with more',
   assert.equal(cells.size, letters - layout.crossings);
   assert.deepEqual(runs(layout, list).length, list.length, 'no run of letters that is not one of the words');
 });
+
+test('a generated grid stands taller than it is wide, so it fits a phone', () => {
+  // A spread of real answers, laid out many times over: the shape rule is a
+  // preference the search weighs, so it is judged over a run rather than one grid.
+  const bank = ['المغرب', 'مصر', 'اسد', 'باريس', 'الشمس', 'شجرة', 'سمك', 'كلب', 'كرة', 'كتاب',
+    'قلم', 'بحر', 'جبل', 'نهر', 'مطر', 'قمر', 'نجم', 'وردة', 'عسل', 'تفاح', 'حصان', 'جمل',
+    'مدرسة', 'مكتبة', 'مطار', 'طبيب', 'مهندس', 'معلم', 'نجار', 'فلاح'];
+  let taller = 0;
+  let wider = 0;
+  const runs = 40;
+  for (let seed = 1; seed <= runs; seed++) {
+    // A different six every time, without needing a random source in the test.
+    const picked = Array.from({ length: 6 }, (_, i) => bank[(seed * 7 + i * 5) % bank.length]);
+    const layout = generateLayout(words(...new Set(picked)), { seed });
+    assert.ok(layout.rows > 0 && layout.cols > 0);
+    if (layout.rows > layout.cols) taller += 1;
+    if (layout.cols > layout.rows) wider += 1;
+  }
+  assert.ok(taller > wider * 4, `expected mostly tall grids, got ${taller} tall and ${wider} wide`);
+});
+
+test('of two layouts the same size, the taller one is chosen', () => {
+  // Two four-letter words crossing at one letter make a plus; the search can put
+  // either one down first, and the shape cost is what settles it.
+  const list = words('كتاب', 'بحر', 'رمل', 'لبن');
+  for (let seed = 1; seed <= 12; seed += 1) {
+    const layout = generateLayout(list, { seed });
+    assert.ok(layout.rows >= layout.cols,
+      `seed ${seed} came out ${layout.rows}×${layout.cols}, wider than it is tall`);
+  }
+});

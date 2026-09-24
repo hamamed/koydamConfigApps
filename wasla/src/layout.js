@@ -19,6 +19,22 @@ const ATTEMPTS = 12;
  */
 const CROSSING_WORTH = 12;
 
+/**
+ * What a grid's shape costs it, on top of its area.
+ *
+ * A phone is tall, and the board is drawn to fit the narrower of the two: a grid
+ * wider than it is tall has to shrink to the screen's width, taking every tile
+ * and every letter down with it. So width beyond the row count is charged for
+ * heavily, and height beyond the column count only lightly — enough to keep the
+ * layout from unrolling into a single tall ribbon, which fits no better.
+ */
+const WIDE_COST = 6;
+const TALL_COST = 1;
+
+function shapeCost(rows, cols) {
+  return cols > rows ? (cols - rows) * WIDE_COST : (rows - cols) * TALL_COST;
+}
+
 /** The cells a placed word covers, in reading order. */
 export function cellsOf({ answer, row, col, direction }) {
   return letters(answer).map((letter, i) => ({
@@ -125,8 +141,8 @@ class Board {
     const b = this.bounds;
     const height = Math.max(b.bottom, endRow) - Math.min(b.top, row) + 1;
     const width = Math.max(b.right, endCol) - Math.min(b.left, col) + 1;
-    // Squarish grids fit a phone better than a long ribbon of the same area.
-    return height * width + Math.abs(height - width) * 2;
+    // Area, plus what the shape costs: of two grids the same size, the taller one wins.
+    return height * width + shapeCost(height, width);
   }
 
   /** The best few spots crossing an existing word, most crossings first. */
@@ -333,8 +349,10 @@ function beamAttempt(order) {
     if (!next.length) break;
     const rank = (state) => {
       const b = state.board.bounds;
-      const area = (b.bottom - b.top + 1) * (b.right - b.left + 1);
-      return state.board.placements.length * 1000 + state.board.crossings * CROSSING_WORTH - area;
+      const rows = b.bottom - b.top + 1;
+      const cols = b.right - b.left + 1;
+      return state.board.placements.length * 1000 + state.board.crossings * CROSSING_WORTH
+        - rows * cols - shapeCost(rows, cols);
     };
     states = next.sort((a, b) => rank(b) - rank(a)).slice(0, BEAM);
     if (states.every((state) => state.stuck || !state.left.length)) break;
@@ -347,9 +365,9 @@ function beamAttempt(order) {
 function better(a, b) {
   if (!b) return true;
   if (a.unplaced.length !== b.unplaced.length) return a.unplaced.length < b.unplaced.length;
-  // Crossings first, area second: a grid where the words meet often is the one
-  // a player can work out, even when it takes a row more than the tightest.
-  return a.crossings * CROSSING_WORTH - a.area > b.crossings * CROSSING_WORTH - b.area;
+  // Crossings first, then size and shape: a grid where the words meet often is the
+  // one a player can work out, even when it takes a row more than the tightest.
+  return a.crossings * CROSSING_WORTH - a.cost > b.crossings * CROSSING_WORTH - b.cost;
 }
 
 /**
@@ -373,9 +391,11 @@ export function generateLayout(words, { seed = 1 } = {}) {
     const { board: placed, unplaced } = words.length <= BEAM_LIMIT ? beamAttempt(order) : attempt(order);
     const board = densify(placed, byId);
     const b = board.bounds;
+    const rows = b.bottom - b.top + 1;
+    const cols = b.right - b.left + 1;
     const result = {
       board, unplaced, crossings: board.crossings,
-      area: (b.bottom - b.top + 1) * (b.right - b.left + 1),
+      cost: rows * cols + shapeCost(rows, cols),
     };
     if (better(result, best)) best = result;
   }
