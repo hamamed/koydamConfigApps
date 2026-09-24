@@ -32,6 +32,7 @@ test('starts from the contract defaults', () => {
       banner: { enabled: true, unitId: '' },
       interstitial: { enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20 },
       rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
+      appOpen: { enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30 },
     },
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
@@ -177,6 +178,11 @@ test('refuses malformed ids and out-of-range numbers, and changes nothing', () =
     { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, coins: 1001 } },
     { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, coins: 2.5 } },
     { rewarded: { ...DEFAULT_CONFIG.ads.rewarded, maxPerDay: 51 } },
+    { appOpen: { ...DEFAULT_CONFIG.ads.appOpen, enabled: true, unitId: 'ca-app-pub-123/456' } },
+    { appOpen: { ...DEFAULT_CONFIG.ads.appOpen, minBackgroundSeconds: 601 } },
+    { appOpen: { ...DEFAULT_CONFIG.ads.appOpen, minBackgroundSeconds: -1 } },
+    { appOpen: { ...DEFAULT_CONFIG.ads.appOpen, minSecondsBetween: 3601 } },
+    { appOpen: { ...DEFAULT_CONFIG.ads.appOpen, maxPerDay: 201 } },
     { enabled: 'perhaps' },
   ];
   for (const over of bad) {
@@ -201,6 +207,7 @@ test('test mode serves Google\'s iOS units to the app and leaves the panel\'s va
     banner: { enabled: true, unitId: UNIT },
     interstitial: { ...DEFAULT_CONFIG.ads.interstitial, unitId: UNIT },
     rewarded: { ...DEFAULT_CONFIG.ads.rewarded, unitId: UNIT },
+    appOpen: { ...DEFAULT_CONFIG.ads.appOpen, unitId: UNIT },
   }));
   const stored = settings.get();
   assert.equal(stored.ads.banner.unitId, UNIT, 'the panel keeps showing what was typed');
@@ -210,6 +217,7 @@ test('test mode serves Google\'s iOS units to the app and leaves the panel\'s va
   assert.equal(served.ads.banner.unitId, IOS_TEST_ADS.banner);
   assert.equal(served.ads.interstitial.unitId, IOS_TEST_ADS.interstitial);
   assert.equal(served.ads.rewarded.unitId, IOS_TEST_ADS.rewarded);
+  assert.equal(served.ads.appOpen.unitId, IOS_TEST_ADS.appOpen);
   // Everything else is untouched, the switches and the counts included.
   assert.equal(served.ads.interstitial.everyQuestions, stored.ads.interstitial.everyQuestions);
   assert.equal(served.dailyPuzzleCoins, stored.dailyPuzzleCoins);
@@ -218,4 +226,28 @@ test('test mode serves Google\'s iOS units to the app and leaves the panel\'s va
 test('with test mode off the app is served the real ids', () => {
   settings.save(withAds({ enabled: true, banner: { enabled: true, unitId: UNIT } }));
   assert.equal(configForApp(settings.get()).ads.banner.unitId, UNIT);
+});
+
+test('saves the advert for a return to the app', () => {
+  const result = settings.save(withAds({
+    enabled: true,
+    appOpen: { enabled: 'on', unitId: `  ${UNIT}  `, minSecondsBetween: '300', maxPerDay: '2', minBackgroundSeconds: '45' },
+  }));
+  assert.equal(result.error, undefined);
+  assert.deepEqual(settings.get().ads.appOpen, {
+    enabled: true, unitId: UNIT, minSecondsBetween: 300, maxPerDay: 2, minBackgroundSeconds: 45,
+  });
+});
+
+test('a config stored before app-open ads existed reads the default for them', () => {
+  // What a row written by the previous version looks like: every other format,
+  // and no appOpen at all. It must still serve, or the app loses its whole
+  // ads block the moment the server is updated.
+  const { appOpen, ...before } = DEFAULT_CONFIG.ads;
+  settings.save(withAds({ enabled: true }));
+  db.prepare(`UPDATE settings SET value = ? WHERE key = 'ads'`)
+    .run(JSON.stringify({ ...before, enabled: true }));
+  const ads = settings.get().ads;
+  assert.equal(ads.enabled, true, 'the rest of the block survives');
+  assert.deepEqual(ads.appOpen, DEFAULT_CONFIG.ads.appOpen);
 });

@@ -191,6 +191,7 @@ test('config returns the contract defaults', async () => {
       banner: { enabled: true, unitId: '' },
       interstitial: { enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20 },
       rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
+      appOpen: { enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30 },
     },
   });
 });

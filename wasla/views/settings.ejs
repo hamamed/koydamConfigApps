@@ -169,7 +169,7 @@
                     </div>
                   </div>
 
-                  <div class="col-lg-4">
+                  <div class="col-lg-6 col-xxl-3">
                     <div class="d-grid gap-2">
                       <div class="form-check form-switch m-0">
                         <input class="form-check-input" type="checkbox" role="switch" id="adsBannerEnabled" name="adsBannerEnabled" value="on" <% if (values.ads?.banner?.enabled) { %>checked<% } %>>
@@ -182,7 +182,7 @@
                     </div>
                   </div>
 
-                  <div class="col-lg-4">
+                  <div class="col-lg-6 col-xxl-3">
                     <div class="d-grid gap-2">
                       <div class="form-check form-switch m-0">
                         <input class="form-check-input" type="checkbox" role="switch" id="adsInterstitialEnabled" name="adsInterstitialEnabled" value="on" <% if (values.ads?.interstitial?.enabled) { %>checked<% } %>>
@@ -208,7 +208,7 @@
                     </div>
                   </div>
 
-                  <div class="col-lg-4">
+                  <div class="col-lg-6 col-xxl-3">
                     <div class="d-grid gap-2">
                       <div class="form-check form-switch m-0">
                         <input class="form-check-input" type="checkbox" role="switch" id="adsRewardedEnabled" name="adsRewardedEnabled" value="on" <% if (values.ads?.rewarded?.enabled) { %>checked<% } %>>
@@ -230,6 +230,35 @@
                         </div>
                       <% }) %>
                       <div class="form-text">زر «شاهد فيديو» تحت المساعدات في صفحة السؤال. لا تُدفع العملات إلا بعد مشاهدة الفيديو كاملاً.</div>
+                    </div>
+                  </div>
+
+                  <div class="col-lg-6 col-xxl-3">
+                    <div class="d-grid gap-2">
+                      <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="adsAppOpenEnabled" name="adsAppOpenEnabled" value="on" <% if (values.ads?.appOpen?.enabled) { %>checked<% } %>>
+                        <label class="form-check-label small fw-semibold" for="adsAppOpenEnabled">إعلان عند العودة إلى التطبيق</label>
+                      </div>
+                      <label class="small fw-semibold" for="adsAppOpenUnitId">معرّف وحدة إعلان الفتح</label>
+                      <input class="form-control kd-mono" type="text" id="adsAppOpenUnitId" name="adsAppOpenUnitId" dir="ltr"
+                             value="<%= values.ads?.appOpen?.unitId ?? '' %>" placeholder="ca-app-pub-…/…">
+                      <% [
+                           ['adsAppOpenMinBackground', 'أقل مدة غياب تستحق إعلاناً (ثانية)', values.ads?.appOpen?.minBackgroundSeconds, defaults.ads.appOpen.minBackgroundSeconds, 0, maxAdBackgroundSeconds],
+                           ['adsAppOpenMinSeconds', 'أقل مهلة بين إعلانين (ثانية)', values.ads?.appOpen?.minSecondsBetween, defaults.ads.appOpen.minSecondsBetween, 0, maxAdsSecondsBetween],
+                           ['adsAppOpenMaxPerDay', 'حد أقصى في اليوم (٠ = بلا حد)', values.ads?.appOpen?.maxPerDay, defaults.ads.appOpen.maxPerDay, 0, maxAdsPerDay],
+                         ].forEach(([name, label, value, fallback, min, max]) => { %>
+                        <div class="row g-2 align-items-center">
+                          <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                          <div class="col-sm-5">
+                            <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" max="<%= max %>" step="1" required value="<%= value %>">
+                            <div class="form-text">الافتراضي <%= fallback %></div>
+                          </div>
+                        </div>
+                      <% }) %>
+                      <div class="form-text">
+                        يظهر حين يترك اللاعب التطبيق ثم يعود إليه. لا يظهر عند أول تشغيل، ولا أثناء اللعب،
+                        ولا إذا كان الغياب أقصر من المدة أعلاه — خروج لحظي للإشعارات لا يستحق إعلاناً.
+                      </div>
                     </div>
                   </div>
                 </div>

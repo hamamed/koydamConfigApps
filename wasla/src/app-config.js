@@ -28,6 +28,10 @@ export const DEFAULT_CONFIG = Object.freeze({
       enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20,
     }),
     rewarded: Object.freeze({ enabled: true, unitId: '', coins: 50, maxPerDay: 5 }),
+    // Shown when the player comes back to a game they left open.
+    appOpen: Object.freeze({
+      enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30,
+    }),
   }),
 });
 
@@ -43,6 +47,14 @@ export const MAX_ADS_SECONDS_BETWEEN = 3600;
 export const MAX_ADS_PER_DAY = 200;
 export const MAX_REWARDED_PER_DAY = 50;
 export const MAX_REWARDED_COINS = 1000;
+/**
+ * How long the app must have been away before a return is worth an advert.
+ *
+ * Someone who flicked to their notifications and came straight back has not
+ * started a session; showing them a full screen for it is the fastest way to
+ * make an app feel like a billboard. Google's own guidance is the same.
+ */
+export const MAX_AD_BACKGROUND_SECONDS = 600;
 
 /**
  * An AdMob ad unit id, or '' for "not set yet" — which turns that format off in
@@ -69,6 +81,7 @@ export const IOS_TEST_ADS = Object.freeze({
   banner: 'ca-app-pub-3940256099942544/2435281174',
   interstitial: 'ca-app-pub-3940256099942544/4411468910',
   rewarded: 'ca-app-pub-3940256099942544/1712485313',
+  appOpen: 'ca-app-pub-3940256099942544/5575463023',
 });
 
 /** A whole number in [min, max] from a number or a numeric string, else null. */
@@ -158,9 +171,21 @@ const FIELDS = {
       coins: whole(v?.rewarded?.coins, 0, MAX_REWARDED_COINS),
       maxPerDay: whole(v?.rewarded?.maxPerDay, 0, MAX_REWARDED_PER_DAY),
     };
-    const parts = [enabled, testMode, appId,
-      ...Object.values(banner), ...Object.values(interstitial), ...Object.values(rewarded)];
-    return parts.includes(null) ? null : { enabled, testMode, appId, banner, interstitial, rewarded };
+    // A block saved before this format existed has no appOpen at all. It reads as
+    // the default rather than as nonsense, so the deploy that adds the format does
+    // not quietly reset every other ad setting on the way past.
+    const open = v?.appOpen ?? DEFAULT_CONFIG.ads.appOpen;
+    const appOpen = {
+      enabled: flag(open.enabled),
+      unitId: adUnit(open.unitId),
+      minSecondsBetween: whole(open.minSecondsBetween, 0, MAX_ADS_SECONDS_BETWEEN),
+      maxPerDay: whole(open.maxPerDay, 0, MAX_ADS_PER_DAY),
+      minBackgroundSeconds: whole(open.minBackgroundSeconds, 0, MAX_AD_BACKGROUND_SECONDS),
+    };
+    const parts = [enabled, testMode, appId, ...Object.values(banner), ...Object.values(interstitial),
+      ...Object.values(rewarded), ...Object.values(appOpen)];
+    return parts.includes(null) ? null
+      : { enabled, testMode, appId, banner, interstitial, rewarded, appOpen };
   },
 };
 
@@ -198,6 +223,7 @@ export function configForApp(config) {
       banner: { ...ads.banner, unitId: IOS_TEST_ADS.banner },
       interstitial: { ...ads.interstitial, unitId: IOS_TEST_ADS.interstitial },
       rewarded: { ...ads.rewarded, unitId: IOS_TEST_ADS.rewarded },
+      appOpen: { ...ads.appOpen, unitId: IOS_TEST_ADS.appOpen },
     },
   };
 }
