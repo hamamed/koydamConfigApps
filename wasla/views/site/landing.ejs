@@ -97,20 +97,31 @@
     set so nothing jumps while they load. %>
 <section class="wz-shots-section">
   <h2 class="wz-h2">من داخل اللعبة</h2>
-  <div class="wz-shots">
-  <% [
-    ['shot-1', 'شبّك — عالم من الذكاء: رحلة تفاعلية تجمع بين الألغاز والمعرفة'],
-    ['shot-2', 'لغز اليوم: خمس ألعاب تُلعب بالترتيب، وجوائز على إكمالها'],
-    ['shot-3', 'شبكة الكلمات المتقاطعة وأنت تملؤها بإصبعك'],
-    ['shot-4', 'أسئلة إسلاميات: أكمل الآية'],
-    ['shot-5', 'أسئلة الصور: ما الذي في الصورة؟'],
-    ['shot-6', 'أسئلة الخرائط والدول'],
-    ['shot-7', 'البحث عن الكلمات في شبكة الحروف'],
-  ].forEach(([file, alt]) => { %>
-    <img src="/assets/site/<%= file %>.jpg?v=<%= assetVersion %>" alt="<%= alt %>"
-         width="260" height="565" loading="lazy" decoding="async">
-    <% }) %>
+  <p class="wz-shots-hint">اسحب لرؤية المزيد</p>
+  <div class="wz-gallery">
+    <%# The arrows are for a mouse; a finger swipes the strip itself. In a page
+        that reads right to left, «previous» is the one on the right. %>
+    <button class="wz-gallery-arrow" type="button" data-gallery-prev aria-label="الصورة السابقة" aria-controls="wzShots">›</button>
+    <div class="wz-shots" id="wzShots" data-gallery tabindex="0" role="group"
+         aria-roledescription="معرض" aria-label="صور من داخل اللعبة">
+    <% [
+      ['shot-1', 'شبّك — عالم من الذكاء: رحلة تفاعلية تجمع بين الألغاز والمعرفة'],
+      ['shot-2', 'لغز اليوم: خمس ألعاب تُلعب بالترتيب، وجوائز على إكمالها'],
+      ['shot-3', 'شبكة الكلمات المتقاطعة وأنت تملؤها بإصبعك'],
+      ['shot-4', 'أسئلة إسلاميات: أكمل الآية'],
+      ['shot-5', 'أسئلة الصور: ما الذي في الصورة؟'],
+      ['shot-6', 'أسئلة الخرائط والدول'],
+      ['shot-7', 'البحث عن الكلمات في شبكة الحروف'],
+    ].forEach(([file, alt], index) => { %>
+      <%# The first two are on screen at once on a wide page, so they are not lazy. %>
+      <img src="/assets/site/<%= file %>.jpg?v=<%= assetVersion %>" alt="<%= alt %>"
+           width="260" height="565" decoding="async"
+           loading="<%= index < 2 ? 'eager' : 'lazy' %>">
+      <% }) %>
+    </div>
+    <button class="wz-gallery-arrow" type="button" data-gallery-next aria-label="الصورة التالية" aria-controls="wzShots">‹</button>
   </div>
+  <div class="wz-gallery-dots" data-gallery-dots></div>
 </section>
 
 <section class="wz-cta">
@@ -126,5 +137,6 @@
   <span class="wz-site-copy">© <%= new Date().getFullYear() %> Koydam</span>
 </footer>
 
+<script src="/assets/js/site.js?v=<%= assetVersion %>" defer></script>
 </body>
 </html>

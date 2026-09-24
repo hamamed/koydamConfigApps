@@ -208,19 +208,110 @@
 /* The section carries the spacing now that it has a heading; the row inside
    only lays the screens out. */
 .wz-shots-section { padding-block: 2.5rem 1rem; }
+.wz-shots-hint {
+  margin: -0.25rem 0 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--wz-muted, #5d7c80);
+}
+
+/* The screenshots are a strip you swipe rather than a wall you scan. Snapping
+   is the browser's own: a finger swipes the strip, the arrows are for a mouse,
+   and nothing here needs script to work. */
+.wz-gallery {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 .wz-shots {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 1.5rem;
+  flex: 1;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  /* Room for the drawn ledge under each shot, and for the focus ring. */
+  padding-block: 0.5rem 1rem;
+  padding-inline: 1rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
 }
+.wz-shots::-webkit-scrollbar { display: none; }
+.wz-shots:focus-visible { outline: 3px solid var(--wz-teal, #14a49e); outline-offset: 4px; border-radius: 30px; }
 .wz-shots img {
+  flex: 0 0 auto;
+  /* A wide page shows a row and scrolls it along; a phone shows one, centred. */
+  scroll-snap-align: start;
   width: 260px;
-  max-width: 44vw;
   height: auto;
   border-radius: 26px;
   border: 3px solid var(--wz-ink, #1f2d3a);
   box-shadow: 0 8px 0 var(--wz-ink, #1f2d3a);
+}
+
+.wz-gallery-arrow {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid var(--wz-ink, #1f2d3a);
+  background: #fff;
+  box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a);
+  color: var(--wz-ink, #1f2d3a);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.wz-gallery-arrow:hover { background: var(--wz-board, #e9f6f3); }
+.wz-gallery-arrow:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--wz-ink, #1f2d3a); }
+.wz-gallery-arrow[disabled] { opacity: 0.35; cursor: default; box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a); transform: none; }
+
+/* Dots answer "which one of seven am I on", which is only a question when one
+   shot fills the view. A wide page shows a row of them and has the arrows. */
+.wz-gallery-dots {
+  display: none;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+.wz-gallery-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--wz-ink, #1f2d3a);
+  opacity: 0.22;
+  cursor: pointer;
+  transition: opacity 0.2s, width 0.2s;
+}
+.wz-gallery-dot.is-here { opacity: 1; width: 22px; border-radius: 6px; }
+
+/* A finger does the swiping, so the arrows are only in the way — and on a
+   narrow page the two of them plus a shot are wider than the screen. */
+@media (hover: none), (max-width: 640px) {
+  .wz-gallery-arrow { display: none; }
+}
+
+/* One shot at a time on a phone, with the next one just showing so it is plain
+   that the strip goes on. */
+@media (max-width: 640px) {
+  .wz-shots {
+    gap: 1rem;
+    /* Enough on both sides that the first and last shot can reach the middle. */
+    padding-inline: max(0.75rem, calc(50% - 0.5 * min(72vw, 280px)));
+  }
+  .wz-shots img {
+    width: min(72vw, 280px);
+    scroll-snap-align: center;
+  }
+  .wz-gallery-dots { display: flex; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wz-shots { scroll-behavior: auto; }
+  .wz-gallery-dot { transition: none; }
 }
 
 /* ------------------------------------------------------------- cta ----- */
