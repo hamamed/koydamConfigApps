@@ -50,6 +50,8 @@
               </div>
             </div>
             <div class="d-flex flex-wrap align-items-end gap-3">
+              <%# Every field here is a label over one row of controls, so they
+                  all line up on the same baseline. The notes go under the row. %>
               <div class="wz-generate-field">
                 <span class="ad-section-label">الصعوبة</span>
                 <%# Tick as many as you like: the run is split between them, in
@@ -62,34 +64,36 @@
                     </label>
                   <% }) %>
                 </div>
-                <span class="small kd-faint" data-generator-grades>الكل — سهل ثم متوسط ثم صعب</span>
               </div>
 
-              <%# Or: every level holds all three grades at once. %>
+              <%# Or: every level holds all three grades at once. The toggle is a
+                  chip beside the amounts, so the whole row is one height. %>
               <div class="wz-generate-field" data-mix>
-                <label class="ad-section-label d-flex align-items-center gap-2 mb-0" for="mixMode">
-                  <input class="form-check-input m-0" type="checkbox" id="mixMode" name="mixMode" value="1" data-mix-toggle>
-                  <span>اخلط داخل كل لغز</span>
-                </label>
-                <div class="wz-grades mt-1" data-mix-fields>
-                  <% [['easy', 'سهل', 4], ['medium', 'متوسط', 3], ['hard', 'صعب', 3]].forEach(([key, label, value]) => { %>
-                    <label class="wz-grade">
-                      <span><%= label %></span>
-                      <input class="form-control form-control-sm wz-mix-count" type="number" name="mix_<%= key %>"
-                             value="<%= value %>" min="0" max="<%= maxLevelSize %>" data-mix-count
-                             aria-label="عدد أسئلة <%= label %> في اللغز">
-                    </label>
-                  <% }) %>
+                <span class="ad-section-label">الخلط داخل كل لغز</span>
+                <div class="wz-grades">
+                  <label class="wz-grade" for="mixMode">
+                    <input class="form-check-input" type="checkbox" id="mixMode" name="mixMode" value="1" data-mix-toggle>
+                    <span>اخلط</span>
+                  </label>
+                  <span class="wz-grades" data-mix-fields>
+                    <% [['easy', 'سهل', 4], ['medium', 'متوسط', 3], ['hard', 'صعب', 3]].forEach(([key, label, value]) => { %>
+                      <label class="wz-grade">
+                        <span><%= label %></span>
+                        <input class="wz-mix-count" type="number" name="mix_<%= key %>"
+                               value="<%= value %>" min="0" max="<%= maxLevelSize %>" data-mix-count
+                               aria-label="عدد أسئلة <%= label %> في اللغز">
+                      </label>
+                    <% }) %>
+                  </span>
                 </div>
-                <span class="small kd-faint" data-mix-total>المجموع يجب أن يساوي عدد أسئلة اللغز</span>
               </div>
               <label class="wz-generate-field">
                 <span class="ad-section-label">كم لغزاً</span>
-                <input class="form-control form-control-sm" type="number" name="count" value="10" min="1" max="<%= maxGenerated %>">
+                <input class="wz-generate-num" type="number" name="count" value="10" min="1" max="<%= maxGenerated %>">
               </label>
               <label class="wz-generate-field">
                 <span class="ad-section-label">أسئلة في اللغز</span>
-                <input class="form-control form-control-sm" type="number" name="size" value="<%= levelSize %>"
+                <input class="wz-generate-num" type="number" name="size" value="<%= levelSize %>"
                        min="<%= minCategories %>" max="<%= maxLevelSize %>">
               </label>
               <label class="form-check mb-1">
@@ -100,10 +104,14 @@
                 <span class="me-1"><%- icon('wand-sparkles', 15) %></span>ولّد
               </button>
             </div>
+            <div class="d-flex flex-wrap gap-3 small kd-faint">
+              <span data-generator-grades>الكل — سهل ثم متوسط ثم صعب</span>
+              <span data-mix-total>المجموع يجب أن يساوي عدد أسئلة اللغز</span>
+            </div>
             <p class="small kd-faint m-0">
               يأخذ كل لغز <%= mainSlots %> أسئلة من <span class="wz-ar"><%= mainCategory %></span> والباقي
-              from other categories picked at random, so no two levels are the same mix. Only words that cross are kept,
-              and a question already in a level is never reused. The number beside a category is how many it has free.
+              من فئات تُسحب عشوائياً، فلا يتشابه لغزان في خليطهما. ولا تُحفظ إلا الكلمات التي تتقاطع،
+              ولا يُعاد استعمال سؤال في لغز آخر. والرقم بجانب الفئة هو ما تبقّى فيها حرّاً.
             </p>
           </div>
         </form>

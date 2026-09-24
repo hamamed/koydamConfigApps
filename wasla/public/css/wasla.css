@@ -1090,6 +1090,31 @@ html { scrollbar-gutter: stable; }
 .wz-grade:has(input:checked) { background: var(--kd-accent-soft); border-color: var(--wz-indigo); }
 .wz-grade input { margin: 0; }
 
-/* Mixing grades inside one generated level. */
-.wz-mix-count { width: 3.6rem; }
+/* Mixing grades inside one generated level: the amount sits inside its chip,
+   so the row is one height whether a chip holds a tick box or a number. */
+.wz-mix-count {
+  width: 2.5rem;
+  padding: .05rem .2rem;
+  text-align: center;
+  font: inherit;
+  color: var(--kd-ink);
+  background: var(--kd-surface);
+  border: var(--wz-line) solid var(--kd-line);
+  border-radius: 7px;
+}
+.wz-mix-count:focus { outline: 2px solid var(--wz-teal-deep); outline-offset: 1px; }
+
+/* «كم لغزاً» and «أسئلة في اللغز» wear the chips' metrics, so the whole
+   generator row is one height rather than two. */
+.wz-generate-num {
+  width: 5.5rem;
+  height: 2.25rem;
+  padding: .3rem .6rem;
+  font-size: .85rem;
+  color: var(--kd-ink);
+  background: var(--kd-surface);
+  border: var(--wz-line) solid var(--kd-line);
+  border-radius: var(--kd-radius-sm);
+}
+.wz-generate-num:focus { outline: 2px solid var(--wz-teal-deep); outline-offset: 1px; }
 [data-mix-fields].is-off { opacity: .45; }
