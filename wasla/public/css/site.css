@@ -58,8 +58,32 @@
   font-size: .9rem;
   color: #5d7c80;
 }
-/* The logo is the hero's picture: the screens are further down the page. */
+/* The app icon is the hero's picture: the screens are further down the page.
+   It wears the page's own border and ledge rather than a drop shadow, so it
+   sits in the same world as the plates and the screenshots. */
 .wz-hero-mark { display: flex; justify-content: center; }
+
+.wz-appicon {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: .85rem;
+}
+.wz-appicon img {
+  display: block;
+  width: clamp(116px, 16vw, 176px);
+  height: auto;
+  /* iOS rounds its icons at about this share of the side. */
+  border-radius: 23%;
+  border: 3px solid var(--wz-ink, #1f2d3a);
+  box-shadow: 0 8px 0 var(--wz-ink, #1f2d3a);
+}
+.wz-appicon figcaption {
+  font-family: "Lalezar", "Tajawal", sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  line-height: 1;
+  color: var(--wz-ink, #1f2d3a);
+}
 
 .wz-hero-shot img {
   width: 100%;
@@ -111,19 +135,30 @@
   padding-block: 1rem 2.5rem;
 }
 .wz-number {
+  position: relative;
+  overflow: hidden;
   background: #fff;
   border: 2px solid var(--wz-ink, #1f2d3a);
   border-radius: 18px;
   box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a);
-  padding: 1rem .75rem;
+  padding: 1.1rem .75rem 1rem;
   text-align: center;
+}
+/* A band of the game's teal along the top, so a row of figures reads as a set. */
+.wz-number::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 5px;
+  background: var(--wz-teal, #17a49e);
 }
 .wz-number-value {
   display: block;
   font-family: "Lalezar", sans-serif;
-  font-size: 1.9rem;
+  font-size: clamp(1.9rem, 4vw, 2.3rem);
   color: var(--wz-teal-deep, #0e7f7a);
-  line-height: 1.2;
+  line-height: 1.15;
 }
 .wz-number-label { font-size: .88rem; color: #5d7c80; font-weight: 700; }
 
@@ -148,6 +183,17 @@
   border-radius: 20px;
   box-shadow: 0 4px 0 var(--wz-ink, #1f2d3a);
   padding: 1.2rem 1.25rem 1.35rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+@media (hover: hover) {
+  .wz-feature:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 0 var(--wz-ink, #1f2d3a);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wz-feature { transition: none; }
+  .wz-feature:hover { transform: none; }
 }
 .wz-feature h3 {
   font-family: "Lalezar", sans-serif;
@@ -159,12 +205,14 @@
 
 /* ----------------------------------------------------------- shots ----- */
 
+/* The section carries the spacing now that it has a heading; the row inside
+   only lays the screens out. */
+.wz-shots-section { padding-block: 2.5rem 1rem; }
 .wz-shots {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1.5rem;
-  padding-block: 2.5rem 1rem;
 }
 .wz-shots img {
   width: 260px;
