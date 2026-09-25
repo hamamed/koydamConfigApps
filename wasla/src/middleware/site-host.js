@@ -7,7 +7,7 @@
  * not serve to the other with a 301, so old links keep working. Off unless
  * `siteUrl` is set; hosts that are neither domain (a local run) are left alone.
  */
-const SITE_PAGES = new Set(['/', '/privacy', '/support', '/credits']);
+const SITE_PAGES = new Set(['/', '/privacy', '/support', '/credits', '/sitemap.xml']);
 const SITE_FILES = [/^\/assets\//, /^\/favicon\.ico$/, /^\/robots\.txt$/];
 
 const hostOf = (url) => (url ? new URL(url).hostname.toLowerCase() : '');

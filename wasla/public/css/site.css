@@ -239,6 +239,9 @@
 }
 .wz-shots::-webkit-scrollbar { display: none; }
 .wz-shots:focus-visible { outline: 3px solid var(--wz-teal, #14a49e); outline-offset: 4px; border-radius: 30px; }
+/* The <picture> around each shot is only a format switch; the strip lays out the img. */
+.wz-shots picture { display: contents; }
+
 .wz-shots img {
   flex: 0 0 auto;
   /* A wide page shows a row and scrolls it along; a phone shows one, centred. */

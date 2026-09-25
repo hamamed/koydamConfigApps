@@ -3,6 +3,7 @@ import express from 'express';
 import { config } from '../config.js';
 import { SUPPORT_EMAIL } from './legal.js';
 import { createPanelIcons } from '../panel-icons.js';
+import { landingJsonLd, pageMeta } from '../seo.js';
 
 /**
  * The icons this page draws — the game's own, from the pack the app uses.
@@ -40,11 +41,14 @@ export function siteRouter({ assetVersion, siteSettings, repo = null, dailyGames
   router.get('/', (_req, res) => {
     const counts = repo ? repo.counts() : { published: 0, questions: 0 };
     res.set('Cache-Control', 'public, max-age=600');
+    const meta = pageMeta(config.siteBase, '/');
+    const appStoreUrl = siteSettings.appStoreUrl();
     res.render('site/landing', {
-      title: 'شبّك · لعبة كلمات متقاطعة عربية',
+      title: meta.title,
+      seo: { ...meta, base: config.siteBase, jsonLd: landingJsonLd({ base: config.siteBase, description: meta.description, appStoreUrl }) },
       assetVersion,
       supportEmail: SUPPORT_EMAIL,
-      appStoreUrl: siteSettings.appStoreUrl(),
+      appStoreUrl,
       playUrl: siteSettings.playUrl(),
       levels: counts.published,
       questions: counts.questions,

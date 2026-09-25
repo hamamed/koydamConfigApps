@@ -23,6 +23,8 @@ export const config = {
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3700').replace(/\/+$/, ''),
   /** Where the landing page, privacy, support and credits live, e.g. https://chabbek.com. Empty keeps them on publicUrl. */
   siteUrl: (process.env.SITE_URL || '').trim().replace(/\/+$/, ''),
+  /** The absolute base every public page, sitemap and link preview is addressed at. */
+  get siteBase() { return this.siteUrl || this.publicUrl; },
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),
 
   /** The APNs .p8 key uploaded in the panel. Under data/, which deploys preserve. */

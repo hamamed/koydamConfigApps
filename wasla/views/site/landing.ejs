@@ -3,18 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><%= title %></title>
-  <meta name="description" content="شبّك لعبة كلمات متقاطعة عربية: ألغاز مرسومة بخط اليد، ولعبة جديدة كل يوم، ولوحات متصدرين. حمّلها مجاناً.">
+  <%- include('../partials/seo-head', { seo }) %>
   <meta name="theme-color" content="#e9f6f3">
   <link rel="icon" href="/assets/favicon.png?v=<%= assetVersion %>" type="image/png">
   <%# iOS masks this itself, so it is the square icon rather than the rounded one. %>
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=<%= assetVersion %>">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="شبّك">
-  <meta property="og:title" content="<%= title %>">
-  <meta property="og:description" content="ألغاز كلمات متقاطعة عربية، ولعبة جديدة كل يوم.">
-  <meta property="og:locale" content="ar_AR">
-  <meta property="og:image" content="/assets/site/shot-1.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Lalezar&display=swap" rel="stylesheet">
@@ -114,9 +107,13 @@
       ['shot-7', 'البحث عن الكلمات في شبكة الحروف'],
     ].forEach(([file, alt], index) => { %>
       <%# The first two are on screen at once on a wide page, so they are not lazy. %>
-      <img src="/assets/site/<%= file %>.jpg?v=<%= assetVersion %>" alt="<%= alt %>"
-           width="260" height="565" decoding="async"
-           loading="<%= index < 2 ? 'eager' : 'lazy' %>">
+      <%# WebP is about a third of the JPEG's weight; the JPEG stays for anything that cannot read it. %>
+      <picture>
+        <source srcset="/assets/site/<%= file %>.webp?v=<%= assetVersion %>" type="image/webp">
+        <img src="/assets/site/<%= file %>.jpg?v=<%= assetVersion %>" alt="<%= alt %>"
+             width="260" height="565" decoding="async"
+             loading="<%= index < 2 ? 'eager' : 'lazy' %>">
+      </picture>
       <% }) %>
     </div>
     <button class="wz-gallery-arrow" type="button" data-gallery-next aria-label="الصورة التالية" aria-controls="wzShots">‹</button>

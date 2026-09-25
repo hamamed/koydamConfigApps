@@ -21,6 +21,7 @@ test('the public pages move from the service domain to the site, keeping the que
   assert.deepEqual(run(on, 'wassla.hamaprojects.com', '/privacy'), { status: 301, location: `${SITE}/privacy` });
   assert.deepEqual(run(on, 'wassla.hamaprojects.com', '/support?x=1'), { status: 301, location: `${SITE}/support?x=1` });
   assert.deepEqual(run(on, 'wassla.hamaprojects.com', '/credits'), { status: 301, location: `${SITE}/credits` });
+  assert.deepEqual(run(on, 'wassla.hamaprojects.com', '/sitemap.xml'), { status: 301, location: `${SITE}/sitemap.xml` });
 });
 
 test('the API, media, panel and challenge links stay on the service domain', () => {
@@ -31,7 +32,7 @@ test('the API, media, panel and challenge links stay on the service domain', () 
 });
 
 test('the site serves its pages and their assets', () => {
-  for (const url of ['/', '/privacy', '/support', '/credits', '/assets/site/app-icon.png', '/favicon.ico', '/robots.txt']) {
+  for (const url of ['/', '/privacy', '/support', '/credits', '/sitemap.xml', '/assets/site/app-icon.png', '/favicon.ico', '/robots.txt']) {
     assert.deepEqual(run(on, 'chabbek.com', url), { next: true }, url);
   }
 });
