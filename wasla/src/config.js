@@ -21,6 +21,8 @@ export const config = {
   isProduction: (process.env.NODE_ENV || 'development') === 'production',
 
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3700').replace(/\/+$/, ''),
+  /** Where the landing page, privacy, support and credits live, e.g. https://chabbek.com. Empty keeps them on publicUrl. */
+  siteUrl: (process.env.SITE_URL || '').trim().replace(/\/+$/, ''),
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),
 
   /** The APNs .p8 key uploaded in the panel. Under data/, which deploys preserve. */

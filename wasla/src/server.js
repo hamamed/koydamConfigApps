@@ -31,6 +31,7 @@ import { createPlayers } from './players.js';
 import { createProfiles } from './profiles.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errors.js';
+import { siteHost } from './middleware/site-host.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { createPendingImports } from './pending-imports.js';
 import { createRepository } from './repository.js';
@@ -77,6 +78,8 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 app.use(compression());
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
+// The public pages on their own domain (SITE_URL); everything else stays on PUBLIC_URL.
+app.use(siteHost({ siteUrl: config.siteUrl, publicUrl: config.publicUrl }));
 
 app.use('/api', cors({ origin: '*', methods: ['GET', 'POST'] }));
 app.use('/api', rateLimit({
