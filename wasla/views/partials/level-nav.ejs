@@ -1,0 +1,17 @@
+<%# Previous / next level, in panel order. `suffix` keeps the page kind: '' or '/preview'. %>
+<div class="btn-group" role="group" aria-label="التنقل بين الألغاز">
+  <% if (neighbours && neighbours.previous) { %>
+    <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= neighbours.previous.id %><%= suffix %>" title="<%= neighbours.previous.name %>">
+      → السابق
+    </a>
+  <% } else { %>
+    <span class="btn btn-sm btn-kd-outline disabled" aria-disabled="true">→ السابق</span>
+  <% } %>
+  <% if (neighbours && neighbours.next) { %>
+    <a class="btn btn-sm btn-kd-outline" href="/admin/levels/<%= neighbours.next.id %><%= suffix %>" title="<%= neighbours.next.name %>">
+      التالي ←
+    </a>
+  <% } else { %>
+    <span class="btn btn-sm btn-kd-outline disabled" aria-disabled="true">التالي ←</span>
+  <% } %>
+</div>

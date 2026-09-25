@@ -691,6 +691,7 @@ export function adminRouter({
       questions: repo.questionsForLevel(level.id),
       difficulties: DIFFICULTIES,
       chosen,
+      neighbours: repo.levelNeighbours(level.id),
     });
   });
 
@@ -735,6 +736,7 @@ export function adminRouter({
     if (!level) return next();
     res.render('level-preview', {
       title: `معاينة · ${level.name}`, level, preview: previewLevel(level, { pictureSize }), coins: STARTING_COINS,
+      neighbours: repo.levelNeighbours(level.id),
     });
   });
 

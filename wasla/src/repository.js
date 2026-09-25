@@ -425,6 +425,15 @@ export function createRepository(db) {
     return level ? getLevel(level.id) : null;
   }
 
+  /** The levels before and after this one in panel order, as `{ id, name }`, or null if it is gone. */
+  function levelNeighbours(id) {
+    const levels = listLevels();
+    const at = levels.findIndex((l) => l.id === Number(id));
+    if (at < 0) return null;
+    const brief = (l) => (l ? { id: l.id, name: l.name } : null);
+    return { previous: brief(levels[at - 1]), next: brief(levels[at + 1]) };
+  }
+
   /** A validated difficulty, or `{ error }`. */
   function readLevelDetails({ difficulty } = {}) {
     const level = difficulty ?? 'medium';
@@ -690,7 +699,7 @@ export function createRepository(db) {
     transaction: (fn) => tx(fn),
     credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
     removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
-    listLevels, getLevel, levelByNumber, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
+    listLevels, getLevel, levelByNumber, levelNeighbours, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty, setLevelsPublished, setLevelsDifficulty, deleteLevels,
     publishedLevels, publishedLevelIds, publishedLevel, publishedLevelById, counts,
   };

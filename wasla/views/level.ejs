@@ -4,6 +4,7 @@
   <main class="ad-main">
     <%- include('partials/topbar', {
           heading: 'اللغز ' + level.number,
+          actions: include('partials/level-nav', { neighbours, suffix: '' }),
           subheading: (level.published ? 'اللغز ' + level.publishedNumber + ' في التطبيق' : 'مسودة — ليست في التطبيق') + ' · ' + level.words.length + ' كلمة · ' + level.rows + ' × ' + level.cols
         }) %>
     <div class="ad-content">

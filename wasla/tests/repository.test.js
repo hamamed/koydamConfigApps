@@ -456,3 +456,16 @@ test('levels: several can be published, re-graded and deleted at once', () => {
   assert.equal(repo.listQuestions({ unused: true }).length, 3);
   assert.match(repo.deleteLevels([]).error, /لغزاً واحداً على الأقل/);
 });
+
+test('a level knows the levels either side of it in panel order', () => {
+  const db = openDatabase(':memory:');
+  const fresh = createRepository(db);
+  const [first, second, third] = [fresh.createLevel(), fresh.createLevel(), fresh.createLevel()];
+
+  assert.deepEqual(fresh.levelNeighbours(first.id), { previous: null, next: { id: second.id, name: second.name } });
+  assert.deepEqual(fresh.levelNeighbours(second.id), {
+    previous: { id: first.id, name: first.name }, next: { id: third.id, name: third.name },
+  });
+  assert.deepEqual(fresh.levelNeighbours(third.id), { previous: { id: second.id, name: second.name }, next: null });
+  assert.equal(fresh.levelNeighbours(9999), null);
+});

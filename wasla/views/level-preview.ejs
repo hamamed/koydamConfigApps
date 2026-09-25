@@ -18,7 +18,7 @@
     <%- include('partials/topbar', {
           heading: 'معاينة · اللغز ' + level.number,
           subheading: (level.published ? 'اللغز ' + level.publishedNumber + ' في التطبيق' : 'مسودة — معروضة كما ستبدو بعد النشر') + ' · آيفون 390 × 844',
-          actions: '<a class="btn btn-sm btn-kd-outline" href="/admin/levels/' + level.id + '">العودة إلى اللغز</a>'
+          actions: include('partials/level-nav', { neighbours, suffix: '/preview' }) + ' <a class="btn btn-sm btn-kd-outline" href="/admin/levels/' + level.id + '">العودة إلى اللغز</a>'
         }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
