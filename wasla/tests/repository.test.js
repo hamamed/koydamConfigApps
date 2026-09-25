@@ -469,3 +469,35 @@ test('a level knows the levels either side of it in panel order', () => {
   assert.deepEqual(fresh.levelNeighbours(third.id), { previous: { id: second.id, name: second.name }, next: null });
   assert.equal(fresh.levelNeighbours(9999), null);
 });
+
+test('an answer edited from its level keeps the rest of the question and re-lays the grid', () => {
+  const { level, ids } = sampleLevel();
+  const before = repo.getQuestion(ids[1]);
+
+  const result = repo.setLevelAnswer(level.id, ids[1], '  مسقط ');
+
+  assert.equal(result.error, undefined);
+  const after = repo.getQuestion(ids[1]);
+  assert.equal(after.answer, 'مسقط');
+  assert.equal(after.clue, before.clue);
+  assert.equal(after.title, before.title);
+  const words = [...repo.getLevel(level.id).words, ...repo.getLevel(level.id).unplaced];
+  assert.ok(words.some((w) => w.id === ids[1] && w.answer === 'مسقط'));
+});
+
+test('an answer cannot be edited through a level the question is not in', () => {
+  const { ids } = sampleLevel();
+  const other = repo.createLevel();
+
+  assert.ok(repo.setLevelAnswer(other.id, ids[0], 'مسقط').error);
+  assert.ok(repo.setLevelAnswer(9999, ids[0], 'مسقط').error);
+  assert.notEqual(repo.getQuestion(ids[0]).answer, 'مسقط');
+});
+
+test('an invalid answer from the level page is refused and nothing changes', () => {
+  const { level, ids } = sampleLevel();
+  const before = repo.getQuestion(ids[0]).answer;
+
+  assert.ok(repo.setLevelAnswer(level.id, ids[0], '').error);
+  assert.equal(repo.getQuestion(ids[0]).answer, before);
+});

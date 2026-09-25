@@ -766,6 +766,16 @@ export function adminRouter({
     else req.flash('success', `بُنيت الشبكة من ${layout.placements.length} كلمة.`);
   });
 
+  // An answer edited in place on the level page; the grid is laid out again around it.
+  levelAction('answer', (id, req) => {
+    const result = repo.setLevelAnswer(id, req.body.question, req.body.answer);
+    if (result.error) return void req.flash('danger', result.error);
+    const { unplaced } = repo.getLevel(id);
+    if (result.unpublished.length) req.flash('warning', `حُفظ «${result.question.answer}». لم يعد يتقاطع في الشبكة، فأُلغي نشر: ${result.unpublished.join('، ')}.`);
+    else if (unplaced.length) req.flash('warning', `حُفظ «${result.question.answer}». ${unplaced.length} كلمة لا تتقاطع مع البقية.`);
+    else req.flash('success', `حُفظ «${result.question.answer}» وأُعيد بناء الشبكة.`);
+  });
+
   levelAction('shuffle', (id, req) => {
     repo.shuffleLevel(id);
     req.flash('success', 'أُعيد الترتيب — توزيع جديد للكلمات نفسها.');

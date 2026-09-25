@@ -251,6 +251,17 @@ export function createRepository(db) {
     });
   }
 
+  /**
+   * Changes one answer from its level's page. Only a question in that level;
+   * everything else about it is kept. Returns what `updateQuestion` does, or `{ error }`.
+   */
+  function setLevelAnswer(levelId, questionId, answer) {
+    const inLevel = db.prepare('SELECT 1 FROM level_words WHERE level_id = ? AND question_id = ?')
+      .get(Number(levelId), Number(questionId));
+    if (!inLevel) return { error: 'هذا السؤال ليس في هذا اللغز.' };
+    return updateQuestion(Number(questionId), { answer: String(answer ?? '') });
+  }
+
   function deleteQuestion(id) {
     const using = levelsUsing(id);
     if (using.length) {
@@ -697,7 +708,7 @@ export function createRepository(db) {
   return {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
-    credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, deleteQuestion, levelsUsing, mediaInUse,
+    credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, setLevelAnswer, deleteQuestion, levelsUsing, mediaInUse,
     removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
     listLevels, getLevel, levelByNumber, levelNeighbours, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty, setLevelsPublished, setLevelsDifficulty, deleteLevels,

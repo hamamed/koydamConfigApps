@@ -92,14 +92,24 @@
               <div class="ad-table-wrap">
                 <table class="ad-table">
                   <tbody>
-                    <% level.words.forEach((w, i) => { %>
+                    <%# Placed words first, numbered as on the grid; loose ones after, so they can be fixed here too. %>
+                    <% [...level.words, ...level.unplaced].forEach((w, i) => { %>
                       <tr>
-                        <td class="kd-faint"><%= i + 1 %></td>
+                        <td class="kd-faint"><%= w.direction ? i + 1 : '—' %></td>
                         <td><%- include('partials/qimage', { q: w, size: 'sm' }) %></td>
                         <td><% if (w.title) { %><span class="kd-tag wz-ar"><%= w.title %></span><% } %></td>
-                        <td><span class="wz-answer"><%= w.answer %></span><% if (w.playAnswer !== w.answer) { %> <span class="kd-faint small">→ <span class="wz-answer"><%= w.playAnswer %></span></span><% } %></td>
+                        <td>
+                          <form method="post" action="/admin/levels/<%= level.id %>/answer" class="d-flex gap-1 align-items-center m-0">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="question" value="<%= w.id %>">
+                            <input class="form-control form-control-sm wz-answer" name="answer" value="<%= w.answer %>"
+                                   dir="rtl" lang="ar" required size="<%= Math.max(4, [...w.answer].length + 1) %>" style="width:auto" aria-label="جواب <%= w.clue || w.answer %>">
+                            <button class="btn btn-sm btn-kd-outline" type="submit">حفظ</button>
+                          </form>
+                          <% if (w.playAnswer !== w.answer) { %><span class="kd-faint small">→ <span class="wz-answer"><%= w.playAnswer %></span></span><% } %>
+                        </td>
                         <td class="wz-ar"><%= w.clue %></td>
-                        <td class="kd-faint small text-nowrap"><%= w.direction === 'across' ? 'أفقي ←' : 'رأسي ↓' %></td>
+                        <td class="kd-faint small text-nowrap"><%= w.direction === 'across' ? 'أفقي ←' : w.direction ? 'رأسي ↓' : 'لا يتقاطع' %></td>
                         <td class="text-end"><a class="btn btn-sm btn-kd-ghost" href="/admin/questions/<%= w.id %>">تعديل</a></td>
                       </tr>
                     <% }) %>
