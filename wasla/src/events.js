@@ -20,7 +20,7 @@ export const WORD_SEARCH_TYPES = ['wordsearch_started', 'wordsearch_word_found',
  * accepted: a phone that has not updated yet is still playing them, and its
  * history should not be thrown away at the door.
  */
-export const DAILY_GAME_TYPES = ['wheel_completed', 'guess_completed', 'marathon_completed',
+export const DAILY_GAME_TYPES = ['wheel_completed', 'guess_completed', 'connect_completed', 'marathon_completed',
   'scramble_completed', 'bubbles_completed', 'groups_completed'];
 const DAILY_TYPES = [...WORD_SEARCH_TYPES, ...DAILY_GAME_TYPES];
 const KNOWN_TYPES = [...EVENT_TYPES, ...DAILY_TYPES];

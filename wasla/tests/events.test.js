@@ -198,3 +198,13 @@ test('questions nobody has opened sort after the rest, whichever the direction',
   }
   assert.deepEqual(events.questionStats({ sort: 'solveRate', dir: 'asc' }).slice(0, 2).map((s) => s.questionId), [words[0], words[1]]);
 });
+
+test('every daily game the app finishes is kept, connect included', () => {
+  // The app's own names (GameEvent.Kind): a finish the server does not know is dropped at the door.
+  for (const type of ['bubbles_completed', 'wheel_completed', 'guess_completed', 'connect_completed', 'marathon_completed']) {
+    const { events: read } = readEventBatch({ device: DEVICE, events: [{ type, level: 0, seconds: 42, stars: 3, at: '2026-09-25T15:00:00Z' }] });
+    assert.equal(read.length, 1, type);
+    assert.equal(read[0].type, type);
+    assert.equal(read[0].seconds, 42);
+  }
+});
