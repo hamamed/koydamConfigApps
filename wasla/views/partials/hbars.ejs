@@ -7,7 +7,7 @@
 <% const top = Math.max(1, ...rows.map((r) => r.value)); %>
 <div class="wz-hbars" role="list">
   <% rows.forEach((r) => { %>
-    <div class="wz-hbar" role="listitem" title="<%= r.label %>: <%= r.text ?? r.value %>">
+    <div class="wz-hbar" role="listitem" tabindex="0" data-tip="<%= r.label %>: <%= r.text ?? r.value.toLocaleString('en') %>">
       <span class="wz-hbar-label"><%= r.label %></span>
       <span class="wz-hbar-track"><span class="wz-hbar-fill" style="width: <%= (r.value / top * 100).toFixed(1) %>%"></span></span>
       <span class="wz-hbar-value"><%= r.text ?? r.value.toLocaleString('en') %></span>

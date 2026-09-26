@@ -40,7 +40,10 @@ export function barChart(points, { width = 720, height = 240, ticks = 4, xEvery 
     const h = (p.value / top) * plotH;
     // The whole column is the hover target, not just the bar: a zero day or a
     // thin bar is still easy to point at, and the tooltip names the day.
-    parts.push(`<g class="wz-chart-col"><title>${escape(p.title ?? `${p.label}: ${p.value}`)}</title>`
+    const tip = escape(p.title ?? `${p.label}: ${p.value}`);
+    // The panel's own tooltip (chart-tips.js) reads data-tip: it shows at once, and
+    // on a tap on a phone, which the browser's <title> tooltip never does.
+    parts.push(`<g class="wz-chart-col" data-tip="${tip}" tabindex="0" role="img" aria-label="${tip}">`
       + `<rect class="wz-chart-hit" x="${(margin.left + slot * i).toFixed(1)}" y="${margin.top}" width="${slot.toFixed(1)}" height="${plotH}"/>`
       + `<rect class="wz-chart-bar" x="${x.toFixed(1)}" y="${(margin.top + plotH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2"/></g>`);
     if (i % xEvery === 0 || i === points.length - 1) {

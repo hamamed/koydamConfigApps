@@ -174,7 +174,8 @@ export function adminRouter({
     const day = (date) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
     /** One bar per day, the date and the count in its tooltip. */
     const perDay = (rows, key, noun, label, size = { height: 200 }) => barChart(
-      rows.map((r) => ({ label: day(r.date), value: r[key], title: `${r.date}: ${r[key].toLocaleString('en')} ${noun}` })),
+      // The date is a left-to-right island in an Arabic line, so the two never scramble.
+      rows.map((r) => ({ label: day(r.date), value: r[key], title: `\u2066${r.date}\u2069: ${r[key].toLocaleString('en')} ${noun}` })),
       { label, ...size },
     );
     res.render('dashboard', {
@@ -189,7 +190,7 @@ export function adminRouter({
         levels: perDay(home.activity, 'levels', 'لغزاً', 'الألغاز المنتهية كل يوم'),
         questions: perDay(home.activity, 'questions', 'سؤالاً', 'الأسئلة المحلولة كل يوم'),
         hours: barChart(home.hours.map((h) => ({
-          label: String(h.hour), value: h.players, title: `${h.hour}:00–${h.hour}:59 UTC: ${h.players} لاعباً`,
+          label: String(h.hour), value: h.players, title: `\u2066${h.hour}:00–${h.hour}:59 UTC\u2069: ${h.players} لاعباً`,
         })), { label: 'اللاعبون حسب الساعة', height: 200, xEvery: 3 }),
       },
       helpLabels: HELP_LABELS,

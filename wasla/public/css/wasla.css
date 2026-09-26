@@ -1264,3 +1264,26 @@ html { scrollbar-gutter: stable; }
 .wz-hbar-track { height: 14px; border-radius: 4px; background: var(--wz-board-1); overflow: hidden; }
 .wz-hbar-fill { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: var(--wz-teal); }
 .wz-hbar-value { font-size: .85rem; font-weight: 800; color: var(--wz-ink); font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }
+
+/* The charts' tooltip: an ink plate with the game's ledge, above the bar pointed at. */
+.wz-tip {
+  position: absolute;
+  z-index: 2000;
+  pointer-events: none;
+  padding: .35rem .65rem;
+  border-radius: 10px;
+  background: var(--wz-ink);
+  color: var(--wz-paper);
+  font: 700 .85rem/1.4 "Tajawal", system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+  /* An Arabic line; the dates and times inside it are isolated where the tips are made. */
+  direction: rtl;
+}
+.wz-tip[hidden] { display: none; }
+.wz-chart-col { outline: none; }
+.wz-chart-col.is-tipped .wz-chart-bar,
+.wz-chart-col:focus-visible .wz-chart-bar { fill: var(--wz-teal-deep); }
+.wz-chart-col.is-tipped .wz-chart-hit { fill: rgba(20, 164, 158, .1); }
+.wz-hbar { cursor: default; outline: none; }
+.wz-hbar.is-tipped, .wz-hbar:focus-visible { background: var(--wz-board-1); }

@@ -170,7 +170,14 @@ test('the bar chart scales to a round maximum and labels the axis', () => {
   const svg = barChart([{ label: '15/09', value: 3 }, { label: '16/09', value: 0 }, { label: '<17>', value: 7 }], { xEvery: 2, label: 'Players' });
   assert.equal((svg.match(/class="wz-chart-bar"/g) ?? []).length, 3);
   assert.equal((svg.match(/class="wz-chart-hit"/g) ?? []).length, 3, 'each day\'s whole column is its hover target');
-  assert.equal((svg.match(/<title>/g) ?? []).length, 3);
+  // The panel's own tooltip reads data-tip (instant, and on a tap on a phone); the
+  // browser's <title> tooltip is not used, or both would show at once.
+  assert.equal((svg.match(/data-tip="/g) ?? []).length, 3);
+  assert.doesNotMatch(svg, /<title>/);
+  assert.match(svg, /data-tip="15\/09: 3"/);
+  assert.match(svg, /data-tip="&lt;17&gt;: 7"/, 'the tip is escaped like the labels');
+  assert.equal((svg.match(/tabindex="0"/g) ?? []).length, 3, 'each bar can be reached from the keyboard');
+  assert.match(svg, /aria-label="15\/09: 3"/);
   assert.match(svg, /aria-label="Players"/);
   assert.match(svg, />8<\/text>/);
   assert.match(svg, />&lt;17&gt;<\/text>/);
