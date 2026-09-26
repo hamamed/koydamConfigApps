@@ -37,14 +37,28 @@ test('the site serves its pages and their assets', () => {
   }
 });
 
+test('the site serves the panel too, with the pictures and sounds it previews', () => {
+  for (const url of ['/admin', '/admin/login', '/admin/levels/1', '/admin/icons/star.svg',
+    '/media/questions/a.png', '/media/audio/b.m4a']) {
+    assert.deepEqual(run(on, 'chabbek.com', url), { next: true }, url);
+  }
+});
+
+test('the panel keeps working on the service domain while the move is tested', () => {
+  assert.deepEqual(run(on, 'wassla.hamaprojects.com', '/admin/levels'), { next: true });
+});
+
 test('anything else asked of the site goes to the service domain', () => {
-  assert.deepEqual(run(on, 'chabbek.com', '/admin/levels'), { status: 301, location: `${SERVICE}/admin/levels` });
   assert.deepEqual(run(on, 'chabbek.com', '/c/3?t=40'), { status: 301, location: `${SERVICE}/c/3?t=40` });
   assert.deepEqual(run(on, 'chabbek.com', '/api/v1/levels'), { status: 301, location: `${SERVICE}/api/v1/levels` });
 });
 
 test('www goes to the bare site domain', () => {
   assert.deepEqual(run(on, 'www.chabbek.com', '/privacy'), { status: 301, location: `${SITE}/privacy` });
+});
+
+test('a word inside a path is not mistaken for the panel', () => {
+  assert.deepEqual(run(on, 'chabbek.com', '/administrator'), { status: 301, location: `${SERVICE}/administrator` });
 });
 
 test('a form post is never redirected, so it is not silently turned into a GET', () => {

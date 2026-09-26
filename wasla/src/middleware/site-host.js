@@ -1,6 +1,6 @@
 /**
- * The public site (landing page, privacy, support, credits) lives on its own
- * domain; the API, media, panel and challenge links stay on the service's.
+ * The public site (landing page, privacy, support, credits) and the panel live
+ * on the site's own domain; the API and challenge links stay on the service's.
  *
  * The app, its universal links and the panel's sign-on cookie are all tied to
  * the service domain, so only the pages move. Each domain sends what it does
@@ -9,6 +9,12 @@
  */
 const SITE_PAGES = new Set(['/', '/privacy', '/support', '/credits', '/sitemap.xml']);
 const SITE_FILES = [/^\/assets\//, /^\/favicon\.ico$/, /^\/robots\.txt$/];
+/**
+ * The panel lives on the site's domain too, signing in with its own accounts
+ * there (`panel-host.js`), and it needs the pictures and sounds it previews.
+ * The service domain keeps serving it as well until the move is tested.
+ */
+const SITE_PANEL = [/^\/admin(\/|$)/, /^\/media\//];
 
 const hostOf = (url) => (url ? new URL(url).hostname.toLowerCase() : '');
 
@@ -27,7 +33,7 @@ export function siteHost({ siteUrl, publicUrl }) {
 
     if (host === `www.${site}`) return res.redirect(301, `${siteBase}${req.url}`);
     if (host === site) {
-      if (isSitePage || SITE_FILES.some((p) => p.test(req.path))) return next();
+      if (isSitePage || [...SITE_FILES, ...SITE_PANEL].some((p) => p.test(req.path))) return next();
       return res.redirect(301, `${serviceBase}${req.url}`);
     }
     if (host === service && isSitePage) return res.redirect(301, `${siteBase}${req.url}`);

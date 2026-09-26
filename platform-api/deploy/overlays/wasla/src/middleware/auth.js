@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import { db } from '../db/index.js';
 import { platformUser, requirePlatformAuth } from './platform-auth.js';
+import { usesPlatformSignIn } from '../panel-host.js';
 
 /**
  * Loads the signed-in user onto `req.user` and `res.locals.user`.
@@ -11,7 +12,8 @@ import { platformUser, requirePlatformAuth } from './platform-auth.js';
  * unset — which keeps a standalone install, or a local dev copy, working.
  */
 export async function loadUser(req, res, next) {
-  if (process.env.PLATFORM_URL) {
+  // On the site's own domain the platform's cookie never arrives: its own accounts sign in there.
+  if (usesPlatformSignIn(req)) {
     const platform = await platformUser(req);
     if (platform) {
       const local = mirrorPlatformUser(platform);
@@ -53,7 +55,7 @@ const platformGate = requirePlatformAuth();
 export function requireAuth(req, res, next) {
   if (req.user) return next();
 
-  if (process.env.PLATFORM_URL) return platformGate(req, res, next);
+  if (usesPlatformSignIn(req)) return platformGate(req, res, next);
 
   const returnTo = req.originalUrl.startsWith('/admin') ? req.originalUrl : '/admin';
   return res.redirect(`/admin/login?next=${encodeURIComponent(returnTo)}`);

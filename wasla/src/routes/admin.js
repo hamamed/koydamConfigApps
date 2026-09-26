@@ -9,6 +9,7 @@ import { db } from '../db/index.js';
 import { csrfProtect, csrfToken, requireAuth, verifyCredentials } from '../middleware/auth.js';
 import { cellsOf } from '../layout.js';
 import { createPanelIcons, pageIconFor } from '../panel-icons.js';
+import { usesPlatformSignIn } from '../panel-host.js';
 import { LEVEL_SIZE, MAIN_CATEGORY, MAIN_SLOTS, MIN_CATEGORIES, planLevels } from '../level-builder.js';
 import { imageSize } from '../image-size.js';
 import { MAX_EMOJI, QUESTION_TYPES } from '../question-types.js';
@@ -117,7 +118,8 @@ export function adminRouter({
 
   router.get('/login', (req, res) => {
     if (req.user) return res.redirect('/admin');
-    res.render('login', { title: 'تسجيل الدخول', platformUrl: config.platformUrl });
+    // The platform's button only where its sign-on can work (not on the site's own domain).
+    res.render('login', { title: 'تسجيل الدخول', platformUrl: usesPlatformSignIn(req) ? config.platformUrl : '' });
   });
 
   router.post('/login', loginLimiter, (req, res) => {
@@ -139,7 +141,7 @@ export function adminRouter({
    */
   router.post('/logout', (req, res) => {
     const back = `${config.publicUrl}/admin/login`;
-    const platform = config.platformUrl
+    const platform = config.platformUrl && usesPlatformSignIn(req)
       ? `${config.platformUrl}/logout?next=${encodeURIComponent(back)}`
       : '/admin/login';
     req.session.destroy(() => res.redirect(platform));
