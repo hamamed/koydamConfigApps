@@ -4,6 +4,9 @@ import { config } from '../config.js';
 import { SUPPORT_EMAIL } from './legal.js';
 import { createPanelIcons } from '../panel-icons.js';
 import { landingJsonLd, pageMeta } from '../seo.js';
+import { LADDER_RUNGS } from '../daily-ladder.js';
+import { BOARDS } from '../profiles.js';
+import { BOARD_LABELS } from './admin-boards.js';
 
 /**
  * The icons this page draws — the game's own, from the pack the app uses.
@@ -52,7 +55,9 @@ export function siteRouter({ assetVersion, siteSettings, repo = null, dailyGames
       playUrl: siteSettings.playUrl(),
       levels: counts.published,
       questions: counts.questions,
-      dailyGames: dailyGames ? 6 : 6,
+      // Read from the game itself, so the page cannot drift from the panel and the app.
+      boards: BOARDS.map((id) => BOARD_LABELS[id].ar),
+      rungs: LADDER_RUNGS,
       // With the pack absent (a checkout that has never seen it) the page
       // simply carries no icons rather than a row of broken pictures.
       hasIcons: SITE_ICONS.every((name) => Boolean(icons.file(name))),

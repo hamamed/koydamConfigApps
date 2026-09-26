@@ -49,7 +49,7 @@ test('a store badge is shown only while there is a listing to send someone to', 
   assert.doesNotMatch(html, /badge-app-store/, 'no App Store badge without a link');
   assert.doesNotMatch(html, /badge-google-play/, 'no Play badge without a link');
   assert.match(html, /قريباً على App Store/);
-  assert.match(html, /قريباً على Google Play/);
+  assert.doesNotMatch(html, /Google Play/, 'no Android app: nothing is promised for Google Play');
 
   siteSettings.saveAppStoreUrl('https://apps.apple.com/app/id1234567890');
   html = await landing();
@@ -71,5 +71,5 @@ test('a link that is not https is refused, and clearing one takes its badge away
 
   siteSettings.savePlayUrl('');
   assert.doesNotMatch(await landing(), /badge-google-play/);
-  assert.match(await landing(), /قريباً على Google Play/);
+  assert.doesNotMatch(await landing(), /Google Play/, 'and nothing is promised in its place');
 });

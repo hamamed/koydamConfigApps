@@ -13,11 +13,10 @@
     <span class="wz-store-soon">قريباً على App Store</span>
   <% } %>
 
+  <%# There is no Android app: nothing is promised for Google Play until its link is set. %>
   <% if (playUrl) { %>
     <a class="wz-store wz-store-play" href="<%= playUrl %>" rel="noopener">
       <img src="/assets/site/badge-google-play-ar.png?v=<%= assetVersion %>" alt="احصل عليها من Google Play" width="200" height="77">
     </a>
-  <% } else { %>
-    <span class="wz-store-soon">قريباً على Google Play</span>
   <% } %>
 </div>
