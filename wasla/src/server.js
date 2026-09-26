@@ -33,6 +33,7 @@ import { loadUser, flash } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { siteHost } from './middleware/site-host.js';
 import { robotsTxt, sitemapXml } from './seo.js';
+import { appAdsTxt } from './app-ads.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
 import { createPendingImports } from './pending-imports.js';
 import { createRepository } from './repository.js';
@@ -119,6 +120,10 @@ app.use('/assets', express.static(path.join(config.root, 'public'), { maxAge: '7
 app.get('/favicon.ico', (_req, res) => res.sendFile(path.join(config.root, 'public', 'favicon.png'), { maxAge: '7d' }));
 app.get('/robots.txt', (_req, res) => {
   res.type('text/plain').set('Cache-Control', 'public, max-age=86400').send(robotsTxt(config.siteBase));
+});
+// For AdMob: the panel's stored app id (the real one, whatever test mode serves the app).
+app.get('/app-ads.txt', (_req, res) => {
+  res.type('text/plain').set('Cache-Control', 'public, max-age=3600').send(appAdsTxt(appConfig.get().ads.appId));
 });
 app.get('/sitemap.xml', (_req, res) => {
   res.type('application/xml').set('Cache-Control', 'public, max-age=86400').send(sitemapXml(config.siteBase));

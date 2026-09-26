@@ -8,7 +8,7 @@
  * `siteUrl` is set; hosts that are neither domain (a local run) are left alone.
  */
 const SITE_PAGES = new Set(['/', '/privacy', '/support', '/credits', '/sitemap.xml']);
-const SITE_FILES = [/^\/assets\//, /^\/favicon\.ico$/, /^\/robots\.txt$/];
+const SITE_FILES = [/^\/assets\//, /^\/favicon\.ico$/, /^\/robots\.txt$/, /^\/app-ads\.txt$/];
 /**
  * The panel lives on the site's domain too, signing in with its own accounts
  * there (`panel-host.js`), and it needs the pictures and sounds it previews.
