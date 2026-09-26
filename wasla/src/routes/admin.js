@@ -173,15 +173,17 @@ export function adminRouter({
     const home = players.home();
     const day = (date) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
     /** One bar per day, the date and the count in its tooltip. */
-    const perDay = (rows, key, noun, label) => barChart(
+    const perDay = (rows, key, noun, label, size = { height: 200 }) => barChart(
       rows.map((r) => ({ label: day(r.date), value: r[key], title: `${r.date}: ${r[key].toLocaleString('en')} ${noun}` })),
-      { label, height: 200 },
+      { label, ...size },
     );
     res.render('dashboard', {
       title: 'الرئيسية',
       counts: repo.counts(),
       home,
       charts: {
+        // Drawn at the full card's width, so its labels are the same size as the half-width charts'.
+        events: perDay(home.eventsPerDay, 'events', 'حدثاً', 'الأحداث المحفوظة كل يوم', { width: 1100, height: 220 }),
         players: perDay(home.perDay, 'players', 'لاعباً', 'اللاعبون كل يوم'),
         newPlayers: perDay(home.newPerDay, 'players', 'لاعباً جديداً', 'اللاعبون الجدد كل يوم'),
         levels: perDay(home.activity, 'levels', 'لغزاً', 'الألغاز المنتهية كل يوم'),

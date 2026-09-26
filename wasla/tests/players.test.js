@@ -241,3 +241,17 @@ test('the new dashboard queries use indexes too', () => {
   ].map((sql) => db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map((r) => r.detail).join(' | '));
   for (const plan of plans) assert.match(plan, /USING (COVERING )?INDEX/, plan);
 });
+
+test('saved events: today, this week, this month, all of them, and per day', () => {
+  // Today: A 5 (open, done, open, done, daily) + 3 revealLetter + 2 askFriend, B 3 → 13; G is tomorrow.
+  const events = players.eventCounts(TODAY);
+  assert.equal(events.today, 13);
+  const all = db.prepare('SELECT COUNT(*) FROM events').pluck().get();
+  assert.equal(events.total, all, 'every retained event, tomorrow\'s skew included');
+  assert.ok(events.week >= events.today && events.month >= events.week);
+  assert.equal(events.week, db.prepare("SELECT COUNT(*) FROM events WHERE received_at >= ? AND received_at < ?").pluck().get(addDays(TODAY, -6), addDays(TODAY, 1)));
+  const days = players.eventsPerDay(TODAY);
+  assert.equal(days.length, 30);
+  assert.equal(days.at(-1).events, 13);
+  assert.equal(days.reduce((s, d) => s + d.events, 0), events.month);
+});

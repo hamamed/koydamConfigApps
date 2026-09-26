@@ -255,7 +255,8 @@
 
 /* Players */
 .wz-chart-wrap { width: 100%; overflow-x: auto; }
-.wz-chart { display: block; width: 100%; min-width: 520px; height: auto; }
+/* Narrow enough for a half-width card beside the sidebar, so its last date is not scrolled out of sight. */
+.wz-chart { display: block; width: 100%; min-width: 420px; height: auto; }
 /*
  * A chart is drawn left to right in its own coordinates. Inside an Arabic page
  * the inherited right-to-left direction flipped `text-anchor`, so the scale's

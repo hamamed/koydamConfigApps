@@ -34,6 +34,33 @@
     <div class="ad-content">
       <%- include('partials/flash') %>
 
+      <%# What the app has sent: every event a phone reported — questions opened
+          and solved, helps, levels and daily games finished — by day, week and month. %>
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <%- icon('activity', 16) %>
+          <span class="fw-semibold me-auto">الأحداث المحفوظة</span>
+          <a class="small" href="/admin/stats">إحصاءات الأسئلة</a>
+        </div>
+        <div class="ad-card-body">
+          <div class="row g-3 mb-3">
+            <% [
+                 ['اليوم', home.events.today],
+                 ['هذا الأسبوع', home.events.week],
+                 ['هذا الشهر', home.events.month],
+                 ['الكل', home.events.total],
+               ].forEach(([label, value]) => { %>
+              <div class="col-6 col-md-3">
+                <div class="ad-kpi-label"><%= label %></div>
+                <div class="ad-kpi-value"><%= n(value) %></div>
+              </div>
+            <% }) %>
+          </div>
+          <p class="small kd-faint mb-2">كل ما يرسله التطبيق: فتح سؤال وحلّه، والمساعدات، وإنهاء الألغاز وألعاب اليوم — كل يوم، آخر 30 يوماً. تُحفظ 180 يوماً.</p>
+          <div class="wz-chart-wrap"><%- charts.events %></div>
+        </div>
+      </div>
+
       <div class="row g-3 mb-3">
         <% tiles.forEach(([label, value, note, glyph]) => { %>
           <div class="col-6 col-lg-3">

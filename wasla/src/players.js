@@ -124,6 +124,28 @@ export function createPlayers(db, { repo }) {
     return { days, total: rows.reduce((sum, r) => sum + r.count, 0), rows };
   }
 
+  /** Events stored today, over the last 7 and 30 days (UTC), and every retained one. */
+  function eventCounts(today = todayUtc()) {
+    const tomorrow = addDays(today, 1);
+    const since = (from) => scalar('SELECT COUNT(*) FROM events WHERE received_at >= ? AND received_at < ?', from, tomorrow);
+    return {
+      today: since(today), week: since(addDays(today, -6)), month: since(addDays(today, -29)),
+      total: scalar('SELECT COUNT(*) FROM events'),
+    };
+  }
+
+  /** `[{ date, events }]`: events stored on each of the `days` days ending `today`, zero-filled. */
+  function eventsPerDay(today = todayUtc(), days = TREND_DAYS) {
+    const from = addDays(today, -(days - 1));
+    const counts = new Map(db.prepare(`SELECT substr(received_at, 1, 10) AS day, COUNT(*) AS events
+      FROM events WHERE received_at >= ? AND received_at < ? GROUP BY day`).all(from, addDays(today, 1))
+      .map((r) => [r.day, r.events]));
+    return Array.from({ length: days }, (_, i) => {
+      const date = addDays(from, i);
+      return { date, events: counts.get(date) ?? 0 };
+    });
+  }
+
   /** Players with a name on the leaderboards: all of them, and those made this month and today. */
   function named(today = todayUtc()) {
     const tomorrow = addDays(today, 1);
@@ -242,8 +264,9 @@ export function createPlayers(db, { repo }) {
       today, kpis: kpis(today), perDay: playersPerDay(today), newPerDay: newPerDay(today),
       activity: activityPerDay(today), hours: byHour(today), dailyGames: dailyGames(today),
       helps: helps(today), retention: retention(today), funnel: funnel(), named: named(today),
+      events: eventCounts(today), eventsPerDay: eventsPerDay(today),
     };
   }
 
-  return { kpis, playersPerDay, newPerDay, activityPerDay, byHour, dailyGames, named, funnel, helps, retention, wordSearch, dashboard, home };
+  return { kpis, eventCounts, eventsPerDay, playersPerDay, newPerDay, activityPerDay, byHour, dailyGames, named, funnel, helps, retention, wordSearch, dashboard, home };
 }
