@@ -8,6 +8,23 @@
   --wz-teal: #14a49e;
   --wz-indigo: #4e4a8c;
   --wz-board: #d6eeea;
+  /* The app's six faint triangles (TriangleField), at its own corners and whites. */
+  --wz-ground-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><g fill='%23fff'><polygon points='0.34,-0.05 0.42,-0.05 0.38,0.1' fill-opacity='0.1'/><polygon points='0.03,1.05 0.39,0.1 0.75,1.05' fill-opacity='0.28'/><polygon points='0.24,1.05 0.63,-0.05 1.02,1.05' fill-opacity='0.22'/><polygon points='0.42,-0.05 0.63,-0.05 0.5,0.25' fill-opacity='0.3'/><polygon points='0.63,-0.05 1.1,-0.05 1.1,0.72' fill-opacity='0.12'/><polygon points='-0.1,0.2 0.25,0.62 -0.1,1.05' fill-opacity='0.16'/></g></svg>");
+}
+
+/*
+ * The app's ground behind a page: the triangles held to the screen as the
+ * app's are. A fixed layer rather than `background-attachment: fixed`, which
+ * iOS Safari ignores and would stretch down the whole page. Worn by the panel
+ * and the landing page; the mint itself is each page's own background.
+ */
+.wz-ground::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--wz-ground-art) 0 0 / 100% 100% no-repeat;
 }
 
 .wz-ar, .wz-answer, .wz-answer-input { font-family: "Noto Kufi Arabic", "Geeza Pro", Tahoma, sans-serif; }
@@ -485,10 +502,9 @@
   --bs-body-font-family: "Tajawal", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* The panel stands on the app's ground: its mint, under `.wz-ground`'s triangles. */
 body {
-  background:
-    radial-gradient(120% 80% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
-    var(--kd-bg);
+  background: var(--wz-board);
 }
 
 /* Lalezar is the app's display face: titles, figures, the brand. */
@@ -995,9 +1011,8 @@ html { scrollbar-gutter: stable; }
   justify-items: center;
   gap: 1rem;
   padding: 2rem 1rem;
-  background:
-    radial-gradient(120% 70% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 62%),
-    var(--wz-board-1);
+  /* Clear, so the sign-in stands on the same ground as the panel behind it. */
+  background: transparent;
 }
 .wz-auth-card {
   width: min(24rem, 100%);

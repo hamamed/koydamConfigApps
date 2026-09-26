@@ -7,7 +7,7 @@
 
 .wz-site {
   margin: 0;
-  /* The app's ground (PatternBackground): board2 mint under six big faint triangles. */
+  /* The app's ground (PatternBackground): board2 mint under its triangles (`.wz-ground`, in wasla.css). */
   background: var(--wz-board, #d6eeea);
   color: var(--wz-ink, #1f2d3a);
   font-family: "Tajawal", system-ui, sans-serif;
@@ -21,20 +21,6 @@
   max-width: 62rem;
   margin-inline: auto;
   padding-inline: 1.25rem;
-}
-
-/*
- * The triangles, at the app's own corners and whites (TriangleField), held to
- * the screen as the app's are — a fixed layer, since iOS Safari ignores
- * `background-attachment: fixed` and would stretch them down the whole page.
- */
-.wz-site::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1' preserveAspectRatio='none'><g fill='%23fff'><polygon points='0.34,-0.05 0.42,-0.05 0.38,0.1' fill-opacity='0.1'/><polygon points='0.03,1.05 0.39,0.1 0.75,1.05' fill-opacity='0.28'/><polygon points='0.24,1.05 0.63,-0.05 1.02,1.05' fill-opacity='0.22'/><polygon points='0.42,-0.05 0.63,-0.05 0.5,0.25' fill-opacity='0.3'/><polygon points='0.63,-0.05 1.1,-0.05 1.1,0.72' fill-opacity='0.12'/><polygon points='-0.1,0.2 0.25,0.62 -0.1,1.05' fill-opacity='0.16'/></g></svg>") 0 0 / 100% 100% no-repeat;
 }
 
 /* ------------------------------------------------------------ hero ----- */
