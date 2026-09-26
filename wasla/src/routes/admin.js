@@ -190,7 +190,7 @@ export function adminRouter({
         levels: perDay(home.activity, 'levels', 'لغزاً', 'الألغاز المنتهية كل يوم'),
         questions: perDay(home.activity, 'questions', 'سؤالاً', 'الأسئلة المحلولة كل يوم'),
         hours: barChart(home.hours.map((h) => ({
-          label: String(h.hour), value: h.players, title: `\u2066${h.hour}:00–${h.hour}:59 UTC\u2069: ${h.players} لاعباً`,
+          label: String(h.hour), value: h.players, title: `\u2066${h.hour}:00–${h.hour}:59 GMT\u2069: ${h.players} لاعباً`,
         })), { label: 'اللاعبون حسب الساعة', height: 200, xEvery: 3 }),
       },
       helpLabels: HELP_LABELS,

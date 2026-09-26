@@ -113,7 +113,7 @@
                           <td class="text-end"><%= n.sent %>/<%= n.total %></td>
                           <td class="text-end"><% if (n.failed) { %><span class="kd-tag kd-tag-warn" title="<%= Object.entries(n.errors).map(([r, c]) => r + ' ×' + c).join(', ') %>"><%= n.failed %></span><% } else { %>0<% } %></td>
                           <td class="text-end"><%= n.disabled %></td>
-                          <td class="small kd-faint text-nowrap"><%= n.createdAt %> UTC<% if (n.createdBy) { %><div><%= n.createdBy %></div><% } %></td>
+                          <td class="small kd-faint text-nowrap"><%= n.createdAt %> GMT<% if (n.createdBy) { %><div><%= n.createdBy %></div><% } %></td>
                         </tr>
                       <% }) %>
                     </tbody>

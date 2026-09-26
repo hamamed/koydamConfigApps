@@ -58,7 +58,7 @@
             <div class="ad-card-body small d-grid gap-2">
               <p class="mb-0">يُرسَل كل جهاز إلى خادم Apple الموافق لنسخته: نسخ App Store وTestFlight إلى production، ونسخ Xcode إلى sandbox. المفتاح نفسه يكفي للاثنين.</p>
               <p class="mb-0">أي رمز تُبلغ Apple أنه لم يعد صالحاً (410 أو BadDeviceToken أو Unregistered) يُعطَّل فتتخطاه الإرسالات التالية. أما الأخطاء الأخرى فتُحصى ويُعاد المحاولة لاحقاً.</p>
-              <% if (apns.uploadedAt) { %><p class="mb-0 kd-faint">Key uploaded <%= apns.uploadedAt.replace('T', ' ').slice(0, 16) %> UTC.</p><% } %>
+              <% if (apns.uploadedAt) { %><p class="mb-0 kd-faint">Key uploaded <%= apns.uploadedAt.replace('T', ' ').slice(0, 16) %> GMT.</p><% } %>
               <% if (apns.hasKey) { %>
                 <form method="post" action="/admin/notifications/setup/remove" class="m-0 mt-2" data-confirm="حذف مفتاح APNs؟ لن يمكن الإرسال حتى يُرفع مفتاح جديد.">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">

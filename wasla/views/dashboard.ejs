@@ -30,7 +30,7 @@
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'الرئيسية', subheading: 'من يلعب شبّك، ومتى، وأين يتوقفون · الأيام بتوقيت UTC' }) %>
+    <%- include('partials/topbar', { heading: 'الرئيسية', subheading: 'من يلعب شبّك، ومتى، وأين يتوقفون · الأيام بتوقيت GMT' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
@@ -102,7 +102,7 @@
               <span class="fw-semibold">متى يلعبون</span>
             </div>
             <div class="ad-card-body">
-              <p class="small kd-faint mb-2">لاعبون مختلفون في كل ساعة من اليوم، آخر 7 أيام، بتوقيت UTC (المغرب UTC+1).</p>
+              <p class="small kd-faint mb-2">لاعبون مختلفون في كل ساعة من اليوم، آخر 7 أيام، بتوقيت GMT (المغرب GMT+1).</p>
               <div class="wz-chart-wrap"><%- charts.hours %></div>
             </div>
           </div>
