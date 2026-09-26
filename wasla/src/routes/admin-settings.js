@@ -3,7 +3,7 @@ import {
   DEFAULT_CONFIG, IOS_TEST_ADS, MAX_ADS_EVERY_QUESTIONS, MAX_ADS_PER_DAY, MAX_ADS_SECONDS_BETWEEN,
   MAX_AD_BACKGROUND_SECONDS,
   MAX_REWARDED_COINS, MAX_REWARDED_PER_DAY, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST,
-  MAX_WORD_SEARCH_HELP_COST, REWARD_DAYS,
+  MAX_WORD_SEARCH_HELP_COST, MAX_CROSSWORD_HELP_COST, REWARD_DAYS,
 } from '../app-config.js';
 
 /** The numbers GET /api/v1/config serves. */
@@ -19,6 +19,7 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
     maxStarsPerLevel: MAX_STARS_PER_LEVEL,
     maxStreakFreezeCost: MAX_STREAK_FREEZE_COST,
     maxWordSearchHelpCost: MAX_WORD_SEARCH_HELP_COST,
+    maxCrosswordHelpCost: MAX_CROSSWORD_HELP_COST,
     maxAdsEveryQuestions: MAX_ADS_EVERY_QUESTIONS,
     maxAdsSecondsBetween: MAX_ADS_SECONDS_BETWEEN,
     maxAdsPerDay: MAX_ADS_PER_DAY,
@@ -68,6 +69,18 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
       wordSearchHelpCosts: { revealLetter: body.wordSearchRevealLetter, revealWord: body.wordSearchRevealWord },
       dailyGameCoins: body.dailyGameCoins,
       dailyAllGamesBonus: body.dailyAllGamesBonus,
+      crosswordCoins: {
+        answer: body.crosswordAnswer,
+        lostPerHelp: body.crosswordLostPerHelp,
+        levelFinish: body.crosswordLevelFinish,
+        helpCosts: {
+          revealLetter: body.crosswordHelpRevealLetter,
+          removeLetters: body.crosswordHelpRemoveLetters,
+          solveWord: body.crosswordHelpSolveWord,
+          unzoomImage: body.crosswordHelpUnzoomImage,
+          unblurImage: body.crosswordHelpUnblurImage,
+        },
+      },
       // Ads (contract §11). Unchecked boxes are simply absent, which reads as false.
       ads: {
         enabled: body.adsEnabled,

@@ -19,6 +19,15 @@ export const DEFAULT_CONFIG = Object.freeze({
   wordSearchHelpCosts: Object.freeze({ revealLetter: 15, revealWord: 40 }),
   dailyGameCoins: 30,
   dailyAllGamesBonus: 120,
+  // The crossword levels: what an answer pays, what each paid help takes off it,
+  // a bonus for a level's first finish, and what each help costs. The app's own
+  // numbers until the panel changes them.
+  crosswordCoins: Object.freeze({
+    answer: 5,
+    lostPerHelp: 2,
+    levelFinish: 0,
+    helpCosts: Object.freeze({ revealLetter: 15, removeLetters: 10, solveWord: 40, unzoomImage: 20, unblurImage: 20 }),
+  }),
   ads: Object.freeze({
     enabled: false,
     testMode: false,
@@ -40,6 +49,9 @@ export const MAX_STARS_PER_LEVEL = 3;
 const MAX_COINS = 100_000;
 export const MAX_STREAK_FREEZE_COST = 500;
 export const MAX_WORD_SEARCH_HELP_COST = 500;
+/** The crossword's paid helps, by the names the app knows them by. */
+export const CROSSWORD_HELPS = Object.freeze(['revealLetter', 'removeLetters', 'solveWord', 'unzoomImage', 'unblurImage']);
+export const MAX_CROSSWORD_HELP_COST = 500;
 
 /** Ads (contract §11). A cap of 0 means "no cap"; `enabled` is the off switch. */
 export const MAX_ADS_EVERY_QUESTIONS = 100;
@@ -149,6 +161,19 @@ const FIELDS = {
   dailyGameCoins: (v) => whole(v, 0, MAX_COINS),
   // Once per date, for finishing the word search and all five games.
   dailyAllGamesBonus: (v) => whole(v, 0, MAX_COINS),
+  crosswordCoins: (v) => {
+    if (!v || typeof v !== 'object') return null;
+    const answer = whole(v.answer, 0, MAX_COINS);
+    const lostPerHelp = whole(v.lostPerHelp, 0, MAX_COINS);
+    const levelFinish = whole(v.levelFinish, 0, MAX_COINS);
+    // A row saved before a help's price existed reads that price as today's,
+    // rather than failing the block and resetting everything else in it.
+    const prices = v.helpCosts ?? DEFAULT_CONFIG.crosswordCoins.helpCosts;
+    const helpCosts = Object.fromEntries(CROSSWORD_HELPS.map((help) => [help,
+      whole(prices[help] ?? DEFAULT_CONFIG.crosswordCoins.helpCosts[help], 0, MAX_CROSSWORD_HELP_COST)]));
+    const parts = [answer, lostPerHelp, levelFinish, ...Object.values(helpCosts)];
+    return parts.includes(null) ? null : { answer, lostPerHelp, levelFinish, helpCosts };
+  },
   // Ads (contract §11): the unit ids and every number the app counts against.
   ads: (v) => {
     const enabled = flag(v?.enabled);
@@ -201,6 +226,7 @@ const MESSAGES = {
   wordSearchHelpCosts: `Each word search help costs a whole number of coins from 0 to ${MAX_WORD_SEARCH_HELP_COST}.`,
   dailyGameCoins: 'Daily game coins must be a whole number, 0 or more.',
   dailyAllGamesBonus: 'The all-games bonus must be a whole number, 0 or more.',
+  crosswordCoins: `عملات الألغاز أعداد صحيحة من ٠ فأكثر، وسعر كل مساعدة من ٠ إلى ${MAX_CROSSWORD_HELP_COST}.`,
   ads: 'تحقّق من إعدادات الإعلانات: معرّف الوحدة يُكتب ca-app-pub-…/… أو يُترك فارغاً، '
     + `والفاصل من ١ إلى ${MAX_ADS_EVERY_QUESTIONS} سؤالاً، والمهلة من ٠ إلى ${MAX_ADS_SECONDS_BETWEEN} ثانية، `
     + `والحد اليومي من ٠ إلى ${MAX_ADS_PER_DAY} (٠ = بلا حد)، وعملات الفيديو من ٠ إلى ${MAX_REWARDED_COINS}.`,

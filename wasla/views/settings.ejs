@@ -51,6 +51,40 @@
           <div class="col-xl-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('grid-3x3', 16) %>
+                <span class="fw-semibold">عملات الألغاز</span>
+              </div>
+              <div class="ad-card-body d-grid gap-3">
+                <p class="kd-faint small m-0">ما يربحه اللاعب في الألغاز وما تكلّفه المساعدات. الإعادة لا تدفع شيئاً، ومكافأة الإنهاء لأول مرة فقط. تصل التغييرات مع التحديث القادم للتطبيق.</p>
+                <%
+                  const cc = values.crosswordCoins || defaults.crosswordCoins;
+                  const cd = defaults.crosswordCoins;
+                %>
+                <% [
+                     ['crosswordAnswer', 'عملات الجواب الصحيح (بلا مساعدة)', cc.answer, cd.answer],
+                     ['crosswordLostPerHelp', 'ما تُنقصه كل مساعدة مدفوعة من عملات الجواب', cc.lostPerHelp, cd.lostPerHelp],
+                     ['crosswordLevelFinish', 'عملات إنهاء اللغز (أول مرة، 0 = لا شيء)', cc.levelFinish, cd.levelFinish],
+                     ['crosswordHelpRevealLetter', 'سعر «كشف حرف»', cc.helpCosts.revealLetter, cd.helpCosts.revealLetter],
+                     ['crosswordHelpRemoveLetters', 'سعر «حذف 3 أحرف»', cc.helpCosts.removeLetters, cd.helpCosts.removeLetters],
+                     ['crosswordHelpSolveWord', 'سعر «حل الكلمة»', cc.helpCosts.solveWord, cd.helpCosts.solveWord],
+                     ['crosswordHelpUnzoomImage', 'سعر «تصغير الصورة»', cc.helpCosts.unzoomImage, cd.helpCosts.unzoomImage],
+                     ['crosswordHelpUnblurImage', 'سعر «وضّح الصورة»', cc.helpCosts.unblurImage, cd.helpCosts.unblurImage],
+                   ].forEach(([name, label, value, fallback]) => { %>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                    <div class="col-sm-5">
+                      <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="0" <% if (name.startsWith('crosswordHelp')) { %>max="<%= maxCrosswordHelpCost %>"<% } %> step="1" required value="<%= value %>">
+                      <div class="form-text">الافتراضي <%= fallback %></div>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
                 <%- icon('timer', 16) %>
                 <span class="fw-semibold">المؤقّت والتذكير</span>
               </div>

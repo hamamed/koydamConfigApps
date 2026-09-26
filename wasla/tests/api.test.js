@@ -184,6 +184,10 @@ test('config returns the contract defaults', async () => {
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
     dailyGameCoins: 30,
     dailyAllGamesBonus: 120,
+    crosswordCoins: {
+      answer: 5, lostPerHelp: 2, levelFinish: 0,
+      helpCosts: { revealLetter: 15, removeLetters: 10, solveWord: 40, unzoomImage: 20, unblurImage: 20 },
+    },
     ads: {
       enabled: false,
       testMode: false,

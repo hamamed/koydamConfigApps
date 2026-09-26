@@ -25,6 +25,10 @@ test('starts from the contract defaults', () => {
     wordSearchHelpCosts: { revealLetter: 15, revealWord: 40 },
     dailyGameCoins: 30,
     dailyAllGamesBonus: 120,
+    crosswordCoins: {
+      answer: 5, lostPerHelp: 2, levelFinish: 0,
+      helpCosts: { revealLetter: 15, removeLetters: 10, solveWord: 40, unzoomImage: 20, unblurImage: 20 },
+    },
     ads: {
       enabled: false,
       testMode: false,
@@ -114,6 +118,50 @@ test('a database saved before word search help costs existed reads them as the d
   const config = createAppConfig(db).get();
   assert.equal(config.dailyPuzzleCoins, 45);
   assert.deepEqual(config.wordSearchHelpCosts, { revealLetter: 15, revealWord: 40 });
+});
+
+// --- The crossword's coins ---------------------------------------------
+
+const crossword = (over) => ({ ...DEFAULT_CONFIG, crosswordCoins: { ...DEFAULT_CONFIG.crosswordCoins, ...over } });
+
+test('the crossword pays and charges what the app always did until the panel says otherwise', () => {
+  assert.deepEqual(settings.get().crosswordCoins, DEFAULT_CONFIG.crosswordCoins);
+  assert.equal(DEFAULT_CONFIG.crosswordCoins.answer, 5);
+  assert.equal(DEFAULT_CONFIG.crosswordCoins.levelFinish, 0, 'finishing a level paid nothing but the speed bonus');
+});
+
+test('answer coins, the loss per help, a finish bonus and each help\'s price are saved', () => {
+  const next = crossword({
+    answer: '8', lostPerHelp: 3, levelFinish: 25,
+    helpCosts: { revealLetter: 20, removeLetters: '12', solveWord: 60, unzoomImage: 0, unblurImage: 25 },
+  });
+  const saved = settings.save(next);
+  assert.equal(saved.error, undefined);
+  assert.deepEqual(saved.config.crosswordCoins, {
+    answer: 8, lostPerHelp: 3, levelFinish: 25,
+    helpCosts: { revealLetter: 20, removeLetters: 12, solveWord: 60, unzoomImage: 0, unblurImage: 25 },
+  });
+});
+
+test('crossword coins out of range are refused, and nothing changes', () => {
+  for (const over of [{ answer: -1 }, { answer: 1.5 }, { lostPerHelp: 'lots' }, { levelFinish: 100_001 },
+    { helpCosts: { ...DEFAULT_CONFIG.crosswordCoins.helpCosts, solveWord: 501 } },
+    { helpCosts: { ...DEFAULT_CONFIG.crosswordCoins.helpCosts, revealLetter: -5 } }]) {
+    assert.match(settings.save(crossword(over)).error, /عملات الألغاز/, JSON.stringify(over));
+  }
+  assert.deepEqual(settings.get().crosswordCoins, DEFAULT_CONFIG.crosswordCoins);
+});
+
+test('a database from before these existed, or a row missing its prices, reads the missing part as today\'s', () => {
+  const db = openDatabase(':memory:');
+  db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('crosswordCoins', JSON.stringify({ answer: 7, lostPerHelp: 2, levelFinish: 0 }));
+  const config = createAppConfig(db).get();
+  assert.equal(config.crosswordCoins.answer, 7, 'what was saved is kept');
+  assert.deepEqual(config.crosswordCoins.helpCosts, DEFAULT_CONFIG.crosswordCoins.helpCosts, 'and the prices it lacks are today\'s');
+});
+
+test('the app is served the crossword coins as they are', () => {
+  assert.deepEqual(configForApp(settings.get()).crosswordCoins, DEFAULT_CONFIG.crosswordCoins);
 });
 
 // --- Ads (contract §11) -------------------------------------------------
