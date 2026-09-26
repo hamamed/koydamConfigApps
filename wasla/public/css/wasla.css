@@ -1133,3 +1133,91 @@ html { scrollbar-gutter: stable; }
 }
 .wz-generate-num:focus { outline: 2px solid var(--wz-teal-deep); outline-offset: 1px; }
 [data-mix-fields].is-off { opacity: .45; }
+
+/* ------------------------------------------------------------ phones --- */
+/*
+ * The panel on a phone: nothing may be wider than the screen, and everything an
+ * admin edits or reads has to be comfortable under a thumb. Only root causes are
+ * fixed here — no `overflow: hidden` on the page, which would hide content
+ * rather than lay it out. Wide tables keep scrolling inside their own card.
+ */
+@media (max-width: 767.98px) {
+  /*
+   * The title bar. Its subtitle never wrapped and its title block never shrank,
+   * so one long subtitle («اللغز 1 في التطبيق · 7 كلمة · 12 × 8») stretched the
+   * bar — and the page — past the screen. Now the text wraps, and the page's own
+   * buttons (السابق/التالي, معاينة…) take a row of their own under the title.
+   */
+  .ad-topbar {
+    flex-wrap: wrap;
+    gap: .4rem .6rem;
+    padding-inline: .85rem;
+    /* Stuck to the top it would take a third of the screen once its buttons wrap. */
+    position: static;
+  }
+  .ad-topbar > .min-w-0 { flex: 1 1 0; min-width: 0; }
+  .ad-topbar .ad-page-title { font-size: 1.35rem; }
+  .ad-topbar .ad-page-sub.text-truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+  .ad-topbar > .ms-auto {
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    margin-right: 0 !important;
+  }
+  .ad-topbar > .ms-auto:empty { display: none; }
+
+  .ad-content { padding: .9rem .75rem 3rem; }
+  .ad-card-body { padding: .9rem; }
+
+  /* Rows of buttons, filters and fields wrap instead of pushing off the edge. */
+  .ad-card-head,
+  .ad-content .d-flex:not(.flex-nowrap):not(.wz-no-wrap) { flex-wrap: wrap; }
+  .ad-content .btn-group { flex-wrap: wrap; }
+
+  /*
+   * Long words, ids and links break rather than widen their card — but not in a
+   * table: its columns would squeeze to one letter («ا ص ط ن ا ع ي»). Tables
+   * scroll sideways inside their card instead.
+   */
+  .ad-card-body, .ad-content p, .ad-content .kd-tag { overflow-wrap: anywhere; }
+  .ad-content td, .ad-content th, .ad-content td .kd-tag { overflow-wrap: normal; }
+  .ad-table td .wz-answer, .ad-table td .wz-ar { white-space: nowrap; }
+
+  /* A thumb, not a mouse. */
+  .ad-content .btn,
+  .ad-content .btn-sm { min-height: 38px; }
+  /* Below 16px iOS Safari zooms the whole page in on every tap into a field. */
+  .ad-content .form-control,
+  .ad-content .form-select,
+  .ad-content textarea { font-size: 16px; min-height: 42px; }
+  .ad-content .form-check-input { width: 1.25em; height: 1.25em; }
+
+  /* A figure is one thing: it shrinks to fit, but never breaks mid-number or mid-date. */
+  .ad-kpi-value { overflow-wrap: normal; white-space: nowrap; font-size: 1.55rem; }
+
+  /*
+   * The crossword preview: its squares size themselves from the screen (up to
+   * the 40px they have on a computer), so a 12-wide grid fits without its edge
+   * scrolled out of sight. 5.5rem is the page's and the board's own padding.
+   */
+  .wz-grid {
+    --wz-side: min(40px, calc((100vw - 5.5rem - (var(--wz-cols) - 1) * 4px) / var(--wz-cols)));
+    grid-template-columns: repeat(var(--wz-cols), var(--wz-side));
+    grid-template-rows: repeat(var(--wz-rows), var(--wz-side));
+  }
+  .wz-cell { font-size: calc(var(--wz-side) * .5); }
+
+  /* The phone preview is a phone and a bit: drawn at four fifths so it fits a real one. */
+  .wp-stage { zoom: .8; }
+
+  /*
+   * Category chips: on a phone 26 of them wrapped into a wall that pushed the
+   * questions off the screen. One row, swiped sideways, keeps the list in view.
+   */
+  .wz-categories {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: .35rem;
+    scrollbar-width: none;
+  }
+  .wz-categories > * { flex: none; }
+}
