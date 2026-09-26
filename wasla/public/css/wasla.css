@@ -256,6 +256,15 @@
 /* Players */
 .wz-chart-wrap { width: 100%; overflow-x: auto; }
 .wz-chart { display: block; width: 100%; min-width: 520px; height: auto; }
+/*
+ * A chart is drawn left to right in its own coordinates. Inside an Arabic page
+ * the inherited right-to-left direction flipped `text-anchor`, so the scale's
+ * numbers hung off the left edge («00» for «300»).
+ */
+.wz-chart { direction: ltr; }
+/* Its scroll box too: in a right-to-left page a box that scrolls starts at its
+   right end, which on a phone hid the scale on the left. */
+.wz-chart-wrap { direction: ltr; }
 .wz-chart-bar { fill: var(--wz-teal); }
 .wz-chart-bar:hover { fill: #0e7f7a; }
 .wz-chart-grid { stroke: var(--kd-line); stroke-width: 1; }
@@ -1221,3 +1230,36 @@ html { scrollbar-gutter: stable; }
   }
   .wz-categories > * { flex: none; }
 }
+
+/* --------------------------------------------------- front page charts --- */
+/* One measure per chart, so one hue: the game's teal; the numbers stay in ink. */
+.wz-chart-hit { fill: transparent; }
+.wz-chart-col:hover .wz-chart-bar { fill: var(--wz-teal-deep); }
+.wz-chart-col:hover .wz-chart-hit { fill: rgba(20, 164, 158, .08); }
+.wz-kpi-note { margin-top: .25rem; font-size: .78rem; color: var(--kd-muted); line-height: 1.5; }
+.wz-kpi-small { font-size: 1.35rem; }
+
+/*
+ * On a phone the whole month fits the width, rather than scrolling to reach the
+ * latest days; the chart shrinks to about half, so its labels are drawn twice
+ * the size to come out readable.
+ */
+@media (max-width: 767.98px) {
+  .wz-chart { min-width: 0; }
+  .wz-chart-axis { font-size: 19px; }
+}
+
+.wz-hbars { display: grid; gap: .55rem; }
+.wz-hbar {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 9rem) 1fr auto;
+  align-items: center;
+  gap: .6rem;
+  padding: .15rem .25rem;
+  border-radius: 8px;
+}
+.wz-hbar:hover { background: var(--wz-board-1); }
+.wz-hbar-label { font-size: .88rem; font-weight: 700; color: var(--kd-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wz-hbar-track { height: 14px; border-radius: 4px; background: var(--wz-board-1); overflow: hidden; }
+.wz-hbar-fill { display: block; height: 100%; min-width: 2px; border-radius: 4px; background: var(--wz-teal); }
+.wz-hbar-value { font-size: .85rem; font-weight: 800; color: var(--wz-ink); font-variant-numeric: tabular-nums; unicode-bidi: plaintext; }

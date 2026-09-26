@@ -15,6 +15,9 @@ export const TREND_DAYS = 30;
 export const HELP_DAYS = 30;
 export const RETENTION_COHORTS = 30;
 export const WORD_SEARCH_DAYS = 30;
+export const HOUR_DAYS = 7;
+/** The daily games, as their events name them (`<game>_completed`), in the order the ladder lists them. */
+export const DAILY_GAMES = Object.freeze(['bubbles', 'wheel', 'guess', 'connect', 'wordsearch', 'marathon']);
 
 /** YYYY-MM-DD `n` days after (or before, when negative) `date`. */
 export function addDays(date, n) {
@@ -62,6 +65,72 @@ export function createPlayers(db, { repo }) {
       wordSearchCompletedToday: scalar(`SELECT COUNT(*) FROM events WHERE type = 'wordsearch_completed'
         AND received_at >= ? AND received_at < ?`, today, tomorrow),
       notificationsEnabled: scalar('SELECT COUNT(*) FROM devices WHERE enabled = 1'),
+      newToday: newSince(today, tomorrow),
+      newMonth: newSince(addDays(today, -29), tomorrow),
+      questionsSolvedToday: scalar(`SELECT COUNT(*) FROM events WHERE type = 'question_solved'
+        AND received_at >= ? AND received_at < ?`, today, tomorrow),
+    };
+  }
+
+  /** Devices whose first retained event falls in [from, to). */
+  function newSince(from, to) {
+    return scalar(`SELECT COUNT(*) FROM (SELECT MIN(received_at) AS first FROM events GROUP BY device)
+      WHERE first >= ? AND first < ?`, from, to);
+  }
+
+  /** `[{ date, players }]`: devices first seen on each of the `days` days ending `today`, zero-filled. */
+  function newPerDay(today = todayUtc(), days = TREND_DAYS) {
+    const from = addDays(today, -(days - 1));
+    const counts = new Map(db.prepare(`SELECT substr(first, 1, 10) AS day, COUNT(*) AS players
+      FROM (SELECT MIN(received_at) AS first FROM events GROUP BY device)
+      WHERE first >= ? AND first < ? GROUP BY day`).all(from, addDays(today, 1)).map((r) => [r.day, r.players]));
+    return Array.from({ length: days }, (_, i) => {
+      const date = addDays(from, i);
+      return { date, players: counts.get(date) ?? 0 };
+    });
+  }
+
+  /** `[{ date, levels, questions }]`: levels finished (not the daily puzzle) and questions solved per day. */
+  function activityPerDay(today = todayUtc(), days = TREND_DAYS) {
+    const from = addDays(today, -(days - 1));
+    const rows = new Map(db.prepare(`SELECT substr(received_at, 1, 10) AS day,
+        SUM(type = 'level_completed' AND level_number > 0) AS levels,
+        SUM(type = 'question_solved') AS questions
+      FROM events WHERE type IN ('level_completed', 'question_solved') AND received_at >= ? AND received_at < ?
+      GROUP BY day`).all(from, addDays(today, 1)).map((r) => [r.day, r]));
+    return Array.from({ length: days }, (_, i) => {
+      const date = addDays(from, i);
+      const row = rows.get(date);
+      return { date, levels: row?.levels ?? 0, questions: row?.questions ?? 0 };
+    });
+  }
+
+  /** `[{ hour, players }]` for hours 0–23 (UTC): distinct devices active in that hour over the last `days` days. */
+  function byHour(today = todayUtc(), days = HOUR_DAYS) {
+    const counts = new Map(db.prepare(`SELECT CAST(substr(received_at, 12, 2) AS INTEGER) AS hour, COUNT(DISTINCT device) AS players
+      FROM events WHERE received_at >= ? AND received_at < ? GROUP BY hour`)
+      .all(addDays(today, -(days - 1)), addDays(today, 1)).map((r) => [r.hour, r.players]));
+    return Array.from({ length: 24 }, (_, hour) => ({ hour, players: counts.get(hour) ?? 0 }));
+  }
+
+  /** `{ total, rows: [{ game, count }] }`: daily games finished over the last `days` days, largest first. */
+  function dailyGames(today = todayUtc(), days = TREND_DAYS) {
+    const types = DAILY_GAMES.map((game) => `'${game}_completed'`).join(', ');
+    const counts = new Map(db.prepare(`SELECT type, COUNT(*) AS n FROM events
+      WHERE type IN (${types}) AND received_at >= ? AND received_at < ? GROUP BY type`)
+      .all(addDays(today, -(days - 1)), addDays(today, 1)).map((r) => [r.type.replace(/_completed$/, ''), r.n]));
+    const rows = DAILY_GAMES.map((game) => ({ game, count: counts.get(game) ?? 0 }))
+      .sort((a, b) => b.count - a.count || DAILY_GAMES.indexOf(a.game) - DAILY_GAMES.indexOf(b.game));
+    return { days, total: rows.reduce((sum, r) => sum + r.count, 0), rows };
+  }
+
+  /** Players with a name on the leaderboards: all of them, and those made this month and today. */
+  function named(today = todayUtc()) {
+    const tomorrow = addDays(today, 1);
+    return {
+      total: scalar('SELECT COUNT(*) FROM profiles'),
+      month: scalar('SELECT COUNT(*) FROM profiles WHERE created_at >= ? AND created_at < ?', addDays(today, -29), tomorrow),
+      today: scalar('SELECT COUNT(*) FROM profiles WHERE created_at >= ? AND created_at < ?', today, tomorrow),
     };
   }
 
@@ -167,5 +236,14 @@ export function createPlayers(db, { repo }) {
     };
   }
 
-  return { kpis, playersPerDay, funnel, helps, retention, wordSearch, dashboard };
+  /** Everything the panel's front page shows. */
+  function home(today = todayUtc()) {
+    return {
+      today, kpis: kpis(today), perDay: playersPerDay(today), newPerDay: newPerDay(today),
+      activity: activityPerDay(today), hours: byHour(today), dailyGames: dailyGames(today),
+      helps: helps(today), retention: retention(today), funnel: funnel(), named: named(today),
+    };
+  }
+
+  return { kpis, playersPerDay, newPerDay, activityPerDay, byHour, dailyGames, named, funnel, helps, retention, wordSearch, dashboard, home };
 }

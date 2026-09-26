@@ -1,0 +1,16 @@
+<%#
+  Horizontal bars for a few named categories: `rows` of { label, value, text },
+  longest bar = the largest value. One hue (a single measure), the value written
+  at the end of every bar in ink — few enough bars that each can carry its number —
+  and the whole row is the hover target.
+%>
+<% const top = Math.max(1, ...rows.map((r) => r.value)); %>
+<div class="wz-hbars" role="list">
+  <% rows.forEach((r) => { %>
+    <div class="wz-hbar" role="listitem" title="<%= r.label %>: <%= r.text ?? r.value %>">
+      <span class="wz-hbar-label"><%= r.label %></span>
+      <span class="wz-hbar-track"><span class="wz-hbar-fill" style="width: <%= (r.value / top * 100).toFixed(1) %>%"></span></span>
+      <span class="wz-hbar-value"><%= r.text ?? r.value.toLocaleString('en') %></span>
+    </div>
+  <% }) %>
+</div>

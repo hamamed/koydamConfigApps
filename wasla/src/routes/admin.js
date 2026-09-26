@@ -22,7 +22,8 @@ import { registerAnswers } from './admin-answers.js';
 import { registerAudio } from './admin-audio.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
-import { registerPlayers } from './admin-players.js';
+import { HELP_LABELS, registerPlayers } from './admin-players.js';
+import { barChart } from '../charts.js';
 import { registerBoards } from './admin-boards.js';
 import { registerCatalogue } from './admin-catalogue.js';
 import { registerEvents } from './admin-events.js';
@@ -52,6 +53,12 @@ function share(total, parts) {
  * The panel: questions (with pictures, sounds and zoom), levels built from
  * them, and the sections registered from the admin-*.js files beside this one.
  */
+/** The daily games as the app names them, for the front page's chart. */
+const DAILY_GAME_LABELS = Object.freeze({
+  bubbles: 'فقاعات الكلمات', wheel: 'عجلة الحروف', guess: 'خمّن الكلمة',
+  connect: 'وصّل الحروف', wordsearch: 'البحث عن الكلمات', marathon: 'ماراثون الجمعة',
+});
+
 export function adminRouter({
   repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
 }) {
@@ -163,12 +170,28 @@ export function adminRouter({
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
   router.get('/', (_req, res) => {
+    const home = players.home();
+    const day = (date) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+    /** One bar per day, the date and the count in its tooltip. */
+    const perDay = (rows, key, noun, label) => barChart(
+      rows.map((r) => ({ label: day(r.date), value: r[key], title: `${r.date}: ${r[key].toLocaleString('en')} ${noun}` })),
+      { label, height: 200 },
+    );
     res.render('dashboard', {
       title: 'الرئيسية',
       counts: repo.counts(),
-      levels: repo.listLevels().slice(0, 8),
-      // What players are doing, and what they say is wrong with it.
-      play: events.overview(),
+      home,
+      charts: {
+        players: perDay(home.perDay, 'players', 'لاعباً', 'اللاعبون كل يوم'),
+        newPlayers: perDay(home.newPerDay, 'players', 'لاعباً جديداً', 'اللاعبون الجدد كل يوم'),
+        levels: perDay(home.activity, 'levels', 'لغزاً', 'الألغاز المنتهية كل يوم'),
+        questions: perDay(home.activity, 'questions', 'سؤالاً', 'الأسئلة المحلولة كل يوم'),
+        hours: barChart(home.hours.map((h) => ({
+          label: String(h.hour), value: h.players, title: `${h.hour}:00–${h.hour}:59 UTC: ${h.players} لاعباً`,
+        })), { label: 'اللاعبون حسب الساعة', height: 200, xEvery: 3 }),
+      },
+      helpLabels: HELP_LABELS,
+      gameLabels: DAILY_GAME_LABELS,
       reportCounts: reports ? reports.counts() : null,
       reasons: REASONS,
     });

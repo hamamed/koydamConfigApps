@@ -1,61 +1,130 @@
+<%
+  const k = home.kpis;
+  const n = (v) => Number(v || 0).toLocaleString('en');
+  const pct = (rate) => (rate == null ? '—' : Math.round(rate * 100) + '٪');
+  const sum = (rows, key) => rows.reduce((s, r) => s + r[key], 0);
+  /** A headline number: label, value, what it is measured against, icon. */
+  const tiles = [
+    ['لعبوا اليوم', n(k.today), 'أجهزة فتحت اللعبة اليوم', 'users'],
+    ['هذا الأسبوع', n(k.week), 'آخر 7 أيام', 'calendar-days'],
+    ['هذا الشهر', n(k.month), 'آخر 30 يوماً', 'calendar-range'],
+    ['لاعبون جدد اليوم', n(k.newToday), n(k.newMonth) + ' جديداً هذا الشهر', 'user-plus'],
+    ['بأسماء في المتصدرين', n(home.named.total), n(home.named.month) + ' هذا الشهر · ' + n(home.named.today) + ' اليوم', 'trophy'],
+    ['يعودون في اليوم التالي', pct(home.retention.d1.rate), 'وبعد أسبوع ' + pct(home.retention.d7.rate), 'repeat'],
+    ['ألغاز انتهت اليوم', n(k.levelsCompletedToday), n(k.questionsSolvedToday) + ' سؤالاً محلولاً اليوم', 'grid-3x3'],
+    ['بلاغات مفتوحة', reportCounts ? n(reportCounts.open) : '—', reportCounts ? n(reportCounts.week) + ' هذا الأسبوع' : '', 'triangle-alert'],
+  ];
+  const chartCard = (title, sub, svg, total) => ({ title, sub, svg, total });
+  const perDayCards = [
+    chartCard('اللاعبون كل يوم', 'أجهزة مختلفة، آخر 30 يوماً', charts.players, null),
+    chartCard('اللاعبون الجدد كل يوم', 'أول مرة يفتح الجهاز اللعبة', charts.newPlayers, n(sum(home.newPerDay, 'players')) + ' في 30 يوماً'),
+    chartCard('الألغاز المنتهية كل يوم', 'دون لغز اليوم', charts.levels, n(sum(home.activity, 'levels')) + ' في 30 يوماً'),
+    chartCard('الأسئلة المحلولة كل يوم', 'في الألغاز', charts.questions, n(sum(home.activity, 'questions')) + ' في 30 يوماً'),
+  ];
+  const funnelRows = home.funnel.rows.slice(0, 10).map((r) => ({
+    label: 'اللغز ' + r.number, value: r.completed,
+    text: n(r.completed) + (r.completedShare == null ? '' : ' · ' + Math.round(r.completedShare * 100) + '٪'),
+  }));
+%>
 <%- include('partials/head') %>
 <div class="ad-shell">
   <%- include('partials/sidebar') %>
   <main class="ad-main">
-    <%- include('partials/topbar', { heading: 'الرئيسية', subheading: 'ما يقدّمه تطبيق شبّك الآن' }) %>
+    <%- include('partials/topbar', { heading: 'الرئيسية', subheading: 'من يلعب شبّك، ومتى، وأين يتوقفون · الأيام بتوقيت UTC' }) %>
     <div class="ad-content">
       <%- include('partials/flash') %>
 
       <div class="row g-3 mb-3">
-        <% [
-             ['ألغاز منشورة', counts.published + ' / ' + counts.levels, 'grid-3x3'],
-             ['الأسئلة', counts.questions, 'message-circle-question'],
-             ['بصورة', counts.withImages, 'image'],
-             ['خارج الألغاز', counts.unused, 'inbox'],
-           ].forEach(([label, value, glyph]) => { %>
-          <div class="col-6 col-xl-3">
-            <div class="ad-card ad-kpi">
+        <% tiles.forEach(([label, value, note, glyph]) => { %>
+          <div class="col-6 col-lg-3">
+            <div class="ad-card ad-kpi h-100">
               <div class="d-flex align-items-center gap-2 mb-2">
                 <%- icon(glyph, 17) %>
                 <span class="ad-kpi-label"><%= label %></span>
               </div>
               <div class="ad-kpi-value"><%= value %></div>
+              <% if (note) { %><div class="wz-kpi-note"><%= note %></div><% } %>
             </div>
           </div>
         <% }) %>
       </div>
 
-      <%# What players are doing, and what they say is wrong with it. %>
       <div class="row g-3 mb-3">
-        <div class="col-xl-7">
+        <% perDayCards.forEach((c) => { %>
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('chart-column', 16) %>
+                <span class="fw-semibold"><%= c.title %></span>
+                <% if (c.total) { %><span class="kd-tag ms-auto"><%= c.total %></span><% } %>
+              </div>
+              <div class="ad-card-body">
+                <p class="small kd-faint mb-2"><%= c.sub %></p>
+                <div class="wz-chart-wrap"><%- c.svg %></div>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-xl-6">
           <div class="ad-card h-100">
             <div class="ad-card-head d-flex align-items-center gap-2">
-              <%- icon('chart-column', 16) %>
-              <span class="fw-semibold me-auto">اللعب</span>
-              <a class="small" href="/admin/stats">كل الإحصاءات</a>
+              <%- icon('clock', 16) %>
+              <span class="fw-semibold">متى يلعبون</span>
             </div>
             <div class="ad-card-body">
-              <div class="row g-3">
-                <% [
-                     ['أجهزة لعبت', play.devices || 0],
-                     ['أجهزة هذا الأسبوع', play.devicesWeek || 0],
-                     ['أحداث مسجَّلة', play.events || 0],
-                   ].forEach(([label, value]) => { %>
-                  <div class="col-4">
-                    <div class="ad-kpi-label"><%= label %></div>
-                    <div class="ad-kpi-value"><%= value.toLocaleString('en') %></div>
-                  </div>
-                <% }) %>
-              </div>
-              <p class="small kd-faint mb-0 mt-3">
-                <% if (play.since) { %>منذ <%= String(play.since).slice(0, 10) %><% } else { %>لا أحداث بعد.<% } %>
-              </p>
+              <p class="small kd-faint mb-2">لاعبون مختلفون في كل ساعة من اليوم، آخر 7 أيام، بتوقيت UTC (المغرب UTC+1).</p>
+              <div class="wz-chart-wrap"><%- charts.hours %></div>
             </div>
           </div>
         </div>
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('route', 16) %>
+              <span class="fw-semibold me-auto">إلى أين يصلون</span>
+              <a class="small" href="/admin/players">التفاصيل</a>
+            </div>
+            <div class="ad-card-body">
+              <p class="small kd-faint mb-3">من أنهى كل لغز من أول عشرة، ونسبتهم ممن فتحوا اللغز الأول (<%= n(home.funnel.base) %>).</p>
+              <% if (funnelRows.length) { %><%- include('partials/hbars', { rows: funnelRows }) %><% } else { %><p class="small kd-muted mb-0">لا ألغاز منشورة.</p><% } %>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div class="row g-3 mb-3">
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('calendar-days', 16) %>
+              <span class="fw-semibold me-auto">ألعاب لغز اليوم</span>
+              <span class="kd-tag"><%= n(home.dailyGames.total) %> في 30 يوماً</span>
+            </div>
+            <div class="ad-card-body">
+              <%- include('partials/hbars', { rows: home.dailyGames.rows.map((g) => ({ label: gameLabels[g.game] || g.game, value: g.count })) }) %>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('lightbulb', 16) %>
+              <span class="fw-semibold me-auto">المساعدات</span>
+              <span class="kd-tag"><%= n(home.helps.total) %> في 30 يوماً</span>
+            </div>
+            <div class="ad-card-body">
+              <%- include('partials/hbars', { rows: home.helps.rows.map((h) => ({ label: helpLabels[h.help] || h.help, value: h.count })) }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
         <% if (reportCounts) { %>
-          <div class="col-xl-5">
+          <div class="col-xl-6">
             <div class="ad-card h-100">
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <%- icon('triangle-alert', 16) %>
@@ -81,40 +150,29 @@
             </div>
           </div>
         <% } %>
-      </div>
-
-      <div class="ad-card">
-        <div class="ad-card-head d-flex align-items-center gap-2">
-          <%- icon('grid-3x3', 16) %>
-          <span class="fw-semibold">الألغاز</span>
-          <div class="ms-auto d-flex gap-2">
-            <a class="btn btn-sm btn-kd-outline" href="/admin/questions/new">سؤال جديد</a>
-            <a class="btn btn-sm btn-kd" href="/admin/levels">إدارة الألغاز</a>
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('library', 16) %>
+              <span class="fw-semibold me-auto">المحتوى</span>
+              <a class="small" href="/admin/stats">إحصاءات الأسئلة</a>
+            </div>
+            <div class="ad-card-body">
+              <div class="row g-3">
+                <% [
+                     ['ألغاز منشورة', n(counts.published) + ' / ' + n(counts.levels)],
+                     ['الأسئلة', n(counts.questions)],
+                     ['بصورة', n(counts.withImages)],
+                     ['خارج الألغاز', n(counts.unused)],
+                   ].forEach(([label, value]) => { %>
+                  <div class="col-6 col-md-3">
+                    <div class="ad-kpi-label"><%= label %></div>
+                    <div class="ad-kpi-value wz-kpi-small"><%= value %></div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="ad-card-body p-0">
-          <% if (!levels.length) { %>
-            <div class="ad-empty">
-              <%- icon('grid-3x3', 28) %>
-              <p class="mb-0">لا ألغاز بعد. أضف بعض الأسئلة ثم كوّن منها لغزاً.</p>
-            </div>
-          <% } else { %>
-            <div class="ad-table-wrap">
-              <table class="ad-table">
-                <thead><tr><th>اللغز</th><th>الكلمات</th><th>الشبكة</th><th>الحالة</th></tr></thead>
-                <tbody>
-                  <% levels.forEach((l) => { %>
-                    <tr>
-                      <td><a class="fw-semibold text-nowrap" href="/admin/levels/<%= l.id %>"><%= l.name %></a></td>
-                      <td><%= l.wordCount %><% if (l.unplacedCount) { %> <span class="kd-tag kd-tag-warn"><%= l.unplacedCount %> بلا تقاطع</span><% } %></td>
-                      <td class="kd-faint"><%= l.rows %> × <%= l.cols %></td>
-                      <td><span class="ad-status <%= l.published ? 'ad-status-published' : 'ad-status-draft' %>"><%= l.published ? 'منشور' : 'مسودة' %></span></td>
-                    </tr>
-                  <% }) %>
-                </tbody>
-              </table>
-            </div>
-          <% } %>
         </div>
       </div>
     </div>

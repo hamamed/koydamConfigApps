@@ -5,6 +5,7 @@ import { barChart, niceMax } from '../src/charts.js';
 import { openDatabase } from '../src/db/index.js';
 import { createDevices, readDeviceRegistration } from '../src/devices.js';
 import { addDays, biggestDrop, createPlayers } from '../src/players.js';
+import { createProfiles } from '../src/profiles.js';
 import { createRepository } from '../src/repository.js';
 
 const TODAY = '2026-09-17';
@@ -73,6 +74,9 @@ test('KPIs count distinct devices by UTC day and completions today', () => {
     dailyCompletedToday: 2,  // A, B
     wordSearchCompletedToday: 0,
     notificationsEnabled: 1,
+    newToday: 1,             // B
+    newMonth: 5,             // A, B, C, D, F (first seen in the last 30 days)
+    questionsSolvedToday: 0,
   });
 });
 
@@ -164,9 +168,76 @@ test('the bar chart scales to a round maximum and labels the axis', () => {
   assert.equal(niceMax(23), 40);
   assert.equal(niceMax(130), 200);
   const svg = barChart([{ label: '15/09', value: 3 }, { label: '16/09', value: 0 }, { label: '<17>', value: 7 }], { xEvery: 2, label: 'Players' });
-  assert.equal((svg.match(/<rect /g) ?? []).length, 3);
+  assert.equal((svg.match(/class="wz-chart-bar"/g) ?? []).length, 3);
+  assert.equal((svg.match(/class="wz-chart-hit"/g) ?? []).length, 3, 'each day\'s whole column is its hover target');
+  assert.equal((svg.match(/<title>/g) ?? []).length, 3);
   assert.match(svg, /aria-label="Players"/);
   assert.match(svg, />8<\/text>/);
   assert.match(svg, />&lt;17&gt;<\/text>/);
   assert.doesNotMatch(svg, />16\/09<\/text>/);
+});
+
+// ── The dashboard's extra views ─────────────────────────────────────────────
+
+test('new players: first seen per day over 30 days, and today and this month', () => {
+  // First seen: A −8, B today, C −3, D −10, F −1 inside 30 days; E −40 and H −31 outside; G is tomorrow.
+  const days = players.newPerDay(TODAY);
+  assert.equal(days.length, 30);
+  assert.equal(days.at(-1).date, TODAY);
+  const byDate = Object.fromEntries(days.map((d) => [d.date, d.players]));
+  assert.equal(byDate[TODAY], 1);
+  assert.equal(byDate[addDays(TODAY, -3)], 1);
+  assert.equal(days.reduce((sum, d) => sum + d.players, 0), 5);
+  const kpis = players.kpis(TODAY);
+  assert.equal(kpis.newToday, 1);
+  assert.equal(kpis.newMonth, 5);
+});
+
+test('activity per day: levels finished and questions solved, zero-filled', () => {
+  event('A', 'question_solved', TODAY, { level: 1, levelId: levelIds[0], word: 1 });
+  event('B', 'question_solved', TODAY, { level: 1, levelId: levelIds[0], word: 1 });
+  event('C', 'question_solved', addDays(TODAY, -3), { level: 1, levelId: levelIds[0], word: 1 });
+  const days = players.activityPerDay(TODAY);
+  assert.equal(days.length, 30);
+  const today = days.at(-1);
+  assert.deepEqual([today.date, today.levels, today.questions], [TODAY, 3, 2], 'A finished 1 and 2, B finished 1; the daily puzzle is not a level');
+  assert.equal(days.find((d) => d.date === addDays(TODAY, -3)).levels, 1);
+  assert.equal(players.kpis(TODAY).questionsSolvedToday, 2);
+});
+
+test('activity by hour of the day (UTC) over the last 7 days', () => {
+  const hours = players.byHour(TODAY);
+  assert.equal(hours.length, 24);
+  assert.deepEqual(hours.map((h) => h.hour), Array.from({ length: 24 }, (_, i) => i));
+  assert.equal(hours[23].players, 1, 'F at 23:59:59 yesterday');
+  assert.ok(hours[12].players >= 3, 'the rest play at noon');
+  assert.equal(hours[0].players, 0, "tomorrow's clock skew is not the past week");
+});
+
+test('daily games finished over 30 days, by game, largest first', () => {
+  for (const [type, n] of [['wheel_completed', 3], ['guess_completed', 1], ['connect_completed', 2], ['wordsearch_completed', 2]]) {
+    for (let i = 0; i < n; i++) event(`P${i}`, type, TODAY, { level: 0 });
+  }
+  event('Q', 'bubbles_completed', addDays(TODAY, -40), { level: 0 });
+  const games = players.dailyGames(TODAY);
+  assert.deepEqual(games.rows.slice(0, 3).map((g) => [g.game, g.count]), [['wheel', 3], ['connect', 2], ['wordsearch', 2]]);
+  assert.equal(games.rows.find((g) => g.game === 'bubbles').count, 0, '40 days ago is outside');
+  assert.equal(games.total, 8);
+});
+
+test('named players: every profile, and those made this month and today', () => {
+  const profiles = createProfiles(db, { now: () => new Date(`${TODAY}T10:00:00Z`) });
+  profiles.create({ username: 'layla', avatar: 'moon' });
+  profiles.create({ username: 'rabab', avatar: 'moon' });
+  db.prepare("UPDATE profiles SET created_at = ? WHERE username = 'rabab'").run(`${addDays(TODAY, -45)} 09:00:00`);
+  db.prepare("UPDATE profiles SET created_at = ? WHERE username = 'layla'").run(`${TODAY} 09:00:00`);
+  assert.deepEqual(players.named(TODAY), { total: 2, month: 1, today: 1 });
+});
+
+test('the new dashboard queries use indexes too', () => {
+  const plans = [
+    "SELECT substr(received_at, 12, 2), COUNT(DISTINCT device) FROM events WHERE received_at >= '2026-09-11' AND received_at < '2026-09-18' GROUP BY 1",
+    "SELECT type, COUNT(*) FROM events WHERE type IN ('wheel_completed', 'guess_completed') AND received_at >= '2026-09-01' AND received_at < '2026-09-18' GROUP BY type",
+  ].map((sql) => db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all().map((r) => r.detail).join(' | '));
+  for (const plan of plans) assert.match(plan, /USING (COVERING )?INDEX/, plan);
 });

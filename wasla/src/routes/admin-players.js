@@ -1,7 +1,7 @@
 import { barChart } from '../charts.js';
 import { RETENTION_DAYS } from '../events.js';
 
-const HELP_LABELS = {
+export const HELP_LABELS = {
   revealLetter: 'كشف حرف',
   removeLetters: 'حذف 3 حروف',
   solveWord: 'حل الكلمة',
