@@ -76,6 +76,72 @@
         <% }) %>
       </div>
 
+      <%
+        const f = home.frontier;
+        const days = (d) => (d == null ? '—' : d === 0 ? 'أنهى الكل' : d === 1 ? 'يوم' : d === 2 ? 'يومان' : d + ' أيام');
+        const who = (p) => p.username || 'جهاز …' + p.device.slice(-4);
+      %>
+      <%# Who is furthest through the levels, and how long what is left lasts them at
+          their pace — the number to watch before adding more levels. %>
+      <div class="ad-card mb-3">
+        <div class="ad-card-head d-flex align-items-center gap-2">
+          <%- icon('flag', 16) %>
+          <span class="fw-semibold me-auto">من سيصل إلى آخر الألغاز</span>
+          <a class="small" href="/admin/levels">الألغاز</a>
+        </div>
+        <div class="ad-card-body">
+          <% if (f.soonest != null && f.soonest <= 7) { %>
+            <div class="alert alert-warning d-flex align-items-center gap-2 small mb-3" role="status">
+              <%- icon('triangle-alert', 16) %>
+              <span>أسرع لاعب سينهي كل الألغاز خلال <strong><%= days(f.soonest) %></strong> بسرعته الحالية — أضف ألغازاً جديدة.</span>
+            </div>
+          <% } %>
+          <div class="row g-3 mb-3">
+            <% [
+                 ['ألغاز منشورة', n(f.total)],
+                 ['أنهوا كل الألغاز', n(f.finishedAll)],
+                 ['على بعد ' + 20 + ' لغزاً أو أقل', n(f.nearEnd)],
+                 ['أقرب من ينفد لديه', f.soonest == null ? '—' : days(f.soonest)],
+               ].forEach(([label, value]) => { %>
+              <div class="col-6 col-md-3">
+                <div class="ad-kpi-label"><%= label %></div>
+                <div class="ad-kpi-value wz-kpi-small"><%= value %></div>
+              </div>
+            <% }) %>
+          </div>
+          <div class="row g-3">
+            <div class="col-xl-7">
+              <% if (f.top.length) { %>
+                <div class="ad-table-wrap">
+                  <table class="ad-table">
+                    <thead><tr><th>#</th><th>اللاعب</th><th>أبعد لغز</th><th>آخر 7 أيام</th><th>يبقى</th><th>ينفد خلال</th></tr></thead>
+                    <tbody>
+                      <% f.top.forEach((p, i) => { %>
+                        <tr>
+                          <td class="kd-faint"><%= i + 1 %></td>
+                          <td class="fw-semibold text-nowrap"><%= who(p) %></td>
+                          <td class="text-nowrap"><span class="wz-ltr"><%= p.highest %> / <%= f.total %></span></td>
+                          <td><%= p.weekLevels %> لغزاً</td>
+                          <td><%= p.remaining %></td>
+                          <td class="text-nowrap"><span class="<%= p.daysLeft != null && p.daysLeft <= 7 && p.remaining > 0 ? 'kd-tag kd-tag-warn' : '' %>"><%= days(p.daysLeft) %></span></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="small kd-faint mb-0 mt-2">«ينفد خلال»: الألغاز الباقية بسرعة اللاعب في آخر 7 أيام. — تعني أنه لم ينهِ لغزاً هذا الأسبوع.</p>
+              <% } else { %>
+                <p class="small kd-muted mb-0">لم ينهِ أحد لغزاً بعد.</p>
+              <% } %>
+            </div>
+            <div class="col-xl-5">
+              <div class="ad-kpi-label mb-2">اللاعبون حسب أبعد لغز أنهوه (<%= n(f.players) %>)</div>
+              <%- include('partials/hbars', { rows: f.buckets.map((b) => ({ label: 'الألغاز ' + b.label, value: b.players })) }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="row g-3 mb-3">
         <% perDayCards.forEach((c) => { %>
           <div class="col-xl-6">

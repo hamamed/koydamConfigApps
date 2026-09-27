@@ -16,6 +16,11 @@ export const HELP_DAYS = 30;
 export const RETENTION_COHORTS = 30;
 export const WORD_SEARCH_DAYS = 30;
 export const HOUR_DAYS = 7;
+/** The furthest players the front page names, and how close to the end counts as "near". */
+export const FRONTIER_TOP = 10;
+export const NEAR_END_LEVELS = 20;
+const PACE_DAYS = 7;
+const BUCKET_EDGES = [10, 25, 50, 100, 150];
 /** The daily games, as their events name them (`<game>_completed`), in the order the ladder lists them. */
 export const DAILY_GAMES = Object.freeze(['bubbles', 'wheel', 'guess', 'connect', 'wordsearch', 'marathon']);
 
@@ -258,15 +263,69 @@ export function createPlayers(db, { repo }) {
     };
   }
 
+  /**
+   * Who is furthest through the published levels, and when they will run out.
+   *
+   * A player's place is the furthest level (in today's order) they have finished,
+   * by level id, so reordering the levels keeps everyone's history. Their pace is
+   * the levels they finished for the first time in the last 7 days; at that pace,
+   * `daysLeft` is how long the levels still ahead of them last — the number to
+   * watch before adding more.
+   */
+  function frontier(today = todayUtc()) {
+    const ids = repo.publishedLevelIds();
+    const total = ids.length;
+    const place = new Map(ids.map((id, i) => [id, i + 1]));
+    const weekFrom = addDays(today, -(PACE_DAYS - 1));
+    const tomorrow = addDays(today, 1);
+    const byDevice = new Map();
+    for (const row of db.prepare(`SELECT device, level_id, MIN(received_at) AS first FROM events
+      WHERE type = 'level_completed' AND level_id IS NOT NULL GROUP BY device, level_id`).all()) {
+      const at = place.get(row.level_id);
+      if (!at) continue; // a level since unpublished
+      const entry = byDevice.get(row.device) ?? { device: row.device, highest: 0, weekLevels: 0 };
+      entry.highest = Math.max(entry.highest, at);
+      if (row.first >= weekFrom && row.first < tomorrow) entry.weekLevels += 1;
+      byDevice.set(row.device, entry);
+    }
+    const everyone = [...byDevice.values()].map((p) => {
+      const remaining = total - p.highest;
+      const pace = p.weekLevels / PACE_DAYS;
+      return { ...p, remaining, daysLeft: remaining === 0 ? 0 : pace > 0 ? Math.ceil(remaining / pace) : null };
+    }).sort((a, b) => b.highest - a.highest || b.weekLevels - a.weekLevels || a.device.localeCompare(b.device));
+
+    const top = everyone.slice(0, FRONTIER_TOP);
+    const names = new Map(top.length ? db.prepare(`SELECT pd.device, p.username FROM profile_devices pd
+      JOIN profiles p ON p.id = pd.profile_id WHERE pd.device IN (${top.map(() => '?').join(', ')})`)
+      .all(...top.map((p) => p.device)).map((r) => [r.device, r.username]) : []);
+    const waiting = everyone.filter((p) => p.remaining > 0 && p.daysLeft !== null).map((p) => p.daysLeft);
+
+    const edges = [...BUCKET_EDGES.filter((edge) => edge < total), total];
+    const buckets = edges.map((to, i) => {
+      const from = i ? edges[i - 1] + 1 : 1;
+      return { label: from === to ? String(to) : `${from}–${to}`, players: everyone.filter((p) => p.highest >= from && p.highest <= to).length };
+    });
+
+    return {
+      total,
+      players: everyone.length,
+      finishedAll: total ? everyone.filter((p) => p.remaining === 0).length : 0,
+      nearEnd: everyone.filter((p) => p.remaining > 0 && p.remaining <= NEAR_END_LEVELS).length,
+      soonest: waiting.length ? Math.min(...waiting) : null,
+      top: top.map((p) => ({ ...p, username: names.get(p.device) ?? null })),
+      buckets: total ? buckets : [],
+    };
+  }
+
   /** Everything the panel's front page shows. */
   function home(today = todayUtc()) {
     return {
       today, kpis: kpis(today), perDay: playersPerDay(today), newPerDay: newPerDay(today),
       activity: activityPerDay(today), hours: byHour(today), dailyGames: dailyGames(today),
       helps: helps(today), retention: retention(today), funnel: funnel(), named: named(today),
-      events: eventCounts(today), eventsPerDay: eventsPerDay(today),
+      events: eventCounts(today), eventsPerDay: eventsPerDay(today), frontier: frontier(today),
     };
   }
 
-  return { kpis, eventCounts, eventsPerDay, playersPerDay, newPerDay, activityPerDay, byHour, dailyGames, named, funnel, helps, retention, wordSearch, dashboard, home };
+  return { kpis, frontier, eventCounts, eventsPerDay, playersPerDay, newPerDay, activityPerDay, byHour, dailyGames, named, funnel, helps, retention, wordSearch, dashboard, home };
 }

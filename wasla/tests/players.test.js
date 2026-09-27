@@ -262,3 +262,40 @@ test('saved events: today, this week, this month, all of them, and per day', () 
   assert.equal(days.at(-1).events, 13);
   assert.equal(days.reduce((s, d) => s + d.events, 0), events.month);
 });
+
+test('the frontier: who is furthest through the levels, how fast, and when they run out', () => {
+  // A finished 1 and 2 today, B finished 1 today, C finished 1 three days ago. Z finishes all three.
+  for (const n of [1, 2, 3]) complete('Z', addDays(TODAY, -1), n);
+  const profiles = createProfiles(db, { now: () => new Date(`${TODAY}T10:00:00Z`) });
+  const { profile } = profiles.create({ username: 'zaki', avatar: 'moon' });
+  profiles.linkDevice(profile, 'Z');
+
+  const f = players.frontier(TODAY);
+  assert.equal(f.total, 3, 'published levels');
+  assert.equal(f.finishedAll, 1);
+  assert.equal(f.players, 4, 'A, B, C and Z finished at least one level');
+  assert.deepEqual(f.top.map((p) => [p.device, p.highest]), [['Z', 3], ['A', 2], ['B', 1], ['C', 1]]);
+  const z = f.top[0];
+  assert.equal(z.username, 'zaki', 'a player with a name shows it');
+  assert.deepEqual([z.remaining, z.daysLeft], [0, 0]);
+  const a = f.top[1];
+  assert.equal(a.remaining, 1);
+  assert.equal(a.weekLevels, 2, 'levels finished in the last 7 days');
+  assert.equal(a.daysLeft, Math.ceil(1 / (2 / 7)), 'at this pace the rest takes 4 days');
+  assert.equal(f.soonest, 4, 'the first to run out, among those who have not yet');
+  assert.equal(f.top.find((p) => p.device === 'C').username, null);
+});
+
+test('the frontier buckets players by the furthest level they finished', () => {
+  const f = players.frontier(TODAY);
+  const total = f.buckets.reduce((s, b) => s + b.players, 0);
+  assert.equal(total, f.players);
+  // Three levels in this fixture: the first bucket stops at the last level there is.
+  assert.deepEqual(f.buckets, [{ label: '1–3', players: 3 }]);
+});
+
+test('with no player moving, no one is about to run out', () => {
+  db.prepare('DELETE FROM events').run();
+  const f = players.frontier(TODAY);
+  assert.deepEqual([f.players, f.finishedAll, f.soonest, f.top.length], [0, 0, null, 0]);
+});
