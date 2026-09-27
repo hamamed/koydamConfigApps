@@ -539,6 +539,9 @@ body {
   font-size: 1.25rem;
 }
 .ad-brand small { color: rgba(255, 255, 255, .75); }
+/* Under the logo: a small pill to the landing page. */
+.wz-site-link-row { display: flex; justify-content: center; padding: .6rem .75rem .2rem; }
+.wz-site-link { display: inline-flex; align-items: center; gap: .35rem; padding-inline: .9rem; font-weight: 700; }
 .ad-nav-label { color: var(--wz-teal-deep); letter-spacing: .08em; }
 .ad-nav-link { border-radius: var(--kd-radius-sm); font-weight: 700; color: var(--kd-ink-2); }
 .ad-nav-link:hover { background: var(--wz-board-1); color: var(--wz-ink); }

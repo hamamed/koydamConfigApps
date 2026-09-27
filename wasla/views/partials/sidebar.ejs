@@ -3,6 +3,14 @@
   <a class="ad-brand wz-brand" href="/admin" aria-label="شبّك · لوحة التحكم">
     <%- include('brand', { size: 34 }) %>
   </a>
+  <%# The landing page, in a new tab so the panel stays where it was. "/" is the
+      landing page on chabbek.com, and wassla.hamaprojects.com sends it there. %>
+  <div class="wz-site-link-row">
+    <a class="btn btn-sm btn-kd-outline wz-site-link" href="/" target="_blank" rel="noopener">
+      <%- icon('globe', 15) %>
+      <span>الموقع</span>
+    </a>
+  </div>
 
   <nav class="ad-nav">
     <div class="ad-nav-label">عام</div>
