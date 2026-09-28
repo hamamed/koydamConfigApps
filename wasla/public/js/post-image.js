@@ -121,8 +121,10 @@
       ctx.fillText(post.title, W / 2, cardTop + 2);
     }
 
-    // A credited picture keeps a line under it for its credit, inside the card.
-    const creditRoom = post.credit ? (tall ? 56 : 44) : 0;
+    // A credited picture keeps a line under it for its credit, inside the card —
+    // unless the credit is left off the picture (the caption always carries it).
+    const credit = assets.showCredit ? post.credit : '';
+    const creditRoom = credit ? (tall ? 56 : 44) : 0;
     const inner = { x: cardX + 50, y: cardTop + (tall ? 90 : 70), w: cardW - 100, h: cardH - (tall ? 290 : 220) - creditRoom };
     if (assets.picture) {
       const pic = assets.picture;
@@ -141,9 +143,11 @@
       ctx.strokeStyle = LAVENDER;
       ctx.stroke();
       // Its author and licence, as CC BY and CC BY-SA ask — right under it.
-      ctx.fillStyle = MUTED;
-      ctx.font = `600 ${tall ? 30 : 25}px Tajawal, sans-serif`;
-      ctx.fillText(`📷 ${post.credit}`, W / 2, py + ph + creditRoom * 0.62);
+      if (credit) {
+        ctx.fillStyle = MUTED;
+        ctx.font = `600 ${tall ? 30 : 25}px Tajawal, sans-serif`;
+        ctx.fillText(`📷 ${credit}`, W / 2, py + ph + creditRoom * 0.62);
+      }
     } else {
       ctx.fillStyle = INK;
       ctx.font = `800 ${tall ? 72 : 60}px Tajawal, sans-serif`;
@@ -202,9 +206,22 @@
     if (!link) return;
     canvas.toBlob((blob) => {
       if (!blob) return;
+      // A redraw (the credit switched) replaces the last file offered.
+      if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
       link.href = URL.createObjectURL(blob);
       link.download = `chabbek-${kind}-${post.id}.png`;
     }, 'image/png');
+  }
+
+  const creditToggle = document.querySelector('[data-post-credit]');
+  let loaded = null;
+
+  function paint() {
+    const showCredit = !creditToggle || creditToggle.checked;
+    for (const canvas of document.querySelectorAll('[data-post-canvas]')) {
+      draw(canvas, { ...loaded, showCredit });
+      offer(canvas, canvas.getAttribute('data-post-canvas'));
+    }
   }
 
   async function render() {
@@ -214,11 +231,11 @@
     const [icon, picture, badge] = await Promise.all([
       load('/assets/site/app-icon.png'), load(post.image), post.store ? load('/assets/site/badge-app-store.svg') : null,
     ]);
-    for (const canvas of document.querySelectorAll('[data-post-canvas]')) {
-      draw(canvas, { icon, picture, badge });
-      offer(canvas, canvas.getAttribute('data-post-canvas'));
-    }
+    loaded = { icon, picture, badge };
+    paint();
   }
+
+  if (creditToggle) creditToggle.addEventListener('change', () => { if (loaded) paint(); });
 
   const copy = document.querySelector('[data-copy-caption]');
   const caption = document.querySelector('[data-caption]');

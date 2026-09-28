@@ -38,7 +38,14 @@
               <div class="ad-card-head d-flex align-items-center gap-2">
                 <%- icon('image', 16) %>
                 <span class="fw-semibold me-auto">الصورتان</span>
-                <span class="small kd-faint">تُرسَم هنا في المتصفح</span>
+                <% if (post.credit) { %>
+                  <label class="form-check form-check-inline small m-0">
+                    <input class="form-check-input" type="checkbox" checked data-post-credit>
+                    <span class="form-check-label">مصدر الصورة عليها</span>
+                  </label>
+                <% } else { %>
+                  <span class="small kd-faint">تُرسَم هنا في المتصفح</span>
+                <% } %>
               </div>
               <div class="ad-card-body">
                 <div class="wz-post-previews" data-post='<%- JSON.stringify(post).replace(/'/g, '&#39;') %>'>
@@ -81,7 +88,7 @@
                 <p class="mb-1"><span class="wz-answer fw-bold"><%= question.answer %></span> · <%= question.title %></p>
                 <p class="kd-faint mb-2">ليس على الصورة: هو اللغز. لتردّ به على التعليقات.</p>
                 <a href="/admin/questions/<%= question.id %>">فتح السؤال <%= question.id %></a>
-                <% if (question.imageFile) { %><p class="kd-faint mb-0 mt-2">صاحب الصورة وترخيصها مكتوبان عليها وفي النص، كما يطلب الترخيص.</p><% } %>
+                <% if (question.imageFile) { %><p class="kd-faint mb-0 mt-2">صاحب الصورة وترخيصها في النص دائماً، كما يطلب الترخيص — فأبقِ النص مع الصورة إن أخفيتهما عنها.</p><% } %>
               </div>
             </div>
           </div>
