@@ -349,6 +349,22 @@
 .ws-past[open] .ws-past-chevron { transform: rotate(90deg); }
 /* A radio picker drawn as a button group: the chosen one is ink, like btn-kd. */
 .btn-check:checked + .btn-kd-outline { background: var(--kd-ink); border-color: var(--kd-ink); color: #fff; }
+/* Bootstrap's build is left to right: in a group it squares the first button's
+   right corners and the others' left ones, and pulls each back by its border
+   on the left. The panel reads right to left, so the first button is on the
+   right and all three are mirrored here — the group's outer corners round, the
+   ones where buttons meet square, and one shared border between them. */
+[dir="rtl"] .btn-group > .btn:not(:last-child):not(.dropdown-toggle) {
+  border-radius: 0 var(--kd-radius-sm) var(--kd-radius-sm) 0;
+}
+[dir="rtl"] .btn-group > .btn:nth-child(n+3),
+[dir="rtl"] .btn-group > :not(.btn-check) + .btn {
+  border-radius: var(--kd-radius-sm) 0 0 var(--kd-radius-sm);
+  margin-left: 0;
+  margin-right: calc(-1 * var(--wz-line));
+}
+[dir="rtl"] .btn-group > .btn:nth-child(n+3):not(:last-child),
+[dir="rtl"] .btn-group > :not(.btn-check) + .btn:not(:last-child) { border-radius: 0; }
 
 /* Bulk actions on the questions list: a bar that stays in view while rows are ticked. */
 .wz-bulk { position: sticky; top: calc(var(--ad-topbar-h, 60px) + .5rem); z-index: 1020; padding: .6rem .8rem; }
