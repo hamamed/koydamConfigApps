@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { isDeviceId } from '../devices.js';
 import { AVATARS, BOARDS, FRAMES, readDailyTime, readStats } from '../profiles.js';
 import { parseDay } from '../daily.js';
+import { addDays } from '../players.js';
 
 const limiter = (limit, windowMs, message) => rateLimit({
   windowMs,
@@ -104,12 +105,14 @@ export function registerProfileApi(router, { profiles, notifications = null }) {
   });
 
   router.post('/profile/me/daily', noStore, writes, json, requireProfile, (req, res) => {
-    const time = readDailyTime(req.body, profiles.today());
+    const today = profiles.today();
+    const time = readDailyTime(req.body, today);
     if (time.error) return res.status(400).json({ error: time.error });
     const saved = profiles.saveDailyTime(req.profile, time);
     const board = { allgames: 'today-allgames', wordsearch: 'today-wordsearch', ladder: 'today-ladder' }[time.kind];
     // Tell the player just passed, once a day; never slows or fails the answer.
-    if (time.kind === 'allgames' && saved.isNew && notifications) {
+    // Not for a day gone by, sent late from offline: that news is stale.
+    if (time.kind === 'allgames' && saved.isNew && notifications && time.date >= addDays(today, -1)) {
       const passed = profiles.claimPassedPlayer(req.profile, time.date);
       const devices = passed ? profiles.devicesOf(passed.profile.id) : [];
       if (devices.length) {

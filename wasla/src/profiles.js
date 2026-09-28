@@ -146,13 +146,37 @@ export function readStats(body) {
   return { stats: { ...stats, bestStreak: Math.max(stats.bestStreak, stats.streak), streakDate, badges: [...new Set(badges)], bestAllGamesSeconds: best } };
 }
 
-/** A daily time, checked against today on the server (a day either side, for time zones). */
-export function readDailyTime(body, today) {
+/**
+ * How far back a daily time may arrive: a phone played offline sends its days
+ * when it is back online, and a week away still counts.
+ */
+export const LATE_DAYS = 7;
+/** How far ahead a finish time may be, for a phone's clock a little fast. */
+const CLOCK_SLACK_MS = 5 * 60_000;
+
+/**
+ * When the game was finished, as the phone says (`at`, ISO 8601), for a time
+ * sent late: it keeps its place among those who finished before and after it.
+ * Anything implausible — unreadable, in the future, before the day — is ignored
+ * and the server's own clock is used, as for older apps that do not send it.
+ */
+function readFinishedAt(raw, date, now) {
+  if (typeof raw !== 'string') return null;
+  const at = new Date(raw);
+  if (Number.isNaN(at.getTime())) return null;
+  // The day in the phone's time zone can start up to 14 hours before UTC's.
+  const earliest = new Date(`${date}T00:00:00Z`).getTime() - 14 * 3_600_000;
+  if (at.getTime() > now.getTime() + CLOCK_SLACK_MS || at.getTime() < earliest) return null;
+  return at.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/** A daily time, checked against today on the server: up to a week late (played offline), a day ahead (time zones). */
+export function readDailyTime(body, today, now = new Date()) {
   const kind = DAILY_KINDS[body?.kind];
   if (!kind) return { error: `"kind" must be one of: ${Object.keys(DAILY_KINDS).join(', ')}.` };
   const date = body?.date;
   if (typeof date !== 'string' || !isRealDate(date)) return { error: '"date" must be YYYY-MM-DD.' };
-  if (date < addDays(today, -1) || date > addDays(today, 1)) return { error: 'That date is not today.' };
+  if (date < addDays(today, -LATE_DAYS) || date > addDays(today, 1)) return { error: `That date is not today or the past ${LATE_DAYS} days.` };
   const seconds = body?.seconds;
   if (!Number.isInteger(seconds) || seconds < MIN_SECONDS[kind] || seconds > MAX_SECONDS) {
     return { error: `"seconds" must be a whole number from ${MIN_SECONDS[kind]} to ${MAX_SECONDS}.` };
@@ -162,7 +186,7 @@ export function readDailyTime(body, today) {
   if (kind === 'ladder' && !(Number.isInteger(stars) && stars >= 0 && stars <= MAX_LADDER_STARS)) {
     return { error: `"stars" must be a whole number from 0 to ${MAX_LADDER_STARS}.` };
   }
-  return { kind, date, seconds, stars: kind === 'ladder' ? stars : null };
+  return { kind, date, seconds, stars: kind === 'ladder' ? stars : null, at: readFinishedAt(body?.at, date, now) };
 }
 
 export function createProfiles(db, { now = () => new Date() } = {}) {
@@ -255,12 +279,13 @@ export function createProfiles(db, { now = () => new Date() } = {}) {
   }
 
   /** Keeps the first time sent for that date and kind. `{ seconds, isNew }`. */
-  function saveDailyTime(profile, { kind, date, seconds, stars = null }) {
+  function saveDailyTime(profile, { kind, date, seconds, stars = null, at = null }) {
     const column = `${kind}_seconds`;
     const stamp = `${kind}_at`;
-    db.prepare(`INSERT INTO profile_daily (profile_id, date, ${column}, ${stamp}) VALUES (?, ?, ?, datetime('now'))
+    // `at` — when the phone finished it — orders ties for a time sent late; else now.
+    db.prepare(`INSERT INTO profile_daily (profile_id, date, ${column}, ${stamp}) VALUES (?, ?, ?, COALESCE(?, datetime('now')))
       ON CONFLICT(profile_id, date) DO UPDATE SET ${column} = excluded.${column}, ${stamp} = excluded.${stamp}
-      WHERE profile_daily.${column} IS NULL`).run(profile.id, date, seconds);
+      WHERE profile_daily.${column} IS NULL`).run(profile.id, date, seconds, at);
     // The stars belong to the climb that was kept, not to a later one.
     if (kind === 'ladder') {
       db.prepare(`UPDATE profile_daily SET ladder_stars = ?

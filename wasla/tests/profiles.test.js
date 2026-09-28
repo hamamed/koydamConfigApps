@@ -67,9 +67,11 @@ test('stats are checked, the best streak never drops, and badges accumulate', ()
   assert.deepEqual(view.badges.sort(), ['wasla.levels.10', 'wasla.words.10']);
 });
 
-test('a daily time is for a date around today, above the minimum, and the first one stays', () => {
+test('a daily time is for today or the week before (played offline), above the minimum, and the first one stays', () => {
   const today = '2026-09-18';
-  assert.match(readDailyTime({ kind: 'allgames', date: '2026-09-16', seconds: 100 }, today).error, /today/);
+  assert.match(readDailyTime({ kind: 'allgames', date: '2026-09-10', seconds: 100 }, today).error, /today/);
+  assert.equal(readDailyTime({ kind: 'allgames', date: '2026-09-11', seconds: 100 }, today).date, '2026-09-11', 'a week late still counts');
+  assert.match(readDailyTime({ kind: 'allgames', date: '2026-09-20', seconds: 100 }, today).error, /today/);
   assert.match(readDailyTime({ kind: 'allgames', date: today, seconds: 5 }, today).error, /30/);
   assert.match(readDailyTime({ kind: 'nope', date: today, seconds: 50 }, today).error, /kind/);
   assert.ok(readDailyTime({ kind: 'wordsearch', date: '2026-09-19', seconds: 50 }, today).date);
@@ -335,4 +337,24 @@ test('every board the app can ask for has a panel label', async () => {
   assert.equal(clockText(0), '0:00');
   assert.equal(clockText(65), '1:05');
   assert.equal(clockText(600), '10:00');
+});
+
+test('a time sent late keeps when it was finished, if the phone\'s clock is believable', () => {
+  const today = '2026-09-18';
+  const now = new Date('2026-09-18T12:00:00Z');
+  const read = (at, date = '2026-09-15') => readDailyTime({ kind: 'allgames', date, seconds: 100, at }, today, now).at;
+  assert.equal(read('2026-09-15T19:30:05.120Z'), '2026-09-15 19:30:05');
+  assert.equal(read('2026-09-15T01:00:00+03:00'), '2026-09-14 22:00:00', 'the day in the phone\'s own time zone');
+  assert.equal(read('2026-09-19T00:00:00Z', today), null, 'in the future: the server\'s clock instead');
+  assert.equal(read('2026-09-10T00:00:00Z'), null, 'before its own day');
+  assert.equal(read('soon'), null);
+  assert.equal(read(undefined), null, 'older apps send none');
+
+  const { profile: early } = profiles.create({ username: 'early', avatar: 'moon' });
+  const { profile: late } = profiles.create({ username: 'late', avatar: 'moon' });
+  // Sent in the wrong order: the one finished first wins the tie even though it arrived last.
+  profiles.saveDailyTime(late, { kind: 'allgames', date: '2026-09-15', seconds: 200, at: '2026-09-15 20:00:00' });
+  profiles.saveDailyTime(early, { kind: 'allgames', date: '2026-09-15', seconds: 200, at: '2026-09-15 08:00:00' });
+  const board = profiles.leaderboard('today-allgames', { date: '2026-09-15' });
+  assert.deepEqual(board.entries.map((r) => r.username), ['early', 'late']);
 });

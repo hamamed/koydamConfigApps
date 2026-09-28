@@ -1,4 +1,5 @@
 import { dayToDate, parseDay, todayUtc } from '../daily.js';
+import { createDayPlanner } from '../day-plan.js';
 import { EDITORS } from '../daily-game-editor.js';
 import { GAME_KINDS } from '../daily-games.js';
 import { rungsFor } from '../daily-ladder.js';
@@ -6,7 +7,6 @@ import { KIND_NAMES, kindForDay } from '../daily-schedule.js';
 import { eventFor, eventLabel } from '../seasonal-events.js';
 import { ARABIC_WEEKDAYS, previewOf } from '../wordsearch-editor.js';
 import { WEEKDAY_NAMES, weekdayOf } from '../wordsearch-daily.js';
-import { sourceOf } from '../wordsearch-schedule.js';
 
 export const PLAN_CHOICES = Object.freeze([7, 14, 30]);
 const CALENDAR_DAYS = 30;
@@ -27,23 +27,7 @@ export const GAME_LABELS = Object.freeze({
 export function registerDays(router, { dailyGames, wordSearch, wordSearchDays }) {
   const isPast = (date) => date < todayUtc();
 
-  /** Plans the word search and every game on `date` that is not planned yet. `{ wordSearch, games }` */
-  function planDate(date, previousTheme) {
-    let theme = wordSearchDays.get(date)?.theme ?? null;
-    let wordSearchAdded = false;
-    if (!theme) {
-      const pick = wordSearch.automaticPick(date, wordSearch.playable(), { avoid: previousTheme });
-      if (pick) {
-        const board = { theme: pick.theme, size: pick.size, rows: pick.board.rows, words: pick.board.words };
-        const saved = wordSearchDays.save(date, { theme: pick.theme, size: pick.size, words: pick.board.words, seed: pick.seed, board, source: sourceOf(pick) });
-        if (!saved.error) {
-          theme = pick.theme;
-          wordSearchAdded = true;
-        }
-      }
-    }
-    return { theme, wordSearchAdded, gamesAdded: dailyGames.freeze(date).added };
-  }
+  const { planDate } = createDayPlanner({ dailyGames, wordSearch, wordSearchDays });
 
   router.get('/days', (req, res) => {
     const start = parseDay(String(req.query.from ?? ''))?.day ?? parseDay(todayUtc()).day;

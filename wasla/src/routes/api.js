@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 
 import { configForApp } from '../app-config.js';
+import { createDayPlanner } from '../day-plan.js';
 import { parseDay, todayUtc } from '../daily.js';
 import { readDeviceRegistration } from '../devices.js';
 import { readEventBatch } from '../events.js';
@@ -17,6 +18,8 @@ import { registerProfileApi } from './api-profiles.js';
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
 export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = null, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null }) {
+  // A coming day a phone downloads to play offline is planned then, so everyone gets the games it has.
+  const planner = createDayPlanner({ dailyGames, wordSearch, wordSearchDays });
   const router = express.Router();
 
   // The one machine-to-machine door (api-audio.js); absent without SERVICE_TOKEN.
@@ -122,6 +125,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = nu
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
     if (!parsed) return res.status(400).json({ error: 'التاريخ يُكتب هكذا YYYY-MM-DD ويجب أن يكون تاريخاً صحيحاً.' });
     if (!wordSearch) return res.status(503).json({ error: 'The word search is not available.' });
+    planner.planAhead(parsed.date, todayUtc());
 
     const board = wordSearchDays ? wordSearchDays.boardFor(parsed.date) : wordSearch.forDate(parsed.date);
     if (!board) return res.status(404).json({ error: 'There is no word search yet: no theme has enough words.' });
@@ -134,6 +138,7 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = nu
     const parsed = raw === undefined ? parseDay(todayUtc()) : parseDay(raw);
     if (!parsed) return res.status(400).json({ error: 'التاريخ يُكتب هكذا YYYY-MM-DD ويجب أن يكون تاريخاً صحيحاً.' });
     if (!dailyGames) return res.status(503).json({ error: 'The daily games are not available.' });
+    planner.planAhead(parsed.date, todayUtc());
 
     const set = dailyGames.forDate(parsed.date);
     if (!set) return res.status(404).json({ error: 'There are no daily games yet.' });
