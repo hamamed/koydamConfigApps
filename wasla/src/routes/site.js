@@ -52,6 +52,7 @@ export function siteRouter({ assetVersion, siteSettings, repo = null, dailyGames
       assetVersion,
       supportEmail: SUPPORT_EMAIL,
       appStoreUrl,
+      social: siteSettings.socialLinks(),
       playUrl: siteSettings.playUrl(),
       levels: counts.published,
       questions: counts.questions,

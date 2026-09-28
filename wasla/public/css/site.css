@@ -384,3 +384,14 @@
   .wz-feature { text-align: center; }
   .wz-hero-points { justify-content: center; }
 }
+
+/* The game's pages, as small ink plates like the rest of the page. */
+.wz-social { display: flex; justify-content: center; gap: .6rem; width: 100%; margin-bottom: .4rem; }
+.wz-social-link {
+  display: grid; place-items: center; width: 42px; height: 42px;
+  border: 2px solid var(--wz-ink, #1f2d3a); border-radius: 50%;
+  background: #fff; color: var(--wz-ink, #1f2d3a);
+  box-shadow: 0 3px 0 var(--wz-ink, #1f2d3a); margin-bottom: 3px;
+}
+.wz-social-link:hover { background: var(--wz-board-1, #e9f6f3); }
+.wz-social-link:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--wz-ink, #1f2d3a); }

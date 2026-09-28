@@ -16,7 +16,7 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = null, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null }) {
   const router = express.Router();
 
   // The one machine-to-machine door (api-audio.js); absent without SERVICE_TOKEN.
@@ -85,8 +85,9 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, events, devices, 
     });
   });
 
+  // The game's own pages ride along, so the app's «تابعنا» follows the panel.
   router.get('/config', cacheable, (_req, res) => {
-    res.json(configForApp(appConfig.get()));
+    res.json({ ...configForApp(appConfig.get()), links: siteSettings ? siteSettings.socialLinks() : { facebook: '', instagram: '', tiktok: '' } });
   });
 
   router.get('/levels', cacheable, (_req, res) => {

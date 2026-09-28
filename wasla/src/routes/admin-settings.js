@@ -1,4 +1,4 @@
-import { readAppStoreUrl, readPlayUrl } from '../site-settings.js';
+import { readAppStoreUrl, readPlayUrl, readSocialUrl } from '../site-settings.js';
 import {
   DEFAULT_CONFIG, IOS_TEST_ADS, MAX_ADS_EVERY_QUESTIONS, MAX_ADS_PER_DAY, MAX_ADS_SECONDS_BETWEEN,
   MAX_AD_BACKGROUND_SECONDS,
@@ -8,11 +8,13 @@ import {
 
 /** The numbers GET /api/v1/config serves. */
 export function registerSettings(router, { appConfig, siteSettings, events = null, reports = null }) {
-  const render = (res, values, error = null, appStoreUrl = siteSettings.storedAppStoreUrl(), playUrl = siteSettings.playUrl()) => res.render('settings', {
+  const render = (res, values, error = null, appStoreUrl = siteSettings.storedAppStoreUrl(), playUrl = siteSettings.playUrl(),
+    social = siteSettings.socialLinks()) => res.render('settings', {
     title: 'الإعدادات',
     values,
     appStoreUrl,
     playUrl,
+    social,
     envAppStoreUrl: siteSettings.envAppStoreUrl,
     defaults: DEFAULT_CONFIG,
     rewardDays: REWARD_DAYS,
@@ -116,10 +118,14 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
     // A refused form comes back with what was typed, not the stored values.
     if (link.error) return render(res, input, link.error, appStoreUrl, playUrl);
     if (play.error) return render(res, input, play.error, appStoreUrl, playUrl);
+    const social = { facebook: String(body.facebookUrl ?? ''), instagram: String(body.instagramUrl ?? ''), tiktok: String(body.tiktokUrl ?? '') };
+    const socialCheck = ['facebook', 'instagram', 'tiktok'].map((n) => readSocialUrl(n, social[n])).find((r) => r.error);
+    if (socialCheck) return render(res, input, socialCheck.error, appStoreUrl, playUrl, social);
     const result = appConfig.save(input);
-    if (result.error) return render(res, input, result.error, appStoreUrl, playUrl);
+    if (result.error) return render(res, input, result.error, appStoreUrl, playUrl, social);
     siteSettings.saveAppStoreUrl(appStoreUrl);
     siteSettings.savePlayUrl(playUrl);
+    siteSettings.saveSocialLinks(social);
     req.flash('success', 'حُفظت الإعدادات. يقرأها التطبيق عند تشغيله القادم.');
     res.redirect('/admin/settings');
   });

@@ -167,6 +167,24 @@
             </div>
           </div>
 
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('share-2', 16) %>
+                <span class="fw-semibold">حسابات التواصل</span>
+              </div>
+              <div class="ad-card-body d-grid gap-2">
+                <p class="small kd-faint m-0">صفحات اللعبة. تظهر أيقوناتها أسفل الموقع، وفي «تابعنا» داخل التطبيق (من الإصدار 1.4). الفراغ يخفي الحساب.</p>
+                <% [['facebookUrl', 'فيسبوك', social.facebook, 'https://www.facebook.com/…'],
+                     ['instagramUrl', 'إنستغرام', social.instagram, 'https://www.instagram.com/…'],
+                     ['tiktokUrl', 'تيك توك', social.tiktok, 'https://www.tiktok.com/@…']].forEach(([name, label, value, hint]) => { %>
+                  <label class="small fw-semibold mt-1" for="<%= name %>"><%= label %></label>
+                  <input class="form-control" type="url" id="<%= name %>" name="<%= name %>" value="<%= value %>" placeholder="<%= hint %>" dir="ltr">
+                <% }) %>
+              </div>
+            </div>
+          </div>
+
           <div class="col-12">
             <div class="ad-card">
               <div class="ad-card-head d-flex align-items-center gap-2">

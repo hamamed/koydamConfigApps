@@ -64,3 +64,12 @@ test('a store the game is not in is not promised', () => {
   // Once there is a listing, its badge (an image, so the markup) links to it.
   assert.match(render({ playUrl: 'https://play.google.com/store/apps/details?id=x' }, { raw: true }), /href="https:\/\/play\.google\.com/);
 });
+
+test('the footer shows an icon for each of the game\'s pages that is set, and none otherwise', () => {
+  assert.doesNotMatch(render({}, { raw: true }), /wz-social-link/);
+  const html = render({ social: { facebook: 'https://facebook.com/chabbek', instagram: '', tiktok: 'https://www.tiktok.com/@chabbek' } }, { raw: true });
+  assert.equal((html.match(/class="wz-social-link"/g) ?? []).length, 2);
+  assert.match(html, /href="https:\/\/facebook.com\/chabbek" target="_blank" rel="noopener" aria-label="شبّك على فيسبوك"/);
+  assert.match(html, /aria-label="شبّك على تيك توك"/);
+  assert.doesNotMatch(html, /إنستغرام/);
+});

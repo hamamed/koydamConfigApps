@@ -197,6 +197,7 @@ test('config returns the contract defaults', async () => {
       rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
       appOpen: { enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30 },
     },
+    links: { facebook: '', instagram: '', tiktok: '' },
   });
 });
 
