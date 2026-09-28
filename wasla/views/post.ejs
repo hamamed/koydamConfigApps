@@ -88,6 +88,13 @@
                 <p class="mb-1"><span class="wz-answer fw-bold"><%= question.answer %></span> · <%= question.title %></p>
                 <p class="kd-faint mb-2">ليس على الصورة: هو اللغز. لتردّ به على التعليقات.</p>
                 <a href="/admin/questions/<%= question.id %>">فتح السؤال <%= question.id %></a>
+                <% if (canPublish && question.imageFile) { %>
+                  <form method="post" action="/admin/autopost/now" class="m-0 mt-2" data-confirm="نشر هذا السؤال الآن على صفحة فيسبوك وإنستغرام، بما اخترته في «النشر التلقائي»؟">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="questionId" value="<%= question.id %>">
+                    <button class="btn btn-sm btn-kd" type="submit"><%- icon('send', 15) %> <span>انشره الآن</span></button>
+                  </form>
+                <% } %>
                 <% if (question.imageFile) { %><p class="kd-faint mb-0 mt-2">صاحب الصورة وترخيصها في النص دائماً، كما يطلب الترخيص — فأبقِ النص مع الصورة إن أخفيتهما عنها.</p><% } %>
               </div>
             </div>
@@ -97,5 +104,5 @@
     </div>
   </main>
 </div>
-<script src="/assets/js/post-image.js?v=<%= assetVersion %>"></script>
+<script type="module" src="/assets/js/post-image.js?v=<%= assetVersion %>"></script>
 <%- include('partials/foot') %>

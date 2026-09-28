@@ -6,6 +6,8 @@ data/*.db-wal
 # The APNs signing key uploaded in the panel. Never in git.
 data/apns/
 *.p8
+# The Facebook Page key set in the panel for scheduled posts. Never in git.
+data/meta/
 .DS_Store
 storage/*
 !storage/.gitkeep

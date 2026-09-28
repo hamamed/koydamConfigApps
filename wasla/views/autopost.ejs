@@ -1,0 +1,174 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'النشر التلقائي',
+          subheading: 'صورة «منشور اليوم» ونصها على صفحة فيسبوك وإنستغرام، في مواعيد كل يوم',
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="row g-3 mb-3">
+        <div class="col-xl-6">
+          <div class="ad-card h-100">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('link', 16) %>
+              <span class="fw-semibold me-auto">الصفحة</span>
+              <% if (meta.connected) { %>
+                <span class="ad-status ad-status-published">مربوطة</span>
+              <% } else { %>
+                <span class="ad-status ad-status-draft">غير مربوطة</span>
+              <% } %>
+            </div>
+            <div class="ad-card-body d-grid gap-3">
+              <% if (meta.connected) { %>
+                <div class="small d-grid gap-1">
+                  <div><span class="fw-semibold">فيسبوك:</span> <%= meta.pageName || meta.pageId %></div>
+                  <div><span class="fw-semibold">إنستغرام:</span>
+                    <% if (meta.igUsername) { %><span dir="ltr">@<%= meta.igUsername %></span><% } else { %><span class="kd-faint">لا حساب مرتبط بالصفحة — يُنشر على فيسبوك فقط</span><% } %>
+                  </div>
+                  <% if (meta.connectedAt) { %><div class="kd-faint">رُبطت <%= meta.connectedAt.replace('T', ' ').slice(0, 16) %> GMT</div><% } %>
+                </div>
+              <% } %>
+              <form method="post" action="/admin/autopost/connect" class="d-grid gap-2 m-0">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <label class="form-label small fw-semibold m-0" for="token"><%= meta.connected ? 'مفتاح جديد (اختياري)' : 'مفتاح الصفحة (Page access token)' %></label>
+                <input class="form-control font-monospace" type="password" id="token" name="token" autocomplete="off" spellcheck="false" dir="ltr" required>
+                <div class="form-text">يُتحقّق منه عند Meta، ثم يُحفظ على الخادم فقط (data/meta، لا يقرأه غير الخدمة)، ولا يُعرض مرة أخرى.</div>
+                <div><button class="btn btn-kd-accent" type="submit"><%= meta.connected ? 'استبدال المفتاح' : 'ربط الصفحة' %></button></div>
+              </form>
+              <% if (meta.connected) { %>
+                <form method="post" action="/admin/autopost/disconnect" class="m-0" data-confirm="إزالة ربط الصفحة؟ يتوقّف النشر التلقائي حتى تُربط من جديد.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-kd-danger" type="submit">إزالة الربط</button>
+                </form>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-6">
+          <form class="ad-card h-100" method="post" action="/admin/autopost/schedule">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('calendar-clock', 16) %>
+              <span class="fw-semibold me-auto">المواعيد</span>
+              <% if (schedule.enabled && meta.connected) { %>
+                <span class="ad-status ad-status-published">يعمل</span>
+              <% } else { %>
+                <span class="ad-status ad-status-draft">متوقّف</span>
+              <% } %>
+            </div>
+            <div class="ad-card-body d-grid gap-3">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="enabled" name="enabled" value="on" <% if (schedule.enabled) { %>checked<% } %>>
+                <label class="form-check-label small fw-semibold" for="enabled">انشر تلقائياً كل يوم</label>
+              </div>
+              <div>
+                <label class="form-label small fw-semibold" for="times">الأوقات (GMT)</label>
+                <input class="form-control font-monospace" id="times" name="times" value="<%= times %>" placeholder="09:00, 18:00" dir="ltr" required>
+                <div class="form-text">وقت أو أكثر مفصولة بفاصلة، حتى ستة في اليوم. في كل وقت يُنشر سؤال بصورة من لغز منشور، لم يُنشر من قبل.</div>
+              </div>
+              <div>
+                <div class="form-label small fw-semibold">أين يُنشر</div>
+                <div class="d-flex flex-wrap gap-3">
+                  <% Object.entries(targets).forEach(([key, t]) => { const needsIg = t.network === 'instagram' && meta.connected && !meta.igUserId; %>
+                    <label class="form-check m-0">
+                      <input class="form-check-input" type="checkbox" name="targets" value="<%= key %>" <% if (schedule.targets.includes(key)) { %>checked<% } %>>
+                      <span class="form-check-label small"><%= t.label %><% if (needsIg) { %> <span class="kd-faint">(لا حساب)</span><% } %></span>
+                    </label>
+                  <% }) %>
+                </div>
+              </div>
+              <label class="form-check m-0">
+                <input class="form-check-input" type="checkbox" name="showCredit" value="on" <% if (schedule.showCredit) { %>checked<% } %>>
+                <span class="form-check-label small">مصدر الصورة عليها <span class="kd-faint">— وفي النص دائماً، كما يطلب الترخيص</span></span>
+              </label>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <button class="btn btn-kd-accent" type="submit">حفظ</button>
+                <% if (upcoming && meta.connected) { %>
+                  <span class="small kd-muted">القادم: <span dir="ltr"><%= upcoming.toISOString().slice(0, 16).replace('T', ' ') %></span> GMT</span>
+                <% } else if (schedule.enabled && !meta.connected) { %>
+                  <span class="small kd-muted">لن يُنشر شيء حتى تُربط الصفحة.</span>
+                <% } %>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-xl-8">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('history', 16) %>
+              <span class="fw-semibold me-auto">ما نُشر</span>
+              <% if (meta.connected) { %>
+                <form method="post" action="/admin/autopost/now" class="m-0" data-confirm="نشر سؤال الآن على ما اخترته في المواعيد؟ يراه متابعو الصفحة فوراً.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button class="btn btn-sm btn-kd" type="submit"><%- icon('send', 15) %> <span>انشر سؤالاً الآن</span></button>
+                </form>
+              <% } %>
+            </div>
+            <div class="ad-card-body">
+              <% if (!history.length) { %>
+                <div class="ad-empty">
+                  <%- icon('image', 28) %>
+                  <p class="mb-0">لم يُنشر شيء بعد.</p>
+                </div>
+              <% } else { %>
+                <div class="ad-table-wrap">
+                  <table class="ad-table">
+                    <thead><tr><th>الموعد</th><th>السؤال</th><th>أين</th><th>الحال</th></tr></thead>
+                    <tbody>
+                      <% history.forEach((p) => { %>
+                        <tr>
+                          <td class="small text-nowrap"><span dir="ltr"><%= p.slot.replace(/^now /, '') %></span><% if (p.slot.startsWith('now ')) { %> <span class="kd-tag">يدوي</span><% } %></td>
+                          <td class="small"><% if (p.question_id) { %><a href="/admin/questions/<%= p.question_id %>"><%= p.question_id %></a> · <span class="wz-answer"><%= p.question_answer %></span><% } else { %><span class="kd-faint">محذوف</span><% } %></td>
+                          <td class="small text-nowrap"><%= targets[p.target] ? targets[p.target].label : p.target %></td>
+                          <td class="small">
+                            <% if (p.status === 'done') { %>
+                              <span class="ad-status ad-status-published">نُشر</span>
+                              <% if (p.link) { %> <a href="<%= p.link %>" target="_blank" rel="noopener">افتح</a><% } %>
+                            <% } else if (p.status === 'failed') { %>
+                              <span class="ad-status ad-status-archived">لم يُنشر</span>
+                              <div class="kd-faint wz-ar"><%= p.error %></div>
+                            <% } else { %>
+                              <span class="ad-status ad-status-draft">يُنشر…</span>
+                            <% } %>
+                          </td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-4">
+          <div class="ad-card">
+            <div class="ad-card-head d-flex align-items-center gap-2">
+              <%- icon('info', 16) %>
+              <span class="fw-semibold me-auto">كيف تأخذ مفتاح الصفحة</span>
+            </div>
+            <div class="ad-card-body small">
+              <ol class="ps-3 d-grid gap-2 mb-2">
+                <li>على <span dir="ltr">developers.facebook.com</span> أنشئ تطبيقاً من نوع <b>Business</b>، وضع فيه رابط الخصوصية <span dir="ltr">https://chabbek.com/privacy</span>، واجعله <b>Live</b> — منشورات تطبيق في وضع التطوير قد لا يراها غيرك.</li>
+                <li>حساب إنستغرام يجب أن يكون احترافياً (Business) ومربوطاً بالصفحة.</li>
+                <li>افتح <b>Graph API Explorer</b>، اختر التطبيق، ثم <b>Get User Access Token</b> بهذه الأذونات: <code dir="ltr">pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish</code> (وأضف <code dir="ltr">business_management</code> إن كانت الصفحة في Business portfolio).</li>
+                <li>الصق المفتاح في <b>Access Token Debugger</b> واضغط <b>Extend Access Token</b>.</li>
+                <li>عد إلى Explorer بالمفتاح الممدّد واطلب <code dir="ltr">me/accounts</code>، وانسخ <code dir="ltr">access_token</code> صفحة شبّك — مفتاح الصفحة المأخوذ هكذا لا ينتهي.</li>
+                <li>الصقه في «مفتاح الصفحة» هنا.</li>
+              </ol>
+              <p class="kd-faint mb-0">تيك توك لا يسمح بالنشر العلني من التطبيقات قبل مراجعته لها، فانشر عليه من «منشور اليوم» يدوياً.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<%- include('partials/foot') %>

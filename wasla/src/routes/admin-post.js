@@ -1,12 +1,13 @@
 import { config } from '../config.js';
+import { captionFor, postFor } from '../post-content.js';
 
 /**
  * «منشور اليوم»: a question drawn as ready-made images for the game's pages — a
  * square post and a tall story — made in the browser (public/js/post-image.js),
- * so the server needs no image library. The answer is never on the image: it is
+ * with the same drawing scheduled posts use on the server (post-render.js). The answer is never on the image: it is
  * the puzzle, and the post sends people to the game for it.
  */
-export function registerPost(router, { repo, siteSettings = null }) {
+export function registerPost(router, { repo, siteSettings = null, metaAccount = null }) {
   router.get('/post', (req, res) => {
     const kind = req.query.kind === 'text' ? 'text' : 'picture';
     const askedId = Number(req.query.id) > 0 ? Number(req.query.id) : null;
@@ -17,27 +18,11 @@ export function registerPost(router, { repo, siteSettings = null }) {
     res.render('post', {
       title: 'منشور اليوم',
       kind,
+      canPublish: Boolean(metaAccount?.status().connected),
       askedId,
       question,
-      post: question && {
-        id: question.id,
-        title: question.title || '',
-        clue: question.clue || '',
-        letters: [...(question.playAnswer || question.answer)].length,
-        image: question.imageFile ? `/media/questions/${question.imageFile}` : null,
-        credit: question.imageFile ? `${question.imageAuthor} · ${question.imageLicence}` : '',
-        site,
-        store: Boolean(appStoreUrl),
-      },
-      caption: question ? caption(question, site, appStoreUrl) : '',
+      post: question && postFor(question, { site, appStoreUrl }),
+      caption: question ? captionFor(question, { site, appStoreUrl }) : '',
     });
   });
-}
-
-/** The words to post with it: the question, the call to play, the link and the tags. */
-function caption(question, site, appStoreUrl = '') {
-  const ask = question.imageFile ? 'ما هذا؟ 🤔' : `${question.clue} 🤔`;
-  const credit = question.imageFile ? `\n📷 ${question.imageAuthor} · ${question.imageLicence}` : '';
-  const store = appStoreUrl ? `\n📲 حمّلها مجاناً من App Store: ${appStoreUrl}` : '';
-  return `${ask}\n${[...(question.playAnswer || question.answer)].length} حروف — اكتب جوابك في التعليقات، وتحقّق منه في شبّك 👇\nhttps://${site}${store}${credit}\n#شبّك #كلمات_متقاطعة #ألغاز`;
 }

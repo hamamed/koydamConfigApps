@@ -303,6 +303,8 @@ add "wasla/storage"      /opt/wasla/storage
 # Wasla's APNs signing key (.p8), uploaded in the panel. Apple lets you download
 # a key once; without this copy a restore means revoking it and making a new one.
 add "wasla/apns"         /opt/wasla/data/apns
+# Wasla's Facebook Page key for scheduled posts, set in the panel.
+add "wasla/meta"         /opt/wasla/data/meta
 add "systemd-wasla"      /etc/systemd/system/wasla.service
 # bdc runs a service and three timers; the loop keeps them in step as they change.
 for unit in /etc/systemd/system/bdc*.service /etc/systemd/system/bdc*.timer; do

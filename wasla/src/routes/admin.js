@@ -23,6 +23,7 @@ import { registerAudio } from './admin-audio.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { HELP_LABELS, registerPlayers } from './admin-players.js';
+import { registerAutopost } from './admin-autopost.js';
 import { registerPost } from './admin-post.js';
 import { barChart } from '../charts.js';
 import { registerBoards } from './admin-boards.js';
@@ -61,7 +62,7 @@ const DAILY_GAME_LABELS = Object.freeze({
 });
 
 export function adminRouter({
-  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null,
+  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null, autopost = null, metaAccount = null,
 }) {
   const router = express.Router();
 
@@ -836,7 +837,8 @@ export function adminRouter({
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings, events, reports });
   registerPlayers(router, { players });
-  registerPost(router, { repo, siteSettings });
+  registerPost(router, { repo, siteSettings, metaAccount });
+  if (autopost && metaAccount) registerAutopost(router, { autopost, metaAccount });
   if (profiles) registerProfiles(router, { profiles });
   if (profiles) registerBoards(router, { profiles });
   if (profiles) registerCatalogue(router, { db, profiles });

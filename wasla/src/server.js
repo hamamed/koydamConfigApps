@@ -11,6 +11,7 @@ import morgan from 'morgan';
 import { createApnsSender } from './apns.js';
 import { createApnsCredentials } from './apns-credentials.js';
 import { createAppConfig } from './app-config.js';
+import { createAutopost } from './autopost.js';
 import { createAudioStore } from './audio.js';
 import { createAudioClips } from './audio-clips.js';
 import { createAudioImport } from './audio-import.js';
@@ -26,9 +27,12 @@ import { db } from './db/index.js';
 import { createEvents } from './events.js';
 import { createImageStore } from './images.js';
 import { createMaintenance } from './maintenance.js';
+import { createMetaAccount } from './meta-account.js';
+import { createMetaClient } from './meta-publish.js';
 import { createNotifications } from './notifications.js';
 import { createPlayers } from './players.js';
 import { createProfiles } from './profiles.js';
+import { renderPost } from './post-render.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { siteHost } from './middleware/site-host.js';
@@ -70,6 +74,12 @@ const lab = createLab(db);
 const dailyGames = createDailyGames(db, { appConfig, wordSearch, wordSearchDays, pictures, lab });
 const profiles = createProfiles(db);
 const titles = createTitles(db);
+const metaClient = createMetaClient();
+const metaAccount = createMetaAccount(db, { dir: config.metaDir, client: metaClient });
+const autopost = createAutopost(db, {
+  repo, account: metaAccount, client: metaClient, render: renderPost, siteSettings,
+  siteBase: config.siteBase, postsDir: config.postsDir, imagesDir: config.imagesDir,
+});
 
 const app = express();
 
@@ -97,6 +107,8 @@ app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConf
 // a file at a given name never changes and can be cached for a long time.
 app.use('/media/questions', express.static(config.imagesDir, { maxAge: '30d', immutable: true, index: false }));
 app.use('/media/audio', express.static(config.audioDir, { maxAge: '30d', immutable: true, index: false }));
+// The images scheduled posts put out: Meta fetches each one by URL when it posts it.
+app.use('/media/posts', express.static(config.postsDir, { maxAge: '7d', immutable: true, index: false }));
 
 // ── Panel ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +162,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles,
+  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles, autopost, metaAccount,
 }));
 // The landing page. It answers `/`, which used to bounce everyone to the panel.
 app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));
@@ -170,6 +182,9 @@ server.headersTimeout = 70_000;
 createMaintenance({
   repo, events, pendingImports, images, audio, retentionDays: config.eventRetentionDays,
 }).start();
+
+// Not under test: a test run must never post to the game's pages.
+if (config.env !== 'test') autopost.start();
 
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection:', reason);

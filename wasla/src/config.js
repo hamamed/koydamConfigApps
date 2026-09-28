@@ -40,6 +40,12 @@ export const config = {
   /** The APNs .p8 key uploaded in the panel. Under data/, which deploys preserve. */
   apnsDir: path.resolve(root, process.env.APNS_DIR || path.join(process.env.DATA_DIR || './data', 'apns')),
 
+  /** The Facebook Page key set on the panel's النشر التلقائي. Under data/, which deploys preserve. */
+  metaDir: path.resolve(root, process.env.META_DIR || path.join(process.env.DATA_DIR || './data', 'meta')),
+
+  /** The images scheduled posts put out, served for Meta to fetch. Under /storage, which deploys preserve. */
+  postsDir: path.resolve(root, process.env.POSTS_DIR || './storage/posts'),
+
   /** The App Store link on the challenge page; the panel's Settings value wins when set. */
   appStoreUrl: (process.env.APP_STORE_URL || '').trim(),
 

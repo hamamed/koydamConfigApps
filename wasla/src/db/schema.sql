@@ -363,3 +363,26 @@ CREATE TABLE IF NOT EXISTS question_reports (
 
 CREATE INDEX IF NOT EXISTS idx_question_reports_open ON question_reports(resolved_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_question_reports_question ON question_reports(question_id);
+
+-- ── v11 ─────────────────────────────────────────────────────────────────────
+
+-- Scheduled posts to the game's Facebook Page and Instagram (autopost.js): one
+-- row per target of a slot. The slot is the scheduled minute in GMT
+-- ("2026-09-28 18:00") or "now …" for one posted by hand; a slot's row is
+-- written before Meta is asked, so a restart never posts the same slot twice.
+CREATE TABLE IF NOT EXISTS social_posts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  slot         TEXT NOT NULL,
+  target       TEXT NOT NULL,
+  question_id  INTEGER REFERENCES questions(id) ON DELETE SET NULL,
+  status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'failed')),
+  remote_id    TEXT,
+  link         TEXT,
+  error        TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  finished_at  TEXT,
+  UNIQUE (slot, target)
+);
+
+CREATE INDEX IF NOT EXISTS idx_social_posts_created ON social_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_social_posts_question ON social_posts(question_id, status);
