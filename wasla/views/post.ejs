@@ -48,7 +48,8 @@
                 <% } %>
               </div>
               <div class="ad-card-body">
-                <div class="wz-post-previews" data-post='<%- JSON.stringify(post).replace(/'/g, '&#39;') %>'>
+                <% const withReel = canReel && question.imageFile; %>
+                <div class="wz-post-previews <%= withReel ? 'wz-post-previews-reel' : '' %>" data-post='<%- JSON.stringify(post).replace(/'/g, '&#39;') %>'>
                   <figure class="wz-post-figure">
                     <canvas class="wz-post-canvas" width="1080" height="1080" data-post-canvas="square" aria-label="منشور مربّع"></canvas>
                     <figcaption>
@@ -63,6 +64,18 @@
                       <a class="btn btn-sm btn-kd" href="#" data-post-download="story" download>تنزيل</a>
                     </figcaption>
                   </figure>
+                  <% if (withReel) { %>
+                    <figure class="wz-post-figure">
+                      <div class="wz-post-reel">
+                        <video class="wz-post-canvas wz-post-video" data-post-reel playsinline muted loop preload="none" aria-label="ريل"></video>
+                        <button class="btn btn-sm btn-kd wz-post-reel-make" type="button" data-post-reel-make><%- icon('play', 15) %> <span>اصنع الريل</span></button>
+                      </div>
+                      <figcaption>
+                        <span>ريل · 10 ث</span>
+                        <a class="btn btn-sm btn-kd" href="/admin/post/reel.mp4?id=<%= question.id %>&download=1" data-post-reel-download>تنزيل</a>
+                      </figcaption>
+                    </figure>
+                  <% } %>
                 </div>
               </div>
             </div>

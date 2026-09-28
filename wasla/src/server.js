@@ -33,6 +33,7 @@ import { createNotifications } from './notifications.js';
 import { createPlayers } from './players.js';
 import { createProfiles } from './profiles.js';
 import { renderPost } from './post-render.js';
+import { renderReel } from './reel-render.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { siteHost } from './middleware/site-host.js';
@@ -77,7 +78,7 @@ const titles = createTitles(db);
 const metaClient = createMetaClient();
 const metaAccount = createMetaAccount(db, { dir: config.metaDir, client: metaClient });
 const autopost = createAutopost(db, {
-  repo, account: metaAccount, client: metaClient, render: renderPost, siteSettings,
+  repo, account: metaAccount, client: metaClient, render: renderPost, renderReel, siteSettings,
   siteBase: config.siteBase, postsDir: config.postsDir, imagesDir: config.imagesDir,
 });
 

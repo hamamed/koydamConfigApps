@@ -96,6 +96,55 @@ test('an Instagram story is a STORIES container; a refused image stops before pu
   await assert.rejects(client.publish('instagram_post', { ...account, igUserId: null }, { imageUrl: 'x' }), /إنستغرام/);
 });
 
+test('a Facebook reel is started, handed over by URL, published, and watched while it processes', async () => {
+  const uploads = [];
+  const graph = fakeGraph({
+    'POST 111/video_reels': (params) => (params.upload_phase === 'start' ? { video_id: 'v1', upload_url: 'https://rupload.facebook.com/video-upload/v1' } : { success: true }),
+    'GET v1': { status: { video_status: 'ready' } },
+  });
+  const fetch = async (url, init = {}) => {
+    if (String(url).startsWith('https://rupload.facebook.com/')) {
+      uploads.push({ url: String(url), headers: init.headers });
+      return { ok: true, status: 200, json: async () => ({ success: true }) };
+    }
+    return graph.fetch(url, init);
+  };
+  const out = await createMetaClient({ fetch, wait: async () => {} })
+    .publish('facebook_reel', account, { videoUrl: 'https://chabbek.com/media/posts/r.mp4', caption: 'ما هذا؟' });
+  assert.deepEqual(out, { remoteId: 'v1', link: 'https://www.facebook.com/reel/v1' });
+  assert.match(uploads[0].url, /\/video-upload\/v[\d.]+\/v1$/);
+  assert.deepEqual(uploads[0].headers, { Authorization: 'OAuth PAGETOKEN', file_url: 'https://chabbek.com/media/posts/r.mp4' });
+  const finish = graph.calls.find((c) => c.params.upload_phase === 'finish');
+  assert.equal(finish.params.video_state, 'PUBLISHED');
+  assert.equal(finish.params.description, 'ما هذا؟');
+});
+
+test('a Facebook reel that fails to process is reported, not taken as posted', async () => {
+  const graph = fakeGraph({
+    'POST 111/video_reels': (params) => (params.upload_phase === 'start' ? { video_id: 'v2' } : { success: true }),
+    'GET v2': { status: { video_status: 'error' } },
+  });
+  const fetch = async (url, init) => (String(url).startsWith('https://rupload.')
+    ? { ok: true, status: 200, json: async () => ({ success: true }) } : graph.fetch(url, init));
+  await assert.rejects(createMetaClient({ fetch, wait: async () => {} }).publish('facebook_reel', account, { videoUrl: 'x', caption: 'y' }), /process/);
+});
+
+test('an Instagram reel is a REELS container with its cover at the finished post, shared to the feed', async () => {
+  let asked = 0;
+  const graph = fakeGraph({
+    'POST 222/media': { id: 'c3' },
+    'GET c3': () => ({ status_code: ++asked < 4 ? 'IN_PROGRESS' : 'FINISHED' }),
+    'POST 222/media_publish': { id: 'm3' },
+    'GET m3': { permalink: 'https://www.instagram.com/reel/xyz/' },
+  });
+  const out = await createMetaClient({ fetch: graph.fetch, wait: async () => {} })
+    .publish('instagram_reel', account, { videoUrl: 'https://x/r.mp4', caption: 'نص' });
+  assert.equal(out.link, 'https://www.instagram.com/reel/xyz/');
+  assert.deepEqual(graph.calls[0].params, {
+    media_type: 'REELS', video_url: 'https://x/r.mp4', caption: 'نص', share_to_feed: 'true', thumb_offset: '6000', access_token: 'PAGETOKEN',
+  });
+});
+
 test('Meta\'s own error message is what the panel shows', async () => {
   const graph = fakeGraph({ 'POST 111/photos': { error: { message: 'Invalid OAuth access token.', code: 190 } } });
   await assert.rejects(createMetaClient({ fetch: graph.fetch }).publish('facebook_post', account, { imageUrl: 'x', caption: 'y' }),
@@ -187,14 +236,16 @@ function setup({ n = 2, connected = true, failing = [], clock = '2026-09-28T18:0
   };
   const rendered = [];
   const render = async (post, size, opts) => { rendered.push({ post, size, opts }); return Buffer.from(`jpeg-${size}`); };
+  const reels = [];
+  const renderReel = async (post, file, opts) => { reels.push({ post, file, opts }); fs.writeFileSync(file, 'mp4'); return file; };
   const account = { status: () => ({ connected }), load: () => (connected ? { pageId: '111', igUserId: '222', token: 'T' } : null) };
   let now = new Date(clock);
   const autopost = createAutopost(db, {
-    repo, account, client, render, siteSettings: { appStoreUrl: () => 'https://apps.apple.com/app/id1' },
+    repo, account, client, render, renderReel, siteSettings: { appStoreUrl: () => 'https://apps.apple.com/app/id1' },
     siteBase: 'https://chabbek.com', postsDir: path.join(dir, 'posts'), imagesDir: path.join(dir, 'questions'),
     log: { error: () => {}, info: () => {} }, now: () => now,
   });
-  return { db, ids, loose, autopost, posted, rendered, setNow: (iso) => { now = new Date(iso); } };
+  return { db, ids, loose, autopost, posted, rendered, reels, setNow: (iso) => { now = new Date(iso); } };
 }
 
 test('nothing is posted until it is switched on, and then at its time, to every target ticked', async () => {
@@ -211,10 +262,13 @@ test('nothing is posted until it is switched on, and then at its time, to every 
   assert.match(post.content.caption, /A\. Photographer · CC BY 4\.0/, 'the caption always credits the picture');
   assert.deepEqual([...new Set(s.rendered.map((r) => r.size))].sort(), ['square', 'story'], 'each size drawn once');
   assert.equal(s.posted.find((p) => p.target === 'instagram_story').content.imageUrl.endsWith('-story.jpg'), true);
-  assert.equal(fs.readdirSync(path.join(dir, 'posts')).length, 2);
+  assert.equal(s.reels.length, 1, 'one reel for both networks');
+  assert.equal(s.posted.find((p) => p.target === 'instagram_reel').content.videoUrl.endsWith('-reel.mp4'), true);
+  assert.equal(s.posted.find((p) => p.target === 'facebook_reel').content.videoUrl, s.posted.find((p) => p.target === 'instagram_reel').content.videoUrl);
+  assert.equal(fs.readdirSync(path.join(dir, 'posts')).length, 3);
 
   const rows = s.autopost.history();
-  assert.equal(rows.length, 4);
+  assert.equal(rows.length, Object.keys(TARGETS).length);
   assert.ok(rows.every((r) => r.status === 'done' && r.slot === '2026-09-28 18:00'));
 });
 
@@ -250,7 +304,7 @@ test('a target Meta refuses is recorded with Meta\'s reason, and the others stil
   const failed = rows.find((r) => r.target === 'instagram_story');
   assert.equal(failed.status, 'failed');
   assert.match(failed.error, /permission/);
-  assert.equal(rows.filter((r) => r.status === 'done').length, 3);
+  assert.equal(rows.filter((r) => r.status === 'done').length, Object.keys(TARGETS).length - 1);
   assert.ok(s.rendered.every((r) => r.opts.showCredit === false), 'the credit left off the picture, as set');
 });
 

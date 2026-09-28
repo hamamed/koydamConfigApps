@@ -9,10 +9,14 @@
  *   Facebook story   POST /{page}/photos { url, published: false } → POST /{page}/photo_stories { photo_id }
  *   Instagram post   POST /{ig}/media { image_url, caption } → POST /{ig}/media_publish { creation_id }
  *   Instagram story  POST /{ig}/media { image_url, media_type: STORIES } → media_publish
+ *   Facebook reel    POST /{page}/video_reels { upload_phase: start } → rupload { file_url }
+ *                    → POST /{page}/video_reels { upload_phase: finish, video_state: PUBLISHED }
+ *   Instagram reel   POST /{ig}/media { video_url, media_type: REELS } → (processing) → media_publish
  *
  * https://developers.facebook.com/docs/graph-api/reference/page/photos/
  * https://developers.facebook.com/docs/page-stories-api/
  * https://developers.facebook.com/docs/instagram-platform/content-publishing/
+ * https://developers.facebook.com/docs/video-api/guides/reels-publishing
  */
 
 export const GRAPH_VERSION = 'v26.0';
@@ -24,6 +28,8 @@ export const TARGETS = {
   facebook_story: { network: 'facebook', size: 'story', label: 'قصة فيسبوك' },
   instagram_post: { network: 'instagram', size: 'square', label: 'منشور إنستغرام' },
   instagram_story: { network: 'instagram', size: 'story', label: 'قصة إنستغرام' },
+  facebook_reel: { network: 'facebook', size: 'reel', label: 'ريل فيسبوك' },
+  instagram_reel: { network: 'instagram', size: 'reel', label: 'ريل إنستغرام' },
 };
 
 /** A Graph API refusal, with Meta's own message. */
@@ -36,9 +42,15 @@ export class MetaError extends Error {
   }
 }
 
-/** How long an Instagram container gets to be ready, and how often it is asked. */
-const CONTAINER_TRIES = 10;
-const CONTAINER_WAIT_MS = 3000;
+/** How long an Instagram container gets to be ready, and how often it is asked: a picture is quick. */
+const IMAGE_WAIT = { tries: 10, ms: 3000 };
+/** A video is processed first; Meta asks for no more than five minutes of asking. */
+const VIDEO_WAIT = { tries: 30, ms: 10_000 };
+/** How long a Facebook reel is watched after publishing, for a processing failure to show. */
+const FACEBOOK_REEL_WAIT = { tries: 12, ms: 10_000 };
+const RUPLOAD = `https://rupload.facebook.com/video-upload/${GRAPH_VERSION}`;
+/** When the reel's post is whole: the frame Instagram shows as its cover (ms). */
+export const REEL_COVER_MS = 6000;
 
 export function createMetaClient({ fetch = globalThis.fetch, wait = (ms) => new Promise((r) => setTimeout(r, ms)) } = {}) {
   async function call(method, pathname, token, params = {}) {
@@ -101,16 +113,16 @@ export function createMetaClient({ fetch = globalThis.fetch, wait = (ms) => new 
   }
 
   /** An Instagram container, published once Meta says it is ready. */
-  async function instagramPublish({ igUserId, token }, params) {
+  async function instagramPublish({ igUserId, token }, params, patience = IMAGE_WAIT) {
     if (!igUserId) throw new MetaError('لا حساب إنستغرام مرتبط بالصفحة.');
     const container = await call('POST', `${igUserId}/media`, token, params);
     if (!container.id) throw new MetaError('Meta did not return an Instagram container.');
-    for (let i = 0; i < CONTAINER_TRIES; i++) {
-      const { status_code: status } = await call('GET', container.id, token, { fields: 'status_code' });
+    for (let i = 0; i < patience.tries; i++) {
+      const { status_code: status, status: detail } = await call('GET', container.id, token, { fields: 'status_code,status' });
       if (status === 'FINISHED') break;
-      if (status === 'ERROR' || status === 'EXPIRED') throw new MetaError(`Instagram could not take the image (${status}).`);
-      if (i === CONTAINER_TRIES - 1) throw new MetaError('Instagram took too long to prepare the image.');
-      await wait(CONTAINER_WAIT_MS);
+      if (status === 'ERROR' || status === 'EXPIRED') throw new MetaError(`Instagram could not take it (${status}${detail ? `: ${detail}` : ''}).`);
+      if (i === patience.tries - 1) throw new MetaError('Instagram took too long to prepare it.');
+      await wait(patience.ms);
     }
     const media = await call('POST', `${igUserId}/media_publish`, token, { creation_id: container.id });
     let link = null;
@@ -125,7 +137,50 @@ export function createMetaClient({ fetch = globalThis.fetch, wait = (ms) => new 
   const instagramPost = (account, { imageUrl, caption }) => instagramPublish(account, { image_url: imageUrl, caption });
   const instagramStory = (account, { imageUrl }) => instagramPublish(account, { image_url: imageUrl, media_type: 'STORIES' });
 
-  const publishers = { facebook_post: facebookPost, facebook_story: facebookStory, instagram_post: instagramPost, instagram_story: instagramStory };
+  const instagramReel = (account, { videoUrl, caption }) => instagramPublish(account, {
+    media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: 'true', thumb_offset: String(REEL_COVER_MS),
+  }, VIDEO_WAIT);
+
+  /** Hands Meta the reel by URL: it fetches the file itself. */
+  async function upload(videoId, token, fileUrl) {
+    let response;
+    try {
+      response = await fetch(`${RUPLOAD}/${videoId}`, { method: 'POST', headers: { Authorization: `OAuth ${token}`, file_url: fileUrl } });
+    } catch (err) {
+      throw new MetaError(`تعذّر الوصول إلى Meta: ${err.message}`);
+    }
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) {
+      throw new MetaError(data?.error?.message || data?.debug_info?.message || `Meta refused the reel upload (${response.status}).`, { status: response.status });
+    }
+  }
+
+  async function facebookReel({ pageId, token }, { videoUrl, caption }) {
+    const started = await call('POST', `${pageId}/video_reels`, token, { upload_phase: 'start' });
+    if (!started.video_id) throw new MetaError('Meta did not start the reel.');
+    await upload(started.video_id, token, videoUrl);
+    await call('POST', `${pageId}/video_reels`, token, {
+      upload_phase: 'finish', video_id: started.video_id, video_state: 'PUBLISHED', description: caption,
+    });
+    // Published, then processed: a failure to process shows here rather than never.
+    for (let i = 0; i < FACEBOOK_REEL_WAIT.tries; i++) {
+      const { status } = await call('GET', started.video_id, token, { fields: 'status' });
+      const state = status?.video_status;
+      if (state === 'error' || state === 'upload_failed' || state === 'expired'
+        || status?.processing_phase?.status === 'error' || status?.publishing_phase?.status === 'error') {
+        throw new MetaError(`Facebook could not process the reel (${state || 'error'}).`);
+      }
+      if (state === 'ready' || status?.publishing_phase?.status === 'completed') break;
+      // Still processing when the watch ends is fine: it was accepted and will appear.
+      if (i < FACEBOOK_REEL_WAIT.tries - 1) await wait(FACEBOOK_REEL_WAIT.ms);
+    }
+    return { remoteId: started.video_id, link: `https://www.facebook.com/reel/${started.video_id}` };
+  }
+
+  const publishers = {
+    facebook_post: facebookPost, facebook_story: facebookStory, instagram_post: instagramPost, instagram_story: instagramStory,
+    facebook_reel: facebookReel, instagram_reel: instagramReel,
+  };
 
   /** Posts one target; `{ remoteId, link }` or throws a MetaError. */
   function publish(target, account, content) {

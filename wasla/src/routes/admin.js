@@ -837,7 +837,7 @@ export function adminRouter({
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings, events, reports });
   registerPlayers(router, { players });
-  registerPost(router, { repo, siteSettings, metaAccount });
+  registerPost(router, { repo, siteSettings, metaAccount, autopost });
   if (autopost && metaAccount) registerAutopost(router, { autopost, metaAccount });
   if (profiles) registerProfiles(router, { profiles });
   if (profiles) registerBoards(router, { profiles });

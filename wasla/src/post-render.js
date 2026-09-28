@@ -37,6 +37,17 @@ async function loadBadge() {
   return loadImage(Buffer.from(svg));
 }
 
+/** The icon, the picture and the badge a post draws, loaded once. */
+export async function loadAssets(post, { picturePath = null, showCredit = true } = {}) {
+  registerFonts();
+  const [icon, picture, badge] = await Promise.all([
+    loadImage(fs.readFileSync(siteFile('app-icon.png'))),
+    picturePath ? loadImage(fs.readFileSync(picturePath)) : null,
+    post.store ? loadBadge() : null,
+  ]);
+  return { icon, picture, badge, showCredit };
+}
+
 /**
  * The post's image as a JPEG buffer. `post` is what the panel page draws
  * (`postFor` in post-content.js); `picturePath` is the question's picture on disk.
@@ -44,13 +55,8 @@ async function loadBadge() {
 export async function renderPost(post, kind, { picturePath = null, showCredit = true } = {}) {
   const size = SIZES[kind];
   if (!size) throw new Error(`Unknown post size: ${kind}`);
-  registerFonts();
-  const [icon, picture, badge] = await Promise.all([
-    loadImage(fs.readFileSync(siteFile('app-icon.png'))),
-    picturePath ? loadImage(fs.readFileSync(picturePath)) : null,
-    post.store ? loadBadge() : null,
-  ]);
+  const assets = await loadAssets(post, { picturePath, showCredit });
   const canvas = createCanvas(size[0], size[1]);
-  drawPost(canvas.getContext('2d'), size[0], size[1], post, { icon, picture, badge, showCredit });
+  drawPost(canvas.getContext('2d'), size[0], size[1], post, assets);
   return canvas.encode('jpeg', JPEG_QUALITY);
 }

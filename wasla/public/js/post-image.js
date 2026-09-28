@@ -6,7 +6,9 @@
  * this site's /media, the app icon), so the canvas is never tainted and always
  * downloadable.
  */
-import { drawPost } from './post-draw.js';
+// The drawing is asked for with this file's own ?v=, so a deploy never pairs
+// this page with a week-old cached copy of it.
+const { drawPost } = await import(`./post-draw.js${new URL(import.meta.url).search}`);
 
 const holder = document.querySelector('[data-post]');
 const post = holder ? JSON.parse(holder.getAttribute('data-post')) : null;
@@ -53,7 +55,38 @@ async function render() {
   paint();
 }
 
-if (creditToggle) creditToggle.addEventListener('change', () => { if (loaded) paint(); });
+// The reel is made on the server — the file a scheduled reel posts — so it is
+// asked for only when wanted: it takes a few seconds the first time.
+const reel = document.querySelector('[data-post-reel]');
+const reelMake = document.querySelector('[data-post-reel-make]');
+const reelDownload = document.querySelector('[data-post-reel-download]');
+const reelUrl = () => `/admin/post/reel.mp4?id=${post.id}&credit=${!creditToggle || creditToggle.checked ? 1 : 0}`;
+
+function playReel() {
+  if (!reel || !reelMake) return;
+  reelMake.disabled = true;
+  reelMake.lastElementChild.textContent = 'يُصنع…';
+  reel.addEventListener('loadeddata', () => { reelMake.hidden = true; }, { once: true });
+  // `preload="none"` keeps the page from asking for it on load; asked now, it loads and plays.
+  reel.preload = 'auto';
+  reel.src = reelUrl();
+  reel.play().catch(() => {});
+  reel.addEventListener('error', () => {
+    reelMake.disabled = false;
+    reelMake.lastElementChild.textContent = 'تعذّر — أعد المحاولة';
+  }, { once: true });
+}
+
+function syncReel() {
+  if (reelDownload) reelDownload.href = `${reelUrl()}&download=1`;
+  // A reel already showing is remade with the credit as now set.
+  if (reel && reel.getAttribute('src')) playReel();
+}
+
+if (reelMake) reelMake.addEventListener('click', playReel);
+syncReel();
+
+if (creditToggle) creditToggle.addEventListener('change', () => { if (loaded) paint(); syncReel(); });
 
 const copy = document.querySelector('[data-copy-caption]');
 const caption = document.querySelector('[data-caption]');

@@ -1,7 +1,8 @@
 /**
  * «النشر التلقائي»: at the times set on the panel (GMT), a picture question from
  * the game is drawn as «منشور اليوم» draws it and posted to the game's Facebook
- * Page and Instagram — a post and a story on each, as ticked.
+ * Page and Instagram — a post, a story and a reel (the story animated) on each,
+ * as ticked.
  *
  * Each time is a slot. A slot's rows are written before anything is posted, so
  * a slot runs once however often the clock ticks or the server restarts; a slot
@@ -70,7 +71,7 @@ export function nextSlot(now, times) {
 }
 
 export function createAutopost(db, {
-  repo, account, client, render, siteSettings, siteBase, postsDir, imagesDir, log = console, now = () => new Date(),
+  repo, account, client, render, renderReel, siteSettings, siteBase, postsDir, imagesDir, log = console, now = () => new Date(),
 }) {
   const readSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
   const writeSetting = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)
@@ -121,20 +122,43 @@ export function createAutopost(db, {
     return { schedule: next };
   }
 
-  /** Writes the images the targets need and returns their public URLs by size. */
-  async function images(question, sizes, slot, showCredit) {
-    const site = siteBase.replace(/^https?:\/\//, '');
-    const post = postFor(question, { site, appStoreUrl: siteSettings.appStoreUrl() });
+  const picturePath = (question) => path.join(imagesDir, path.basename(question.imageFile));
+  const postOf = (question) => postFor(question, { site: siteBase.replace(/^https?:\/\//, ''), appStoreUrl: siteSettings.appStoreUrl() });
+
+  /** Writes the images (and the reel) the targets need and returns their public URLs by size. */
+  async function media(question, sizes, slot, showCredit) {
+    const post = postOf(question);
     fs.mkdirSync(postsDir, { recursive: true });
     const stamp = slot.replace(/[^0-9a-z]+/gi, '');
     const urls = {};
     for (const size of sizes) {
-      const file = `${stamp}-${question.id}-${size}.jpg`;
-      const jpeg = await render(post, size, { picturePath: path.join(imagesDir, path.basename(question.imageFile)), showCredit });
-      fs.writeFileSync(path.join(postsDir, file), jpeg);
+      const file = `${stamp}-${question.id}-${size}.${size === 'reel' ? 'mp4' : 'jpg'}`;
+      if (size === 'reel') {
+        await renderReel(post, path.join(postsDir, file), { picturePath: picturePath(question), showCredit });
+      } else {
+        fs.writeFileSync(path.join(postsDir, file), await render(post, size, { picturePath: picturePath(question), showCredit }));
+      }
       urls[size] = `${siteBase}/media/posts/${file}`;
     }
     return urls;
+  }
+
+  /**
+   * The reel of a question for the panel to watch or download, made once per
+   * picture, credit choice and deploy (the drawing may have changed), and kept
+   * with the posts' files for a week.
+   */
+  async function previewReel(questionId, { showCredit = true, version = '' } = {}) {
+    const question = repo.questionForPost({ id: questionId });
+    if (!question?.imageFile) return null;
+    const post = postOf(question);
+    const tag = `${path.parse(question.imageFile).name}-${showCredit ? 1 : 0}-${post.store ? 1 : 0}-${version}`.replace(/[^0-9a-z-]+/gi, '');
+    const file = path.join(postsDir, `preview-${question.id}-${tag}.mp4`);
+    if (!fs.existsSync(file)) {
+      fs.mkdirSync(postsDir, { recursive: true });
+      await renderReel(post, file, { picturePath: picturePath(question), showCredit });
+    }
+    return file;
   }
 
   /**
@@ -156,17 +180,18 @@ export function createAutopost(db, {
     const caption = captionFor(question, { site, appStoreUrl: siteSettings.appStoreUrl() });
     let urls;
     try {
-      urls = await images(question, [...new Set(claimed.map((t) => TARGETS[t].size))], slot, showCredit);
+      urls = await media(question, [...new Set(claimed.map((t) => TARGETS[t].size))], slot, showCredit);
     } catch (err) {
       log.error?.('Autopost render failed:', err);
-      for (const target of claimed) finish.run('failed', null, null, `تعذّر رسم الصورة: ${err.message}`, slot, target);
+      for (const target of claimed) finish.run('failed', null, null, `تعذّر رسم الصورة أو الريل: ${err.message}`, slot, target);
       return { question, results: claimed.map((target) => ({ target, ok: false })) };
     }
 
     const results = [];
     for (const target of claimed) {
       try {
-        const { remoteId, link } = await client.publish(target, credentials, { imageUrl: urls[TARGETS[target].size], caption });
+        const url = urls[TARGETS[target].size];
+        const { remoteId, link } = await client.publish(target, credentials, { imageUrl: url, videoUrl: url, caption });
         finish.run('done', remoteId ?? null, link ?? null, null, slot, target);
         results.push({ target, ok: true, link });
       } catch (err) {
@@ -236,5 +261,5 @@ export function createAutopost(db, {
     return current.enabled ? nextSlot(now(), current.times) : null;
   };
 
-  return { schedule, saveSchedule, runSlot, postNow, tick, start, history, upcoming };
+  return { schedule, saveSchedule, runSlot, postNow, tick, start, history, upcoming, previewReel };
 }
