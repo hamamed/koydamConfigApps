@@ -1,42 +1,31 @@
 /**
- * The public site (landing page, privacy, support, credits) and the panel live
- * on the site's own domain; the API and challenge links stay on the service's.
+ * The site's own domain (SITE_URL, chabbek.com) serves everything: the landing
+ * page, privacy, support and credits, the panel, the app's API, its pictures,
+ * challenge links and the file iOS reads for universal links.
  *
- * The app, its universal links and the panel's sign-on cookie are all tied to
- * the service domain, so only the pages move. Each domain sends what it does
- * not serve to the other with a 301, so old links keep working. Off unless
- * `siteUrl` is set; hosts that are neither domain (a local run) are left alone.
+ * The old domain (LEGACY_HOSTS, wassla.hamaprojects.com) keeps serving all of
+ * that too — the app versions already on phones talk to it, and links already
+ * shared point at it — except its public pages, which it sends to the site with
+ * a 301 so there is one of each for search engines and readers. `www.` goes to
+ * the bare domain. Hosts that are neither (a local run) are left alone, and so
+ * is everything when no site is set.
  */
 const SITE_PAGES = new Set(['/', '/privacy', '/support', '/credits', '/sitemap.xml']);
-const SITE_FILES = [/^\/assets\//, /^\/favicon\.ico$/, /^\/robots\.txt$/, /^\/app-ads\.txt$/];
-/**
- * The panel lives on the site's domain too, signing in with its own accounts
- * there (`panel-host.js`), and it needs the pictures and sounds it previews.
- * The service domain keeps serving it as well until the move is tested.
- */
-const SITE_PANEL = [/^\/admin(\/|$)/, /^\/media\//];
 
 const hostOf = (url) => (url ? new URL(url).hostname.toLowerCase() : '');
 
-export function siteHost({ siteUrl, publicUrl }) {
+export function siteHost({ siteUrl, legacyHosts = [] }) {
   const site = hostOf(siteUrl);
-  const service = hostOf(publicUrl);
   if (!site) return (_req, _res, next) => next();
   const siteBase = siteUrl.replace(/\/+$/, '');
-  const serviceBase = publicUrl.replace(/\/+$/, '');
+  const legacy = new Set(legacyHosts.map((h) => String(h).trim().toLowerCase()).filter((h) => h && h !== site));
 
   return (req, res, next) => {
     // Only reads move: a redirected POST arrives as a GET and loses its body.
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     const host = String(req.hostname ?? '').toLowerCase();
-    const isSitePage = SITE_PAGES.has(req.path);
-
     if (host === `www.${site}`) return res.redirect(301, `${siteBase}${req.url}`);
-    if (host === site) {
-      if (isSitePage || [...SITE_FILES, ...SITE_PANEL].some((p) => p.test(req.path))) return next();
-      return res.redirect(301, `${serviceBase}${req.url}`);
-    }
-    if (host === service && isSitePage) return res.redirect(301, `${siteBase}${req.url}`);
+    if (legacy.has(host) && SITE_PAGES.has(req.path)) return res.redirect(301, `${siteBase}${req.url}`);
     return next();
   };
 }

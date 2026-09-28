@@ -23,6 +23,16 @@ export const config = {
   publicUrl: (process.env.PUBLIC_URL || 'http://localhost:3700').replace(/\/+$/, ''),
   /** Where the landing page, privacy, support and credits live, e.g. https://chabbek.com. Empty keeps them on publicUrl. */
   siteUrl: (process.env.SITE_URL || '').trim().replace(/\/+$/, ''),
+  /**
+   * The old domains that still serve the app and the panel, whose public pages go
+   * to the site: LEGACY_HOSTS (comma-separated), and PUBLIC_URL's own host while it
+   * is not the site — so moving PUBLIC_URL to the site never strands the old one.
+   */
+  get legacyHosts() {
+    const listed = (process.env.LEGACY_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
+    const own = this.publicUrl ? new URL(this.publicUrl).hostname.toLowerCase() : '';
+    return [...new Set([...listed, own].filter(Boolean))];
+  },
   /** The absolute base every public page, sitemap and link preview is addressed at. */
   get siteBase() { return this.siteUrl || this.publicUrl; },
   dataDir: path.resolve(root, process.env.DATA_DIR || './data'),

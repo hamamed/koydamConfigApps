@@ -19,7 +19,7 @@ test('no AdMob app id, no line: an empty file rather than a wrong one', () => {
 });
 
 test('it is served on the site domain, where the App Store listing points', () => {
-  const on = siteHost({ siteUrl: 'https://chabbek.com', publicUrl: 'https://wassla.hamaprojects.com' });
+  const on = siteHost({ siteUrl: 'https://chabbek.com', legacyHosts: ['wassla.hamaprojects.com'] });
   let out = null;
   on({ method: 'GET', url: '/app-ads.txt', path: '/app-ads.txt', hostname: 'chabbek.com' },
     { redirect: (status, location) => { out = { status, location }; } }, () => { out = { next: true }; });

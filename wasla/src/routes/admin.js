@@ -147,7 +147,8 @@ export function adminRouter({
    * it, so destroying this session alone left the next page signed in again.
    */
   router.post('/logout', (req, res) => {
-    const back = `${config.publicUrl}/admin/login`;
+    // Back to this domain's own sign-in: each domain signs in its own way (panel-host.js).
+    const back = `${req.protocol}://${req.get('host')}/admin/login`;
     const platform = config.platformUrl && usesPlatformSignIn(req)
       ? `${config.platformUrl}/logout?next=${encodeURIComponent(back)}`
       : '/admin/login';
