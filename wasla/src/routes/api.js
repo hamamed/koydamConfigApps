@@ -17,7 +17,7 @@ import { registerProfileApi } from './api-profiles.js';
  *
  * Every error is `{ error: message }` with a 4xx or 5xx status.
  */
-export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = null, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null }) {
+export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = null, events, devices, wordSearch, wordSearchDays, dailyGames, lab, profiles, notifications, audioClips = null, reports = null, appBuilds = null }) {
   // A coming day a phone downloads to play offline is planned then, so everyone gets the games it has.
   const planner = createDayPlanner({ dailyGames, wordSearch, wordSearchDays });
   const router = express.Router();
@@ -171,6 +171,8 @@ export function apiRouter({ repo, publicUrl, daily, appConfig, siteSettings = nu
     res.set('Cache-Control', 'no-store');
     const batch = readEventBatch(req.body);
     if (batch.error) return res.status(400).json({ error: batch.error });
+    // Which build this phone plays, and through which domain (the dashboard's «إصدارات التطبيق»).
+    appBuilds?.record({ device: batch.device, userAgent: req.get('user-agent'), host: req.hostname });
     res.status(202).json({ accepted: events.record(batch) });
   });
 

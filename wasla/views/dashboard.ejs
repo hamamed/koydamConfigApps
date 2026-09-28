@@ -188,6 +188,50 @@
         </div>
       </div>
 
+      <% if (builds) { const pct = (x) => Math.round(x * 100) + '%'; %>
+        <div class="row g-3 mb-3">
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('smartphone', 16) %>
+                <span class="fw-semibold me-auto">إصدارات التطبيق</span>
+                <% if (builds.total) { %>
+                  <span class="kd-tag <%= builds.oldShare <= 0.05 ? '' : 'kd-tag-warn' %>">على النطاق القديم: <%= pct(builds.oldShare) %></span>
+                <% } %>
+              </div>
+              <div class="ad-card-body">
+                <p class="small kd-faint mb-3">كل هاتف مرة واحدة، بآخر إصدار لعب به في آخر <%= builds.days %> أيام (<%= n(builds.total) %> لاعباً). الإصداران 1.1 و1.2 يتصلان بـ<span dir="ltr"><%= oldDomain %></span>، و1.3 وما بعده بـchabbek.com.</p>
+                <% if (builds.versions.length) { %>
+                  <%- include('partials/hbars', { rows: builds.versions.map((v) => ({
+                        label: v.version + (v.old ? ' · النطاق القديم' : ''),
+                        value: v.players,
+                        text: n(v.players) + ' (' + pct(builds.total ? v.players / builds.total : 0) + ')',
+                      })) }) %>
+                <% } else { %>
+                  <p class="small kd-muted mb-0">لا أرقام بعد: تبدأ من أول لعب بعد هذا التحديث.</p>
+                <% } %>
+                <p class="small kd-faint mt-3 mb-0">
+                  يمكن حذف <span dir="ltr"><%= oldDomain %></span> حين تبقى النسبة تحت 5% أسبوعين متتاليين.
+                  <% if (builds.since) { %>الأرقام منذ <span dir="ltr"><%= builds.since %></span>.<% } %>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-6">
+            <div class="ad-card h-100">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('chart-column', 16) %>
+                <span class="fw-semibold">على النطاق القديم كل يوم</span>
+              </div>
+              <div class="ad-card-body">
+                <p class="small kd-faint mb-2">لاعبون بإصدار يتصل بالنطاق القديم، آخر 14 يوماً.</p>
+                <div class="wz-chart-wrap"><%- charts.oldDomain %></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
       <div class="row g-3 mb-3">
         <div class="col-xl-6">
           <div class="ad-card h-100">

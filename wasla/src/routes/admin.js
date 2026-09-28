@@ -62,7 +62,7 @@ const DAILY_GAME_LABELS = Object.freeze({
 });
 
 export function adminRouter({
-  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null, autopost = null, metaAccount = null,
+  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null, autopost = null, metaAccount = null, appBuilds = null,
 }) {
   const router = express.Router();
 
@@ -192,10 +192,13 @@ export function adminRouter({
         newPlayers: perDay(home.newPerDay, 'players', 'لاعباً جديداً', 'اللاعبون الجدد كل يوم'),
         levels: perDay(home.activity, 'levels', 'لغزاً', 'الألغاز المنتهية كل يوم'),
         questions: perDay(home.activity, 'questions', 'سؤالاً', 'الأسئلة المحلولة كل يوم'),
+        oldDomain: appBuilds && perDay(appBuilds.perDay(), 'old', 'لاعباً على النطاق القديم', 'اللاعبون على النطاق القديم كل يوم'),
         hours: barChart(home.hours.map((h) => ({
           label: String(h.hour), value: h.players, title: `\u2066${h.hour}:00–${h.hour}:59 GMT\u2069: ${h.players} لاعباً`,
         })), { label: 'اللاعبون حسب الساعة', height: 200, xEvery: 3 }),
       },
+      builds: appBuilds?.summary() ?? null,
+      oldDomain: config.legacyHosts.filter((h) => h !== new URL(config.siteBase).hostname).join('، '),
       helpLabels: HELP_LABELS,
       gameLabels: DAILY_GAME_LABELS,
       reportCounts: reports ? reports.counts() : null,

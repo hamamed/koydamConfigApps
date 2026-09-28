@@ -10,6 +10,7 @@ import morgan from 'morgan';
 
 import { createApnsSender } from './apns.js';
 import { createApnsCredentials } from './apns-credentials.js';
+import { createAppBuilds } from './app-builds.js';
 import { createAppConfig } from './app-config.js';
 import { createAutopost } from './autopost.js';
 import { createAudioStore } from './audio.js';
@@ -75,6 +76,7 @@ const lab = createLab(db);
 const dailyGames = createDailyGames(db, { appConfig, wordSearch, wordSearchDays, pictures, lab });
 const profiles = createProfiles(db);
 const titles = createTitles(db);
+const appBuilds = createAppBuilds(db, { siteHost: new URL(config.siteBase).hostname });
 const metaClient = createMetaClient();
 const metaAccount = createMetaAccount(db, { dir: config.metaDir, client: metaClient });
 const autopost = createAutopost(db, {
@@ -102,7 +104,7 @@ app.use('/api', rateLimit({
   legacyHeaders: false,
   handler: (_req, res) => res.status(429).json({ error: 'Too many requests. Try again in a minute.' }),
 }));
-app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, siteSettings, events, devices, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, notifications, audioClips, reports }));
+app.use('/api/v1', apiRouter({ repo, publicUrl: config.publicUrl, daily, appConfig, siteSettings, events, devices, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, notifications, audioClips, reports, appBuilds }));
 
 // Question pictures and sounds. A replaced file gets a new generated name, so
 // a file at a given name never changes and can be cached for a long time.
@@ -163,7 +165,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles, autopost, metaAccount,
+  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles, autopost, metaAccount, appBuilds,
 }));
 // The landing page. It answers `/`, which used to bounce everyone to the panel.
 app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));

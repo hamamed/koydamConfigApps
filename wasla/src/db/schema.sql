@@ -386,3 +386,18 @@ CREATE TABLE IF NOT EXISTS social_posts (
 
 CREATE INDEX IF NOT EXISTS idx_social_posts_created ON social_posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_social_posts_question ON social_posts(question_id, status);
+
+-- ── v12 ─────────────────────────────────────────────────────────────────────
+
+-- Which app build each phone plays, and through which domain, one row per phone
+-- per day (app-builds.js): the dashboard shows who is still on a version that
+-- talks to the old domain, so it is known when that domain can go.
+CREATE TABLE IF NOT EXISTS app_builds (
+  device  TEXT NOT NULL,
+  day     TEXT NOT NULL,
+  build   TEXT NOT NULL,
+  host    TEXT NOT NULL,
+  PRIMARY KEY (device, day)
+);
+
+CREATE INDEX IF NOT EXISTS idx_app_builds_day ON app_builds(day);
