@@ -15,7 +15,6 @@
   const INK = '#1f2d3a';
   const MINT = '#d6eeea';
   const TEAL = '#14a49e';
-  const TEAL_DEEP = '#0e7f7a';
   const INDIGO = '#4e4a8c';
   const LAVENDER = '#eeedfb';
   const MUTED = '#5d7c80';
@@ -55,6 +54,22 @@
     ctx.lineWidth = 6;
     ctx.strokeStyle = INK;
     ctx.stroke();
+  }
+
+  /**
+   * The site's address as the app draws its buttons: a teal capsule with an ink
+   * border and ledge, the address in white, centred on (cx, cy).
+   */
+  function siteChip(ctx, text, cx, cy, tall) {
+    ctx.save();
+    ctx.direction = 'ltr';
+    ctx.font = `800 ${tall ? 44 : 32}px Tajawal, sans-serif`;
+    const h = tall ? 84 : 58;
+    const w = ctx.measureText(text).width + (tall ? 90 : 64);
+    plate(ctx, cx - w / 2, cy - h / 2, w, h, h / 2, TEAL, tall ? 8 : 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(text, cx, cy + 2);
+    ctx.restore();
   }
 
   /** Arabic lines that fit `width`, broken between words. */
@@ -110,7 +125,7 @@
     const cardW = W - 140;
     const cardTop = y;
     // A little shorter on the square post when the App Store badge needs room under it.
-    const cardH = post.store ? (tall ? 980 : 500) : (tall ? 1080 : 640);
+    const cardH = post.store ? (tall ? 980 : 490) : (tall ? 1080 : 620);
     plate(ctx, cardX, cardTop, cardW, cardH, 48, '#ffffff');
     if (post.title) {
       ctx.font = `400 ${tall ? 56 : 46}px Lalezar, Tajawal, sans-serif`;
@@ -190,15 +205,11 @@
       const bw = bh * (119.66407 / 40);
       y += tall ? 45 : 27;
       ctx.drawImage(assets.badge, W / 2 - bw / 2, y, bw, bh);
-      y += bh + (tall ? 70 : 40);
+      y += bh + (tall ? 75 : 42);
     } else {
       y += tall ? 95 : 70;
     }
-    ctx.fillStyle = TEAL_DEEP;
-    ctx.direction = 'ltr';
-    ctx.font = `800 ${tall ? 50 : 34}px Tajawal, sans-serif`;
-    ctx.fillText(post.site, W / 2, y);
-    ctx.direction = 'rtl';
+    siteChip(ctx, post.site, W / 2, y, tall);
   }
 
   function offer(canvas, kind) {
