@@ -1,0 +1,94 @@
+<%- include('partials/head') %>
+<div class="ad-shell">
+  <%- include('partials/sidebar') %>
+  <main class="ad-main">
+    <%- include('partials/topbar', {
+          heading: 'منشور اليوم',
+          subheading: 'سؤال من اللعبة كصورة جاهزة لصفحاتها: منشور مربّع وقصة طويلة',
+        }) %>
+    <div class="ad-content">
+      <%- include('partials/flash') %>
+
+      <div class="ad-card mb-3">
+        <div class="ad-card-body d-flex flex-wrap align-items-end gap-2">
+          <div class="btn-group" role="group" aria-label="نوع السؤال">
+            <a class="btn btn-sm <%= kind === 'picture' ? 'btn-kd' : 'btn-kd-outline' %>" href="/admin/post?kind=picture">سؤال بصورة</a>
+            <a class="btn btn-sm <%= kind === 'text' ? 'btn-kd' : 'btn-kd-outline' %>" href="/admin/post?kind=text">سؤال نصي</a>
+          </div>
+          <a class="btn btn-sm btn-kd-outline" href="/admin/post?kind=<%= kind %>"><%- icon('shuffle', 15) %> <span>سؤال آخر</span></a>
+          <form method="get" action="/admin/post" class="d-flex gap-2 align-items-end m-0 ms-auto">
+            <div>
+              <label class="form-label small fw-semibold" for="postId">أو رقم سؤال بعينه</label>
+              <input class="form-control form-control-sm" type="number" min="1" id="postId" name="id" value="<%= askedId || '' %>" placeholder="112" dir="ltr">
+            </div>
+            <button class="btn btn-sm btn-kd-outline" type="submit">اعرض</button>
+          </form>
+        </div>
+      </div>
+
+      <% if (!question) { %>
+        <div class="ad-card ad-empty">
+          <%- icon('image-off', 28) %>
+          <p class="mb-0"><%= askedId ? 'لا يُنشر هذا السؤال: غير موجود، أو صورته بلا صاحب أو ترخيص مسجَّل — والمنشور يجب أن يذكرهما.' : 'لا سؤال من هذا النوع بعد.' %></p>
+        </div>
+      <% } else { %>
+        <div class="row g-3">
+          <div class="col-xl-8">
+            <div class="ad-card">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('image', 16) %>
+                <span class="fw-semibold me-auto">الصورتان</span>
+                <span class="small kd-faint">تُرسَم هنا في المتصفح</span>
+              </div>
+              <div class="ad-card-body">
+                <div class="wz-post-previews" data-post='<%- JSON.stringify(post).replace(/'/g, '&#39;') %>'>
+                  <figure class="wz-post-figure">
+                    <canvas class="wz-post-canvas" width="1080" height="1080" data-post-canvas="square" aria-label="منشور مربّع"></canvas>
+                    <figcaption>
+                      <span>منشور · 1080 × 1080</span>
+                      <a class="btn btn-sm btn-kd" href="#" data-post-download="square" download>تنزيل</a>
+                    </figcaption>
+                  </figure>
+                  <figure class="wz-post-figure wz-post-figure-story">
+                    <canvas class="wz-post-canvas" width="1080" height="1920" data-post-canvas="story" aria-label="قصة"></canvas>
+                    <figcaption>
+                      <span>قصة · 1080 × 1920</span>
+                      <a class="btn btn-sm btn-kd" href="#" data-post-download="story" download>تنزيل</a>
+                    </figcaption>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-4">
+            <div class="ad-card mb-3">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('message-square-text', 16) %>
+                <span class="fw-semibold me-auto">النص</span>
+                <button class="btn btn-sm btn-kd-outline" type="button" data-copy-caption>انسخ</button>
+              </div>
+              <div class="ad-card-body">
+                <textarea class="form-control" rows="7" data-caption dir="rtl"><%= caption %></textarea>
+              </div>
+            </div>
+            <div class="ad-card">
+              <div class="ad-card-head d-flex align-items-center gap-2">
+                <%- icon('key-round', 16) %>
+                <span class="fw-semibold">الجواب — لك وحدك</span>
+              </div>
+              <div class="ad-card-body small">
+                <p class="mb-1"><span class="wz-answer fw-bold"><%= question.answer %></span> · <%= question.title %></p>
+                <p class="kd-faint mb-2">ليس على الصورة: هو اللغز. لتردّ به على التعليقات.</p>
+                <a href="/admin/questions/<%= question.id %>">فتح السؤال <%= question.id %></a>
+                <% if (question.imageFile) { %><p class="kd-faint mb-0 mt-2">صاحب الصورة وترخيصها مكتوبان عليها وفي النص، كما يطلب الترخيص.</p><% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+<script src="/assets/js/post-image.js?v=<%= assetVersion %>"></script>
+<%- include('partials/foot') %>

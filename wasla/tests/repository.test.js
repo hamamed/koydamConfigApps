@@ -501,3 +501,19 @@ test('an invalid answer from the level page is refused and nothing changes', () 
   assert.ok(repo.setLevelAnswer(level.id, ids[0], '').error);
   assert.equal(repo.getQuestion(ids[0]).answer, before);
 });
+
+test('a question for a social post: a credited picture, or a text question, never an uncredited picture', () => {
+  const text = repo.createQuestion({ title: 'عام', answer: 'قمر', clue: 'يضيء الليل' }).question;
+  const credited = repo.createQuestion({ title: 'حيوانات', answer: 'لقلق', clue: '', type: 'image', imageFile: 'a.jpg',
+    imageAuthor: 'Jane', imageLicence: 'CC BY 4.0' }).question;
+  const uncredited = repo.createQuestion({ title: 'حيوانات', answer: 'نسر', clue: '', type: 'image', imageFile: 'b.jpg' }).question;
+
+  for (let i = 0; i < 20; i++) {
+    const picture = repo.questionForPost({ kind: 'picture' });
+    assert.equal(picture.id, credited.id, 'the only picture with an author and a licence');
+    assert.equal(repo.questionForPost({ kind: 'text' }).id, text.id);
+  }
+  assert.equal(repo.questionForPost({ id: credited.id }).id, credited.id, 'a chosen one');
+  assert.equal(repo.questionForPost({ id: uncredited.id }), null, 'chosen or not, a picture nobody can be credited for is not posted');
+  assert.equal(repo.questionForPost({ id: 999999 }), null);
+});

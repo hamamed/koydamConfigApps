@@ -19,6 +19,7 @@ const NAME = /^[a-z0-9-]+$/;
  */
 const PAGE_ICONS = Object.freeze([
   ['/levels', 'grid-3x3'],
+  ['/post', 'share-2'],
   ['/questions', 'message-circle-question'],
   ['/titles', 'tag'],
   ['/days', 'calendar-days'],

@@ -1,0 +1,217 @@
+/*
+ * «منشور اليوم»: draws a question as the game's own card, on the game's ground,
+ * at the two sizes the pages want — a 1080 square post and a 1080 × 1920 story —
+ * and offers each as a PNG. Everything is drawn from what the page holds (the
+ * question, its picture from this site's /media, the app icon), so the canvas is
+ * never tainted and always downloadable. The answer is never drawn.
+ */
+(function () {
+  'use strict';
+
+  const holder = document.querySelector('[data-post]');
+  if (!holder) return;
+  const post = JSON.parse(holder.getAttribute('data-post'));
+
+  const INK = '#1f2d3a';
+  const MINT = '#d6eeea';
+  const TEAL = '#14a49e';
+  const TEAL_DEEP = '#0e7f7a';
+  const INDIGO = '#4e4a8c';
+  const LAVENDER = '#eeedfb';
+  const MUTED = '#5d7c80';
+  // The app's six faint triangles (TriangleField), in the unit square.
+  const TRIANGLES = [
+    [[0.34, -0.05], [0.42, -0.05], [0.38, 0.1], 0.10], [[0.03, 1.05], [0.39, 0.1], [0.75, 1.05], 0.28],
+    [[0.24, 1.05], [0.63, -0.05], [1.02, 1.05], 0.22], [[0.42, -0.05], [0.63, -0.05], [0.5, 0.25], 0.30],
+    [[0.63, -0.05], [1.1, -0.05], [1.1, 0.72], 0.12], [[-0.1, 0.2], [0.25, 0.62], [-0.1, 1.05], 0.16],
+  ];
+
+  const load = (src) => new Promise((resolve) => {
+    if (!src) return resolve(null);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /** A plate as the game draws them: a face, an ink border, and an ink ledge under it. */
+  function plate(ctx, x, y, w, h, r, face, ledge = 10) {
+    roundRect(ctx, x, y + ledge, w, h, r);
+    ctx.fillStyle = INK;
+    ctx.fill();
+    roundRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = face;
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+  }
+
+  /** Arabic lines that fit `width`, broken between words. */
+  function lines(ctx, text, width) {
+    const out = [];
+    let line = '';
+    for (const word of String(text).split(/\s+/).filter(Boolean)) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width > width && line) { out.push(line); line = word; } else { line = next; }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+
+  function draw(canvas, assets) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const tall = H > W;
+    ctx.direction = 'rtl';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // The ground.
+    ctx.fillStyle = MINT;
+    ctx.fillRect(0, 0, W, H);
+    for (const [a, b, c, white] of TRIANGLES) {
+      ctx.beginPath();
+      ctx.moveTo(a[0] * W, a[1] * H); ctx.lineTo(b[0] * W, b[1] * H); ctx.lineTo(c[0] * W, c[1] * H);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(255,255,255,${white})`;
+      ctx.fill();
+    }
+
+    // The mark: the app icon and the name.
+    let y = tall ? 170 : 90;
+    const icon = tall ? 150 : 110;
+    if (assets.icon) {
+      ctx.save();
+      roundRect(ctx, W / 2 - icon / 2, y - icon / 2, icon, icon, icon * 0.22);
+      ctx.clip();
+      ctx.drawImage(assets.icon, W / 2 - icon / 2, y - icon / 2, icon, icon);
+      ctx.restore();
+    }
+    y += icon / 2 + (tall ? 70 : 45);
+    ctx.fillStyle = INK;
+    ctx.font = `400 ${tall ? 84 : 60}px Lalezar, Tajawal, sans-serif`;
+    ctx.fillText('شبّك', W / 2, y);
+    y += tall ? 110 : 70;
+
+    // The card: the category on its indigo ribbon, then the picture or the clue.
+    const cardX = 70;
+    const cardW = W - 140;
+    const cardTop = y;
+    const cardH = tall ? 1080 : 640;
+    plate(ctx, cardX, cardTop, cardW, cardH, 48, '#ffffff');
+    if (post.title) {
+      ctx.font = `400 ${tall ? 56 : 46}px Lalezar, Tajawal, sans-serif`;
+      const chipW = Math.min(cardW - 80, ctx.measureText(post.title).width + 90);
+      const chipH = tall ? 88 : 74;
+      plate(ctx, W / 2 - chipW / 2, cardTop - chipH / 2, chipW, chipH, chipH / 2, INDIGO, 7);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(post.title, W / 2, cardTop + 2);
+    }
+
+    // A credited picture keeps a line under it for its credit, inside the card.
+    const creditRoom = post.credit ? (tall ? 56 : 44) : 0;
+    const inner = { x: cardX + 50, y: cardTop + (tall ? 90 : 70), w: cardW - 100, h: cardH - (tall ? 290 : 220) - creditRoom };
+    if (assets.picture) {
+      const pic = assets.picture;
+      const fit = Math.min(inner.w / pic.width, inner.h / pic.height);
+      const pw = pic.width * fit;
+      const ph = pic.height * fit;
+      const px = W / 2 - pw / 2;
+      const py = inner.y + (inner.h - ph) / 2;
+      ctx.save();
+      roundRect(ctx, px, py, pw, ph, 30);
+      ctx.clip();
+      ctx.drawImage(pic, px, py, pw, ph);
+      ctx.restore();
+      roundRect(ctx, px, py, pw, ph, 30);
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = LAVENDER;
+      ctx.stroke();
+      // Its author and licence, as CC BY and CC BY-SA ask — right under it.
+      ctx.fillStyle = MUTED;
+      ctx.font = `600 ${tall ? 30 : 25}px Tajawal, sans-serif`;
+      ctx.fillText(`📷 ${post.credit}`, W / 2, py + ph + creditRoom * 0.62);
+    } else {
+      ctx.fillStyle = INK;
+      ctx.font = `800 ${tall ? 72 : 60}px Tajawal, sans-serif`;
+      const text = lines(ctx, post.clue, inner.w);
+      const lh = tall ? 108 : 88;
+      let ty = inner.y + inner.h / 2 - ((text.length - 1) * lh) / 2;
+      for (const line of text) { ctx.fillText(line, W / 2, ty); ty += lh; }
+    }
+
+    // The answer's empty boxes, as the question page draws them — the count, not the word.
+    const slots = Math.min(post.letters, 12);
+    const box = Math.min(tall ? 92 : 78, (cardW - 120) / slots - 14);
+    const gap = 14;
+    const rowW = slots * box + (slots - 1) * gap;
+    const by = cardTop + cardH - (tall ? 160 : 125);
+    for (let i = 0; i < slots; i++) {
+      const bx = W / 2 - rowW / 2 + i * (box + gap);
+      roundRect(ctx, bx, by, box, box, box * 0.22);
+      ctx.fillStyle = MINT;
+      ctx.fill();
+      ctx.setLineDash([12, 9]);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = TEAL;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // The call, the link and — for a picture — its credit.
+    y = cardTop + cardH + (tall ? 150 : 90);
+    ctx.fillStyle = INK;
+    ctx.font = `800 ${tall ? 64 : 50}px Tajawal, sans-serif`;
+    ctx.fillText(post.image ? 'ما هذا؟ الجواب في شبّك' : 'الجواب في شبّك', W / 2, y);
+    y += tall ? 95 : 70;
+    ctx.fillStyle = TEAL_DEEP;
+    ctx.direction = 'ltr';
+    ctx.font = `800 ${tall ? 58 : 46}px Tajawal, sans-serif`;
+    ctx.fillText(post.site, W / 2, y);
+    ctx.direction = 'rtl';
+  }
+
+  function offer(canvas, kind) {
+    const link = document.querySelector(`[data-post-download="${kind}"]`);
+    if (!link) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      link.href = URL.createObjectURL(blob);
+      link.download = `chabbek-${kind}-${post.id}.png`;
+    }, 'image/png');
+  }
+
+  async function render() {
+    await Promise.all([
+      document.fonts.load('400 60px Lalezar'), document.fonts.load('800 60px Tajawal'), document.fonts.load('600 30px Tajawal'),
+    ].map((p) => p.catch(() => null)));
+    const [icon, picture] = await Promise.all([load('/assets/site/app-icon.png'), load(post.image)]);
+    for (const canvas of document.querySelectorAll('[data-post-canvas]')) {
+      draw(canvas, { icon, picture });
+      offer(canvas, canvas.getAttribute('data-post-canvas'));
+    }
+  }
+
+  const copy = document.querySelector('[data-copy-caption]');
+  const caption = document.querySelector('[data-caption]');
+  if (copy && caption) {
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(caption.value); copy.textContent = 'نُسخ ✓'; } catch { caption.select(); }
+      setTimeout(() => { copy.textContent = 'انسخ'; }, 1800);
+    });
+  }
+
+  render();
+})();

@@ -183,6 +183,25 @@ export function createRepository(db) {
       ORDER BY q.id DESC`).all({ term, exact }).map(toQuestion);
   }
 
+  /**
+   * A question for a social post: the one asked for, or a random one of `kind`
+   * ('picture' or 'text'). A picture is only ever one with both an author and a
+   * licence recorded — a post has to credit it, as CC BY and CC BY-SA require —
+   * and a text question is one whose clue says something on its own.
+   */
+  function questionForPost({ id = null, kind = 'picture' } = {}) {
+    const credited = (q) => !q.imageFile || Boolean(q.imageAuthor.trim() && q.imageLicence.trim());
+    if (id) {
+      const q = getQuestion(Number(id));
+      return q && credited(q) ? q : null;
+    }
+    const where = kind === 'text'
+      ? "q.image_file IS NULL AND q.type = 'text' AND trim(IFNULL(q.clue, '')) <> ''"
+      : "q.image_file IS NOT NULL AND trim(IFNULL(q.image_author, '')) <> '' AND trim(IFNULL(q.image_licence, '')) <> ''";
+    const row = db.prepare(`${QUESTION_SELECT} WHERE ${where} ORDER BY RANDOM() LIMIT 1`).get();
+    return row ? toQuestion(row) : null;
+  }
+
   /** Every picture that names a photographer or a licence, for the credits page. */
   function credited() {
     return db.prepare(`${QUESTION_SELECT}
@@ -708,7 +727,7 @@ export function createRepository(db) {
   return {
     /** Runs `fn` in one transaction; nested calls become savepoints. */
     transaction: (fn) => tx(fn),
-    credited, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, setLevelAnswer, deleteQuestion, levelsUsing, mediaInUse,
+    credited, questionForPost, listQuestions, getQuestion, checkQuestion, createQuestion, updateQuestion, setLevelAnswer, deleteQuestion, levelsUsing, mediaInUse,
     removeQuestionsFromLevels, moveQuestionsToLevel, newLevelFromQuestions, setQuestionsTitle, deleteQuestions,
     listLevels, getLevel, levelByNumber, levelNeighbours, createLevel, setLevelDetails, setLevelQuestions, questionsForLevel, shuffleLevel,
     setPublished, deleteLevel, moveLevel, orderByDifficulty, setLevelsPublished, setLevelsDifficulty, deleteLevels,

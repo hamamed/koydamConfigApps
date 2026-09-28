@@ -23,6 +23,7 @@ import { registerAudio } from './admin-audio.js';
 import { registerImport } from './admin-import.js';
 import { registerNotifications } from './admin-notifications.js';
 import { HELP_LABELS, registerPlayers } from './admin-players.js';
+import { registerPost } from './admin-post.js';
 import { barChart } from '../charts.js';
 import { registerBoards } from './admin-boards.js';
 import { registerCatalogue } from './admin-catalogue.js';
@@ -835,6 +836,7 @@ export function adminRouter({
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings, events, reports });
   registerPlayers(router, { players });
+  registerPost(router, { repo });
   if (profiles) registerProfiles(router, { profiles });
   if (profiles) registerBoards(router, { profiles });
   if (profiles) registerCatalogue(router, { db, profiles });

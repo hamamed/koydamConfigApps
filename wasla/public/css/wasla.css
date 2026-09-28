@@ -1290,3 +1290,14 @@ html { scrollbar-gutter: stable; }
 .wz-chart-col.is-tipped .wz-chart-hit { fill: rgba(20, 164, 158, .1); }
 .wz-hbar { cursor: default; outline: none; }
 .wz-hbar.is-tipped, .wz-hbar:focus-visible { background: var(--wz-board-1); }
+
+/* «منشور اليوم»: the two images side by side, scaled to the card; stacked on a phone. */
+.wz-post-previews { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.25rem; align-items: start; }
+.wz-post-figure { margin: 0; display: grid; gap: .6rem; }
+.wz-post-canvas {
+  width: 100%; height: auto; display: block;
+  border: var(--wz-line) solid var(--wz-ink); border-radius: 14px;
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink); background: var(--wz-board);
+}
+.wz-post-figure figcaption { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .85rem; font-weight: 700; color: var(--kd-muted); }
+@media (max-width: 767.98px) { .wz-post-previews { grid-template-columns: 1fr; } }
