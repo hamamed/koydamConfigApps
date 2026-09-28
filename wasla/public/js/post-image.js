@@ -109,7 +109,8 @@
     const cardX = 70;
     const cardW = W - 140;
     const cardTop = y;
-    const cardH = tall ? 1080 : 640;
+    // A little shorter on the square post when the App Store badge needs room under it.
+    const cardH = post.store ? (tall ? 980 : 500) : (tall ? 1080 : 640);
     plate(ctx, cardX, cardTop, cardW, cardH, 48, '#ffffff');
     if (post.title) {
       ctx.font = `400 ${tall ? 56 : 46}px Lalezar, Tajawal, sans-serif`;
@@ -170,15 +171,28 @@
       ctx.setLineDash([]);
     }
 
-    // The call, the link and — for a picture — its credit.
-    y = cardTop + cardH + (tall ? 150 : 90);
+    // The call, then — while the game is on the store — Apple's badge, then the link.
+    y = cardTop + cardH + (post.store ? (tall ? 115 : 70) : (tall ? 150 : 80));
     ctx.fillStyle = INK;
-    ctx.font = `800 ${tall ? 64 : 50}px Tajawal, sans-serif`;
+    ctx.font = `800 ${tall ? 64 : 48}px Tajawal, sans-serif`;
     ctx.fillText(post.image ? 'ما هذا؟ الجواب في شبّك' : 'الجواب في شبّك', W / 2, y);
-    y += tall ? 95 : 70;
+    if (post.store && assets.badge) {
+      y += tall ? 80 : 55;
+      ctx.fillStyle = MUTED;
+      ctx.font = `700 ${tall ? 40 : 30}px Tajawal, sans-serif`;
+      ctx.fillText('حمّلها مجاناً من App Store', W / 2, y);
+      // Apple's own artwork, unchanged, at its own proportions (119.66 × 40).
+      const bh = tall ? 120 : 78;
+      const bw = bh * (119.66407 / 40);
+      y += tall ? 45 : 27;
+      ctx.drawImage(assets.badge, W / 2 - bw / 2, y, bw, bh);
+      y += bh + (tall ? 70 : 40);
+    } else {
+      y += tall ? 95 : 70;
+    }
     ctx.fillStyle = TEAL_DEEP;
     ctx.direction = 'ltr';
-    ctx.font = `800 ${tall ? 58 : 46}px Tajawal, sans-serif`;
+    ctx.font = `800 ${tall ? 50 : 34}px Tajawal, sans-serif`;
     ctx.fillText(post.site, W / 2, y);
     ctx.direction = 'rtl';
   }
@@ -197,9 +211,11 @@
     await Promise.all([
       document.fonts.load('400 60px Lalezar'), document.fonts.load('800 60px Tajawal'), document.fonts.load('600 30px Tajawal'),
     ].map((p) => p.catch(() => null)));
-    const [icon, picture] = await Promise.all([load('/assets/site/app-icon.png'), load(post.image)]);
+    const [icon, picture, badge] = await Promise.all([
+      load('/assets/site/app-icon.png'), load(post.image), post.store ? load('/assets/site/badge-app-store.svg') : null,
+    ]);
     for (const canvas of document.querySelectorAll('[data-post-canvas]')) {
-      draw(canvas, { icon, picture });
+      draw(canvas, { icon, picture, badge });
       offer(canvas, canvas.getAttribute('data-post-canvas'));
     }
   }

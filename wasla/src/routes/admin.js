@@ -836,7 +836,7 @@ export function adminRouter({
   if (titles) registerTitles(router, { titles });
   registerSettings(router, { appConfig, siteSettings, events, reports });
   registerPlayers(router, { players });
-  registerPost(router, { repo });
+  registerPost(router, { repo, siteSettings });
   if (profiles) registerProfiles(router, { profiles });
   if (profiles) registerBoards(router, { profiles });
   if (profiles) registerCatalogue(router, { db, profiles });
