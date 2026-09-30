@@ -66,9 +66,16 @@
                 <label class="form-check-label small fw-semibold" for="enabled">انشر تلقائياً كل يوم</label>
               </div>
               <div>
-                <label class="form-label small fw-semibold" for="times">الأوقات (GMT)</label>
-                <input class="form-control font-monospace" id="times" name="times" value="<%= times %>" placeholder="09:00, 18:00" dir="ltr" required>
-                <div class="form-text">وقت أو أكثر مفصولة بفاصلة، حتى ستة في اليوم. في كل وقت يُنشر سؤال بصورة من لغز منشور، لم يُنشر من قبل.</div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span class="form-label small fw-semibold m-0 me-auto">الأوقات (GMT) — حتى <%= maxTimes %> في اليوم</span>
+                  <button class="btn btn-sm btn-kd-outline" type="button" data-times-preset="<%= suggestedTimes.join(',') %>">اقترح <%= suggestedTimes.length %> أوقات</button>
+                </div>
+                <div class="wz-times" dir="ltr">
+                  <% for (let i = 0; i < maxTimes; i++) { %>
+                    <input class="form-control font-monospace" type="time" name="times" value="<%= schedule.times[i] || '' %>" aria-label="الوقت <%= i + 1 %>" data-time-slot>
+                  <% } %>
+                </div>
+                <div class="form-text">اترك ما لا تريده فارغاً. في كل وقت يُنشر سؤال بصورة من لغز منشور لم يُنشر من قبل. الأوقات المقترحة قبل ساعات لعب لاعبيك بقليل (المغرب GMT+1).</div>
               </div>
               <div>
                 <div class="form-label small fw-semibold">أين يُنشر</div>
@@ -171,4 +178,5 @@
     </div>
   </main>
 </div>
+<script src="/assets/js/autopost.js?v=<%= assetVersion %>"></script>
 <%- include('partials/foot') %>

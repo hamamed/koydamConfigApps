@@ -1,4 +1,11 @@
+import { MAX_TIMES } from '../autopost.js';
 import { TARGETS } from '../meta-publish.js';
+
+/**
+ * Five posts a day, each a little before one of the players' busy hours (GMT):
+ * morning, midday, the afternoon peak, and the evening.
+ */
+export const SUGGESTED_TIMES = Object.freeze(['09:00', '12:00', '15:00', '17:00', '20:00']);
 
 /**
  * «النشر التلقائي»: connecting the game's Facebook Page (and its Instagram), the
@@ -13,7 +20,8 @@ export function registerAutopost(router, { autopost, metaAccount }) {
       title: 'النشر التلقائي',
       meta: metaAccount.status(),
       schedule,
-      times: schedule.times.join(', '),
+      maxTimes: MAX_TIMES,
+      suggestedTimes: SUGGESTED_TIMES,
       targets: TARGETS,
       upcoming: autopost.upcoming(),
       history: autopost.history(),
@@ -46,7 +54,8 @@ export function registerAutopost(router, { autopost, metaAccount }) {
   router.post('/autopost/schedule', (req, res) => {
     const result = autopost.saveSchedule({
       enabled: on(req.body.enabled),
-      times: req.body.times,
+      // One field per time; the empty ones are the times not wanted.
+      times: [req.body.times ?? []].flat().join(','),
       targets: req.body.targets ?? [],
       showCredit: on(req.body.showCredit),
     });

@@ -15,6 +15,8 @@ import { createRepository } from '../src/repository.js';
 test('times are read as GMT hours, sorted, without repeats', () => {
   assert.deepEqual(readTimes('18:00, 9:30،18:00').times, ['09:30', '18:00']);
   assert.match(readTimes('').error, /وقتاً/);
+  assert.deepEqual(readTimes('20:00,,09:00,12:00,,').times, ['09:00', '12:00', '20:00'], 'six pickers, the empty ones skipped');
+  assert.match(readTimes(',,,,,').error, /وقتاً/);
   assert.match(readTimes('25:00').error, /25:00/);
   assert.match(readTimes('6pm').error, /6pm/);
   assert.match(readTimes('01:00 02:00 03:00 04:00 05:00 06:00 07:00').error, /6/);
