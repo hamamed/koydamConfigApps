@@ -37,6 +37,12 @@ test('starts from the contract defaults', () => {
       interstitial: { enabled: true, unitId: '', everyQuestions: 10, minSecondsBetween: 60, maxPerDay: 20 },
       rewarded: { enabled: true, unitId: '', coins: 50, maxPerDay: 5 },
       appOpen: { enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30 },
+      daily: {
+        enabled: false,
+        interstitial: { enabled: true, unitId: '', everyGames: 2, maxPerDay: 0, archive: false },
+        banner: { enabled: true, unitId: '' },
+        rewarded: { enabled: true, unitId: '', multiplier: 2 },
+      },
     },
   });
   assert.deepEqual(settings.get(), DEFAULT_CONFIG);
@@ -298,4 +304,45 @@ test('a config stored before app-open ads existed reads the default for them', (
   const ads = settings.get().ads;
   assert.equal(ads.enabled, true, 'the rest of the block survives');
   assert.deepEqual(ads.appOpen, DEFAULT_CONFIG.ads.appOpen);
+});
+
+test('لغز اليوم\'s adverts: saved before they existed reads as off, a unit left empty uses the main one, test mode covers them', async () => {
+  const { DEFAULT_CONFIG, configForApp, createAppConfig } = await import('../src/app-config.js');
+  const { openDatabase } = await import('../src/db/index.js');
+  const db = openDatabase(':memory:');
+  const appConfig = createAppConfig(db);
+  // An ads block from before: no daily at all.
+  const { daily: _unused, ...before } = DEFAULT_CONFIG.ads;
+  db.prepare("INSERT INTO settings (key, value) VALUES ('ads', ?)").run(JSON.stringify({
+    ...before, enabled: true,
+    interstitial: { ...before.interstitial, unitId: 'ca-app-pub-1111111111111111/1111111111' },
+    banner: { ...before.banner, unitId: 'ca-app-pub-1111111111111111/2222222222' },
+  }));
+  const stored = appConfig.get();
+  assert.equal(stored.ads.enabled, true, 'the rest of the block is kept');
+  assert.deepEqual(stored.ads.daily, DEFAULT_CONFIG.ads.daily);
+
+  const served = configForApp({ ...stored, ads: { ...stored.ads, daily: { ...stored.ads.daily, banner: { enabled: true, unitId: 'ca-app-pub-1111111111111111/3333333333' } } } });
+  assert.equal(served.ads.daily.interstitial.unitId, 'ca-app-pub-1111111111111111/1111111111', 'empty: the main unit');
+  assert.equal(served.ads.daily.banner.unitId, 'ca-app-pub-1111111111111111/3333333333', 'its own when typed');
+
+  const test = configForApp({ ...stored, ads: { ...stored.ads, testMode: true } });
+  assert.match(test.ads.daily.interstitial.unitId, /^ca-app-pub-3940256099942544\//);
+  assert.match(test.ads.daily.rewarded.unitId, /^ca-app-pub-3940256099942544\//);
+});
+
+test('لغز اليوم\'s numbers are checked like the rest', async () => {
+  const { DEFAULT_CONFIG, createAppConfig } = await import('../src/app-config.js');
+  const { openDatabase } = await import('../src/db/index.js');
+  const appConfig = createAppConfig(openDatabase(':memory:'));
+  const with_ = (daily) => ({ ...DEFAULT_CONFIG, ads: { ...DEFAULT_CONFIG.ads, daily: { ...DEFAULT_CONFIG.ads.daily, ...daily } } });
+  const bad = [
+    { interstitial: { ...DEFAULT_CONFIG.ads.daily.interstitial, everyGames: 0 } },
+    { interstitial: { ...DEFAULT_CONFIG.ads.daily.interstitial, everyGames: 11 } },
+    { rewarded: { ...DEFAULT_CONFIG.ads.daily.rewarded, multiplier: 1 } },
+    { banner: { enabled: true, unitId: 'not a unit' } },
+  ];
+  for (const daily of bad) assert.ok(appConfig.save(with_(daily)).error, JSON.stringify(daily));
+  assert.equal(appConfig.save(with_({ enabled: true })).error, undefined);
+  assert.equal(appConfig.get().ads.daily.enabled, true);
 });

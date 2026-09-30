@@ -1,7 +1,7 @@
 import { readAppStoreUrl, readPlayUrl, readSocialUrl } from '../site-settings.js';
 import {
   DEFAULT_CONFIG, IOS_TEST_ADS, MAX_ADS_EVERY_QUESTIONS, MAX_ADS_PER_DAY, MAX_ADS_SECONDS_BETWEEN,
-  MAX_AD_BACKGROUND_SECONDS,
+  MAX_AD_BACKGROUND_SECONDS, MAX_DAILY_AD_EVERY_GAMES, MAX_DAILY_REWARD_MULTIPLIER,
   MAX_REWARDED_COINS, MAX_REWARDED_PER_DAY, MAX_STARS_PER_LEVEL, MAX_STREAK_FREEZE_COST,
   MAX_WORD_SEARCH_HELP_COST, MAX_CROSSWORD_HELP_COST, REWARD_DAYS,
 } from '../app-config.js';
@@ -28,6 +28,8 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
     maxRewardedPerDay: MAX_REWARDED_PER_DAY,
     maxRewardedCoins: MAX_REWARDED_COINS,
     maxAdBackgroundSeconds: MAX_AD_BACKGROUND_SECONDS,
+    maxDailyAdEveryGames: MAX_DAILY_AD_EVERY_GAMES,
+    maxDailyRewardMultiplier: MAX_DAILY_REWARD_MULTIPLIER,
     testAds: IOS_TEST_ADS,
     ...(error ? { flash: { type: 'danger', message: error } } : {}),
   });
@@ -108,6 +110,22 @@ export function registerSettings(router, { appConfig, siteSettings, events = nul
           minSecondsBetween: body.adsAppOpenMinSeconds,
           maxPerDay: body.adsAppOpenMaxPerDay,
           minBackgroundSeconds: body.adsAppOpenMinBackground,
+        },
+        daily: {
+          enabled: body.adsDailyEnabled,
+          interstitial: {
+            enabled: body.adsDailyInterstitialEnabled,
+            unitId: body.adsDailyInterstitialUnitId,
+            everyGames: body.adsDailyInterstitialEvery,
+            maxPerDay: body.adsDailyInterstitialMaxPerDay,
+            archive: body.adsDailyInterstitialArchive,
+          },
+          banner: { enabled: body.adsDailyBannerEnabled, unitId: body.adsDailyBannerUnitId },
+          rewarded: {
+            enabled: body.adsDailyRewardedEnabled,
+            unitId: body.adsDailyRewardedUnitId,
+            multiplier: body.adsDailyRewardedMultiplier,
+          },
         },
       },
     };

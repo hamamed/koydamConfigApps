@@ -319,6 +319,85 @@
           </div>
         </div>
 
+        <% const daily = values.ads?.daily ?? defaults.ads.daily; %>
+        <div class="ad-card mt-3">
+          <div class="ad-card-head d-flex align-items-center gap-2">
+            <%- icon('calendar-days', 16) %>
+            <span class="fw-semibold me-auto">إعلانات لغز اليوم</span>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" role="switch" id="adsDailyEnabled" name="adsDailyEnabled" value="on" <% if (daily.enabled) { %>checked<% } %>>
+              <label class="form-check-label small fw-semibold" for="adsDailyEnabled">تشغيلها</label>
+            </div>
+          </div>
+          <div class="ad-card-body">
+            <p class="small kd-faint mb-3">
+              تعمل مع مفتاح الإعلانات العام أعلاه ووضع الاختبار. معرّف وحدة يُترك فارغاً يستعمل وحدة اللعبة من النوع نفسه —
+              والأفضل وحدات خاصة بلغز اليوم في AdMob ليظهر ربحه وحده. لا يُحسب وقت الإعلان من وقت اللاعب في المتصدرين.
+            </p>
+            <div class="row g-4">
+              <div class="col-lg-4">
+                <div class="d-grid gap-2">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="adsDailyInterstitialEnabled" name="adsDailyInterstitialEnabled" value="on" <% if (daily.interstitial.enabled) { %>checked<% } %>>
+                    <label class="form-check-label small fw-semibold" for="adsDailyInterstitialEnabled">إعلان بيني بين الألعاب</label>
+                  </div>
+                  <label class="small fw-semibold" for="adsDailyInterstitialUnitId">معرّف الوحدة البينية</label>
+                  <input class="form-control kd-mono" type="text" id="adsDailyInterstitialUnitId" name="adsDailyInterstitialUnitId" dir="ltr"
+                         value="<%= daily.interstitial.unitId %>" placeholder="فارغ = وحدة اللعبة البينية">
+                  <% [
+                       ['adsDailyInterstitialEvery', 'يظهر بعد كل كم لعبة منتهية', daily.interstitial.everyGames, defaults.ads.daily.interstitial.everyGames, 1, maxDailyAdEveryGames],
+                       ['adsDailyInterstitialMaxPerDay', 'حد أقصى في اليوم (٠ = بلا حد)', daily.interstitial.maxPerDay, defaults.ads.daily.interstitial.maxPerDay, 0, maxAdsPerDay],
+                     ].forEach(([name, label, value, fallback, min, max]) => { %>
+                    <div class="row g-2 align-items-center">
+                      <label class="col-sm-7 small fw-semibold" for="<%= name %>"><%= label %></label>
+                      <div class="col-sm-5">
+                        <input class="form-control" type="number" id="<%= name %>" name="<%= name %>" min="<%= min %>" max="<%= max %>" step="1" required value="<%= value %>">
+                        <div class="form-text">الافتراضي <%= fallback %></div>
+                      </div>
+                    </div>
+                  <% }) %>
+                  <label class="form-check m-0">
+                    <input class="form-check-input" type="checkbox" name="adsDailyInterstitialArchive" value="on" <% if (daily.interstitial.archive) { %>checked<% } %>>
+                    <span class="form-check-label small">وفي أيام الأرشيف أيضاً</span>
+                  </label>
+                  <div class="form-text">عند الرجوع إلى السلّم بعد لعبة منتهية. لا يظهر قبل أول لعبة، ولا عند نتيجة اليوم، ولا أثناء اللعب، ويحترم أقل مهلة بين إعلانين من الإعلان البيني أعلاه.</div>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="d-grid gap-2">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="adsDailyBannerEnabled" name="adsDailyBannerEnabled" value="on" <% if (daily.banner.enabled) { %>checked<% } %>>
+                    <label class="form-check-label small fw-semibold" for="adsDailyBannerEnabled">شريط أسفل صفحة لغز اليوم</label>
+                  </div>
+                  <label class="small fw-semibold" for="adsDailyBannerUnitId">معرّف وحدة الشريط</label>
+                  <input class="form-control kd-mono" type="text" id="adsDailyBannerUnitId" name="adsDailyBannerUnitId" dir="ltr"
+                         value="<%= daily.banner.unitId %>" placeholder="فارغ = وحدة شريط اللعبة">
+                  <div class="form-text">في صفحة السلّم وحدها، لا داخل الألعاب: الألعاب تحتاج الشاشة كلها.</div>
+                </div>
+              </div>
+              <div class="col-lg-4">
+                <div class="d-grid gap-2">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" role="switch" id="adsDailyRewardedEnabled" name="adsDailyRewardedEnabled" value="on" <% if (daily.rewarded.enabled) { %>checked<% } %>>
+                    <label class="form-check-label small fw-semibold" for="adsDailyRewardedEnabled">«ضاعف مكافأة اليوم» بفيديو</label>
+                  </div>
+                  <label class="small fw-semibold" for="adsDailyRewardedUnitId">معرّف وحدة الفيديو</label>
+                  <input class="form-control kd-mono" type="text" id="adsDailyRewardedUnitId" name="adsDailyRewardedUnitId" dir="ltr"
+                         value="<%= daily.rewarded.unitId %>" placeholder="فارغ = وحدة فيديو اللعبة">
+                  <div class="row g-2 align-items-center">
+                    <label class="col-sm-7 small fw-semibold" for="adsDailyRewardedMultiplier">مضاعفة المكافأة ×</label>
+                    <div class="col-sm-5">
+                      <input class="form-control" type="number" id="adsDailyRewardedMultiplier" name="adsDailyRewardedMultiplier" min="2" max="<%= maxDailyRewardMultiplier %>" step="1" required value="<%= daily.rewarded.multiplier %>">
+                      <div class="form-text">الافتراضي <%= defaults.ads.daily.rewarded.multiplier %></div>
+                    </div>
+                  </div>
+                  <div class="form-text">مرة في اليوم، بعد إنهاء لعبة اليوم: فيديو كامل يدفع عملات اليوم مرة أخرى (×٢ = المكافأة مضاعفة).</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex gap-2 mt-3">
           <button class="btn btn-kd-accent" type="submit">حفظ الإعدادات</button>
           <a class="btn btn-kd-ghost" href="/api/v1/config" target="_blank" rel="noopener">عرض JSON</a>

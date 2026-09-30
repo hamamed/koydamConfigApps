@@ -41,6 +41,19 @@ export const DEFAULT_CONFIG = Object.freeze({
     appOpen: Object.freeze({
       enabled: false, unitId: '', minSecondsBetween: 120, maxPerDay: 4, minBackgroundSeconds: 30,
     }),
+    // لغز اليوم's own adverts (contract §11.1), all quiet until switched on. A unit
+    // left empty uses the main one of its kind, so it can run before AdMob has a
+    // unit of its own for it.
+    daily: Object.freeze({
+      enabled: false,
+      // Back on the ladder after a finished game, every `everyGames` of them;
+      // never before the first, never on the day's result, never in a game.
+      interstitial: Object.freeze({ enabled: true, unitId: '', everyGames: 2, maxPerDay: 0, archive: false }),
+      // At the foot of the day's page, not inside the games.
+      banner: Object.freeze({ enabled: true, unitId: '' }),
+      // «ضاعف مكافأة اليوم»: once the day is done, a video pays its coins again.
+      rewarded: Object.freeze({ enabled: true, unitId: '', multiplier: 2 }),
+    }),
   }),
 });
 
@@ -58,6 +71,9 @@ export const MAX_ADS_EVERY_QUESTIONS = 100;
 export const MAX_ADS_SECONDS_BETWEEN = 3600;
 export const MAX_ADS_PER_DAY = 200;
 export const MAX_REWARDED_PER_DAY = 50;
+/** لغز اليوم: an interstitial every 1 to this many finished games, and a reward multiplied by 2 to this. */
+export const MAX_DAILY_AD_EVERY_GAMES = 10;
+export const MAX_DAILY_REWARD_MULTIPLIER = 5;
 export const MAX_REWARDED_COINS = 1000;
 /**
  * How long the app must have been away before a return is worth an advert.
@@ -207,10 +223,29 @@ const FIELDS = {
       maxPerDay: whole(open.maxPerDay, 0, MAX_ADS_PER_DAY),
       minBackgroundSeconds: whole(open.minBackgroundSeconds, 0, MAX_AD_BACKGROUND_SECONDS),
     };
+    // Saved before لغز اليوم had adverts: the default, as for appOpen above.
+    const d = v?.daily ?? DEFAULT_CONFIG.ads.daily;
+    const daily = {
+      enabled: flag(d.enabled),
+      interstitial: {
+        enabled: flag(d.interstitial?.enabled),
+        unitId: adUnit(d.interstitial?.unitId),
+        everyGames: whole(d.interstitial?.everyGames, 1, MAX_DAILY_AD_EVERY_GAMES),
+        maxPerDay: whole(d.interstitial?.maxPerDay, 0, MAX_ADS_PER_DAY),
+        archive: flag(d.interstitial?.archive),
+      },
+      banner: { enabled: flag(d.banner?.enabled), unitId: adUnit(d.banner?.unitId) },
+      rewarded: {
+        enabled: flag(d.rewarded?.enabled),
+        unitId: adUnit(d.rewarded?.unitId),
+        multiplier: whole(d.rewarded?.multiplier, 2, MAX_DAILY_REWARD_MULTIPLIER),
+      },
+    };
     const parts = [enabled, testMode, appId, ...Object.values(banner), ...Object.values(interstitial),
-      ...Object.values(rewarded), ...Object.values(appOpen)];
+      ...Object.values(rewarded), ...Object.values(appOpen), daily.enabled, ...Object.values(daily.interstitial),
+      ...Object.values(daily.banner), ...Object.values(daily.rewarded)];
     return parts.includes(null) ? null
-      : { enabled, testMode, appId, banner, interstitial, rewarded, appOpen };
+      : { enabled, testMode, appId, banner, interstitial, rewarded, appOpen, daily };
   },
 };
 
@@ -229,7 +264,8 @@ const MESSAGES = {
   crosswordCoins: `عملات الألغاز أعداد صحيحة من ٠ فأكثر، وسعر كل مساعدة من ٠ إلى ${MAX_CROSSWORD_HELP_COST}.`,
   ads: 'تحقّق من إعدادات الإعلانات: معرّف الوحدة يُكتب ca-app-pub-…/… أو يُترك فارغاً، '
     + `والفاصل من ١ إلى ${MAX_ADS_EVERY_QUESTIONS} سؤالاً، والمهلة من ٠ إلى ${MAX_ADS_SECONDS_BETWEEN} ثانية، `
-    + `والحد اليومي من ٠ إلى ${MAX_ADS_PER_DAY} (٠ = بلا حد)، وعملات الفيديو من ٠ إلى ${MAX_REWARDED_COINS}.`,
+    + `والحد اليومي من ٠ إلى ${MAX_ADS_PER_DAY} (٠ = بلا حد)، وعملات الفيديو من ٠ إلى ${MAX_REWARDED_COINS}، `
+    + `وإعلان لغز اليوم كل ١ إلى ${MAX_DAILY_AD_EVERY_GAMES} ألعاب، ومضاعفة المكافأة من ٢ إلى ${MAX_DAILY_REWARD_MULTIPLIER}.`,
 };
 
 /**
@@ -240,7 +276,15 @@ const MESSAGES = {
  */
 export function configForApp(config) {
   const ads = config?.ads;
-  if (!ads?.testMode) return config;
+  if (!ads) return config;
+  // لغز اليوم's units: its own where one is typed, else the main one of its kind.
+  const daily = ads.daily && {
+    ...ads.daily,
+    interstitial: { ...ads.daily.interstitial, unitId: ads.daily.interstitial.unitId || ads.interstitial.unitId },
+    banner: { ...ads.daily.banner, unitId: ads.daily.banner.unitId || ads.banner.unitId },
+    rewarded: { ...ads.daily.rewarded, unitId: ads.daily.rewarded.unitId || ads.rewarded.unitId },
+  };
+  if (!ads.testMode) return daily ? { ...config, ads: { ...ads, daily } } : config;
   return {
     ...config,
     ads: {
@@ -250,6 +294,14 @@ export function configForApp(config) {
       interstitial: { ...ads.interstitial, unitId: IOS_TEST_ADS.interstitial },
       rewarded: { ...ads.rewarded, unitId: IOS_TEST_ADS.rewarded },
       appOpen: { ...ads.appOpen, unitId: IOS_TEST_ADS.appOpen },
+      ...(daily ? {
+        daily: {
+          ...daily,
+          interstitial: { ...daily.interstitial, unitId: IOS_TEST_ADS.interstitial },
+          banner: { ...daily.banner, unitId: IOS_TEST_ADS.banner },
+          rewarded: { ...daily.rewarded, unitId: IOS_TEST_ADS.rewarded },
+        },
+      } : {}),
     },
   };
 }
