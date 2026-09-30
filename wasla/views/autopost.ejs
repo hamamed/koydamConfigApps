@@ -67,25 +67,30 @@
               </div>
               <div>
                 <div class="d-flex align-items-center gap-2 mb-2">
-                  <span class="form-label small fw-semibold m-0 me-auto">الأوقات (GMT) — حتى <%= maxTimes %> في اليوم</span>
-                  <button class="btn btn-sm btn-kd-outline" type="button" data-times-preset="<%= suggestedTimes.join(',') %>">اقترح <%= suggestedTimes.length %> أوقات</button>
+                  <span class="form-label small fw-semibold m-0 me-auto">الأوقات (GMT)، وما يُنشر في كل وقت — حتى <%= maxTimes %> في اليوم</span>
+                  <button class="btn btn-sm btn-kd-outline" type="button" data-slots-preset='<%- JSON.stringify(suggested).replace(/'/g, "&#39;") %>'>اقترح <%= suggested.length %> أوقات</button>
                 </div>
-                <div class="wz-times" dir="ltr">
-                  <% for (let i = 0; i < maxTimes; i++) { %>
-                    <input class="form-control font-monospace" type="time" name="times" value="<%= schedule.times[i] || '' %>" aria-label="الوقت <%= i + 1 %>" data-time-slot>
+                <% const kinds = { square: 'منشور', story: 'قصة', reel: 'ريل' };
+                   const networks = [['facebook', 'فيسبوك'], ['instagram', 'إنستغرام']]; %>
+                <div class="wz-slots">
+                  <% for (let i = 0; i < maxTimes; i++) { const slot = schedule.slots[i]; %>
+                    <div class="wz-slot" data-slot="<%= i %>">
+                      <input class="form-control font-monospace wz-slot-time" type="time" name="time<%= i %>" value="<%= slot ? slot.time : '' %>" aria-label="الوقت <%= i + 1 %>" dir="ltr" data-slot-time>
+                      <% networks.forEach(([network, name]) => { const noIg = network === 'instagram' && meta.connected && !meta.igUserId; %>
+                        <div class="wz-slot-group" role="group" aria-label="<%= name %> في الوقت <%= i + 1 %>">
+                          <span class="wz-slot-net"><%= name %><% if (noIg) { %> <span class="kd-faint">(لا حساب)</span><% } %></span>
+                          <% Object.entries(targets).filter(([, t]) => t.network === network).forEach(([key, t]) => { %>
+                            <input class="btn-check" type="checkbox" id="t<%= i %>-<%= key %>" name="targets<%= i %>" value="<%= key %>" autocomplete="off" data-slot-target <% if (slot && slot.targets.includes(key)) { %>checked<% } %>>
+                            <label class="btn btn-sm btn-kd-outline" for="t<%= i %>-<%= key %>"><%= kinds[t.size] %></label>
+                          <% }) %>
+                        </div>
+                      <% }) %>
+                    </div>
                   <% } %>
                 </div>
-                <div class="form-text">اترك ما لا تريده فارغاً. في كل وقت يُنشر سؤال بصورة من لغز منشور لم يُنشر من قبل. الأوقات المقترحة قبل ساعات لعب لاعبيك بقليل (المغرب GMT+1).</div>
-              </div>
-              <div>
-                <div class="form-label small fw-semibold">أين يُنشر</div>
-                <div class="d-flex flex-wrap gap-3">
-                  <% Object.entries(targets).forEach(([key, t]) => { const needsIg = t.network === 'instagram' && meta.connected && !meta.igUserId; %>
-                    <label class="form-check m-0">
-                      <input class="form-check-input" type="checkbox" name="targets" value="<%= key %>" <% if (schedule.targets.includes(key)) { %>checked<% } %>>
-                      <span class="form-check-label small"><%= t.label %><% if (needsIg) { %> <span class="kd-faint">(لا حساب)</span><% } %></span>
-                    </label>
-                  <% }) %>
+                <div class="form-text">
+                  اترك الوقت فارغاً إن لم تُرده. في كل وقت يُنشر سؤال بصورة من لغز منشور لم يُنشر من قبل، في ما اخترته له.
+                  المقترح: القصص كثيراً، والريلز مرتين، ومنشور إنستغرام مرة واحدة وقت الذروة — منشورات كثيرة في اليوم تُنقص المتابعين. (المغرب GMT+1)
                 </div>
               </div>
               <label class="form-check m-0">

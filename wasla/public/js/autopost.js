@@ -1,16 +1,20 @@
 /*
- * «النشر التلقائي»: «اقترح» fills the time pickers with the suggested times,
- * in order, and empties the rest.
+ * «النشر التلقائي»: «اقترح» fills the rows with the suggested times and the
+ * places each one posts to, and empties the rows left over.
  */
 (function () {
   'use strict';
 
-  const preset = document.querySelector('[data-times-preset]');
+  const preset = document.querySelector('[data-slots-preset]');
   if (!preset) return;
   preset.addEventListener('click', () => {
-    const times = preset.getAttribute('data-times-preset').split(',');
-    document.querySelectorAll('[data-time-slot]').forEach((input, i) => {
-      input.value = times[i] || '';
+    const slots = JSON.parse(preset.getAttribute('data-slots-preset'));
+    document.querySelectorAll('[data-slot]').forEach((row, i) => {
+      const slot = slots[i];
+      row.querySelector('[data-slot-time]').value = slot ? slot.time : '';
+      row.querySelectorAll('[data-slot-target]').forEach((box) => {
+        box.checked = Boolean(slot && slot.targets.includes(box.value));
+      });
     });
   });
 })();

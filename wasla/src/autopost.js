@@ -26,7 +26,42 @@ const DAY_MS = 86_400_000;
 const SETTING = 'autopost';
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-export const DEFAULT_SCHEDULE = { enabled: false, times: ['18:00'], targets: Object.keys(TARGETS), showCredit: true };
+/** One time of the day and where it posts. */
+const slotOf = (time, targets) => ({ time, targets: Object.keys(TARGETS).filter((t) => targets.includes(t)) });
+
+export const DEFAULT_SCHEDULE = Object.freeze({
+  enabled: false, slots: [slotOf('18:00', Object.keys(TARGETS))], showCredit: true,
+});
+
+/** A schedule as the app reads it: its slots, and the times and places they add up to. */
+function withTotals(schedule) {
+  const slots = [...schedule.slots].sort((a, b) => a.time.localeCompare(b.time));
+  const targets = Object.keys(TARGETS).filter((t) => slots.some((s) => s.targets.includes(t)));
+  return { ...schedule, slots, times: slots.map((s) => s.time), targets };
+}
+
+/**
+ * The panel's rows — `[{ time, targets }]`, a row with no time being one not
+ * used — as slots, or `{ error }`. A time kept must post somewhere, and each
+ * time once.
+ */
+export function readSlots(rows) {
+  const slots = [];
+  for (const row of rows) {
+    const raw = String(row?.time ?? '').trim();
+    if (!raw) continue;
+    const read = readTimes(raw);
+    if (read.error) return { error: read.error };
+    const [time] = read.times;
+    if (slots.some((s) => s.time === time)) return { error: `الوقت ${time} مكتوب مرتين.` };
+    const targets = [row.targets ?? []].flat().filter((t) => t in TARGETS);
+    if (!targets.length) return { error: `اختر أين يُنشر في ${time}: منشور أو قصة أو ريل.` };
+    slots.push(slotOf(time, targets));
+  }
+  if (!slots.length) return { error: 'اكتب وقتاً واحداً على الأقل، مثل 18:00.' };
+  if (slots.length > MAX_TIMES) return { error: `${MAX_TIMES} أوقات في اليوم على الأكثر.` };
+  return { slots };
+}
 
 /** "18:00, 9:30" → ["09:30", "18:00"], or `{ error }`. */
 export function readTimes(raw) {
@@ -97,29 +132,37 @@ export function createAutopost(db, {
 
   function schedule() {
     const row = readSetting.get(SETTING);
-    if (!row) return { ...DEFAULT_SCHEDULE };
+    if (!row) return withTotals(DEFAULT_SCHEDULE);
     try {
       const saved = JSON.parse(row.value);
-      return {
-        enabled: Boolean(saved.enabled),
-        times: Array.isArray(saved.times) ? saved.times.filter((t) => TIME.test(t)) : DEFAULT_SCHEDULE.times,
-        targets: Array.isArray(saved.targets) ? saved.targets.filter((t) => t in TARGETS) : DEFAULT_SCHEDULE.targets,
-        showCredit: saved.showCredit !== false,
-      };
+      // Saved before each time had places of its own: every time posts where the one list said.
+      const slots = Array.isArray(saved.slots)
+        ? saved.slots.filter((s) => TIME.test(s?.time)).map((s) => slotOf(s.time, Array.isArray(s.targets) ? s.targets : []))
+        : (Array.isArray(saved.times) ? saved.times : []).filter((t) => TIME.test(t))
+          .map((t) => slotOf(t, Array.isArray(saved.targets) ? saved.targets : Object.keys(TARGETS)));
+      return withTotals({ enabled: Boolean(saved.enabled), slots, showCredit: saved.showCredit !== false });
     } catch {
-      return { ...DEFAULT_SCHEDULE };
+      return withTotals(DEFAULT_SCHEDULE);
     }
   }
 
-  /** Saves the panel's form: `{ schedule }` or `{ error }`. */
-  function saveSchedule({ enabled, times, targets, showCredit }) {
-    const read = readTimes(times);
+  /**
+   * Saves the panel's form: `{ schedule }` or `{ error }`. Takes the rows
+   * (`slots: [{ time, targets }]`), or one list of `times` all posting to the
+   * same `targets`.
+   */
+  function saveSchedule({ enabled, slots, times, targets, showCredit }) {
+    let rows = slots;
+    if (!rows) {
+      const read = readTimes(times);
+      if (read.error) return { error: read.error };
+      rows = read.times.map((time) => ({ time, targets }));
+    }
+    const read = readSlots(rows);
     if (read.error) return { error: read.error };
-    const chosen = [targets].flat().filter((t) => t in TARGETS);
-    if (enabled && !chosen.length) return { error: 'اختر أين يُنشر: منشور أو قصة على فيسبوك أو إنستغرام.' };
-    const next = { enabled: Boolean(enabled), times: read.times, targets: chosen, showCredit: Boolean(showCredit) };
+    const next = { enabled: Boolean(enabled), slots: read.slots, showCredit: Boolean(showCredit) };
     writeSetting.run(SETTING, JSON.stringify(next));
-    return { schedule: next };
+    return { schedule: withTotals(next) };
   }
 
   const picturePath = (question) => path.join(imagesDir, path.basename(question.imageFile));
@@ -234,10 +277,13 @@ export function createAutopost(db, {
     try {
       removeOldFiles();
       const current = schedule();
-      if (!current.enabled || !current.targets.length || !account.status().connected) return;
+      if (!current.enabled || !current.slots.length || !account.status().connected) return;
       for (const slot of slotsDue(now(), current.times)) {
         if (slotRows.get(slot).n) continue;
-        const outcome = await runSlot(slot, { targets: current.targets, showCredit: current.showCredit });
+        // "2026-09-28 18:00": the places are the ones set for 18:00.
+        const targets = current.slots.find((s) => s.time === slot.slice(11))?.targets ?? [];
+        if (!targets.length) continue;
+        const outcome = await runSlot(slot, { targets, showCredit: current.showCredit });
         if (outcome.error) log.error?.(`Autopost ${slot}: ${outcome.error}`);
       }
     } catch (err) {

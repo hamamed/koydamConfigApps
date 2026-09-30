@@ -1323,6 +1323,10 @@ html { scrollbar-gutter: stable; }
 .wz-post-figure figcaption { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .85rem; font-weight: 700; color: var(--kd-muted); }
 @media (max-width: 767.98px) { .wz-post-previews { grid-template-columns: 1fr; } }
 
-/* «النشر التلقائي»: one picker per time, three to a row. */
-.wz-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
-@media (max-width: 575.98px) { .wz-times { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* «النشر التلقائي»: a row per time — its picker, then what Facebook and Instagram post then. */
+.wz-slots { display: grid; gap: .5rem; }
+.wz-slot { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .9rem; padding: .5rem .6rem; border-radius: var(--kd-radius-sm); background: var(--wz-board-1); }
+.wz-slot-time { width: 7.5rem; flex: none; }
+.wz-slot-group { display: flex; align-items: center; gap: .3rem; }
+.wz-slot-net { font-size: .8rem; font-weight: 800; color: var(--kd-muted); margin-inline-end: .15rem; }
+.wz-slot-group .btn { padding: .15rem .6rem; }

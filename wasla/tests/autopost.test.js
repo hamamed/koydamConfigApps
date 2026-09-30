@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 
-import { createAutopost, nextSlot, readTimes, slotsDue } from '../src/autopost.js';
+import { createAutopost, nextSlot, readSlots, readTimes, slotsDue } from '../src/autopost.js';
 import { openDatabase } from '../src/db/index.js';
 import { checkToken, createMetaAccount } from '../src/meta-account.js';
 import { createMetaClient, MetaError, TARGETS } from '../src/meta-publish.js';
@@ -329,7 +329,49 @@ test('the schedule refuses bad times, and switching on with nowhere to post', ()
   const s = setup();
   assert.ok(s.autopost.saveSchedule({ enabled: true, times: 'soon', targets: ['facebook_post'] }).error);
   assert.ok(s.autopost.saveSchedule({ enabled: true, times: '18:00', targets: [] }).error);
-  assert.deepEqual(s.autopost.saveSchedule({ enabled: false, times: '20:00', targets: ['bogus', 'instagram_post'], showCredit: true }).schedule,
-    { enabled: false, times: ['20:00'], targets: ['instagram_post'], showCredit: true });
+  const saved = s.autopost.saveSchedule({ enabled: false, times: '20:00', targets: ['bogus', 'instagram_post'], showCredit: true }).schedule;
+  assert.deepEqual(saved.slots, [{ time: '20:00', targets: ['instagram_post'] }]);
   assert.deepEqual(s.autopost.schedule().times, ['20:00']);
+});
+
+test('each time posts where it was told to, and only there', async () => {
+  const s = setup({ clock: '2026-09-28T09:05:00Z' });
+  assert.equal(s.autopost.saveSchedule({
+    enabled: true, showCredit: true,
+    slots: [
+      { time: '09:00', targets: ['facebook_post', 'instagram_story'] },
+      { time: '20:00', targets: ['instagram_reel'] },
+      { time: '', targets: ['facebook_post'] },
+    ],
+  }).error, undefined);
+  await s.autopost.tick();
+  assert.deepEqual(s.posted.map((p) => p.target), ['facebook_post', 'instagram_story']);
+  assert.equal(s.reels.length, 0, 'no reel made for a time that posts none');
+  s.setNow('2026-09-28T20:01:00Z');
+  await s.autopost.tick();
+  assert.deepEqual(s.posted.map((p) => p.target), ['facebook_post', 'instagram_story', 'instagram_reel']);
+  assert.deepEqual(s.autopost.schedule().targets, ['facebook_post', 'instagram_story', 'instagram_reel'], 'posting by hand goes everywhere a time does');
+});
+
+test('the rows: a kept time must post somewhere, each time once, empty rows skipped', () => {
+  assert.deepEqual(readSlots([{ time: '9:00', targets: ['facebook_reel', 'facebook_post'] }, { time: '' }]).slots,
+    [{ time: '09:00', targets: ['facebook_post', 'facebook_reel'] }]);
+  assert.match(readSlots([{ time: '09:00', targets: [] }]).error, /09:00/);
+  assert.match(readSlots([{ time: '09:00', targets: ['facebook_post'] }, { time: '09:00', targets: ['instagram_post'] }]).error, /مرتين/);
+  assert.match(readSlots([{ time: '', targets: ['facebook_post'] }]).error, /وقتاً/);
+  assert.match(readSlots([{ time: '26:00', targets: ['facebook_post'] }]).error, /26:00/);
+});
+
+test('a schedule saved before each time had its own places reads as every time posting everywhere it said', () => {
+  const s = setup();
+  s.db.prepare("INSERT INTO settings (key, value) VALUES ('autopost', ?)").run(JSON.stringify({
+    enabled: true, times: ['18:00', '09:00'], targets: ['facebook_story', 'instagram_story'], showCredit: false,
+  }));
+  const schedule = s.autopost.schedule();
+  assert.deepEqual(schedule.slots, [
+    { time: '09:00', targets: ['facebook_story', 'instagram_story'] },
+    { time: '18:00', targets: ['facebook_story', 'instagram_story'] },
+  ]);
+  assert.equal(schedule.showCredit, false);
+  assert.equal(schedule.enabled, true);
 });

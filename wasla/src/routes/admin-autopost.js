@@ -2,10 +2,17 @@ import { MAX_TIMES } from '../autopost.js';
 import { TARGETS } from '../meta-publish.js';
 
 /**
- * Five posts a day, each a little before one of the players' busy hours (GMT):
- * morning, midday, the afternoon peak, and the evening.
+ * Five posts a day, each a little before one of the players' busy hours (GMT),
+ * each with its own places: stories often, reels twice, three Facebook posts,
+ * and one Instagram post, at the peak — a feed that posts all day loses followers.
  */
-export const SUGGESTED_TIMES = Object.freeze(['09:00', '12:00', '15:00', '17:00', '20:00']);
+export const SUGGESTED_SLOTS = Object.freeze([
+  { time: '09:00', targets: ['facebook_post', 'facebook_story', 'instagram_story'] },
+  { time: '12:00', targets: ['facebook_story', 'instagram_story', 'facebook_reel'] },
+  { time: '15:00', targets: ['facebook_post', 'instagram_reel'] },
+  { time: '17:00', targets: ['facebook_post', 'instagram_post', 'facebook_story', 'instagram_story'] },
+  { time: '20:00', targets: ['facebook_reel', 'instagram_reel', 'facebook_story', 'instagram_story'] },
+]);
 
 /**
  * «النشر التلقائي»: connecting the game's Facebook Page (and its Instagram), the
@@ -21,7 +28,7 @@ export function registerAutopost(router, { autopost, metaAccount }) {
       meta: metaAccount.status(),
       schedule,
       maxTimes: MAX_TIMES,
-      suggestedTimes: SUGGESTED_TIMES,
+      suggested: SUGGESTED_SLOTS,
       targets: TARGETS,
       upcoming: autopost.upcoming(),
       history: autopost.history(),
@@ -54,9 +61,8 @@ export function registerAutopost(router, { autopost, metaAccount }) {
   router.post('/autopost/schedule', (req, res) => {
     const result = autopost.saveSchedule({
       enabled: on(req.body.enabled),
-      // One field per time; the empty ones are the times not wanted.
-      times: [req.body.times ?? []].flat().join(','),
-      targets: req.body.targets ?? [],
+      // One row per time — `time0` and its `targets0` boxes — the empty ones not wanted.
+      slots: Array.from({ length: MAX_TIMES }, (_, i) => ({ time: req.body[`time${i}`], targets: req.body[`targets${i}`] ?? [] })),
       showCredit: on(req.body.showCredit),
     });
     if (result.error) {
