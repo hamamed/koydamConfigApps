@@ -1330,3 +1330,35 @@ html { scrollbar-gutter: stable; }
 .wz-slot-group { display: flex; align-items: center; gap: .3rem; }
 .wz-slot-net { font-size: .8rem; font-weight: 800; color: var(--kd-muted); margin-inline-end: .15rem; }
 .wz-slot-group .btn { padding: .15rem .6rem; }
+
+/* ---------------------------------------------------------- ملاحظاتي ----- */
+
+/* The note under the header of every page: a gold plate like the game's own,
+   one line when closed, the whole text when open. */
+.wz-note {
+  /* The same side gutter as the page's content, so it lines up with the cards under it. */
+  margin: .75rem clamp(1rem, 2.5vw, 1.75rem) 0;
+  background: var(--wz-gold-light);
+  border: var(--wz-line) solid var(--wz-ink);
+  border-radius: var(--kd-radius-sm);
+  box-shadow: 0 var(--wz-ledge) 0 var(--wz-ink);
+}
+.wz-note-bar {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .45rem .8rem; border: 0; background: none; color: var(--wz-ink);
+  font: inherit; text-align: start; cursor: pointer;
+}
+.wz-note-title { font-weight: 800; flex: none; }
+.wz-note-preview { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--kd-muted); font-weight: 600; }
+.wz-note.is-open .wz-note-preview { visibility: hidden; }
+.wz-note-state { flex: none; font-size: .8rem; font-weight: 700; color: var(--wz-teal-deep); }
+.wz-note-chevron { flex: none; display: inline-flex; transition: transform var(--kd-fast) var(--kd-ease); }
+.wz-note.is-open .wz-note-chevron { transform: rotate(180deg); }
+.wz-note-body { padding: 0 .8rem .7rem; }
+.wz-note-text {
+  display: block; width: 100%; min-height: 5.5rem; resize: none; overflow: hidden;
+  padding: .6rem .75rem; border: var(--wz-line) solid var(--wz-ink); border-radius: var(--kd-radius-sm);
+  background: var(--wz-paper); color: var(--wz-ink); font: inherit; font-weight: 600; line-height: 1.7;
+}
+.wz-note-text:focus-visible { outline: 3px solid var(--wz-teal); outline-offset: 1px; }
+@media (max-width: 991.98px) { .wz-note { margin: .6rem .75rem 0; } }

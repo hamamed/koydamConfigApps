@@ -19,6 +19,7 @@ import { createAudioImport } from './audio-import.js';
 import { createReports } from './reports.js';
 import { config } from './config.js';
 import { createPanelIcons } from './panel-icons.js';
+import { createPanelNote } from './panel-note.js';
 import { createDaily } from './daily.js';
 import { createBubblePictures } from './bubble-pictures.js';
 import { createDailyGames } from './daily-games.js';
@@ -76,6 +77,7 @@ const lab = createLab(db);
 const dailyGames = createDailyGames(db, { appConfig, wordSearch, wordSearchDays, pictures, lab });
 const profiles = createProfiles(db);
 const titles = createTitles(db);
+const panelNote = createPanelNote(db);
 const appBuilds = createAppBuilds(db, { siteHost: new URL(config.siteBase).hostname });
 const metaClient = createMetaClient();
 const metaAccount = createMetaAccount(db, { dir: config.metaDir, client: metaClient });
@@ -165,7 +167,7 @@ app.use(flash);
 app.use(loadUser);
 
 app.use('/admin', adminRouter({
-  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles, autopost, metaAccount, appBuilds,
+  repo, images, audio, audioClips, audioImport, reports, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures, lab, profiles, titles, autopost, metaAccount, appBuilds, panelNote,
 }));
 // The landing page. It answers `/`, which used to bounce everyone to the panel.
 app.use(siteRouter({ assetVersion: config.assetVersion, siteSettings, repo, dailyGames }));

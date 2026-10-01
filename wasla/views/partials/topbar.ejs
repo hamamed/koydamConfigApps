@@ -19,3 +19,19 @@
     <% if (typeof actions !== 'undefined' && actions) { %><%- actions %><% } %>
   </div>
 </header>
+<% if (typeof panelNote !== 'undefined' && panelNote) { %>
+  <%# «ملاحظاتي»: one note under the header of every page; it opens to type in and saves itself. %>
+  <section class="wz-note" data-note data-note-csrf="<%= csrfToken %>" aria-label="ملاحظاتي">
+    <button class="wz-note-bar" type="button" data-note-toggle aria-expanded="false" aria-controls="wzNoteBody">
+      <%- icon('sticky-note', 16) %>
+      <span class="wz-note-title">ملاحظاتي</span>
+      <span class="wz-note-preview" data-note-preview dir="auto"><%= panelNote.text.split('\n').find((line) => line.trim()) || 'اكتب هنا ما تريد أن تتذكّره…' %></span>
+      <span class="wz-note-state" data-note-state aria-live="polite"></span>
+      <span class="wz-note-chevron"><%- icon('chevron-down', 16) %></span>
+    </button>
+    <div class="wz-note-body" id="wzNoteBody" hidden>
+      <textarea class="wz-note-text" data-note-text dir="auto" rows="4" maxlength="<%= maxNoteLength %>"
+                placeholder="اكتب هنا ما تريد أن تتذكّره أو تفعله… يُحفظ وحده ويظهر في كل الصفحات." aria-label="نص الملاحظة"><%= panelNote.text %></textarea>
+    </div>
+  </section>
+<% } %>

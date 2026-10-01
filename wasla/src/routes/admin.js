@@ -25,6 +25,7 @@ import { registerNotifications } from './admin-notifications.js';
 import { HELP_LABELS, registerPlayers } from './admin-players.js';
 import { registerAutopost } from './admin-autopost.js';
 import { registerPost } from './admin-post.js';
+import { MAX_NOTE_LENGTH } from '../panel-note.js';
 import { barChart } from '../charts.js';
 import { registerBoards } from './admin-boards.js';
 import { registerCatalogue } from './admin-catalogue.js';
@@ -62,7 +63,7 @@ const DAILY_GAME_LABELS = Object.freeze({
 });
 
 export function adminRouter({
-  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null, autopost = null, metaAccount = null, appBuilds = null,
+  repo, images, audio, audioClips = null, audioImport = null, reports = null, appConfig, events, pendingImports, siteSettings, devices, notifications, apnsCredentials, players, wordSearch, wordSearchDays, dailyGames, pictures = null, lab = null, profiles, titles = null, autopost = null, metaAccount = null, appBuilds = null, panelNote = null,
 }) {
   const router = express.Router();
 
@@ -120,6 +121,9 @@ export function adminRouter({
     // by definition has nobody signed in — draws the Lucide outline instead.
     res.locals.icon = (name, size) => (req.user ? icons.markup(name, size) : icons.lucide(name, size));
     res.locals.pageIcon = pageIconFor(req.path);
+    // «ملاحظاتي», under the header of every page — for whoever is signed in.
+    res.locals.panelNote = req.user && panelNote ? panelNote.get() : null;
+    res.locals.maxNoteLength = MAX_NOTE_LENGTH;
     next();
   });
 
@@ -158,6 +162,14 @@ export function adminRouter({
   });
 
   router.use(requireAuth);
+
+  // «ملاحظاتي»: saved as it is typed, from any page.
+  router.post('/note', (req, res) => {
+    if (!panelNote) return res.status(404).json({ error: 'Notes are not available.' });
+    const result = panelNote.save(req.body?.text, req.user?.username ?? null);
+    if (result.error) return res.status(400).json({ error: result.error });
+    return res.json({ ok: true, updatedAt: result.note.updatedAt });
+  });
 
   /**
    * The panel's icons. Behind the sign-in on purpose: the pack may be used in a
