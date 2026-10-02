@@ -14,7 +14,8 @@
     "seed": "node src/db/seed.js",
     "create-admin": "node src/db/create-admin.js",
     "backfill-colors": "node src/db/backfill-colors.js",
-    "regenerate-previews": "node src/db/regenerate-previews.js"
+    "regenerate-previews": "node src/db/regenerate-previews.js",
+    "import-skins": "node src/db/import-skins.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
