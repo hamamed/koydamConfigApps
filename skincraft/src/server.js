@@ -15,6 +15,7 @@ import { ensureStorageDirs } from './services/images.js';
 import { apiRouter } from './routes/api.js';
 import { shareRouter } from './routes/share.js';
 import { adminRouter } from './routes/admin.js';
+import { internalRouter } from './routes/internal.js';
 import { formatBytes, formatNumber, formatDate, timeAgo, sparklinePath } from './utils/format.js';
 
 migrate();
@@ -67,6 +68,8 @@ app.use(compression());
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 app.use(express.urlencoded({ extended: false, limit: '256kb' }));
 app.use(express.json({ limit: '256kb' }));
+// The control panel's door, on the local port only; it has its own check and takes no cookie.
+app.use('/internal', internalRouter);
 
 app.use(
   session({
