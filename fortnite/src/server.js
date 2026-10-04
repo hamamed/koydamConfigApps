@@ -11,6 +11,7 @@ import morgan from 'morgan';
 import { config } from './config.js';
 import { migrate } from './db/index.js';
 import { adminRouter } from './routes/admin.js';
+import { internalRouter } from './routes/internal.js';
 import { errorHandler, notFound } from './middleware/errors.js';
 import { loadUser, flash } from './middleware/auth.js';
 import { SqliteSessionStore } from './middleware/session-store.js';
@@ -32,6 +33,9 @@ app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 app.use(compression());
 app.use(express.json({ limit: '256kb' }));
+// The control panel's door, on the local port only. Before sessions and the
+// admin router on purpose: it has its own check and takes no cookie.
+app.use('/internal', internalRouter);
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 
 // Public and read-only, so any origin may call it. The catalogue is a mirror of
