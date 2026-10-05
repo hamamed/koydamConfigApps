@@ -49,7 +49,9 @@ LockPersonality=true
 
 # ProtectSystem=strict makes everything read-only; the app writes
 # data/brawler-meta.json, so that one path needs an exception.
-ReadWritePaths=/opt/brawl-vps/data
+# The gallery too: the panel adds and removes wallpapers there. Without it
+# every upload fails with EROFS (read-only file system).
+ReadWritePaths=/opt/brawl-vps/data /opt/brawl-vps/wallpapers
 
 [Install]
 WantedBy=multi-user.target
