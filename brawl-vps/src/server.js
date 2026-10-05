@@ -16,6 +16,7 @@ import { metaHistoryRouter } from './routes/meta_history.js';
 import { analyticsRouter } from './routes/analytics.js';
 import { wallpapersRouter, WALLPAPER_ROOT } from './routes/wallpapers.js';
 import { legalRouter } from './routes/legal.js';
+import { internalRouter } from './routes/internal.js';
 import { adminRouter } from './routes/admin.js';
 import { runMigrations } from './db/migrate.js';
 import { closePool, dbHealth } from './db/pool.js';
@@ -139,6 +140,10 @@ app.get('/health', async (req, res) => {
 // Mounted before the API-key gate: the panel has its own, stronger auth, and
 // requiring both would mean pasting two secrets into a browser URL.
 app.use(adminRouter);
+
+// The control panel's local-only routes (see internal-auth.js). Ahead of the
+// API-key gate: they carry their own token and never come through nginx.
+app.use('/internal', internalRouter);
 
 // Public and ahead of the API-key gate: App Store Connect requires a privacy
 // policy at a URL a reviewer can open in a browser, and a page that demands a

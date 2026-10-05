@@ -5,27 +5,13 @@ import { fileURLToPath } from 'node:url';
 import express, { Router } from 'express';
 import multer from 'multer';
 
-import { config } from '../config.js';
+import { log } from '../log.js';
 import { requirePlatformAuth } from '../platform-auth.js';
 import { scanGallery, WALLPAPER_ROOT } from './wallpapers.js';
 import { deleteWallpaper, MAX_BYTES, storeWallpaper } from '../wallpapers/store.js';
 import { cacheDel } from '../cache/store.js';
-import { dbHealth } from '../db/pool.js';
-import {
-  latestStandings,
-  panelSummary,
-  recentRuns,
-  tableSizes,
-  topMovers,
-  universeStats,
-} from '../db/meta_repo.js';
-import {
-  browsableTables,
-  browseTable,
-  tableCounts,
-} from '../db/browse_repo.js';
-import { currentSourceName } from '../db/source.js';
-import { metaStats } from '../transform/brawler_meta.js';
+import { browseTable } from '../db/browse_repo.js';
+import { panelData } from '../panel-data.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PANEL_DIR = path.join(HERE, '..', 'panel');
@@ -168,52 +154,13 @@ adminRouter.get('/admin', (_req, res) => {
  * dashboard where the counters and the run list disagree.
  */
 adminRouter.get('/admin/data', async (req, res) => {
-  const [db, summary, runs, standings, movers, sizes, universe, counts] =
-    await Promise.all([
-      dbHealth(),
-      panelSummary(),
-      recentRuns(15),
-      latestStandings(25),
-      topMovers({ days: 7, limit: 8 }),
-      tableSizes(),
-      universeStats(),
-      tableCounts(),
-    ]);
-
   res.json({
-    now: new Date().toISOString(),
+    ...(await panelData()),
     // Who is signed in, for the topbar chip. The panel sits behind the platform
     // login and had no way to say whose session it was rendering under.
     user: req.platformUser
       ? { email: req.platformUser.email, role: req.platformUser.role }
       : null,
-    db,
-    crawler: {
-      enabled: config.crawler.enabled,
-      intervalMinutes: config.crawler.intervalMinutes,
-      playersPerRegion: config.crawler.playersPerRegion,
-      regions: config.crawler.regions,
-      minSampleSize: config.crawler.minSampleSize,
-    },
-    brawlerMeta: metaStats(),
-    // Which record the meta screens are being served from. The switchover is
-    // automatic, so without this there is no way to tell whether it happened.
-    analyticsSource: currentSourceName(),
-    summary,
-    runs: runs ?? [],
-    standings: standings ?? [],
-    movers: movers ?? [],
-    sizes: sizes ?? [],
-    universe,
-    tables: browsableTables(),
-    counts,
-    discovery: {
-      perCycle: config.crawler.discoveryPerCycle,
-      searchedPerCycle: config.crawler.searchedPerCycle,
-      profilesPerCycle: config.crawler.profilesPerCycle,
-      retentionDays: config.postgres.retentionDays,
-      battleRetentionDays: config.postgres.battleRetentionDays,
-    },
   });
 });
 
