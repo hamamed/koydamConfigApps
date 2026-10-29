@@ -18,7 +18,7 @@ import { derivePreview, dominantColor, storePreview, storeTemplate } from '../se
 import * as reports from '../services/reports.js';
 import {
   allTags, createSkin, deleteSkin, getSkin, listSkins, logAudit, toAdminShape,
-  toggleFeatured, togglePublished, updateSkin,
+  toggleFeatured, setLocked, togglePublished, updateSkin,
 } from '../services/skins.js';
 import * as stats from '../services/stats.js';
 import { generateSkinId, parseTags, slugify } from '../utils/ids.js';
@@ -158,6 +158,15 @@ internalRouter.post('/skins/:id/feature', (req, res) => {
   if (featured === null) return fail(res, 404, 'No such skin.');
   logAudit(null, featured ? 'skin.feature' : 'skin.unfeature', req.params.id, actor(req));
   return ok(res, { featured });
+});
+
+// A checkbox in the panel, so the state is set, never flipped: a double click must not undo it.
+internalRouter.post('/skins/:id/lock', (req, res) => {
+  const locked = req.body?.locked === true;
+  const result = setLocked(req.params.id, locked);
+  if (result === null) return fail(res, 404, 'No such skin.');
+  logAudit(null, locked ? 'skin.lock' : 'skin.unlock', req.params.id, actor(req));
+  return ok(res, { locked: result });
 });
 
 internalRouter.post('/skins/:id/publish', (req, res) => {

@@ -51,6 +51,7 @@ export function toApiShape(row, tags) {
     preview_url: previewUrl,
     template_url: templateUrl,
     is_featured: Boolean(row.is_featured),
+    is_locked: Boolean(row.is_locked),
     tags: tags || [],
     color_hex: row.color_hex || null,
   };
@@ -63,6 +64,7 @@ export function toAdminShape(row, tags) {
     ...row,
     isFeatured: Boolean(row.is_featured),
     isPublished: Boolean(row.is_published),
+    isLocked: Boolean(row.is_locked),
     tags: tags || [],
     previewUrl,
     templateUrl,
@@ -295,6 +297,13 @@ export function toggleFeatured(id) {
   db.prepare("UPDATE skins SET is_featured = ?, updated_at = datetime('now') WHERE id = ?")
     .run(next, id);
   return Boolean(next);
+}
+
+/** Sets whether the app locks this skin behind a rewarded video. Returns the new state, or null. */
+export function setLocked(id, locked) {
+  const result = db.prepare("UPDATE skins SET is_locked = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(locked ? 1 : 0, id);
+  return result.changes ? Boolean(locked) : null;
 }
 
 export function togglePublished(id) {

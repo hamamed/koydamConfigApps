@@ -28,6 +28,8 @@ export function migrate() {
   ensureColumn('skins', 'color_light', 'REAL');
   ensureColumn('skins', 'color_hex', 'TEXT');
   ensureColumn('skins', 'design_meta', 'TEXT');
+  // Premium skins: the app asks for one rewarded video before the template can be saved.
+  ensureColumn('skins', 'is_locked', 'INTEGER NOT NULL DEFAULT 0');
 
   // ALTER TABLE cannot add a UNIQUE column in SQLite, so the column goes on
   // plain and the index follows. Both are idempotent.
