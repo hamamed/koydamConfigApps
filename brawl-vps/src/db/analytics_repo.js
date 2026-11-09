@@ -10,10 +10,65 @@
  * 003 with no backfill, so rows crawled before it landed carry NULLs — the
  * queries filter for presence rather than assuming coverage, which means a
  * freshly-migrated server returns empty until the crawler has run a few cycles.
+ *
+ * Synergy, counters and brackets read the daily rollups from migration 006 when
+ * they cover the window (built by rollup_repo.js); the raw queries below them
+ * stay as the fallback. See rollupWindow for exactly when each is used.
  */
 
+import { config } from '../config.js';
+import { log } from '../log.js';
 import { query } from './pool.js';
 import { resolveSource } from './source.js';
+import {
+  bracketCase,
+  utcDay,
+  windowCoverage,
+  windowStartDay,
+} from './rollup_repo.js';
+
+// ── Rollups or raw ──────────────────────────────────────────────────────────
+
+/**
+ * Decides whether a synergy/counters/brackets read is served from the daily
+ * rollups (migration 006, kept current by src/analytics/rollup.js) or from the
+ * raw tables.
+ *
+ * A rollup read covers whole UTC days: from the window's start rounded down to
+ * midnight through today's partial day. That is between `hours` and
+ * `hours + 24` of battles — a 168-hour request reads seven full days plus
+ * today — so samples only ever grow against the raw window, never shrink.
+ *
+ * The fallback, deliberately asymmetric:
+ *
+ * - Every day of the window rolled → rollups.
+ * - Some days missing (just deployed, backfill still running, or a day that
+ *   keeps failing) and the window is a day or less → raw. Those queries answer
+ *   in a few seconds, so there is no reason to serve a half-built answer.
+ * - Some days missing and the window is longer → the rollups anyway, with
+ *   whatever days they have. A partial week beats a gateway timeout, which is
+ *   what the raw query is at that size. The gap closes as the backfill runs.
+ * - Rollups switched off, or rollup_runs unreadable → raw, as before.
+ */
+async function rollupWindow(hours) {
+  if (!config.analytics.rollups) return null;
+
+  const from = windowStartDay(hours);
+  const coverage = await windowCoverage(from, utcDay());
+
+  if (!coverage.usable) return null;
+  if (coverage.complete) return { from };
+  if (hours <= 24) return null;
+
+  log.debug('Serving a partial rollup window', {
+    hours,
+    from,
+    missing: coverage.missing,
+  });
+  return { from };
+}
+
+// ── Synergy ─────────────────────────────────────────────────────────────────
 
 /**
  * Brawler pairs that played on the same team, with how they did together.
@@ -21,7 +76,8 @@ import { resolveSource } from './source.js';
  * The join is the whole trick: `battle_samples` stores one row per brawler per
  * battle, so self-joining on `battle_key` reassembles the lobby, and matching
  * `team_index` narrows it to teammates. `a.brawler_id < b.brawler_id` keeps
- * each pair once and drops self-pairs.
+ * each pair once and drops self-pairs. The daily rollup runs exactly that join
+ * one day at a time; reading it is a SUM across days.
  *
  * Only decided battles count. Showdown writes NULL `won` for everyone, so
  * including it would add pairs with no outcome and a meaningless denominator.
@@ -33,6 +89,39 @@ export async function brawlerSynergy({
   minSample = 30,
   limit = 60,
 } = {}) {
+  const window = await rollupWindow(hours);
+  const args = { hours, mode, map, minSample, limit };
+
+  const rows = window
+    ? await rollupSynergy({ ...args, from: window.from })
+    : await rawSynergy(args);
+
+  return rows.map(toPair);
+}
+
+async function rollupSynergy({ from, mode, map, minSample, limit }) {
+  const res = await query(
+    `SELECT a_id,
+            MAX(a_name)        AS a_name,
+            b_id,
+            MAX(b_name)        AS b_name,
+            SUM(games)::int    AS games,
+            SUM(wins)::int     AS wins
+       FROM pair_stats_daily
+      WHERE day >= $1::date
+        AND ($2::text IS NULL OR mode = $2)
+        AND ($3::text IS NULL OR map = $3)
+      GROUP BY a_id, b_id
+     HAVING SUM(games) >= $4
+      ORDER BY SUM(wins)::float / SUM(games) DESC
+      LIMIT $5`,
+    [from, mode, map, minSample, limit],
+  );
+
+  return res?.rows ?? [];
+}
+
+async function rawSynergy({ hours, mode, map, minSample, limit }) {
   const src = await resolveSource();
 
   const res = await query(
@@ -63,8 +152,10 @@ export async function brawlerSynergy({
     [String(hours), mode, map, minSample, limit],
   );
 
-  return (res?.rows ?? []).map(toPair);
+  return res?.rows ?? [];
 }
+
+// ── Counters ────────────────────────────────────────────────────────────────
 
 /**
  * How one brawler fares against each brawler it has faced.
@@ -80,6 +171,44 @@ export async function brawlerCounters(brawlerId, {
   minSample = 25,
   limit = 40,
 } = {}) {
+  const window = await rollupWindow(hours);
+  const args = { brawlerId, hours, mode, map, minSample, limit };
+
+  const rows = window
+    ? await rollupCounters({ ...args, from: window.from })
+    : await rawCounters(args);
+
+  return rows.map((r) => ({
+    id: r.b_id,
+    name: r.b_name,
+    games: r.games,
+    wins: r.wins,
+    winRate: r.games > 0 ? r.wins / r.games : null,
+  }));
+}
+
+async function rollupCounters({ from, brawlerId, mode, map, minSample, limit }) {
+  const res = await query(
+    `SELECT opp_id             AS b_id,
+            MAX(opp_name)      AS b_name,
+            SUM(games)::int    AS games,
+            SUM(wins)::int     AS wins
+       FROM matchup_stats_daily
+      WHERE brawler_id = $1
+        AND day >= $2::date
+        AND ($3::text IS NULL OR mode = $3)
+        AND ($4::text IS NULL OR map = $4)
+      GROUP BY opp_id
+     HAVING SUM(games) >= $5
+      ORDER BY SUM(wins)::float / SUM(games) DESC
+      LIMIT $6`,
+    [brawlerId, from, mode, map, minSample, limit],
+  );
+
+  return res?.rows ?? [];
+}
+
+async function rawCounters({ brawlerId, hours, mode, map, minSample, limit }) {
   const src = await resolveSource();
 
   const res = await query(
@@ -108,13 +237,7 @@ export async function brawlerCounters(brawlerId, {
     [String(hours), mode, map, brawlerId, minSample, limit],
   );
 
-  return (res?.rows ?? []).map((r) => ({
-    id: r.b_id,
-    name: r.b_name,
-    games: r.games,
-    wins: r.wins,
-    winRate: r.games > 0 ? r.wins / r.games : null,
-  }));
+  return res?.rows ?? [];
 }
 
 function toPair(r) {
@@ -126,6 +249,8 @@ function toPair(r) {
     winRate: r.games > 0 ? r.wins / r.games : null,
   };
 }
+
+// ── Trophy brackets ─────────────────────────────────────────────────────────
 
 /**
  * Win rate split by the brawler's own trophy count.
@@ -143,18 +268,52 @@ export async function trophyBrackets({
   hours = 168,
   minSample = 20,
 } = {}) {
+  const window = await rollupWindow(hours);
+  const args = { brawlerId, mode, hours, minSample };
+
+  const rows = window
+    ? await rollupBrackets({ ...args, from: window.from })
+    : await rawBrackets(args);
+
+  return rows.map((r) => ({
+    id: r.brawler_id,
+    name: r.brawler_name,
+    bracket: r.bracket,
+    appearances: r.appearances,
+    decided: r.decided,
+    wins: r.wins,
+    winRate: r.decided > 0 ? r.wins / r.decided : null,
+  }));
+}
+
+async function rollupBrackets({ from, brawlerId, mode, minSample }) {
+  const res = await query(
+    `SELECT brawler_id,
+            MAX(brawler_name)        AS brawler_name,
+            bracket,
+            SUM(appearances)::int    AS appearances,
+            SUM(decided)::int        AS decided,
+            SUM(wins)::int           AS wins
+       FROM bracket_stats_daily
+      WHERE day >= $1::date
+        AND ($2::int IS NULL OR brawler_id = $2)
+        AND ($3::text IS NULL OR mode = $3)
+      GROUP BY brawler_id, bracket
+     HAVING SUM(appearances) >= $4
+      ORDER BY brawler_id, bracket`,
+    [from, brawlerId, mode, minSample],
+  );
+
+  return res?.rows ?? [];
+}
+
+async function rawBrackets({ brawlerId, mode, hours, minSample }) {
   const src = await resolveSource();
 
   const res = await query(
     `SELECT s.brawler_id,
             MAX(s.brawler_name) AS brawler_name,
-            CASE
-              WHEN s.brawler_trophies <  300 THEN '0-299'
-              WHEN s.brawler_trophies <  500 THEN '300-499'
-              WHEN s.brawler_trophies <  700 THEN '500-699'
-              WHEN s.brawler_trophies < 1000 THEN '700-999'
-              ELSE '1000+'
-            END                                            AS bracket,
+            ${bracketCase('s.brawler_trophies')}            AS bracket,
             COUNT(*)::int                                  AS appearances,
             COUNT(*) FILTER (WHERE s.won IS NOT NULL)::int AS decided,
             COUNT(*) FILTER (WHERE s.won)::int             AS wins
@@ -169,15 +328,7 @@ export async function trophyBrackets({
     [String(hours), brawlerId, mode, minSample],
   );
 
-  return (res?.rows ?? []).map((r) => ({
-    id: r.brawler_id,
-    name: r.brawler_name,
-    bracket: r.bracket,
-    appearances: r.appearances,
-    decided: r.decided,
-    wins: r.wins,
-    winRate: r.decided > 0 ? r.wins / r.decided : null,
-  }));
+  return res?.rows ?? [];
 }
 
 /**

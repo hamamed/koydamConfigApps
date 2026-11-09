@@ -127,6 +127,16 @@ export const config = {
      * ages out, so the automatic fallback has nothing left to serve.
      */
     writeLegacySamples: bool('WRITE_LEGACY_SAMPLES', true),
+
+    /**
+     * Whether synergy, counters, draft and brackets read the daily rollups.
+     *
+     * On by default: the raw self-joins behind those endpoints outrun the
+     * gateway timeout at a week's window. Turning it off stops the rollup job
+     * and sends every request back to the raw tables — the escape hatch if a
+     * rollup ever looks wrong, at the cost of the old timeouts.
+     */
+    rollups: bool('ANALYTICS_ROLLUPS', true),
   },
 
   wallpapers: {

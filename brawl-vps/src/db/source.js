@@ -44,6 +44,8 @@ const SOURCES = {
     // recovers it — without this the pre-003 corpus would drop out of every
     // synergy and counter query.
     team: 'COALESCE(s.team_index, CASE WHEN s.won THEN 1 ELSE 0 END)',
+    // Nothing to join, so nothing to bound.
+    joinedTime: null,
   },
   battles: {
     name: 'battle_players',
@@ -53,6 +55,11 @@ const SOURCES = {
     region: 's.region',
     // Always written by the new ingest path, so no fallback is needed.
     team: 's.team_index',
+    // The same timestamp as `s.battle_time` — both are written from the battle's
+    // own time in one ingest pass. Repeating the bound on the joined side lets
+    // the daily rollup range-scan `battles` by time instead of probing its
+    // primary key once per participant row.
+    joinedTime: 'b.battle_time',
   },
 };
 

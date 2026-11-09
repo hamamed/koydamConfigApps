@@ -33,6 +33,7 @@ import {
   metaIsStale,
 } from './transform/brawler_meta.js';
 import { runCrawl } from './crawler/meta_crawler.js';
+import { startRollups, stopRollups } from './analytics/rollup.js';
 
 const app = express();
 
@@ -225,7 +226,7 @@ async function boot() {
 
   // Before anything that might write: a crawl firing against an unmigrated
   // database would fail every insert.
-  await runMigrations();
+  const migrated = await runMigrations();
 
   // Any row still marked running belongs to a process that is no longer here —
   // this service runs one crawl at a time, and it has just started.
@@ -309,6 +310,11 @@ async function boot() {
     log.info('Meta crawler disabled (CRAWLER_ENABLED=false)');
   }
 
+  // Independent of the crawler on purpose: with CRAWLER_ENABLED=false the crawl
+  // runs from cron, and the analytics still need their rollups built here.
+  // Skipped when migrations failed — the rollup tables may not exist.
+  if (migrated) startRollups();
+
   /**
    * Graceful shutdown: stop accepting connections, let in-flight requests
    * finish, then close Redis. Without this, `systemctl restart` can drop
@@ -317,6 +323,7 @@ async function boot() {
   const shutdown = async (signal) => {
     log.info('Shutting down', { signal });
     if (crawlTimer) clearInterval(crawlTimer);
+    stopRollups();
 
     server.close(async () => {
       await closeCache();

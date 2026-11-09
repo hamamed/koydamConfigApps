@@ -13,7 +13,8 @@
     "sync:brawlers": "node src/scripts/sync-brawlers.js",
     "crawl:meta": "node src/scripts/run-crawl.js",
     "health": "node src/scripts/health.js",
-    "db:migrate": "node src/scripts/migrate.js"
+    "db:migrate": "node src/scripts/migrate.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",

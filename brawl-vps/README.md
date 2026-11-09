@@ -323,6 +323,14 @@ that ran without one for months.
   recomputed, so changing `CRAWLER_MIN_SAMPLE` later can't silently rewrite
   history.
 - `players_seen` — the sampling frame, for reach over time.
+- `pair_stats_daily`, `matchup_stats_daily`, `bracket_stats_daily` — synergy,
+  counters and trophy brackets pre-aggregated per UTC day (migration 006), so
+  `/meta/synergy`, `/meta/counters/:id`, `/meta/draft` and `/meta/brackets` sum
+  a week of small slices instead of self-joining a week of raw battles.
+  `src/analytics/rollup.js` backfills the last 8 days after boot and re-rolls
+  today and yesterday every 30 minutes; `rollup_runs` says which days are done.
+  A rollup read covers whole days, from the window's start rounded down to
+  midnight. `ANALYTICS_ROLLUPS=false` sends those routes back to the raw tables.
 
 ### New endpoints
 
