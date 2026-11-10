@@ -79,6 +79,9 @@ test('upgrades on an owned brawler each count once, with names from the new read
     { expLevel: 101, icon: { id: 28000014 } },
   );
   assert.deepEqual(kinds(diffProfiles(compactProfile(before), compactProfile(after), after)), [
+    'b.gear:16000000:62000000:SHIELD',
+    'b.skin:16000000:29000001:BANDITA SHELLY',
+    'b.starpower:16000000:23000076:SHELL SHOCK',
     'dist.level:101:101',
     'dist.rank:21:21',
     'icon.drop:28000000:',
@@ -246,4 +249,17 @@ test('no counters means not ready rather than zero shares pretending to be data'
   const a = activity({ totals: [], daily: [], days: ['2026-11-10'], iconCatalog: {}, trackingSince: null });
   assert.equal(a.ready, false);
   assert.equal(a.events, 0);
+});
+
+test('buffies count when one turns on, against the brawler', () => {
+  const before = player([brawler({ buffies: { gadget: false, starPower: false, hyperCharge: false } })]);
+  const after = player([brawler({ buffies: { gadget: true, starPower: false, hyperCharge: false } })]);
+  assert.deepEqual(kinds(diffProfiles(compactProfile(before), compactProfile(after), after)), ['b.buffie:16000000:gadget']);
+});
+
+test('an older stored tuple without buffies still diffs', () => {
+  const before = compactProfile(player([brawler()]));
+  before.brawlers[16000000] = before.brawlers[16000000].slice(0, 9);
+  const after = player([brawler({ buffies: { gadget: true } })]);
+  assert.deepEqual(kinds(diffProfiles(before, compactProfile(after), after)), ['b.buffie:16000000:gadget']);
 });

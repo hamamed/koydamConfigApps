@@ -23,7 +23,7 @@ const names = (list) =>
  * hundred bytes per brawler would be most of the table.
  *
  * Brawler tuple: [power, rank, prestige, currentWinStreak, gadgetIds,
- * starPowerIds, gearIds, hyperchargeIds, skinId].
+ * starPowerIds, gearIds, hyperchargeIds, skinId, buffieKeys].
  */
 export function compactProfile(raw) {
   const brawlers = {};
@@ -40,6 +40,7 @@ export function compactProfile(raw) {
       ids(b.gears),
       ids(b.hyperCharges),
       num(b.skin?.id),
+      buffieKeys(b.buffies),
     ];
   }
   return {
@@ -49,6 +50,15 @@ export function compactProfile(raw) {
     level: num(raw?.expLevel),
     brawlers,
   };
+}
+
+/**
+ * Owned Buffies as sorted keys ("gadget", "starPower", "hyperCharge"). The API
+ * reports them as booleans; anything else (absent, older payloads) is none.
+ */
+function buffieKeys(raw) {
+  if (!raw || typeof raw !== 'object') return [];
+  return Object.entries(raw).filter(([, v]) => v === true).map(([k]) => k).sort();
 }
 
 /** Ids in `next` that `prev` lacks. */
@@ -82,8 +92,8 @@ export function diffProfiles(prev, next, raw) {
       continue;
     }
 
-    const [power, rank, prestige, streak, gadgets, starPowers, gears, hypercharges, skin] = now;
-    const [pPower, pRank, pPrestige, pStreak, pGadgets, pStarPowers, pGears, pHyper, pSkin] = was;
+    const [power, rank, prestige, streak, gadgets, starPowers, gears, hypercharges, skin, buffies] = now;
+    const [pPower, pRank, pPrestige, pStreak, pGadgets, pStarPowers, pGears, pHyper, pSkin, pBuffies] = was;
 
     if (power > pPower) push('prog.powerup', id, name);
     if (rank > pRank) {
@@ -100,15 +110,30 @@ export function diffProfiles(prev, next, raw) {
       push('dist.streak', pStreak, String(pStreak));
     }
 
+    // Each unlock is counted twice: once by the item (community totals) and
+    // once against the brawler as "itemId:name" (the brawler's own page).
     const gadgetNames = names(r.gadgets);
-    for (const g of added(pGadgets, gadgets)) push('unlock.gadget', g, gadgetNames.get(g));
+    for (const g of added(pGadgets, gadgets)) {
+      push('unlock.gadget', g, gadgetNames.get(g));
+      push('b.gadget', id, `${g}:${gadgetNames.get(g) ?? ''}`);
+    }
     const spNames = names(r.starPowers);
-    for (const s of added(pStarPowers, starPowers)) push('unlock.starpower', s, spNames.get(s));
+    for (const s of added(pStarPowers, starPowers)) {
+      push('unlock.starpower', s, spNames.get(s));
+      push('b.starpower', id, `${s}:${spNames.get(s) ?? ''}`);
+    }
     const gearNames = names(r.gears);
-    for (const g of added(pGears, gears)) push('unlock.gear', g, gearNames.get(g));
+    for (const g of added(pGears, gears)) {
+      push('unlock.gear', g, gearNames.get(g));
+      push('b.gear', id, `${g}:${gearNames.get(g) ?? ''}`);
+    }
     // Counted against the brawler, which is how a hypercharge is known.
     if (added(pHyper, hypercharges).length) push('unlock.hypercharge', id, name);
-    if (skin && skin !== pSkin) push('skin', skin, r.skin?.name ?? '');
+    if (skin && skin !== pSkin) {
+      push('skin', skin, r.skin?.name ?? '');
+      push('b.skin', id, `${skin}:${r.skin?.name ?? ''}`);
+    }
+    for (const key of added(pBuffies ?? [], buffies ?? [])) push('b.buffie', id, key);
   }
 
   if (next.level > prev.level) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { cached, cacheGet, cacheSet } from '../cache/store.js';
+import { DAY, daysBack, isoDay, merge, perDay } from '../community/perday.js';
 import { isDbEnabled } from '../db/pool.js';
 import { log } from '../log.js';
 import { topMovers } from '../db/meta_repo.js';
@@ -15,6 +16,7 @@ import {
   trophyTotals,
 } from '../db/community_repo.js';
 import { buildReport } from '../community/report.js';
+import { weeklyRanges } from './profiles.js';
 
 /**
  * GET /meta/community — the week in Brawl Stars: meta board, momentum, mode
@@ -29,8 +31,6 @@ import { buildReport } from '../community/report.js';
  */
 export const communityRouter = Router();
 
-const DAY = 86_400_000;
-const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
 const ICONS_URL = 'https://api.brawlapi.com/v1/icons';
 
 /** Public icon catalog (id → entry), for icon categories. Empty when unreachable. */
@@ -53,48 +53,6 @@ async function iconCatalog() {
   }
 }
 
-/**
- * One query per UTC day over `days`, run one after another. Days at least two
- * days old are cached for a week; today and yesterday are always re-read,
- * since battle logs fetched hours later still add battles to them.
- * Returns `[{ day, value }]` in day order.
- */
-async function perDay(name, days, todayIso, fn) {
-  const settled = isoDay(Date.parse(`${todayIso}T00:00:00Z`) - DAY);
-  const out = [];
-  for (const day of days) {
-    const start = new Date(`${day}T00:00:00Z`);
-    const end = new Date(start.getTime() + DAY);
-    const key = `community:day:${name}:${day}`;
-    const cacheable = day < settled;
-    const hit = cacheable ? await cacheGet(key) : null;
-    if (hit !== null) {
-      out.push({ day, value: hit });
-      continue;
-    }
-    const value = await fn(start, end);
-    if (cacheable) await cacheSet(key, value, 8 * 86_400);
-    out.push({ day, value });
-  }
-  return out;
-}
-
-const daysBack = (today, n) => Array.from({ length: n }, (_, i) => isoDay(today - (n - 1 - i) * DAY));
-
-/** Sums per-day row lists by `keyOf`, adding the numeric fields in `fields`. */
-function merge(perDayRows, keyOf, fields) {
-  const out = new Map();
-  for (const { value } of perDayRows) {
-    for (const row of value) {
-      const key = keyOf(row);
-      const acc = out.get(key) ?? { ...row, ...Object.fromEntries(fields.map((f) => [f, 0])) };
-      for (const f of fields) acc[f] += row[f];
-      out.set(key, acc);
-    }
-  }
-  return [...out.values()];
-}
-
 export async function communityReport(now = new Date()) {
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const todayIso = isoDay(today);
@@ -107,6 +65,8 @@ export async function communityReport(now = new Date()) {
   const rankedDays = await perDay('ranked', week, todayIso, rankedByDivision);
   const trophyDays = await perDay('trophies', daysBack(today - DAY, 14), todayIso, trophyTotals);
   const countDays = await perDay('battles', daysBack(today - DAY, 7), todayIso, battleCount);
+  // Warms the brawler pages' per-range cache on the same schedule.
+  await weeklyRanges().catch((err) => log.warn('Range warm-up failed', { error: err.message }));
 
   const [brawlers, movers, totals, daily, pipeline, icons] = await Promise.all([
     brawlerTotals(from),

@@ -135,7 +135,7 @@ export async function activityTotals(fromDay) {
   const res = await query(
     `WITH s AS (
        SELECT kind, subject_id, subject, SUM(events)::bigint AS n
-         FROM community_daily WHERE day >= $1::date
+         FROM community_daily WHERE day >= $1::date AND kind NOT LIKE 'b.%'
         GROUP BY kind, subject_id, subject
      ), r AS (
        SELECT *, ROW_NUMBER() OVER (PARTITION BY kind ORDER BY n DESC, subject_id) AS rn,
@@ -161,7 +161,7 @@ export async function activityTotals(fromDay) {
 export async function activityDaily(fromDay) {
   const res = await query(
     `SELECT to_char(day, 'YYYY-MM-DD') AS day, kind, SUM(events)::bigint AS n
-       FROM community_daily WHERE day >= $1::date
+       FROM community_daily WHERE day >= $1::date AND kind NOT LIKE 'b.%'
       GROUP BY day, kind ORDER BY day`,
     [fromDay],
   );
