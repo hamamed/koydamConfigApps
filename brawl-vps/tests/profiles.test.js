@@ -56,11 +56,11 @@ test('brawler profile: ranges, ranked tiers, modes, maps against the mode, build
 
 test('team stats: confidence-ranked, so a small perfect record does not top a big good one', () => {
   const { top, partnersOf } = teamStats([
-    { comp: [1, 2, 3], games: 200, wins: 140 },
-    { comp: [1, 2, 4], games: 12, wins: 12 },
-    { comp: [1, 5, 6], games: 4, wins: 4 },
+    { comp: [1, 2, 3], games: 200, wins: 160 }, // 80%, lower bound ~74%
+    { comp: [1, 2, 4], games: 10, wins: 10 }, // 100%, lower bound ~72%
+    { comp: [1, 5, 6], games: 4, wins: 4 }, // under the 10-game minimum
   ]);
-  assert.deepEqual(top.map((t) => [t.ids, t.winRate]), [[[1, 2, 3], 0.7], [[1, 2, 4], 1]]);
+  assert.deepEqual(top.map((t) => [t.ids, t.winRate]), [[[1, 2, 3], 0.8], [[1, 2, 4], 1]]);
   assert.deepEqual(partnersOf(1).map((p) => p.id), [2, 3, 4]);
 });
 
