@@ -50,7 +50,7 @@ import {
  *   what the raw query is at that size. The gap closes as the backfill runs.
  * - Rollups switched off, or rollup_runs unreadable → raw, as before.
  */
-async function rollupWindow(hours) {
+export async function rollupWindow(hours) {
   if (!config.analytics.rollups) return null;
 
   const from = windowStartDay(hours);

@@ -1,6 +1,7 @@
 import { log } from '../log.js';
 import { query, withTransaction } from './pool.js';
 import { resolveSource } from './source.js';
+import { rollupWindow } from './analytics_repo.js';
 
 /**
  * Every Postgres read and write, in one place.
@@ -623,6 +624,28 @@ export async function pooledStandings({
   map = null,
   minSample = 20,
 } = {}) {
+  // Past a day the raw scan outruns the gateway; read the daily rollups
+  // (migration 007) with the same coverage rules as synergy and counters.
+  const window = await rollupWindow(hours);
+  if (window) {
+    const rolled = await query(
+      `SELECT brawler_id,
+              MAX(brawler_name)      AS brawler_name,
+              SUM(appearances)::int  AS appearances,
+              SUM(decided)::int      AS decided,
+              SUM(wins)::int         AS wins
+         FROM brawler_stats_daily
+        WHERE day >= $1::date
+          AND ($2::text IS NULL OR mode = $2)
+          AND ($3::text IS NULL OR map = $3)
+        GROUP BY brawler_id
+       HAVING SUM(appearances) >= $4
+        ORDER BY appearances DESC`,
+      [window.from, mode, map, minSample],
+    );
+    if (rolled) return rolled.rows.map(toStanding);
+  }
+
   const src = await resolveSource();
 
   const res = await query(
@@ -641,14 +664,18 @@ export async function pooledStandings({
     [String(hours), mode, map, minSample],
   );
 
-  return (res?.rows ?? []).map((r) => ({
+  return (res?.rows ?? []).map(toStanding);
+}
+
+function toStanding(r) {
+  return {
     id: r.brawler_id,
     name: r.brawler_name,
     appearances: r.appearances,
     decided: r.decided,
     wins: r.wins,
     winRate: r.decided > 0 ? r.wins / r.decided : null,
-  }));
+  };
 }
 
 /** Distinct maps seen in the window, with how much data backs each. */

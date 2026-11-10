@@ -132,6 +132,7 @@ export async function rollupDay(day) {
     await client.query('DELETE FROM pair_stats_daily WHERE day = $1', [day]);
     await client.query('DELETE FROM matchup_stats_daily WHERE day = $1', [day]);
     await client.query('DELETE FROM bracket_stats_daily WHERE day = $1', [day]);
+    await client.query('DELETE FROM brawler_stats_daily WHERE day = $1', [day]);
 
     const pairs = await client.query(
       `INSERT INTO pair_stats_daily
@@ -184,6 +185,21 @@ export async function rollupDay(day) {
       [day],
     );
 
+    // Every appearance counts, showdown included; only decided games feed the
+    // win rate — the same split pooledStandings makes on the raw rows.
+    const brawlers = await client.query(
+      `INSERT INTO brawler_stats_daily
+         (day, mode, map, brawler_id, brawler_name, appearances, decided, wins)
+       SELECT $1::date, mode, map, brawler_id,
+              MAX(brawler_name),
+              COUNT(*),
+              COUNT(*) FILTER (WHERE won IS NOT NULL),
+              COUNT(*) FILTER (WHERE won)
+         FROM rollup_day
+        GROUP BY mode, map, brawler_id`,
+      [day],
+    );
+
     const summary = {
       day,
       source: src.name,
@@ -192,13 +208,14 @@ export async function rollupDay(day) {
       pairRows: pairs.rowCount ?? 0,
       matchupRows: matchups.rowCount ?? 0,
       bracketRows: brackets.rowCount ?? 0,
+      brawlerRows: brawlers.rowCount ?? 0,
     };
 
     await client.query(
       `INSERT INTO rollup_runs
          (day, source, rolled_at, duration_ms, raw_rows,
-          pair_rows, matchup_rows, bracket_rows)
-       VALUES ($1, $2, now(), $3, $4, $5, $6, $7)
+          pair_rows, matchup_rows, bracket_rows, brawler_rows)
+       VALUES ($1, $2, now(), $3, $4, $5, $6, $7, $8)
        ON CONFLICT (day) DO UPDATE SET
          source       = EXCLUDED.source,
          rolled_at    = EXCLUDED.rolled_at,
@@ -206,7 +223,8 @@ export async function rollupDay(day) {
          raw_rows     = EXCLUDED.raw_rows,
          pair_rows    = EXCLUDED.pair_rows,
          matchup_rows = EXCLUDED.matchup_rows,
-         bracket_rows = EXCLUDED.bracket_rows`,
+         bracket_rows = EXCLUDED.bracket_rows,
+         brawler_rows = EXCLUDED.brawler_rows`,
       [
         day,
         summary.source,
@@ -215,6 +233,7 @@ export async function rollupDay(day) {
         summary.pairRows,
         summary.matchupRows,
         summary.bracketRows,
+        summary.brawlerRows,
       ],
     );
 
@@ -234,9 +253,12 @@ export async function rollupDay(day) {
  */
 export async function rolledDays(from, to) {
   const res = await query(
+    // A day rolled before migration 007 has no brawler_stats_daily rows
+    // (brawler_rows IS NULL): count it as not rolled, so the job rebuilds it.
     `SELECT to_char(day, 'YYYY-MM-DD') AS day, source
        FROM rollup_runs
-      WHERE day >= $1::date AND day <= $2::date`,
+      WHERE day >= $1::date AND day <= $2::date
+        AND brawler_rows IS NOT NULL`,
     [from, to],
   );
   if (!res) return null;
