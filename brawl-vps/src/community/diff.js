@@ -159,10 +159,47 @@ export function diffProfiles(prev, next, raw) {
 /** The part of a raw `/clubs/{tag}` response worth diffing. */
 export function compactClub(raw) {
   const members = {};
+  const names = {};
   for (const m of Array.isArray(raw?.members) ? raw.members : []) {
-    if (m?.tag) members[m.tag] = String(m.role ?? 'member');
+    if (!m?.tag) continue;
+    members[m.tag] = String(m.role ?? 'member');
+    names[m.tag] = String(m.name ?? '');
   }
-  return { v: 1, type: String(raw?.type ?? ''), badge: num(raw?.badgeId), members };
+  return {
+    v: 1,
+    type: String(raw?.type ?? ''),
+    badge: num(raw?.badgeId),
+    members,
+    names,
+    required: num(raw?.requiredTrophies),
+    description: String(raw?.description ?? ''),
+  };
+}
+
+/**
+ * The club's own timeline between two reads: `{ kind, subject, detail }` with
+ * names (unlike the counters, which stay anonymous). Older stored reads lack
+ * names, descriptions and requirements; those changes are skipped then.
+ */
+export function clubTimeline(prev, next) {
+  if (!prev || prev.v !== next?.v) return [];
+  const out = [];
+  const name = (s, tag) => s.names?.[tag] || tag;
+  for (const [tag, role] of Object.entries(next.members ?? {})) {
+    const was = prev.members?.[tag];
+    if (!was) out.push({ kind: 'join', subject: name(next, tag), detail: tag });
+    else if (was !== role) out.push({ kind: 'role', subject: name(next, tag), detail: `${was}>${role}` });
+  }
+  for (const tag of Object.keys(prev.members ?? {})) {
+    if (!next.members?.[tag]) out.push({ kind: 'leave', subject: name(prev, tag), detail: tag });
+  }
+  if (prev.type && next.type && prev.type !== next.type) out.push({ kind: 'type', subject: '', detail: `${prev.type}>${next.type}` });
+  if (prev.badge && next.badge && prev.badge !== next.badge) out.push({ kind: 'badge', subject: '', detail: `${prev.badge}>${next.badge}` });
+  if (prev.required != null && next.required != null && 'required' in prev && prev.required !== next.required) {
+    out.push({ kind: 'required', subject: '', detail: `${prev.required}>${next.required}` });
+  }
+  if ('description' in prev && prev.description !== next.description) out.push({ kind: 'description', subject: '', detail: next.description.slice(0, 300) });
+  return out;
 }
 
 /** Events between two compact clubs, seen from the club's side. */

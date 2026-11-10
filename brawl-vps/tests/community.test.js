@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  clubTimeline,
   compactClub,
   compactProfile,
   diffClubs,
@@ -262,4 +263,15 @@ test('an older stored tuple without buffies still diffs', () => {
   before.brawlers[16000000] = before.brawlers[16000000].slice(0, 9);
   const after = player([brawler({ buffies: { gadget: true } })]);
   assert.deepEqual(kinds(diffProfiles(before, compactProfile(after), after)), ['b.buffie:16000000:gadget']);
+});
+
+test('club timeline names who joined, left and changed role, plus club setting changes', () => {
+  const before = compactClub({ tag: '#C', type: 'open', badgeId: 1, requiredTrophies: 1000, description: 'a',
+    members: [{ tag: '#1', name: 'Ann', role: 'member' }, { tag: '#2', name: 'Bob', role: 'member' }] });
+  const after = compactClub({ tag: '#C', type: 'closed', badgeId: 2, requiredTrophies: 2000, description: 'b',
+    members: [{ tag: '#1', name: 'Ann', role: 'senior' }, { tag: '#3', name: 'Cy', role: 'member' }] });
+  assert.deepEqual(clubTimeline(before, after).map((e) => `${e.kind}:${e.subject}:${e.detail}`).sort(), [
+    'badge::1>2', 'description::b', 'join:Cy:#3', 'leave:Bob:#2', 'required::1000>2000', 'role:Ann:member>senior', 'type::open>closed',
+  ]);
+  assert.deepEqual(clubTimeline(null, after), []);
 });

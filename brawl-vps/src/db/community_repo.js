@@ -1,5 +1,6 @@
 import { query, withTransaction } from './pool.js';
 import {
+  clubTimeline,
   compactClub,
   compactProfile,
   diffClubs,
@@ -56,10 +57,47 @@ export async function recordProfile(raw) {
   return (await record('profile_state', raw.tag, next, (prev, n) => diffProfiles(prev, n, raw))) ?? 0;
 }
 
-/** Diffs a raw `/clubs/{tag}` read against the last one. Returns events counted. */
+/**
+ * Diffs a raw `/clubs/{tag}` read against the last one: anonymous counters for
+ * the community report, plus the club's own named timeline (club_events).
+ */
 export async function recordClub(raw) {
   if (!raw?.tag) return 0;
-  return (await record('club_state', raw.tag, compactClub(raw), diffClubs)) ?? 0;
+  const next = compactClub(raw);
+  return (await withTransaction(async (client) => {
+    const prev = (await client.query('SELECT state FROM club_state WHERE tag = $1 FOR UPDATE', [raw.tag])).rows[0]?.state ?? null;
+    const events = diffClubs(prev, next);
+    const timeline = clubTimeline(prev, next);
+    await client.query(
+      `INSERT INTO club_state (tag, state, updated_at) VALUES ($1, $2, now())
+       ON CONFLICT (tag) DO UPDATE SET state = EXCLUDED.state, updated_at = now()`,
+      [raw.tag, JSON.stringify(next)],
+    );
+    await bumpCounters(client, tally(events), utcDay());
+    for (const t of timeline) {
+      await client.query('INSERT INTO club_events (tag, kind, subject, detail) VALUES ($1, $2, $3, $4)', [raw.tag, t.kind, t.subject, t.detail]);
+    }
+    return events.length;
+  })) ?? 0;
+}
+
+/** A club's recorded history: when tracking began, totals, and recent events. */
+export async function clubHistory(tag, { limit = 60 } = {}) {
+  const [state, totals, recent, fortnight] = await Promise.all([
+    query('SELECT first_seen, updated_at FROM club_state WHERE tag = $1', [tag]),
+    query(`SELECT kind, COUNT(*)::int AS n FROM club_events WHERE tag = $1 GROUP BY kind`, [tag]),
+    query(`SELECT at, kind, subject, detail FROM club_events WHERE tag = $1 ORDER BY at DESC LIMIT $2`, [tag, limit]),
+    query(`SELECT kind, COUNT(*)::int AS n FROM club_events WHERE tag = $1 AND at > now() - interval '14 days' GROUP BY kind`, [tag]),
+  ]);
+  const count = (rows, kind) => rows?.rows?.find((r) => r.kind === kind)?.n ?? 0;
+  const s = state?.rows?.[0];
+  return {
+    trackedSince: s?.first_seen ?? null,
+    lastRead: s?.updated_at ?? null,
+    allTime: { joins: count(totals, 'join'), leaves: count(totals, 'leave'), roles: count(totals, 'role') },
+    lastTwoWeeks: { joins: count(fortnight, 'join'), leaves: count(fortnight, 'leave'), roles: count(fortnight, 'role') },
+    events: (recent?.rows ?? []).map((r) => ({ at: r.at, kind: r.kind, subject: r.subject, detail: r.detail })),
+  };
 }
 
 /**

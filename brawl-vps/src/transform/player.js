@@ -88,7 +88,11 @@ function transformPlayerBrawler(raw) {
    * that isn't ground truth.
    */
   const hasHypercharge = meta?.hasHypercharge ?? false;
-  const hyperchargeUnlocked = hasHypercharge && num(raw.power) >= 11;
+  // Current payloads list owned hypercharges; older ones had no field, so fall
+  // back to the power-11 inference there.
+  const hyperchargeUnlocked = Array.isArray(raw.hyperCharges)
+    ? raw.hyperCharges.length > 0
+    : hasHypercharge && num(raw.power) >= 11;
 
   return {
     id: num(raw.id),
@@ -115,6 +119,14 @@ function transformPlayerBrawler(raw) {
 
     hasHypercharge,
     hyperchargeUnlocked,
+
+    // Passed through for the profile (prestige, streaks, equipped skin,
+    // Buffies). Absent fields stay null; old clients ignore them.
+    prestigeLevel: raw.prestigeLevel ?? null,
+    currentWinStreak: raw.currentWinStreak ?? null,
+    maxWinStreak: raw.maxWinStreak ?? null,
+    skin: raw.skin?.id ? { id: num(raw.skin.id), name: raw.skin.name ?? '' } : null,
+    buffies: raw.buffies && typeof raw.buffies === 'object' ? raw.buffies : null,
 
     portraitUrl: meta?.portraitUrl ?? null,
 

@@ -6,6 +6,9 @@ import { supercell, isValidTag } from '../supercell/client.js';
 import { transformPlayer, transformBattleLog, normaliseTag } from '../transform/player.js';
 import { ingestPlayer, ingestBattleLog } from '../db/ingest.js';
 import { asyncRoute, BadRequestError } from '../middleware/errors.js';
+import { isDbEnabled } from '../db/pool.js';
+import { recordClub, clubHistory } from '../db/community_repo.js';
+import { log } from '../log.js';
 
 export const playerRouter = Router();
 
@@ -84,6 +87,12 @@ playerRouter.get(
           supercell.clubMembers(tag).catch(() => ({ items: [] })),
         ]);
 
+        // Every read feeds the club's timeline (joins, leaves, role changes).
+        if (isDbEnabled()) {
+          recordClub({ ...club, members: members.items?.length ? members.items : club.members })
+            .catch((err) => log.warn('Club history record failed', { tag, error: err.message }));
+        }
+
         return {
           tag: club.tag ?? tag,
           name: club.name ?? '',
@@ -107,5 +116,19 @@ playerRouter.get(
 
     res.set('X-Cache', hit ? 'HIT' : 'MISS');
     res.json(data);
+  }),
+);
+
+/** GET /club/:tag/history — the club's recorded timeline (since we first read it). */
+playerRouter.get(
+  '/club/:tag/history',
+  asyncRoute(async (req, res) => {
+    const tag = requireTag(req.params.tag);
+    if (!isDbEnabled()) {
+      res.status(503).json({ error: 'history_unavailable', message: 'No database configured.' });
+      return;
+    }
+    res.set('Cache-Control', 'public, max-age=120');
+    res.json(await clubHistory(tag));
   }),
 );
