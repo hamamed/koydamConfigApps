@@ -99,17 +99,21 @@ profilesRouter.get('/meta/maps/profile', (req, res) => {
     res.status(400).json({ error: 'bad_request', message: 'Give a map name and a range of all, 0-499, 500-999 or 1000+.' });
     return;
   }
-  // One build serves every range filter; the range only reshapes the result.
-  return serve(res, `profile:map:v1:${map.toLowerCase()}:${range}`, async () => {
-    const now = new Date();
-    const since = new Date(now.getTime() - 30 * DAY);
-    const [rows, ranked, teams, summary, rotations] = await Promise.all([
-      mapBrawlers(map, since), mapRanked(map, since), mapTeams(map, since), mapSummary(map, since), mapRotations(map),
-    ]);
-    const modeRows = summary.mode ? await modeBrawlers(summary.mode, week(now).from) : [];
-    return mapProfile({ map, range, rows, ranked, teams, summary, rotations, modeRows, now });
-  });
+  return serve(res, mapProfileKey(map, range), () => buildMapProfile(map, range));
 });
+
+export const mapProfileKey = (map, range) => `profile:map:v1:${map.toLowerCase()}:${range}`;
+
+/** One map's page (also used per live event by /events/overview). */
+export async function buildMapProfile(map, range = 'all') {
+  const now = new Date();
+  const since = new Date(now.getTime() - 30 * DAY);
+  const [rows, ranked, teams, summary, rotations] = await Promise.all([
+    mapBrawlers(map, since), mapRanked(map, since), mapTeams(map, since), mapSummary(map, since), mapRotations(map),
+  ]);
+  const modeRows = summary.mode ? await modeBrawlers(summary.mode, week(now).from) : [];
+  return mapProfile({ map, range, rows, ranked, teams, summary, rotations, modeRows, now });
+}
 
 const normalise = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 let modeIndex = { at: 0, map: new Map() };

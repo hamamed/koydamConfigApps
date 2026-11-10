@@ -17,6 +17,7 @@ import {
 } from '../db/community_repo.js';
 import { buildReport } from '../community/report.js';
 import { weeklyRanges } from './profiles.js';
+import { rebuildEventsOverview } from './events_overview.js';
 
 /**
  * GET /meta/community — the week in Brawl Stars: meta board, momentum, mode
@@ -110,6 +111,8 @@ export function rebuildCommunityReport() {
       // last good report in place rather than a gap.
       await cacheSet(REPORT_KEY, report, 6 * 3_600);
       log.info('Community report built', { ms: Date.now() - began });
+      // The Events tab rides the same 15-minute schedule.
+      await rebuildEventsOverview();
       return report;
     } catch (err) {
       log.error('Community report failed', { error: err.message });

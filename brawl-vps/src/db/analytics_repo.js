@@ -488,7 +488,9 @@ export async function recordRotation(events) {
     const map = e?.event?.map ?? e?.map ?? null;
     if (!mode || !map) continue;
 
-    const slotId = e?.event?.id ?? e?.slotId ?? null;
+    // The rotation slot (1, 2, 55…). Rows written before 2026-11-10 hold the
+    // event (map) id here instead, which is always above 15,000,000.
+    const slotId = e?.slotId ?? e?.event?.id ?? null;
     const startTime = e?.startTime ? parseEventTime(e.startTime) : null;
 
     const res = await query(

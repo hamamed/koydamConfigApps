@@ -178,8 +178,10 @@ export async function mapSummary(map, since) {
 /** Every rotation window the crawler has recorded for a map. */
 export async function mapRotations(map) {
   const res = await query(
-    `SELECT mode, slot_id, start_time, end_time FROM map_rotations
-      WHERE map = $1 AND start_time IS NOT NULL ORDER BY start_time`,
+    // One row per window: the slot-id fix wrote a second row for windows that
+    // were live at the time.
+    `SELECT DISTINCT ON (start_time) mode, slot_id, start_time, end_time FROM map_rotations
+      WHERE map = $1 AND start_time IS NOT NULL ORDER BY start_time, slot_id`,
     [map],
   );
   return (res?.rows ?? []).map((r) => ({ mode: r.mode, slot: r.slot_id, start: r.start_time, end: r.end_time }));
@@ -264,4 +266,66 @@ export async function mapActivity(dayAgo, weekAgo) {
     [dayAgo, weekAgo],
   );
   return (res?.rows ?? []).map((r) => ({ map: r.map, mode: r.mode, day: num(r.day), week: num(r.week), lastAt: r.last_at }));
+}
+
+// ── Events overview ──────────────────────────────────────────────────────────
+
+/**
+ * Likely next maps for a rotation slot: maps of the same mode whose windows
+ * last about as long as the current one (a 2 h featured slot versus a 24 h
+ * daily one), least recently played first. Real slot ids win when known.
+ */
+export async function predictedMaps(mode, slot, currentMap, windowSeconds) {
+  const res = await query(
+    `SELECT map, MAX(start_time) AS last_at,
+            BOOL_OR(slot_id = $2) AS same_slot
+       FROM map_rotations
+      WHERE mode = $1 AND start_time > now() - interval '120 days'
+        AND end_time IS NOT NULL AND map <> $3
+        AND EXTRACT(EPOCH FROM (end_time - start_time)) BETWEEN $4 * 0.5 AND $4 * 1.5
+      GROUP BY map
+      ORDER BY BOOL_OR(slot_id = $2) DESC, MAX(start_time) ASC
+      LIMIT 3`,
+    [mode, slot, currentMap, windowSeconds],
+  );
+  return (res?.rows ?? []).map((r) => ({ map: r.map, lastAt: r.last_at }));
+}
+
+/** Ladder participants per trophy band since `since` (ranked excluded). */
+export async function trophyBands(since) {
+  const res = await query(
+    `SELECT CASE WHEN bp.brawler_trophies < 100 THEN 0 WHEN bp.brawler_trophies < 300 THEN 1
+                 WHEN bp.brawler_trophies < 500 THEN 2 WHEN bp.brawler_trophies < 700 THEN 3
+                 WHEN bp.brawler_trophies < 900 THEN 4 WHEN bp.brawler_trophies < 1100 THEN 5
+                 WHEN bp.brawler_trophies < 1300 THEN 6 ELSE 7 END AS band,
+            COUNT(*)::bigint AS n
+       FROM battle_players bp JOIN battles b USING (battle_key)
+      WHERE bp.battle_time >= $1 AND b.battle_type IS DISTINCT FROM 'soloRanked' AND bp.brawler_trophies IS NOT NULL
+      GROUP BY 1 ORDER BY 1`,
+    [since],
+  );
+  return (res?.rows ?? []).map((r) => ({ band: r.band, n: num(r.n) }));
+}
+
+/** Ranked results per (map, tier, brawler) in [start, end); cached per day by the caller. */
+export async function rankedMaps(start, end) {
+  const res = await query(
+    `SELECT b.map, MAX(b.mode) AS mode,
+            CASE WHEN bp.brawler_trophies >= 22 THEN 'Pro'
+                 ELSE (ARRAY['Bronze','Silver','Gold','Diamond','Mythic','Legendary','Masters'])[CEIL(bp.brawler_trophies / 3.0)::int] END AS tier,
+            bp.brawler_id, MAX(bp.brawler_name) AS name,
+            COUNT(*)::bigint AS picks,
+            COUNT(*) FILTER (WHERE bp.won IS NOT NULL)::bigint AS decided,
+            COUNT(*) FILTER (WHERE bp.won)::bigint AS wins,
+            COUNT(DISTINCT bp.battle_key)::bigint AS battles
+       FROM battles b JOIN battle_players bp USING (battle_key)
+      WHERE b.battle_type = 'soloRanked' AND b.battle_time >= $1 AND b.battle_time < $2
+        AND bp.brawler_trophies BETWEEN 1 AND 22 AND b.map IS NOT NULL
+      GROUP BY b.map, 3, bp.brawler_id`,
+    [start, end],
+  );
+  return (res?.rows ?? []).map((r) => ({
+    map: r.map, mode: r.mode, tier: r.tier, id: r.brawler_id, name: r.name,
+    picks: num(r.picks), decided: num(r.decided), wins: num(r.wins), battles: num(r.battles),
+  }));
 }

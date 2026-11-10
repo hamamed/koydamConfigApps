@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { config } from '../config.js';
-import { cached } from '../cache/store.js';
+import { cached, cacheGet, cacheSet } from '../cache/store.js';
 import { supercell } from '../supercell/client.js';
 import { asyncRoute, BadRequestError } from '../middleware/errors.js';
 
@@ -33,6 +33,35 @@ function clampLimit(raw) {
   return Math.min(Math.max(n, 1), 200);
 }
 
+
+/**
+ * Adds `rankChange` (positive = climbed) and `isNew` to each row by comparing
+ * with a snapshot from about a day earlier. The API has no previous rank, so
+ * two snapshots are kept per board: `cur` (taken when the last one turned 20 h
+ * old) and `prev` (the one before). Null until a day of history exists.
+ */
+async function withRankChange(board, items) {
+  const key = `rankhist:v1:${board}`;
+  const now = Date.now();
+  const ranks = Object.fromEntries(items.map((r) => [r.tag, r.rank]));
+  let hist = (await cacheGet(key)) ?? null;
+  if (!hist?.cur) {
+    hist = { cur: { at: now, ranks }, prev: null };
+    await cacheSet(key, hist, 7 * 86_400);
+  } else if (now - hist.cur.at > 20 * 3_600_000) {
+    hist = { prev: hist.cur, cur: { at: now, ranks } };
+    await cacheSet(key, hist, 7 * 86_400);
+  }
+  const prev = hist.prev?.ranks;
+  // A 100-row snapshot says nothing about ranks 101-200.
+  const depth = prev ? Object.keys(prev).length : 0;
+  return items.map((r) => ({
+    ...r,
+    rankChange: prev && prev[r.tag] != null ? prev[r.tag] - r.rank : null,
+    isNew: Boolean(prev) && prev[r.tag] == null && r.rank <= depth,
+  }));
+}
+
 /** GET /rankings/players?country=global&limit=100 */
 rankingsRouter.get(
   '/rankings/players',
@@ -49,7 +78,7 @@ rankingsRouter.get(
         return {
           country: region,
           count: (raw.items ?? []).length,
-          items: (raw.items ?? []).map((p) => ({
+          items: await withRankChange(`players:${region}`, (raw.items ?? []).map((p) => ({
             rank: Number(p.rank ?? 0),
             tag: p.tag ?? '',
             name: p.name ?? '',
@@ -57,7 +86,7 @@ rankingsRouter.get(
             trophies: Number(p.trophies ?? 0),
             iconId: Number(p.icon?.id ?? 0),
             club: p.club?.name ? { name: p.club.name } : null,
-          })),
+          }))),
         };
       },
     );
@@ -83,14 +112,14 @@ rankingsRouter.get(
         return {
           country: region,
           count: (raw.items ?? []).length,
-          items: (raw.items ?? []).map((c) => ({
+          items: await withRankChange(`clubs:${region}`, (raw.items ?? []).map((c) => ({
             rank: Number(c.rank ?? 0),
             tag: c.tag ?? '',
             name: c.name ?? '',
             trophies: Number(c.trophies ?? 0),
             badgeId: Number(c.badgeId ?? 0),
             memberCount: Number(c.memberCount ?? 0),
-          })),
+          }))),
         };
       },
     );
@@ -122,7 +151,7 @@ rankingsRouter.get(
           country: region,
           brawlerId,
           count: (raw.items ?? []).length,
-          items: (raw.items ?? []).map((p) => ({
+          items: await withRankChange(`brawler:${brawlerId}:${region}`, (raw.items ?? []).map((p) => ({
             rank: Number(p.rank ?? 0),
             tag: p.tag ?? '',
             name: p.name ?? '',
@@ -130,7 +159,7 @@ rankingsRouter.get(
             trophies: Number(p.trophies ?? 0),
             iconId: Number(p.icon?.id ?? 0),
             club: p.club?.name ? { name: p.club.name } : null,
-          })),
+          }))),
         };
       },
     );
