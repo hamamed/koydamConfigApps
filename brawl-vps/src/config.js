@@ -209,7 +209,7 @@ export const config = {
      * are the players someone actually cares about, so their history stays
      * dense even when they are nowhere near the top of the ladder.
      */
-    searchedPerCycle: int('CRAWLER_SEARCHED', 50),
+    searchedPerCycle: int('CRAWLER_SEARCHED', 150),
 
     /**
      * Full player profiles refreshed each cycle.

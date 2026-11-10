@@ -21,6 +21,8 @@ import {
 } from '../db/player_repo.js';
 import { wilsonLowerBound } from '../crawler/meta_crawler.js';
 import { normaliseTag } from '../transform/player.js';
+import { storedBattleItems } from '../transform/stored_battles.js';
+import { playerBattles } from '../db/profile_repo.js';
 
 /**
  * Analytics derived from the crawled corpus.
@@ -346,6 +348,21 @@ analyticsRouter.get('/players/:tag/stats', async (req, res) => {
 });
 
 /** The stored profile, without going upstream. */
+/**
+ * GET /players/:tag/battles?days=180 — every battle the crawler has stored for
+ * this player (their own logs and other players' logs they appear in), shaped
+ * like the live battle log so the app can merge it into its history.
+ */
+analyticsRouter.get('/players/:tag/battles', async (req, res) => {
+  if (!requireDb(res)) return;
+  const tag = normaliseTag(req.params.tag);
+  if (!tag) return res.status(400).json({ error: 'bad_tag' });
+  const days = clamp(req.query.days, 180, 1, 365);
+  const rows = await playerBattles(tag, { days, limit: 400 });
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ tag, days, items: storedBattleItems(rows, tag) });
+});
+
 analyticsRouter.get('/players/:tag/stored', async (req, res) => {
   if (!requireDb(res)) return;
 

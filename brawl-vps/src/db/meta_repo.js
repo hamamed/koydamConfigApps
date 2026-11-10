@@ -584,7 +584,7 @@ export async function staleSearchedPlayers(limit = 50) {
     `SELECT tag FROM players_seen
       WHERE source = 'search'
         AND (last_crawled_at IS NULL
-             OR last_crawled_at < now() - interval '6 hours')
+             OR last_crawled_at < now() - interval '2 hours')
       ORDER BY last_crawled_at NULLS FIRST, last_seen DESC
       LIMIT $1`,
     [limit],

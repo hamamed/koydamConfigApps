@@ -329,3 +329,30 @@ export async function rankedMaps(start, end) {
     picks: num(r.picks), decided: num(r.decided), wins: num(r.wins), battles: num(r.battles),
   }));
 }
+
+// ── One player's stored battles ─────────────────────────────────────────────
+
+/**
+ * Every stored battle a player took part in, newest first, with everyone in
+ * the lobby: their own logs and the times they turned up in someone else's.
+ */
+export async function playerBattles(tag, { days = 180, limit = 400 } = {}) {
+  const own = await query(
+    `SELECT bp.battle_key FROM battle_players bp
+      WHERE bp.player_tag = $1 AND bp.battle_time >= now() - ($2 || ' days')::interval
+      ORDER BY bp.battle_time DESC LIMIT $3`,
+    [tag, String(days), limit],
+  );
+  const keys = (own?.rows ?? []).map((r) => r.battle_key);
+  if (!keys.length) return [];
+  const res = await query(
+    `SELECT b.battle_key, b.battle_time, b.mode, b.map, b.battle_type, b.duration, b.is_showdown,
+            bp.player_tag, bp.player_name, bp.team_index, bp.brawler_id, bp.brawler_name,
+            bp.brawler_power, bp.brawler_trophies, bp.is_star_player, bp.won, bp.trophy_change
+       FROM battles b JOIN battle_players bp USING (battle_key)
+      WHERE b.battle_key = ANY($1)
+      ORDER BY b.battle_time DESC, bp.team_index, bp.player_tag`,
+    [keys],
+  );
+  return res?.rows ?? [];
+}
