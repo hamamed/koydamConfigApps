@@ -224,6 +224,20 @@ export const config = {
      * which leaves personal stats and the trophy percentile without a source.
      */
     profilesPerCycle: int('CRAWLER_PROFILES', 40),
+
+    /**
+     * Community telemetry (Meta → Community stats): profiles read each cycle
+     * purely to diff against their previous read. Unlocks, power-ups, icon and
+     * club moves only exist as that difference, so the same cohort is re-read
+     * about daily and grown from the battle-log players up to COMMUNITY_COHORT.
+     * One upstream request each, on top of the budget above. 0 disables.
+     */
+    communityProfilesPerCycle: int('CRAWLER_COMMUNITY_PROFILES', 360),
+    /** Clubs of cohort players re-read each cycle (member, role, badge moves). */
+    communityClubsPerCycle: int('CRAWLER_COMMUNITY_CLUBS', 60),
+    /** Most players / clubs kept in the community cohort. */
+    communityCohort: int('COMMUNITY_COHORT', 12000),
+    communityClubCohort: int('COMMUNITY_CLUB_COHORT', 3000),
   },
 
   brawlerMeta: {
@@ -345,6 +359,8 @@ const LIVE = [
   [() => config.crawler, 'discoveryPerCycle', 'CRAWLER_DISCOVERY', 'num'],
   [() => config.crawler, 'searchedPerCycle', 'CRAWLER_SEARCHED', 'num'],
   [() => config.crawler, 'profilesPerCycle', 'CRAWLER_PROFILES', 'num'],
+  [() => config.crawler, 'communityProfilesPerCycle', 'CRAWLER_COMMUNITY_PROFILES', 'num'],
+  [() => config.crawler, 'communityClubsPerCycle', 'CRAWLER_COMMUNITY_CLUBS', 'num'],
 ];
 
 for (const [owner, prop, key, kind] of LIVE) {

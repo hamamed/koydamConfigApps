@@ -27,6 +27,13 @@ import {
   upsertRoster,
 } from '../db/player_repo.js';
 import { transformPlayer } from '../transform/player.js';
+import { isDbEnabled } from '../db/pool.js';
+import {
+  communityClubs,
+  communityCohort,
+  recordClub,
+  recordProfile,
+} from '../db/community_repo.js';
 
 /**
  * Builds the live tier list by sampling top players' battle logs.
@@ -436,6 +443,52 @@ function finaliseBucket(key, bucket) {
 }
 
 /** Runs one full crawl cycle and writes the results to cache. */
+/**
+ * Community telemetry: re-reads a cohort of profiles and their clubs so each
+ * read can be diffed against the last (src/community/diff.js). Failures are
+ * logged and swallowed per player: one private or deleted profile must not
+ * cost the cycle its meta crawl.
+ */
+async function refreshCommunity() {
+  if (!isDbEnabled()) return;
+  const { communityProfilesPerCycle, communityClubsPerCycle, concurrency } = config.crawler;
+  let players = 0;
+  let clubs = 0;
+  let events = 0;
+
+  try {
+    const tags = await communityCohort(communityProfilesPerCycle, { cap: config.crawler.communityCohort });
+    await pooled(tags, concurrency, async (tag) => {
+      try {
+        events += await recordProfile(await supercell.player(tag));
+        players += 1;
+      } catch (err) {
+        if (!(err instanceof UpstreamError && err.status === 404)) {
+          log.warn('Community profile read failed', { tag, error: err.message });
+        }
+      }
+      await sleep(40);
+    });
+
+    const clubTags = await communityClubs(communityClubsPerCycle, { cap: config.crawler.communityClubCohort });
+    await pooled(clubTags, concurrency, async (tag) => {
+      try {
+        events += await recordClub(await supercell.club(tag));
+        clubs += 1;
+      } catch (err) {
+        if (!(err instanceof UpstreamError && err.status === 404)) {
+          log.warn('Community club read failed', { tag, error: err.message });
+        }
+      }
+      await sleep(40);
+    });
+  } catch (err) {
+    log.error('Community telemetry step failed', { error: err.message });
+  }
+
+  if (players || clubs) log.info('Community telemetry', { players, clubs, events });
+}
+
 export async function runCrawl() {
   const startedAt = Date.now();
   log.info('Meta crawl starting', {
@@ -591,6 +644,7 @@ export async function runCrawl() {
           const player = transformPlayer(raw);
 
           await upsertProfile(player, null);
+          await recordProfile(raw);
           if (player.brawlers?.length) {
             await upsertRoster(player.tag, player.brawlers);
           }
@@ -608,6 +662,8 @@ export async function runCrawl() {
       });
     }
   }
+
+  await refreshCommunity();
 
   // Everyone seen in this cycle's logs goes back into the queue, so the next
   // cycle reaches one hop further out.

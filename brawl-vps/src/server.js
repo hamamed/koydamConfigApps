@@ -14,6 +14,7 @@ import { rankingsRouter } from './routes/rankings.js';
 import { clubActivityRouter } from './routes/club_activity.js';
 import { metaHistoryRouter } from './routes/meta_history.js';
 import { analyticsRouter } from './routes/analytics.js';
+import { communityRouter } from './routes/community.js';
 import { wallpapersRouter, WALLPAPER_ROOT } from './routes/wallpapers.js';
 import { legalRouter } from './routes/legal.js';
 import { internalRouter } from './routes/internal.js';
@@ -200,6 +201,7 @@ app.use('/v1', rankingsRouter);
 app.use('/v1', clubActivityRouter);
 app.use('/v1', metaHistoryRouter);
 app.use('/v1', analyticsRouter);
+app.use('/v1', communityRouter);
 app.use('/v1', wallpapersRouter);
 
 // Unprefixed aliases, so a misconfigured base URL still works instead of 404ing.
@@ -209,6 +211,7 @@ app.use('/', rankingsRouter);
 app.use('/', clubActivityRouter);
 app.use('/', metaHistoryRouter);
 app.use('/', analyticsRouter);
+app.use('/', communityRouter);
 app.use('/', wallpapersRouter);
 
 app.use(notFoundHandler);
