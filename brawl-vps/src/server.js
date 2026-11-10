@@ -14,7 +14,7 @@ import { rankingsRouter } from './routes/rankings.js';
 import { clubActivityRouter } from './routes/club_activity.js';
 import { metaHistoryRouter } from './routes/meta_history.js';
 import { analyticsRouter } from './routes/analytics.js';
-import { communityRouter } from './routes/community.js';
+import { communityRouter, startCommunityReports, stopCommunityReports } from './routes/community.js';
 import { wallpapersRouter, WALLPAPER_ROOT } from './routes/wallpapers.js';
 import { legalRouter } from './routes/legal.js';
 import { internalRouter } from './routes/internal.js';
@@ -317,6 +317,7 @@ async function boot() {
   // runs from cron, and the analytics still need their rollups built here.
   // Skipped when migrations failed — the rollup tables may not exist.
   if (migrated) startRollups();
+  if (migrated) startCommunityReports();
 
   /**
    * Graceful shutdown: stop accepting connections, let in-flight requests
@@ -327,6 +328,7 @@ async function boot() {
     log.info('Shutting down', { signal });
     if (crawlTimer) clearInterval(crawlTimer);
     stopRollups();
+    stopCommunityReports();
 
     server.close(async () => {
       await closeCache();

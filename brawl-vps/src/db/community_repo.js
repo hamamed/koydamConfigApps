@@ -187,70 +187,64 @@ export async function brawlerTotals(fromDay) {
   }));
 }
 
-/** Battles per mode over the window. */
-export async function modeShare(since) {
+// The four queries below scan raw battles, so each covers one UTC day
+// [start, end) and the route caches finished days: a rebuild then only
+// scans today.
+
+/** Battles per mode in [start, end). */
+export async function modeShare(start, end) {
   const res = await query(
     `SELECT mode, COUNT(*)::bigint AS n FROM battles
-      WHERE battle_time >= $1 GROUP BY mode ORDER BY n DESC`,
-    [since],
+      WHERE battle_time >= $1 AND battle_time < $2 GROUP BY mode`,
+    [start, end],
   );
   return (res?.rows ?? []).map((r) => ({ mode: r.mode, battles: Number(r.n) }));
 }
 
-/** Battles per UTC day over the window. */
-export async function battlesPerDay(since) {
+/** Battles in [start, end). */
+export async function battleCount(start, end) {
   const res = await query(
-    `SELECT to_char(date_trunc('day', battle_time AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
-            COUNT(*)::bigint AS n
-       FROM battles WHERE battle_time >= $1
-      GROUP BY 1 ORDER BY 1`,
-    [since],
+    'SELECT COUNT(*)::bigint AS n FROM battles WHERE battle_time >= $1 AND battle_time < $2',
+    [start, end],
   );
-  return (res?.rows ?? []).map((r) => ({ day: r.day, battles: Number(r.n) }));
+  return Number(res?.rows?.[0]?.n ?? 0);
 }
 
 /**
- * Trophies won per UTC day, from the log owners' own trophy changes (the only
- * rows that carry one), and how many such results there were.
+ * Trophies won and lost in [start, end), from the log owners' own trophy
+ * changes (the only rows that carry one), and how many such results there were.
  */
-export async function trophiesPerDay(since) {
+export async function trophyTotals(start, end) {
   const res = await query(
-    `SELECT to_char(date_trunc('day', battle_time AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS day,
-            COALESCE(SUM(trophy_change) FILTER (WHERE trophy_change > 0), 0)::bigint AS gained,
+    `SELECT COALESCE(SUM(trophy_change) FILTER (WHERE trophy_change > 0), 0)::bigint AS gained,
             COALESCE(SUM(-trophy_change) FILTER (WHERE trophy_change < 0), 0)::bigint AS lost,
             COUNT(*)::bigint AS results
        FROM battle_players
-      WHERE battle_time >= $1 AND trophy_change IS NOT NULL
-      GROUP BY 1 ORDER BY 1`,
-    [since],
+      WHERE battle_time >= $1 AND battle_time < $2 AND trophy_change IS NOT NULL`,
+    [start, end],
   );
-  return (res?.rows ?? []).map((r) => ({
-    day: r.day,
-    gained: Number(r.gained),
-    lost: Number(r.lost),
-    results: Number(r.results),
-  }));
+  const r = res?.rows?.[0] ?? {};
+  return { gained: Number(r.gained ?? 0), lost: Number(r.lost ?? 0), results: Number(r.results ?? 0) };
 }
 
 /**
- * Ranked (soloRanked) results by tier. In a ranked battle log the brawler's
- * "trophies" field holds the player's ranked division, 1 (Bronze I) to 22
- * (Pro); anything outside that range is not a division and is skipped.
+ * Ranked (soloRanked) results by division in [start, end). In a ranked battle
+ * log the brawler's "trophies" field holds the player's ranked division, 1
+ * (Bronze I) to 22 (Pro); anything outside that range is skipped.
  */
-export async function rankedByDivision(since) {
+export async function rankedByDivision(start, end) {
   const res = await query(
     `SELECT bp.brawler_trophies AS division, bp.brawler_id, MAX(bp.brawler_name) AS name,
             COUNT(*)::bigint AS picks,
             COUNT(*) FILTER (WHERE bp.won IS NOT NULL)::bigint AS decided,
-            COUNT(*) FILTER (WHERE bp.won)::bigint AS wins,
-            COUNT(DISTINCT bp.battle_key)::bigint AS battles
-       FROM battle_players bp
-       JOIN battles b USING (battle_key)
+            COUNT(*) FILTER (WHERE bp.won)::bigint AS wins
+       FROM battles b
+       JOIN battle_players bp USING (battle_key)
       WHERE b.battle_type = 'soloRanked'
-        AND bp.battle_time >= $1
+        AND b.battle_time >= $1 AND b.battle_time < $2
         AND bp.brawler_trophies BETWEEN 1 AND 22
       GROUP BY bp.brawler_trophies, bp.brawler_id`,
-    [since],
+    [start, end],
   );
   return (res?.rows ?? []).map((r) => ({
     division: r.division,
@@ -259,7 +253,7 @@ export async function rankedByDivision(since) {
     picks: Number(r.picks),
     decided: Number(r.decided),
     wins: Number(r.wins),
-    battles: Number(r.battles),
+    battles: Number(r.picks),
   }));
 }
 
