@@ -120,6 +120,8 @@ function normaliseEntry(raw) {
     id: raw.id,
     name,
     rarity: RARITY_LABELS[rarityName] ?? 'Common',
+    // Unfolded, for clients that know Ultra Legendary (the Swift app).
+    rarityExact: rarityName || null,
     class: CLASS_LABELS[className] ?? 'Damage Dealer',
     gadgetsTotal: Array.isArray(raw.gadgets) ? raw.gadgets.length : 0,
     starPowersTotal: Array.isArray(raw.starPowers) ? raw.starPowers.length : 0,

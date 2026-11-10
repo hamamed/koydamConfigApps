@@ -1,0 +1,8 @@
+{
+  "_comment": "Exact rarities the community catalogue (api.brawlapi.com) lacks or folds. Keyed by brawler id. Remove an entry once the catalogue has it.",
+  "16000094": "Ultra Legendary",
+  "16000102": "Ultra Legendary",
+  "16000111": "Legendary",
+  "16000112": "Mythic",
+  "16000113": "Mythic"
+}

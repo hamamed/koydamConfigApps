@@ -134,13 +134,25 @@ function rangeRows(rows, range) {
   return [...byId.values()];
 }
 
+/**
+ * Wilson lower bound of a win rate (95%). Ranks small samples honestly: 5-0
+ * scores below 140-60, where sorting by raw win rate puts every 100% first.
+ */
+export function wilson(wins, games, z = 1.96) {
+  if (games <= 0) return 0;
+  const p = wins / games;
+  const d = 1 + (z * z) / games;
+  return (p + (z * z) / (2 * games) - z * Math.sqrt((p * (1 - p) + (z * z) / (4 * games)) / games)) / d;
+}
+
 /** Team stats: top line-ups and, for each brawler, its best teammates. */
-export function teamStats(teams, { minGames = 5 } = {}) {
+export function teamStats(teams, { minGames = 10 } = {}) {
   const top = teams
     .filter((t) => t.games >= minGames)
-    .map((t) => ({ ids: t.comp, games: t.games, winRate: ratio(t.wins, t.games) }))
-    .sort((a, b) => b.winRate - a.winRate || b.games - a.games)
-    .slice(0, 12);
+    .map((t) => ({ ids: t.comp, games: t.games, winRate: ratio(t.wins, t.games), score: wilson(t.wins, t.games) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12)
+    .map(({ score, ...t }) => t);
   const pairs = new Map();
   for (const t of teams) {
     for (let i = 0; i < t.comp.length; i++) {
@@ -155,9 +167,10 @@ export function teamStats(teams, { minGames = 5 } = {}) {
   }
   const partnersOf = (id) => [...pairs.values()]
     .filter((p) => p.a === id && p.games >= minGames)
-    .map((p) => ({ id: p.b, games: p.games, winRate: ratio(p.wins, p.games) }))
-    .sort((a, b) => b.winRate - a.winRate)
-    .slice(0, 3);
+    .map((p) => ({ id: p.b, games: p.games, winRate: ratio(p.wins, p.games), score: wilson(p.wins, p.games) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ score, ...p }) => p);
   return { top, partnersOf };
 }
 

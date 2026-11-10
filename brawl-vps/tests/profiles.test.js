@@ -54,14 +54,14 @@ test('brawler profile: ranges, ranked tiers, modes, maps against the mode, build
   assert.equal(p.unlocks.brawler, 9);
 });
 
-test('team stats: top line-ups need enough games; partners come from shared teams', () => {
+test('team stats: confidence-ranked, so a small perfect record does not top a big good one', () => {
   const { top, partnersOf } = teamStats([
-    { comp: [1, 2, 3], games: 10, wins: 8 },
-    { comp: [1, 2, 4], games: 6, wins: 3 },
-    { comp: [1, 5, 6], games: 2, wins: 2 },
+    { comp: [1, 2, 3], games: 200, wins: 140 },
+    { comp: [1, 2, 4], games: 12, wins: 12 },
+    { comp: [1, 5, 6], games: 4, wins: 4 },
   ]);
-  assert.deepEqual(top.map((t) => [t.ids, t.winRate]), [[[1, 2, 3], 0.8], [[1, 2, 4], 0.5]]);
-  assert.deepEqual(partnersOf(1).map((p) => [p.id, p.games]), [[3, 10], [2, 16], [4, 6]]);
+  assert.deepEqual(top.map((t) => [t.ids, t.winRate]), [[[1, 2, 3], 0.7], [[1, 2, 4], 1]]);
+  assert.deepEqual(partnersOf(1).map((p) => p.id), [2, 3, 4]);
 });
 
 test('rotation summary: appearances, cadence, live now', () => {
@@ -87,7 +87,7 @@ test('map profile: categories, snapshot, range filter, vs mode', () => {
     row('0-499', 4, 10, 10, 2),
   ];
   const p = mapProfile({
-    map: 'Backyard Bowl', rows, ranked: [], teams: [{ comp: [1, 2, 3], games: 9, wins: 7 }],
+    map: 'Backyard Bowl', rows, ranked: [], teams: [{ comp: [1, 2, 3], games: 19, wins: 14 }],
     summary: { battles: 150, mode: 'brawlBall', lastAt: null, avgDuration: 90 }, rotations: [],
     modeRows: [{ id: 1, decided: 1000, wins: 500 }],
   });

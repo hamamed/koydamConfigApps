@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { Router } from 'express';
 
 import { config } from '../config.js';
@@ -19,11 +21,21 @@ export const catalogRouter = Router();
  * class, hypercharge, portraits). Official data wins on anything both provide,
  * since it's authoritative for what actually exists in the game.
  */
+/** data/rarity-overrides.json: id → exact rarity, for brawlers the catalogue lacks or folds. */
+const rarityOverrides = (() => {
+  try {
+    const raw = JSON.parse(readFileSync(path.resolve(process.cwd(), 'data', 'rarity-overrides.json'), 'utf8'));
+    return Object.fromEntries(Object.entries(raw).filter(([k]) => /^\d+$/.test(k)).map(([k, v]) => [Number(k), String(v)]));
+  } catch {
+    return {};
+  }
+})();
+
 catalogRouter.get(
   '/brawlers',
   asyncRoute(async (req, res) => {
     const { data, cached: hit } = await cached(
-      'brawlers:all',
+      'brawlers:all:v2',
       config.ttl.brawlers,
       async () => {
         const official = await supercell.brawlers().catch(() => ({ items: [] }));
@@ -46,13 +58,18 @@ catalogRouter.get(
             const gadgets = mergeItems(off?.gadgets, meta?.gadgets);
             const starPowers = mergeItems(off?.starPowers, meta?.starPowers);
 
+            const exact = rarityOverrides[id] ?? meta?.rarityExact ?? (meta ? meta.rarity : null);
             return {
               id,
               name: off?.name ?? meta?.name ?? 'Unknown',
-              rarity: meta?.rarity ?? 'Common',
+              // Folded to the six rarities old Flutter builds know.
+              rarity: meta?.rarity ?? (exact ? (exact === 'Ultra Legendary' ? 'Legendary' : exact) : 'Common'),
+              // Exact rarity, or null when no source knows it yet.
+              rarityExact: exact,
               class: meta?.class ?? 'Damage Dealer',
               description: meta?.description ?? null,
-              portraitUrl: meta?.portraitUrl ?? null,
+              // The CDN publishes new brawlers' portraits before the catalogue lists them.
+              portraitUrl: meta?.portraitUrl ?? `https://cdn.brawlify.com/brawlers/borderless/${id}.png`,
 
               gadgets,
               starPowers,
