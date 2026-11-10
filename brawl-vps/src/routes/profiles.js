@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { isDbEnabled } from '../db/pool.js';
+import { isDbEnabled, query } from '../db/pool.js';
 import { log } from '../log.js';
 import { cachedOrBuilding, daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
 import { rankedByDivision } from '../db/community_repo.js';
@@ -111,12 +111,24 @@ profilesRouter.get('/meta/maps/profile', (req, res) => {
   });
 });
 
-profilesRouter.get('/meta/mode/:mode/profile', (req, res) => {
-  const mode = req.params.mode;
-  if (!MODE_RE.test(mode)) {
+const normalise = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+let modeIndex = { at: 0, map: new Map() };
+
+/** The stored spelling of a mode ("brawlBall") from any casing ("brawlball", "Brawl Ball"). */
+async function resolveMode(raw) {
+  if (Date.now() - modeIndex.at > 3_600_000) {
+    const rows = await query(`SELECT DISTINCT mode FROM brawler_stats_daily WHERE day >= current_date - 30`);
+    modeIndex = { at: Date.now(), map: new Map((rows?.rows ?? []).map((r) => [normalise(r.mode), r.mode])) };
+  }
+  return modeIndex.map.get(normalise(raw)) ?? raw;
+}
+
+profilesRouter.get('/meta/mode/:mode/profile', async (req, res) => {
+  if (!MODE_RE.test(req.params.mode)) {
     res.status(400).json({ error: 'bad_request', message: 'Invalid mode.' });
     return;
   }
+  const mode = isDbEnabled() ? await resolveMode(req.params.mode).catch(() => req.params.mode) : req.params.mode;
   return serve(res, `profile:mode:v1:${mode}`, async () => {
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * DAY);
