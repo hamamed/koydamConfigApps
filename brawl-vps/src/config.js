@@ -113,7 +113,7 @@ export const config = {
      * `battles`  — force the per-player model, even if it is empty.
      * `samples`  — force the legacy table, e.g. to compare the two.
      */
-    source: (process.env.ANALYTICS_SOURCE ?? 'auto').toLowerCase(),
+    source: (process.env.ANALYTICS_SOURCE ?? 'battles').toLowerCase(),
 
     /**
      * Whether to keep writing the legacy `battle_samples` table.
@@ -126,7 +126,8 @@ export const config = {
      * Turning it off is one-way in practice: the legacy table stops growing and
      * ages out, so the automatic fallback has nothing left to serve.
      */
-    writeLegacySamples: bool('WRITE_LEGACY_SAMPLES', true),
+    // Off since 2026-11-10: the table was emptied (17 GB) and nothing reads it.
+    writeLegacySamples: bool('WRITE_LEGACY_SAMPLES', false),
 
     /**
      * Whether synergy, counters, draft and brackets read the daily rollups.
@@ -167,7 +168,7 @@ export const config = {
   crawler: {
     enabled: bool('CRAWLER_ENABLED', true),
     /** How often to rebuild the tier list, in minutes. */
-    intervalMinutes: int('CRAWLER_INTERVAL_MIN', 60),
+    intervalMinutes: int('CRAWLER_INTERVAL_MIN', 30),
     /**
      * Countries to sample top players from. 'global' is the widest net;
      * add regions if you want the meta weighted toward a specific server.
@@ -200,7 +201,7 @@ export const config = {
      * CRAWLER_PLAYERS + CRAWLER_DISCOVERY + CRAWLER_SEARCHED. Set to 0 to go
      * back to rankings-only crawling.
      */
-    discoveryPerCycle: int('CRAWLER_DISCOVERY', 150),
+    discoveryPerCycle: int('CRAWLER_DISCOVERY', 300),
 
     /**
      * Searched players refreshed each cycle.
@@ -223,7 +224,7 @@ export const config = {
      * CRAWLER_DISCOVERY and CRAWLER_SEARCHED. 0 disables profile refreshing,
      * which leaves personal stats and the trophy percentile without a source.
      */
-    profilesPerCycle: int('CRAWLER_PROFILES', 40),
+    profilesPerCycle: int('CRAWLER_PROFILES', 20),
 
     /**
      * Community telemetry (Meta → Community stats): profiles read each cycle
@@ -232,9 +233,9 @@ export const config = {
      * about daily and grown from the battle-log players up to COMMUNITY_COHORT.
      * One upstream request each, on top of the budget above. 0 disables.
      */
-    communityProfilesPerCycle: int('CRAWLER_COMMUNITY_PROFILES', 360),
+    communityProfilesPerCycle: int('CRAWLER_COMMUNITY_PROFILES', 180),
     /** Clubs of cohort players re-read each cycle (member, role, badge moves). */
-    communityClubsPerCycle: int('CRAWLER_COMMUNITY_CLUBS', 60),
+    communityClubsPerCycle: int('CRAWLER_COMMUNITY_CLUBS', 30),
     /** Most players / clubs kept in the community cohort. */
     communityCohort: int('COMMUNITY_COHORT', 12000),
     communityClubCohort: int('COMMUNITY_CLUB_COHORT', 3000),
@@ -310,7 +311,9 @@ export const config = {
      * A Postgres that fills its disk stops accepting writes and is unpleasant
      * to recover, so this exists to make that unreachable. 0 disables it.
      */
-    diskBudgetBytes: int('POSTGRES_DISK_BUDGET_GB', 40) * 1_000_000_000,
+    // The database lives on the 130 GB volume (tablespace brawl_space), not the
+    // root disk; 60 GB leaves room for 180 days at the 30-minute crawl.
+    diskBudgetBytes: int('POSTGRES_DISK_BUDGET_GB', 60) * 1_000_000_000,
   },
 
   /**
