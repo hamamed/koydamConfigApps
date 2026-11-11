@@ -18,8 +18,8 @@
  * lawyer; the publisher is responsible for what they say.
  */
 
-/** Must match `_updated` in the app's legal_documents.dart. */
-const UPDATED = 'July 2026';
+/** Must match `updated` in the app's LegalDocuments.swift. */
+const UPDATED = 'November 2026';
 
 export const legalDocuments = {
   privacy: {
@@ -35,8 +35,7 @@ export const legalDocuments = {
         heading: 'What we do not collect',
         body:
           'No name, email address, phone number, or payment details — the app ' +
-          'never asks for them. We do not sell anything about you, and we do ' +
-          'not run our own analytics.',
+          'never asks for them. We do not sell anything about you.',
       },
       {
         heading: 'Advertising',
@@ -64,6 +63,26 @@ export const legalDocuments = {
           'cached server responses. All of it is stored locally and none of it ' +
           'is uploaded. Deleting the app removes it permanently — it is not ' +
           'backed up to us and cannot be recovered.',
+      },
+      {
+        heading: 'Anonymous usage counts',
+        body:
+          'To learn which features people use, the app sends daily counts such ' +
+          'as “the upgrade advisor was opened 3 times”, together with the app ' +
+          'version and the app language. These counts carry no device ' +
+          'identifier, no player tag and nothing else that could tell one ' +
+          'person from another, and they are only ever added up. You can ' +
+          'switch them off in Settings at any time.',
+      },
+      {
+        heading: 'Alerts and widgets',
+        body:
+          'If you turn on alerts, they are planned and shown by your device. ' +
+          'Map alerts come from the public rotation; record and club alerts ' +
+          'come from the app checking the public profiles you pinned, in the ' +
+          'background, every few hours. Widgets and the Lock Screen countdown ' +
+          'read only what the app already saved on your device. Nothing about ' +
+          'your choices is sent to us.',
       },
       {
         heading: 'What our server receives',
