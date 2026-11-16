@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { cacheGet } from '../cache/store.js';
 import { isDbEnabled, query } from '../db/pool.js';
 import { log } from '../log.js';
 import { cachedOrBuilding, cachedShared, daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
@@ -42,6 +43,8 @@ import { brawlerProfile, mapProfile, modeProfile } from '../community/profiles.j
 export const profilesRouter = Router();
 
 const TTL = 1_200;
+/** Map pages cover 30 days of battles, so an hour-old copy is as good as new (and they are the heaviest builds). */
+export const MAP_TTL = 3_600;
 const RANGES = new Set(['all', '0-499', '500-999', '1000+']);
 const MODE_RE = /^[a-zA-Z0-9]{2,40}$/;
 
@@ -54,10 +57,10 @@ function building(res) {
   res.status(503).json({ error: 'building', message: 'These stats are being built. Try again in a few seconds.' });
 }
 
-async function serve(res, key, build) {
+async function serve(res, key, build, ttl = TTL) {
   if (!isDbEnabled()) return unavailable(res);
   try {
-    const data = await cachedOrBuilding(key, TTL, build);
+    const data = await cachedOrBuilding(key, ttl, build);
     if (!data) return building(res);
     res.set('Cache-Control', 'public, max-age=300');
     res.json(data);
@@ -121,7 +124,7 @@ profilesRouter.get('/meta/maps/profile', (req, res) => {
     res.status(400).json({ error: 'bad_request', message: 'Give a map name and a range of all, 0-499, 500-999 or 1000+.' });
     return;
   }
-  return serve(res, mapProfileKey(map, range), () => buildMapProfile(map, range));
+  return serve(res, mapProfileKey(map, range), () => buildMapProfile(map, range), MAP_TTL);
 });
 
 export const mapProfileKey = (map, range) => `profile:map:v1:${map.toLowerCase()}:${range}`;
@@ -181,10 +184,17 @@ async function buildMapActivity() {
 
 profilesRouter.get('/meta/maps/activity', (req, res) => serve(res, 'profile:maps:activity:v1', buildMapActivity));
 
+/** Whether a page has a fresh or a last-good copy (then a visit answers at once). */
+async function hasCopy(key) {
+  return (await cacheGet(key)) !== null || (await cacheGet(`stale:${key}`)) !== null;
+}
+
 /**
- * Builds every brawler page and every mode played this week, one after
- * another, wherever the fresh copy has run out. Run in the background after
- * each community report, so a user opening any of them gets a cached answer.
+ * Builds the brawler and mode pages that have never been built, one after
+ * another. Pages that already have a copy are left alone: a visit answers
+ * from it and refreshes it in the background, so rebuilding all of them on a
+ * timer only added database load (about three minutes of it every cycle).
+ * After the first pass this usually builds nothing.
  */
 export async function warmProfiles() {
   if (!isDbEnabled()) return;
@@ -192,20 +202,21 @@ export async function warmProfiles() {
   let brawlers = 0;
   let modes = 0;
   try {
-    const { totals } = await weekInputs();
-    for (const { id } of totals) {
+    const ids = (await allBrawlerTotals(week().from)).map((t) => t.id);
+    for (const id of ids) {
       if (!Number.isInteger(id) || id < 16_000_000 || id > 16_999_999) continue;
+      if (await hasCopy(brawlerProfileKey(id))) continue;
       await cachedShared(brawlerProfileKey(id), TTL, () => buildBrawlerProfile(id));
       brawlers += 1;
     }
     await resolveMode('');
     for (const mode of modeIndex.map.values()) {
-      if (!MODE_RE.test(mode)) continue;
+      if (!MODE_RE.test(mode) || (await hasCopy(modeProfileKey(mode)))) continue;
       await cachedShared(modeProfileKey(mode), TTL, () => buildModeProfile(mode));
       modes += 1;
     }
-    await cachedShared('profile:maps:activity:v1', TTL, buildMapActivity);
-    log.info('Profiles warmed', { ms: Date.now() - began, brawlers, modes });
+    if (!(await hasCopy('profile:maps:activity:v1'))) await cachedShared('profile:maps:activity:v1', TTL, buildMapActivity);
+    if (brawlers + modes > 0) log.info('Profiles warmed', { ms: Date.now() - began, brawlers, modes });
   } catch (err) {
     log.warn('Profile warm-up stopped', { ms: Date.now() - began, brawlers, modes, error: err.message });
   }
