@@ -1,6 +1,8 @@
 import { Router } from 'express';
 
 import { isDbEnabled } from '../db/pool.js';
+import { log } from '../log.js';
+import { cachedOrBuilding } from '../community/perday.js';
 import {
   brawlerCounters,
   brawlerSynergy,
@@ -54,6 +56,31 @@ function clamp(raw, fallback, min, max) {
 
 const str = (v) => (typeof v === 'string' && v.length ? v : null);
 
+/**
+ * Answers from a 10-minute cache, keyed by the route and its parameters, with
+ * the last good copy served at once while an expired one rebuilds (see
+ * cachedOrBuilding). These read days of rollups; several took 8-20 s a call.
+ */
+const ANALYTICS_TTL = 600;
+const MAX_KEY = 400;
+
+async function answerCached(res, name, params, build) {
+  const key = `analytics:${name}:v1:${JSON.stringify(params)}`;
+  try {
+    const data = key.length > MAX_KEY ? await build() : await cachedOrBuilding(key, ANALYTICS_TTL, build);
+    if (!data) {
+      res.set('Retry-After', '15');
+      res.status(503).json({ error: 'building', message: 'These stats are being built. Try again in a few seconds.' });
+      return;
+    }
+    res.set('Cache-Control', 'public, max-age=120');
+    res.json(data);
+  } catch (err) {
+    log.error('Analytics build failed', { name, error: err.message });
+    res.status(502).json({ error: 'analytics_failed', message: 'These stats are unavailable right now.' });
+  }
+}
+
 // ── Synergy and counters ────────────────────────────────────────────────────
 
 analyticsRouter.get('/meta/synergy', async (req, res) => {
@@ -65,24 +92,22 @@ analyticsRouter.get('/meta/synergy', async (req, res) => {
   const minSample = clamp(req.query.minSample, 30, 5, 1000);
   const limit = clamp(req.query.limit, 60, 1, 200);
 
-  const pairs = await brawlerSynergy({
-    hours,
-    minSample,
-    limit,
-    mode: str(req.query.mode),
-    map: str(req.query.map),
-  });
+  const mode = str(req.query.mode);
+  const map = str(req.query.map);
 
-  res.json({
-    hours,
-    minSample,
-    mode: str(req.query.mode),
-    map: str(req.query.map),
-    // Ranked by the same lower bound the tier list uses, so a 3-0 pair does not
-    // outrank a 180-120 one.
-    pairs: pairs
-      .map((p) => ({ ...p, score: wilsonLowerBound(p.wins, p.games) }))
-      .sort((a, b) => b.score - a.score),
+  return answerCached(res, 'synergy', { hours, minSample, limit, mode, map }, async () => {
+    const pairs = await brawlerSynergy({ hours, minSample, limit, mode, map });
+    return {
+      hours,
+      minSample,
+      mode,
+      map,
+      // Ranked by the same lower bound the tier list uses, so a 3-0 pair does not
+      // outrank a 180-120 one.
+      pairs: pairs
+        .map((p) => ({ ...p, score: wilsonLowerBound(p.wins, p.games) }))
+        .sort((a, b) => b.score - a.score),
+    };
   });
 });
 
@@ -97,29 +122,32 @@ analyticsRouter.get('/meta/counters/:id', async (req, res) => {
   const hours = clamp(req.query.hours, 168, 1, 720);
   const minSample = clamp(req.query.minSample, 25, 5, 1000);
 
-  const rows = await brawlerCounters(id, {
+  const params = {
+    id,
     hours,
     minSample,
     limit: clamp(req.query.limit, 40, 1, 200),
     mode: str(req.query.mode),
     map: str(req.query.map),
-  });
+  };
 
-  const scored = rows.map((r) => ({
-    ...r,
-    score: wilsonLowerBound(r.wins, r.games),
-  }));
-
-  res.json({
-    brawlerId: id,
-    hours,
-    minSample,
-    // Split at the point of the question: who this brawler beats, and who beats
-    // it. A single list sorted by win rate makes the reader do that work.
-    strongAgainst: scored.filter((r) => (r.winRate ?? 0) > 0.5),
-    weakAgainst: scored
-      .filter((r) => (r.winRate ?? 0) <= 0.5)
-      .sort((a, b) => (a.winRate ?? 0) - (b.winRate ?? 0)),
+  return answerCached(res, 'counters', params, async () => {
+    const rows = await brawlerCounters(id, params);
+    const scored = rows.map((r) => ({
+      ...r,
+      score: wilsonLowerBound(r.wins, r.games),
+    }));
+    return {
+      brawlerId: id,
+      hours,
+      minSample,
+      // Split at the point of the question: who this brawler beats, and who beats
+      // it. A single list sorted by win rate makes the reader do that work.
+      strongAgainst: scored.filter((r) => (r.winRate ?? 0) > 0.5),
+      weakAgainst: scored
+        .filter((r) => (r.winRate ?? 0) <= 0.5)
+        .sort((a, b) => (a.winRate ?? 0) - (b.winRate ?? 0)),
+    };
   });
 });
 
@@ -238,7 +266,7 @@ analyticsRouter.get('/meta/health', async (req, res) => {
   if (!requireDb(res)) return;
 
   const hours = clamp(req.query.hours, 24, 1, 720);
-  res.json({ hours, modes: await metaHealth({ hours }) });
+  return answerCached(res, 'health', { hours }, async () => ({ hours, modes: await metaHealth({ hours }) }));
 });
 
 analyticsRouter.get('/meta/brackets', async (req, res) => {
@@ -249,35 +277,34 @@ analyticsRouter.get('/meta/brackets', async (req, res) => {
     : null;
 
   const hours = clamp(req.query.hours, 168, 1, 720);
-  const rows = await trophyBrackets({
+  const params = {
     brawlerId: Number.isFinite(brawlerId) ? brawlerId : null,
     mode: str(req.query.mode),
     hours,
     minSample: clamp(req.query.minSample, 20, 5, 1000),
-  });
+  };
 
-  res.json({ hours, brawlerId, rows });
+  return answerCached(res, 'brackets', params, async () => ({ hours, brawlerId, rows: await trophyBrackets(params) }));
 });
 
 analyticsRouter.get('/meta/regions', async (req, res) => {
   if (!requireDb(res)) return;
 
   const hours = clamp(req.query.hours, 24, 1, 720);
-  const regions = await regionalStandings({
-    hours,
-    mode: str(req.query.mode),
-    minSample: clamp(req.query.minSample, 20, 5, 1000),
-  });
+  const params = { hours, mode: str(req.query.mode), minSample: clamp(req.query.minSample, 20, 5, 1000) };
 
-  res.json({
-    hours,
-    // Said plainly rather than left for the client to infer from a single
-    // group: one region means the crawler is only watching one ladder.
-    note:
-      regions.length <= 1
-        ? 'Only one region is being crawled. Set CRAWLER_REGIONS to compare.'
-        : null,
-    regions,
+  return answerCached(res, 'regions', params, async () => {
+    const regions = await regionalStandings(params);
+    return {
+      hours,
+      // Said plainly rather than left for the client to infer from a single
+      // group: one region means the crawler is only watching one ladder.
+      note:
+        regions.length <= 1
+          ? 'Only one region is being crawled. Set CRAWLER_REGIONS to compare.'
+          : null,
+      regions,
+    };
   });
 });
 

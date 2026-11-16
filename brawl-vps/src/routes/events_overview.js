@@ -4,7 +4,7 @@ import { cacheGet, cacheSet } from '../cache/store.js';
 import { isDbEnabled } from '../db/pool.js';
 import { log } from '../log.js';
 import { supercell } from '../supercell/client.js';
-import { daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
+import { cachedShared, daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
 import { predictedMaps, rankedMaps, trophyBands } from '../db/profile_repo.js';
 import { eventStats, rankedPool, trophyBreakdown } from '../community/events.js';
 import { buildMapProfile, mapProfileKey } from './profiles.js';
@@ -37,11 +37,7 @@ export async function buildEventsOverview(now = new Date()) {
     const end = eventTime(e.endTime);
     const windowSeconds = start && end ? (end - start) / 1000 : 86_400;
     // The map page's cache is shared, so an event build warms the map pages too.
-    let profile = await cacheGet(mapProfileKey(map, 'all'));
-    if (profile === null) {
-      profile = await buildMapProfile(map, 'all');
-      await cacheSet(mapProfileKey(map, 'all'), profile, 1_200);
-    }
+    const profile = await cachedShared(mapProfileKey(map, 'all'), 1_200, () => buildMapProfile(map, 'all'));
     const next = await predictedMaps(mode, Number(e.slotId ?? 0), map, windowSeconds);
     events.push({
       slotId: Number(e.slotId ?? 0),

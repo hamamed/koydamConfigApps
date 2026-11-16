@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 import { isDbEnabled, query } from '../db/pool.js';
 import { log } from '../log.js';
-import { cachedOrBuilding, daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
+import { cachedOrBuilding, cachedShared, daysBack, isoDay, merge, perDay, utcMidnight, DAY } from '../community/perday.js';
 import { rankedByDivision } from '../db/community_repo.js';
 import {
   allBrawlerTotals,
@@ -32,8 +32,12 @@ import { brawlerProfile, mapProfile, modeProfile } from '../community/profiles.j
  *   GET /meta/mode/:mode/profile         mode meta, ranked, maps, battles, length
  *   GET /meta/maps/activity              battles per map, last day and week
  *
- * Each is cached for 20 minutes. A cold request waits up to 14 s for its build,
- * then gets 503 "building" (with Retry-After) while the build finishes.
+ * Each is cached for 20 minutes, with the last good copy kept for three days:
+ * once a page has been built it answers at once, and an expired copy is
+ * rebuilt behind the answer. `warmProfiles` (run with the community report)
+ * keeps every brawler and mode page built, so users never wait on the
+ * database. A page that was never built waits up to 14 s for its build, then
+ * gets 503 "building" (with Retry-After) while the build finishes.
  */
 export const profilesRouter = Router();
 
@@ -75,21 +79,39 @@ export async function weeklyRanges() {
   return merge(await perDay('ranges', w.days, w.todayIso, rangeTotals), (r) => `${r.range}:${r.id}`, ['decided', 'wins', 'picks']);
 }
 
+/**
+ * The week-wide inputs every brawler page reads: all brawlers' totals, results
+ * per trophy range and ranked results per division. Built once and shared, so
+ * a hundred brawler pages cost one set of raw-battle scans, not a hundred.
+ */
+const WEEK_INPUTS_TTL = 900;
+function weekInputs(w = week()) {
+  return cachedShared(`profile:week-inputs:v1:${w.todayIso}`, WEEK_INPUTS_TTL, async () => {
+    const totals = await allBrawlerTotals(w.from);
+    const ranges = await weeklyRanges();
+    const ranked = merge(await perDay('ranked', w.days, w.todayIso, rankedByDivision), (r) => `${r.division}:${r.id}`, ['picks', 'decided', 'wins', 'battles']);
+    return { totals, ranges, ranked };
+  });
+}
+
+const brawlerProfileKey = (id) => `profile:brawler:v1:${id}`;
+
+async function buildBrawlerProfile(id) {
+  const w = week();
+  const { totals, ranges, ranked } = await weekInputs(w);
+  const [modes, maps, daily, counters] = await Promise.all([
+    brawlerModes(id, w.from), brawlerMaps(id, w.from), brawlerDaily(id, w.from), brawlerCounters(id, w.from),
+  ]);
+  return brawlerProfile({ id, totals, ranges, ranked, modes, maps, daily, counters });
+}
+
 profilesRouter.get('/meta/brawler/:id/profile', (req, res) => {
   const id = Number.parseInt(req.params.id, 10);
   if (!Number.isInteger(id) || id < 16_000_000 || id > 16_999_999) {
     res.status(400).json({ error: 'bad_request', message: 'Invalid brawler id.' });
     return;
   }
-  return serve(res, `profile:brawler:v1:${id}`, async () => {
-    const w = week();
-    const [totals, modes, maps, daily, counters] = await Promise.all([
-      allBrawlerTotals(w.from), brawlerModes(id, w.from), brawlerMaps(id, w.from), brawlerDaily(id, w.from), brawlerCounters(id, w.from),
-    ]);
-    const ranges = await weeklyRanges();
-    const ranked = merge(await perDay('ranked', w.days, w.todayIso, rankedByDivision), (r) => `${r.division}:${r.id}`, ['picks', 'decided', 'wins', 'battles']);
-    return brawlerProfile({ id, totals, ranges, ranked, modes, maps, daily, counters });
-  });
+  return serve(res, brawlerProfileKey(id), () => buildBrawlerProfile(id));
 });
 
 profilesRouter.get('/meta/maps/profile', (req, res) => {
@@ -127,30 +149,64 @@ async function resolveMode(raw) {
   return modeIndex.map.get(normalise(raw)) ?? raw;
 }
 
+const modeProfileKey = (mode) => `profile:mode:v1:${mode}`;
+
+async function buildModeProfile(mode) {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * DAY);
+  const [board, ranked, maps, summary, daily] = await Promise.all([
+    modeBrawlers(mode, week(now).from),
+    modeRanked(mode, weekAgo),
+    modeMaps(mode, new Date(now.getTime() - 30 * DAY)),
+    modeSummary(mode, weekAgo),
+    modeDaily(mode, weekAgo),
+  ]);
+  return modeProfile({ mode, board, ranked, maps, summary, daily });
+}
+
 profilesRouter.get('/meta/mode/:mode/profile', async (req, res) => {
   if (!MODE_RE.test(req.params.mode)) {
     res.status(400).json({ error: 'bad_request', message: 'Invalid mode.' });
     return;
   }
   const mode = isDbEnabled() ? await resolveMode(req.params.mode).catch(() => req.params.mode) : req.params.mode;
-  return serve(res, `profile:mode:v1:${mode}`, async () => {
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * DAY);
-    const [board, ranked, maps, summary, daily] = await Promise.all([
-      modeBrawlers(mode, week(now).from),
-      modeRanked(mode, weekAgo),
-      modeMaps(mode, new Date(now.getTime() - 30 * DAY)),
-      modeSummary(mode, weekAgo),
-      modeDaily(mode, weekAgo),
-    ]);
-    return modeProfile({ mode, board, ranked, maps, summary, daily });
-  });
+  return serve(res, modeProfileKey(mode), () => buildModeProfile(mode));
 });
 
-profilesRouter.get('/meta/maps/activity', (req, res) =>
-  serve(res, 'profile:maps:activity:v1', async () => {
-    const now = Date.now();
-    const rows = await mapActivity(new Date(now - DAY), new Date(now - 7 * DAY));
-    return { maps: rows.sort((a, b) => b.day - a.day || b.week - a.week) };
-  }),
-);
+async function buildMapActivity() {
+  const now = Date.now();
+  const rows = await mapActivity(new Date(now - DAY), new Date(now - 7 * DAY));
+  return { maps: rows.sort((a, b) => b.day - a.day || b.week - a.week) };
+}
+
+profilesRouter.get('/meta/maps/activity', (req, res) => serve(res, 'profile:maps:activity:v1', buildMapActivity));
+
+/**
+ * Builds every brawler page and every mode played this week, one after
+ * another, wherever the fresh copy has run out. Run in the background after
+ * each community report, so a user opening any of them gets a cached answer.
+ */
+export async function warmProfiles() {
+  if (!isDbEnabled()) return;
+  const began = Date.now();
+  let brawlers = 0;
+  let modes = 0;
+  try {
+    const { totals } = await weekInputs();
+    for (const { id } of totals) {
+      if (!Number.isInteger(id) || id < 16_000_000 || id > 16_999_999) continue;
+      await cachedShared(brawlerProfileKey(id), TTL, () => buildBrawlerProfile(id));
+      brawlers += 1;
+    }
+    await resolveMode('');
+    for (const mode of modeIndex.map.values()) {
+      if (!MODE_RE.test(mode)) continue;
+      await cachedShared(modeProfileKey(mode), TTL, () => buildModeProfile(mode));
+      modes += 1;
+    }
+    await cachedShared('profile:maps:activity:v1', TTL, buildMapActivity);
+    log.info('Profiles warmed', { ms: Date.now() - began, brawlers, modes });
+  } catch (err) {
+    log.warn('Profile warm-up stopped', { ms: Date.now() - began, brawlers, modes, error: err.message });
+  }
+}

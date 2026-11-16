@@ -16,7 +16,7 @@ import {
   trophyTotals,
 } from '../db/community_repo.js';
 import { buildReport } from '../community/report.js';
-import { weeklyRanges } from './profiles.js';
+import { warmProfiles, weeklyRanges } from './profiles.js';
 import { rebuildEventsOverview } from './events_overview.js';
 
 /**
@@ -111,8 +111,10 @@ export function rebuildCommunityReport() {
       // last good report in place rather than a gap.
       await cacheSet(REPORT_KEY, report, 6 * 3_600);
       log.info('Community report built', { ms: Date.now() - began });
-      // The Events tab rides the same 15-minute schedule.
+      // The Events tab rides the same 15-minute schedule, then every brawler
+      // and mode page is kept built so none of them waits on the database.
       await rebuildEventsOverview();
+      await warmProfiles();
       return report;
     } catch (err) {
       log.error('Community report failed', { error: err.message });

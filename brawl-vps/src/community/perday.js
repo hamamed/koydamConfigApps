@@ -1,4 +1,5 @@
 import { cacheGet, cacheSet } from '../cache/store.js';
+import { log } from '../log.js';
 
 /**
  * Raw-battle scans one UTC day at a time, with settled days cached.
@@ -52,21 +53,20 @@ export function merge(perDayRows, keyOf, fields) {
   return [...out.values()];
 }
 
-/**
- * Serves a cached value, building it on a miss. Concurrent misses share one
- * build; a request waits up to `waitMs`, then gets null (the caller answers
- * "building") while the build carries on and fills the cache.
- */
+/** How long the last good copy of a cached build is kept behind the fresh one. */
+const STALE_SECONDS = 3 * 86_400;
+
 const inflight = new Map();
-export async function cachedOrBuilding(key, ttlSeconds, build, waitMs = 14_000) {
-  const hit = await cacheGet(key);
-  if (hit !== null) return hit;
+
+/** Starts (or joins) the one build for `key`; it fills the fresh and the stale copy. */
+function startBuild(key, ttlSeconds, build) {
   let job = inflight.get(key);
   if (!job) {
     job = (async () => {
       try {
         const value = await build();
         await cacheSet(key, value, ttlSeconds);
+        await cacheSet(`stale:${key}`, value, Math.max(STALE_SECONDS, ttlSeconds));
         return value;
       } finally {
         inflight.delete(key);
@@ -74,5 +74,34 @@ export async function cachedOrBuilding(key, ttlSeconds, build, waitMs = 14_000) 
     })();
     inflight.set(key, job);
   }
+  return job;
+}
+
+/**
+ * Serves a cached value, building it on a miss. Concurrent misses share one
+ * build.
+ *
+ * When the fresh copy has expired but an earlier build is still on hand (kept
+ * for three days), that copy is answered at once and the rebuild runs behind
+ * it, so a page someone opened before never waits on the database again.
+ * Only a key that was never built waits, up to `waitMs`, then gets null (the
+ * caller answers "building") while the build carries on and fills the cache.
+ */
+export async function cachedOrBuilding(key, ttlSeconds, build, waitMs = 14_000) {
+  const hit = await cacheGet(key);
+  if (hit !== null) return hit;
+  const stale = await cacheGet(`stale:${key}`);
+  const job = startBuild(key, ttlSeconds, build);
+  if (stale !== null) {
+    job.catch((err) => log.warn('Background rebuild failed; serving the last good copy', { key, error: err.message }));
+    return stale;
+  }
   return Promise.race([job, new Promise((r) => setTimeout(() => r(null), waitMs).unref?.())]);
+}
+
+/** A cached value every caller waits for, built once however many ask at the same time. */
+export async function cachedShared(key, ttlSeconds, build) {
+  const hit = await cacheGet(key);
+  if (hit !== null) return hit;
+  return startBuild(key, ttlSeconds, build);
 }
